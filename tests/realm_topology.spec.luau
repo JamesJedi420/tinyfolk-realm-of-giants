@@ -2,7 +2,9 @@ local RealmTopologyValidator = require("../src/ReplicatedStorage/Shared/RealmTop
 
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -56,21 +58,21 @@ local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 --   ConstructionSite_A:  ( 12, 0.5,  32)
 local PROTOTYPE_DESCRIPTOR = {
 	spawns = {
-		{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0   } },
-		{ name = "GiantSpawn",    position = { x = 12,  y = 0.5, z = 0   } },
+		{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } },
+		{ name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } },
 	},
 	escapeRoutes = {
-		{ name = "EscapeRoute_A", position = { x = 0,   y = 1,   z = 170 } },
+		{ name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 } },
 	},
 	returnPoints = {
 		{ name = "TinyfolkReturnPoint", position = { x = 0, y = 1, z = 220 } },
 	},
 	stations = {
-		{ name = "WorkStation_A",   position = { x = 20,  y = 3,   z = 0 } },
-		{ name = "MiningStation_A", position = { x = 36,  y = 3,   z = 0 } },
-		{ name = "Warehouse_A",     position = { x = 52,  y = 3.5, z = 0 } },
-		{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },
-		{ name = "Granary_A",       position = { x = 4,   y = 3.5, z = 0 } },
+		{ name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } },
+		{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+		{ name = "Warehouse_A", position = { x = 52, y = 3.5, z = 0 } },
+		{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
+		{ name = "Granary_A", position = { x = 4, y = 3.5, z = 0 } },
 	},
 	constructionSites = {
 		{ name = "ConstructionSite_A", position = { x = 12, y = 0.5, z = 32 } },
@@ -79,29 +81,40 @@ local PROTOTYPE_DESCRIPTOR = {
 		{ name = "GiantUpgradeBoard_A", position = { x = 32, y = 4, z = 0 } },
 	},
 	controlZones = {},
+	captureZones = {},
 	props = {
-		{ name = "Cover_A", position = { x = -8,  y = 0.5, z = 0   }, propType = "cover" },
-		{ name = "Cover_B", position = { x = 0,   y = 0.5, z = 165 }, propType = "cover" },
+		{ name = "Cover_A", position = { x = -8, y = 0.5, z = 0 }, propType = "cover" },
+		{ name = "Cover_B", position = { x = 0, y = 0.5, z = 165 }, propType = "cover" },
 	},
 	routeGraph = {
 		nodes = {
-			{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn" },
-			{ name = "RouteNorth",    position = { x = 0,   y = 0,   z = -90 }, nodeType = "waypoint" },
-			{ name = "RouteSouth",    position = { x = 0,   y = 0,   z = 90  }, nodeType = "waypoint" },
-			{ name = "EscapeRoute_A", position = { x = 0,   y = 1,   z = 170 }, nodeType = "escape", tier = "primary"  },
-			{ name = "EscapeRoute_B", position = { x = -90, y = 1,   z = 170 }, nodeType = "escape", tier = "fallback" },
+			{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 }, nodeType = "spawn" },
+			{ name = "RouteNorth", position = { x = 0, y = 0, z = -90 }, nodeType = "waypoint" },
+			{ name = "RouteSouth", position = { x = 0, y = 0, z = 90 }, nodeType = "waypoint" },
+			{
+				name = "EscapeRoute_A",
+				position = { x = 0, y = 1, z = 170 },
+				nodeType = "escape",
+				tier = "primary",
+			},
+			{
+				name = "EscapeRoute_B",
+				position = { x = -90, y = 1, z = 170 },
+				nodeType = "escape",
+				tier = "fallback",
+			},
 		},
 		edges = {
-			{ from = "TinyfolkSpawn", to = "RouteNorth",    distance = 90 },
-			{ from = "TinyfolkSpawn", to = "RouteSouth",    distance = 90 },
-			{ from = "RouteNorth",    to = "EscapeRoute_A", distance = 80 },
-			{ from = "RouteSouth",    to = "EscapeRoute_A", distance = 80 },
-			{ from = "RouteNorth",    to = "EscapeRoute_B", distance = 90 },
-			{ from = "RouteNorth",    to = "TinyfolkSpawn", distance = 90 },
-			{ from = "RouteSouth",    to = "TinyfolkSpawn", distance = 90 },
-			{ from = "EscapeRoute_A", to = "RouteNorth",    distance = 80 },
-			{ from = "EscapeRoute_A", to = "RouteSouth",    distance = 80 },
-			{ from = "EscapeRoute_B", to = "RouteNorth",    distance = 90 },
+			{ from = "TinyfolkSpawn", to = "RouteNorth", distance = 90 },
+			{ from = "TinyfolkSpawn", to = "RouteSouth", distance = 90 },
+			{ from = "RouteNorth", to = "EscapeRoute_A", distance = 80 },
+			{ from = "RouteSouth", to = "EscapeRoute_A", distance = 80 },
+			{ from = "RouteNorth", to = "EscapeRoute_B", distance = 90 },
+			{ from = "RouteNorth", to = "TinyfolkSpawn", distance = 90 },
+			{ from = "RouteSouth", to = "TinyfolkSpawn", distance = 90 },
+			{ from = "EscapeRoute_A", to = "RouteNorth", distance = 80 },
+			{ from = "EscapeRoute_A", to = "RouteSouth", distance = 80 },
+			{ from = "EscapeRoute_B", to = "RouteNorth", distance = 90 },
 		},
 	},
 }
@@ -114,16 +127,15 @@ local PROTOTYPE_DESCRIPTOR = {
 --   StationConfig.RequiredSpecialistRoleByStationId keys
 --   ConstructionConfig.CostBySiteId keys
 local PROTOTYPE_CONFIG = {
-	escapeTriggerRadiusStuds          = 10,
-	boardInteractionRangeStuds        = 16,
-	stationActivationRangeStuds       = 16,
+	escapeTriggerRadiusStuds = 10,
+	boardInteractionRangeStuds = 16,
+	stationActivationRangeStuds = 16,
 	constructionInteractionRangeStuds = 16,
-	requiredSpecialistStationIds      = { "WorkStation_A", "MiningStation_A" },
-	constructionSiteIds               = { "ConstructionSite_A" },
+	requiredSpecialistStationIds = { "WorkStation_A", "MiningStation_A" },
+	constructionSiteIds = { "ConstructionSite_A" },
 }
 
 local function run()
-
 	-- ============================================================
 	-- BLOCK 1: Prototype map — all 8 checks pass
 	-- ============================================================
@@ -154,16 +166,16 @@ local function run()
 	-- BLOCK 2: Failure — missing TinyfolkSpawn
 	-- ============================================================
 	local noTinyfolkSpawn = {
-		spawns              = { { name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } } },
-		escapeRoutes        = PROTOTYPE_DESCRIPTOR.escapeRoutes,
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = PROTOTYPE_DESCRIPTOR.stations,
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
-		controlZones        = {},
-		captureZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		spawns = { { name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } } },
+		escapeRoutes = PROTOTYPE_DESCRIPTOR.escapeRoutes,
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = PROTOTYPE_DESCRIPTOR.stations,
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = PROTOTYPE_DESCRIPTOR.upgradeBoards,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r1 = RealmTopologyValidator.ValidateRealm(noTinyfolkSpawn, PROTOTYPE_CONFIG)
 	assertEqual(r1.passed, false, "missing TinyfolkSpawn overall fail")
@@ -176,16 +188,16 @@ local function run()
 	-- BLOCK 3: Failure — missing GiantSpawn
 	-- ============================================================
 	local noGiantSpawn = {
-		spawns              = { { name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } } },
-		escapeRoutes        = PROTOTYPE_DESCRIPTOR.escapeRoutes,
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = PROTOTYPE_DESCRIPTOR.stations,
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
-		controlZones        = {},
-		captureZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		spawns = { { name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } } },
+		escapeRoutes = PROTOTYPE_DESCRIPTOR.escapeRoutes,
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = PROTOTYPE_DESCRIPTOR.stations,
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = PROTOTYPE_DESCRIPTOR.upgradeBoards,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r2 = RealmTopologyValidator.ValidateRealm(noGiantSpawn, PROTOTYPE_CONFIG)
 	assertEqual(r2.passed, false, "missing GiantSpawn overall fail")
@@ -198,16 +210,16 @@ local function run()
 	-- BLOCK 4: Failure — no escape routes
 	-- ============================================================
 	local noEscape = {
-		spawns              = PROTOTYPE_DESCRIPTOR.spawns,
-		escapeRoutes        = {},
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = PROTOTYPE_DESCRIPTOR.stations,
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
-		controlZones        = {},
-		captureZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		spawns = PROTOTYPE_DESCRIPTOR.spawns,
+		escapeRoutes = {},
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = PROTOTYPE_DESCRIPTOR.stations,
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = PROTOTYPE_DESCRIPTOR.upgradeBoards,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmTopologyValidator.ValidateRealm(noEscape, PROTOTYPE_CONFIG)
 	assertEqual(r3.passed, false, "no escape routes overall fail")
@@ -221,17 +233,18 @@ local function run()
 	-- Placed at (200, 4, 200) — ~274 studs from GiantSpawn, max=32.
 	-- ============================================================
 	local boardTooFar = {
-		spawns              = PROTOTYPE_DESCRIPTOR.spawns,
-		escapeRoutes        = PROTOTYPE_DESCRIPTOR.escapeRoutes,
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = PROTOTYPE_DESCRIPTOR.stations,
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = {
+		spawns = PROTOTYPE_DESCRIPTOR.spawns,
+		escapeRoutes = PROTOTYPE_DESCRIPTOR.escapeRoutes,
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = PROTOTYPE_DESCRIPTOR.stations,
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = {
 			{ name = "GiantUpgradeBoard_A", position = { x = 200, y = 4, z = 200 } },
 		},
-		controlZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmTopologyValidator.ValidateRealm(boardTooFar, PROTOTYPE_CONFIG)
 	assertEqual(r4.passed, false, "board too far overall fail")
@@ -244,16 +257,16 @@ local function run()
 	-- BLOCK 6: Failure — missing specialist station
 	-- ============================================================
 	local missingStation = {
-		spawns              = PROTOTYPE_DESCRIPTOR.spawns,
-		escapeRoutes        = PROTOTYPE_DESCRIPTOR.escapeRoutes,
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = { { name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } } }, -- MiningStation_A absent
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
-		controlZones        = {},
-		captureZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		spawns = PROTOTYPE_DESCRIPTOR.spawns,
+		escapeRoutes = PROTOTYPE_DESCRIPTOR.escapeRoutes,
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = { { name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } } }, -- MiningStation_A absent
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = PROTOTYPE_DESCRIPTOR.upgradeBoards,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmTopologyValidator.ValidateRealm(missingStation, PROTOTYPE_CONFIG)
 	assertEqual(r5.passed, false, "missing specialist station overall fail")
@@ -267,18 +280,18 @@ local function run()
 	-- Placed at (12, 0.5, 5) — 5 studs from GiantSpawn, min=15.
 	-- ============================================================
 	local routeTooClose = {
-		spawns              = PROTOTYPE_DESCRIPTOR.spawns,
-		escapeRoutes        = {
+		spawns = PROTOTYPE_DESCRIPTOR.spawns,
+		escapeRoutes = {
 			{ name = "EscapeRoute_A", position = { x = 12, y = 0.5, z = 5 } },
 		},
-		returnPoints        = PROTOTYPE_DESCRIPTOR.returnPoints,
-		stations            = PROTOTYPE_DESCRIPTOR.stations,
-		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
-		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
-		controlZones        = {},
-		captureZones        = {},
-		props               = {},
-		routeGraph          = EMPTY_ROUTE_GRAPH,
+		returnPoints = PROTOTYPE_DESCRIPTOR.returnPoints,
+		stations = PROTOTYPE_DESCRIPTOR.stations,
+		constructionSites = PROTOTYPE_DESCRIPTOR.constructionSites,
+		upgradeBoards = PROTOTYPE_DESCRIPTOR.upgradeBoards,
+		controlZones = {},
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmTopologyValidator.ValidateRealm(routeTooClose, PROTOTYPE_CONFIG)
 	assertEqual(r6.passed, false, "escape route too close to spawn overall fail")
