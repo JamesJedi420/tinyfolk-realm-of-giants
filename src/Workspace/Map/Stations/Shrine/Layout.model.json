@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "Shrine_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.55, 0.55, 0.55],
+        "Size": [8, 8, 8],
+        "Position": [-20, 4, 0]
+      }
+    }
+  ]
+}

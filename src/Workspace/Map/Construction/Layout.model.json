@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "ConstructionSite_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.7, 0.6, 0.45],
+        "Size": [12, 1, 12],
+        "Position": [12, 0.5, 32]
+      }
+    }
+  ]
+}

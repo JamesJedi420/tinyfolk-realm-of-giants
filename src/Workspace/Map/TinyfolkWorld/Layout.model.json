@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "TinyfolkReturnPoint",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.2, 0.7, 0.3],
+        "Size": [10, 2, 10],
+        "Position": [0, 1, 220]
+      }
+    }
+  ]
+}

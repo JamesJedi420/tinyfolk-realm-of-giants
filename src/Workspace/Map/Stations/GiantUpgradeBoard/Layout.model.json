@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "GiantUpgradeBoard_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.48, 0.48, 0.48],
+        "Size": [10, 8, 2],
+        "Position": [32, 4, 0]
+      }
+    }
+  ]
+}

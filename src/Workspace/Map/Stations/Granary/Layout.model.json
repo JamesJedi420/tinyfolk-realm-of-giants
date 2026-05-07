@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "Granary_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [0.6, 0.5, 0.35],
+        "Size": [10, 7, 10],
+        "Position": [4, 3.5, 0]
+      }
+    }
+  ]
+}

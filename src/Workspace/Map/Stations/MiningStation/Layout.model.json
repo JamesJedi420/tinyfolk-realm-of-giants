@@ -1,0 +1,17 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "MiningStation_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Slate",
+        "Color": [0.35, 0.35, 0.4],
+        "Size": [8, 6, 8],
+        "Position": [36, 3, 0]
+      }
+    }
+  ]
+}

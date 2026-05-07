@@ -1,0 +1,25 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "RouteGraphData",
+      "className": "Folder",
+      "children": [
+        {
+          "name": "Nodes",
+          "className": "Folder",
+          "properties": {
+            "Name": "Nodes"
+          }
+        },
+        {
+          "name": "Edges",
+          "className": "Folder",
+          "properties": {
+            "Name": "Edges"
+          }
+        }
+      ]
+    }
+  ]
+}

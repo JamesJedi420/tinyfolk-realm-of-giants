@@ -1,0 +1,60 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "CentralFloor",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "Concrete",
+        "Color": [0.45, 0.45, 0.45],
+        "Size": [120, 1, 120],
+        "Position": [0, 0, 0]
+      }
+    },
+    {
+      "name": "NorthAnchor",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "Concrete",
+        "Color": [0.35, 0.35, 0.35],
+        "Size": [20, 8, 2],
+        "Position": [0, 4, -48]
+      }
+    },
+    {
+      "name": "SouthAnchor",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "Concrete",
+        "Color": [0.35, 0.35, 0.35],
+        "Size": [20, 8, 2],
+        "Position": [0, 4, 48]
+      }
+    },
+    {
+      "name": "EastAnchor",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "Concrete",
+        "Color": [0.35, 0.35, 0.35],
+        "Size": [2, 8, 20],
+        "Position": [48, 4, 0]
+      }
+    },
+    {
+      "name": "WestAnchor",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "Concrete",
+        "Color": [0.35, 0.35, 0.35],
+        "Size": [2, 8, 20],
+        "Position": [-48, 4, 0]
+      }
+    }
+  ]
+}
