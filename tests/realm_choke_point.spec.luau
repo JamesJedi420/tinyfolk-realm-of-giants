@@ -67,14 +67,16 @@ local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 
 -- Standard config: need 2 independent escape paths, filter "GiantControl" zones.
 local STANDARD_CONFIG = {
-	zoneTagFilter            = "GiantControl",
-	minimumDisjointPathCount = 2,
+	zoneTagFilter                      = "GiantControl",
+	minimumDisjointPathCount           = 2,
+	requireFallbackEscapeReachability  = false,
 }
 
 -- Relaxed config: only 1 path required.
 local RELAXED_CONFIG = {
-	zoneTagFilter            = "GiantControl",
-	minimumDisjointPathCount = 1,
+	zoneTagFilter                      = "GiantControl",
+	minimumDisjointPathCount           = 1,
+	requireFallbackEscapeReachability  = false,
 }
 
 local EMPTY_SPAWNS        = {}

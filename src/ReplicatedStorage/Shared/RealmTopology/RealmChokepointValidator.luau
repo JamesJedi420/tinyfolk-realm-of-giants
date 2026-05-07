@@ -15,6 +15,8 @@ export type RealmChokepointConfig = {
 	zoneTagFilter: string,
 	-- Minimum number of edge-disjoint spawn-to-escape paths that must survive zone blocking
 	minimumDisjointPathCount: number,
+	-- When true, asserts at least one tier=fallback escape node is reachable after zone blocking
+	requireFallbackEscapeReachability: boolean,
 }
 
 export type CheckResult = {
@@ -235,12 +237,118 @@ local function checkChokepointEscapeReachability(
 	}
 end
 
+-- BFS reachability from a seed set through unblocked edges.
+-- Returns the set of all node names reachable from any seed node.
+local function bfsReachable(
+	seedSet: { [string]: boolean },
+	unlockedEdges: { RouteEdge }
+): { [string]: boolean }
+	-- Build adjacency list from unlocked edges.
+	local adj: { [string]: { string } } = {}
+	for _, edge in unlockedEdges do
+		if not adj[edge.from] then
+			adj[edge.from] = {}
+		end
+		table.insert(adj[edge.from], edge.to)
+	end
+
+	local visited: { [string]: boolean } = {}
+	local queue: { string } = {}
+	for name in pairs(seedSet) do
+		visited[name] = true
+		table.insert(queue, name)
+	end
+
+	local head = 1
+	while head <= #queue do
+		local u = queue[head]
+		head += 1
+		local neighbors = adj[u]
+		if neighbors ~= nil then
+			for _, v in neighbors do
+				if not visited[v] then
+					visited[v] = true
+					table.insert(queue, v)
+				end
+			end
+		end
+	end
+
+	return visited
+end
+
+-- Check: after blocking edges whose endpoints lie inside any matching Giant
+-- control zone, at least one tier=fallback escape node must remain both
+-- unblocked and reachable from any unblocked spawn node.
+local function checkChokepointFallbackReachability(
+	descriptor: RealmDescriptor,
+	config: RealmChokepointConfig
+): CheckResult
+	if not config.requireFallbackEscapeReachability then
+		return { id = "choke_point_fallback_reachability", passed = true }
+	end
+
+	local zones = getZonesByTag(descriptor.controlZones, config.zoneTagFilter)
+	local nodes = descriptor.routeGraph.nodes
+	local edges = descriptor.routeGraph.edges
+
+	local blocked = buildBlockedNodeSet(nodes, zones)
+
+	-- Build unlocked edge set.
+	local unlockedEdges: { RouteEdge } = {}
+	for _, edge in edges do
+		if not blocked[edge.from] and not blocked[edge.to] then
+			table.insert(unlockedEdges, edge)
+		end
+	end
+
+	-- Collect unblocked fallback escape nodes.
+	local fallbackEscapes: { string } = {}
+	for _, node in nodes do
+		if node.nodeType == "escape" and node.tier == "fallback" and not blocked[node.name] then
+			table.insert(fallbackEscapes, node.name)
+		end
+	end
+
+	-- Vacuous pass: no fallback escape nodes registered or all blocked.
+	if #fallbackEscapes == 0 then
+		return { id = "choke_point_fallback_reachability", passed = true }
+	end
+
+	-- Seed BFS from all unblocked spawn nodes.
+	local spawnSeed: { [string]: boolean } = {}
+	for _, node in nodes do
+		if node.nodeType == "spawn" and not blocked[node.name] then
+			spawnSeed[node.name] = true
+		end
+	end
+
+	local reachable = bfsReachable(spawnSeed, unlockedEdges)
+
+	-- Pass if at least one fallback escape is reachable.
+	for _, name in fallbackEscapes do
+		if reachable[name] then
+			return { id = "choke_point_fallback_reachability", passed = true }
+		end
+	end
+
+	return {
+		id = "choke_point_fallback_reachability",
+		passed = false,
+		reason = string.format(
+			"no fallback escape node is reachable from any spawn after zone blocking (unreached: %s)",
+			table.concat(fallbackEscapes, ", ")
+		),
+	}
+end
+
 function RealmChokepointValidator.ValidateChokepoints(
 	descriptor: RealmDescriptor,
 	config: RealmChokepointConfig
 ): ChokepointValidationResult
 	local results: { CheckResult } = {
 		checkChokepointEscapeReachability(descriptor, config),
+		checkChokepointFallbackReachability(descriptor, config),
 	}
 
 	local allPassed = true
