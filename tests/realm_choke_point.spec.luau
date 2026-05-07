@@ -43,20 +43,23 @@ end
 -- Both directions stored; 2 edge-disjoint spawn-to-escape paths.
 local PROTOTYPE_ROUTE_GRAPH = {
 	nodes = {
-		{ name = "TinyfolkSpawn",  position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn"   },
+		{ name = "TinyfolkSpawn",  position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn"    },
 		{ name = "RouteNorth",     position = { x = 0,   y = 0,   z = -90 }, nodeType = "waypoint" },
 		{ name = "RouteSouth",     position = { x = 0,   y = 0,   z = 90  }, nodeType = "waypoint" },
-		{ name = "EscapeRoute_A",  position = { x = 0,   y = 1,   z = 170 }, nodeType = "escape"  },
+		{ name = "EscapeRoute_A",  position = { x = 0,   y = 1,   z = 170 }, nodeType = "escape",  tier = "primary"  },
+		{ name = "EscapeRoute_B",  position = { x = -90, y = 1,   z = 170 }, nodeType = "escape",  tier = "fallback" },
 	},
 	edges = {
 		{ from = "TinyfolkSpawn", to = "RouteNorth",    distance = 90 },
 		{ from = "TinyfolkSpawn", to = "RouteSouth",    distance = 90 },
 		{ from = "RouteNorth",    to = "EscapeRoute_A", distance = 80 },
 		{ from = "RouteSouth",    to = "EscapeRoute_A", distance = 80 },
+		{ from = "RouteNorth",    to = "EscapeRoute_B", distance = 90 },
 		{ from = "RouteNorth",    to = "TinyfolkSpawn", distance = 90 },
 		{ from = "RouteSouth",    to = "TinyfolkSpawn", distance = 90 },
 		{ from = "EscapeRoute_A", to = "RouteNorth",    distance = 80 },
 		{ from = "EscapeRoute_A", to = "RouteSouth",    distance = 80 },
+		{ from = "EscapeRoute_B", to = "RouteNorth",    distance = 90 },
 	},
 }
 

@@ -1,0 +1,18 @@
+{
+  "className": "Folder",
+  "name": "FallbackEscapeRoutes",
+  "children": [
+    {
+      "name": "EscapeRoute_B",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.4, 0.6, 0.4],
+        "Size": [10, 2, 10],
+        "Position": [-90, 1, 170]
+      }
+    }
+  ]
+}

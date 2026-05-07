@@ -24,6 +24,7 @@ export type NamedNode = {
 	name: string,
 	position: Vector3Data,
 	nodeType: "spawn" | "waypoint" | "escape" | "station",
+	tier: ("primary" | "fallback")?,
 }
 
 export type RouteEdge = {
