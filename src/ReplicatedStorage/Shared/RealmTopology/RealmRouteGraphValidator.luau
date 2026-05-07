@@ -7,6 +7,7 @@ local RealmRouteGraphValidator = {}
 export type RealmDescriptor = RealmTopologyValidator.RealmDescriptor
 export type NamedPart = RealmTopologyValidator.NamedPart
 export type NamedNode = RealmTopologyValidator.NamedNode
+export type RouteEdge = RealmTopologyValidator.RouteEdge
 
 export type RealmRouteGraphConfig = {
 	-- Prefix used to identify tinyfolk spawn parts in descriptor.spawns.
@@ -83,6 +84,51 @@ local function checkEscapeRegistration(descriptor: RealmDescriptor): CheckResult
 	}
 end
 
+local function sortedDanglingEndpointNames(nodeNameSet: { [string]: boolean }, edges: { RouteEdge }): { string }
+	local missingSet: { [string]: boolean } = {}
+
+	for _, edge in edges do
+		if not nodeNameSet[edge.from] then
+			missingSet[edge.from] = true
+		end
+		if not nodeNameSet[edge.to] then
+			missingSet[edge.to] = true
+		end
+	end
+
+	local missing: { string } = {}
+	for name in pairs(missingSet) do
+		table.insert(missing, name)
+	end
+	table.sort(missing)
+	return missing
+end
+
+local function checkEdgeConsistency(descriptor: RealmDescriptor): CheckResult
+	local edges = descriptor.routeGraph.edges
+
+	-- Vacuous pass: no edges to validate.
+	if #edges == 0 then
+		return { id = "route_graph_edge_consistency", passed = true }
+	end
+
+	local nodeNameSet: { [string]: boolean } = {}
+	for _, node in descriptor.routeGraph.nodes do
+		nodeNameSet[node.name] = true
+	end
+
+	local missing = sortedDanglingEndpointNames(nodeNameSet, edges)
+	if #missing == 0 then
+		return { id = "route_graph_edge_consistency", passed = true }
+	end
+
+	return {
+		id = "route_graph_edge_consistency",
+		passed = false,
+		reason = string.format("dangling route-graph edge endpoint(s): %s", table.concat(missing, ", ")),
+	}
+end
+
 function RealmRouteGraphValidator.ValidateRouteGraph(
 	descriptor: RealmDescriptor,
 	config: RealmRouteGraphConfig
@@ -90,6 +136,7 @@ function RealmRouteGraphValidator.ValidateRouteGraph(
 	local results: { CheckResult } = {
 		checkSpawnRegistration(descriptor, config),
 		checkEscapeRegistration(descriptor),
+		checkEdgeConsistency(descriptor),
 	}
 
 	local allPassed = true
