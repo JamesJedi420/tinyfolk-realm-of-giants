@@ -1,6 +1,5 @@
 {
   "className": "Folder",
-  "name": "FallbackEscapeRoutes",
   "children": [
     {
       "name": "EscapeRoute_B",

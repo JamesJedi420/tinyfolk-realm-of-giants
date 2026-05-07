@@ -77,6 +77,7 @@ local TWO_EXIT_DESCRIPTOR = {
 	constructionSites = EMPTY_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
 
@@ -88,6 +89,7 @@ local PROTOTYPE_DESCRIPTOR = {
 	constructionSites = EMPTY_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
 
@@ -153,6 +155,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmExitValidator.ValidateExits(oneExit, STANDARD_CONFIG)
@@ -177,6 +180,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmExitValidator.ValidateExits(clusteredExits, STANDARD_CONFIG)
@@ -202,6 +206,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmExitValidator.ValidateExits(exitNearGiantSpawn, STANDARD_CONFIG)
@@ -228,6 +233,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmExitValidator.ValidateExits(isolatedReturnPoint, STANDARD_CONFIG)

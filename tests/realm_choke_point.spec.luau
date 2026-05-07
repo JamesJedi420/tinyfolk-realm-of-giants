@@ -101,6 +101,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_CONTROL_ZONES,
+		props             = {},
 		routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 	}
 	local r1 = RealmChokepointValidator.ValidateChokepoints(noZones, STANDARD_CONFIG)
@@ -125,6 +126,7 @@ local function run()
 		controlZones      = {
 			{ name = "Zone_North", position = { x = 0, y = 0, z = -90 }, radius = 5, tag = "GiantControl" },
 		},
+		props             = {},
 		routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 	}
 	local r2 = RealmChokepointValidator.ValidateChokepoints(zoneBlocksNorth, STANDARD_CONFIG)
@@ -150,6 +152,7 @@ local function run()
 			{ name = "Zone_North", position = { x = 0, y = 0, z = -90 }, radius = 5, tag = "GiantControl" },
 			{ name = "Zone_South", position = { x = 0, y = 0, z = 90  }, radius = 5, tag = "GiantControl" },
 		},
+		props             = {},
 		routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 	}
 	local r3 = RealmChokepointValidator.ValidateChokepoints(zoneBothRoutes, STANDARD_CONFIG)
@@ -174,6 +177,7 @@ local function run()
 		controlZones      = {
 			{ name = "Zone_Far", position = { x = 200, y = 0, z = 200 }, radius = 30, tag = "GiantControl" },
 		},
+		props             = {},
 		routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 	}
 	local r4 = RealmChokepointValidator.ValidateChokepoints(zoneDistant, STANDARD_CONFIG)
@@ -197,6 +201,7 @@ local function run()
 		controlZones      = {
 			{ name = "Zone_North", position = { x = 0, y = 0, z = -90 }, radius = 5, tag = "GiantControl" },
 		},
+		props             = {},
 		routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 	}
 	local r5 = RealmChokepointValidator.ValidateChokepoints(relaxedWithBlockedNorth, RELAXED_CONFIG)
@@ -218,6 +223,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_CONTROL_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmChokepointValidator.ValidateChokepoints(emptyGraph, STANDARD_CONFIG)

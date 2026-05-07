@@ -79,6 +79,10 @@ local PROTOTYPE_DESCRIPTOR = {
 		{ name = "GiantUpgradeBoard_A", position = { x = 32, y = 4, z = 0 } },
 	},
 	controlZones = {},
+	props = {
+		{ name = "Cover_A", position = { x = -8,  y = 0.5, z = 0   }, propType = "cover" },
+		{ name = "Cover_B", position = { x = 0,   y = 0.5, z = 165 }, propType = "cover" },
+	},
 	routeGraph = {
 		nodes = {
 			{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn" },
@@ -157,6 +161,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r1 = RealmTopologyValidator.ValidateRealm(noTinyfolkSpawn, PROTOTYPE_CONFIG)
@@ -177,6 +182,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r2 = RealmTopologyValidator.ValidateRealm(noGiantSpawn, PROTOTYPE_CONFIG)
@@ -197,6 +203,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmTopologyValidator.ValidateRealm(noEscape, PROTOTYPE_CONFIG)
@@ -220,6 +227,7 @@ local function run()
 			{ name = "GiantUpgradeBoard_A", position = { x = 200, y = 4, z = 200 } },
 		},
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmTopologyValidator.ValidateRealm(boardTooFar, PROTOTYPE_CONFIG)
@@ -240,6 +248,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmTopologyValidator.ValidateRealm(missingStation, PROTOTYPE_CONFIG)
@@ -263,6 +272,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmTopologyValidator.ValidateRealm(routeTooClose, PROTOTYPE_CONFIG)

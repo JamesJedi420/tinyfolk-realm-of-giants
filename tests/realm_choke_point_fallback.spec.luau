@@ -88,6 +88,7 @@ local function makeDescriptor(nodes, edges, controlZones)
 		constructionSites = {},
 		upgradeBoards     = {},
 		controlZones      = controlZones,
+		props             = {},
 		routeGraph        = { nodes = nodes, edges = edges },
 	}
 end

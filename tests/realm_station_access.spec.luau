@@ -81,6 +81,7 @@ local PROTOTYPE_DESCRIPTOR = {
 	constructionSites = PROTOTYPE_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
 
@@ -130,6 +131,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r2 = RealmStationAccessValidator.ValidateStationAccess(distantWorkStation, STANDARD_CONFIG)
@@ -156,6 +158,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmStationAccessValidator.ValidateStationAccess(distantWarehouse, STANDARD_CONFIG)
@@ -182,6 +185,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmStationAccessValidator.ValidateStationAccess(brokenHaulLoop, STANDARD_CONFIG)
@@ -205,6 +209,7 @@ local function run()
 		},
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmStationAccessValidator.ValidateStationAccess(distantSite, STANDARD_CONFIG)
@@ -235,6 +240,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmStationAccessValidator.ValidateStationAccess(mixedStations, STANDARD_CONFIG)

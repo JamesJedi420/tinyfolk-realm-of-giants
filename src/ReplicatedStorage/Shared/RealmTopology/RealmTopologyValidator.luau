@@ -20,6 +20,12 @@ export type NamedZone = {
 	tag: string,
 }
 
+export type NamedProp = {
+	name: string,
+	position: Vector3Data,
+	propType: string,
+}
+
 export type NamedNode = {
 	name: string,
 	position: Vector3Data,
@@ -41,6 +47,7 @@ export type RealmDescriptor = {
 	constructionSites: { NamedPart },
 	upgradeBoards: { NamedPart },
 	controlZones: { NamedZone },
+	props: { NamedProp },
 	routeGraph: {
 		nodes: { NamedNode },
 		edges: { RouteEdge },
