@@ -47,6 +47,7 @@ export type RealmDescriptor = {
 	constructionSites: { NamedPart },
 	upgradeBoards: { NamedPart },
 	controlZones: { NamedZone },
+	captureZones: { NamedZone },
 	props: { NamedProp },
 	routeGraph: {
 		nodes: { NamedNode },

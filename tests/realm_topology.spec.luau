@@ -161,6 +161,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		captureZones        = {},
 		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
@@ -182,6 +183,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		captureZones        = {},
 		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
@@ -203,6 +205,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		captureZones        = {},
 		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
@@ -248,6 +251,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		captureZones        = {},
 		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}
@@ -272,6 +276,7 @@ local function run()
 		constructionSites   = PROTOTYPE_DESCRIPTOR.constructionSites,
 		upgradeBoards       = PROTOTYPE_DESCRIPTOR.upgradeBoards,
 		controlZones        = {},
+		captureZones        = {},
 		props               = {},
 		routeGraph          = EMPTY_ROUTE_GRAPH,
 	}

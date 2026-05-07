@@ -101,6 +101,7 @@ local PROTOTYPE_DESCRIPTOR = {
 	constructionSites = EMPTY_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = PROTOTYPE_CONTROL_ZONE,
+	captureZones      = {},
 	props             = {},
 	routeGraph        = PROTOTYPE_ROUTE_GRAPH,
 }
@@ -147,6 +148,7 @@ local function run()
 		controlZones      = {
 			{ name = "GiantControlZone_A", position = { x = 120, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 		},
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -172,6 +174,7 @@ local function run()
 		controlZones      = {
 			{ name = "GiantControlZone_A", position = { x = 5, y = 1, z = 175 }, radius = 30, tag = "GiantControl" },
 		},
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -201,6 +204,7 @@ local function run()
 			{ name = "GiantControlZone_A", position = { x = 12, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 			{ name = "GiantControlZone_B", position = { x = 80, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 		},
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -237,6 +241,7 @@ local function run()
 		controlZones      = {
 			{ name = "GiantControlZone_A", position = { x = 35, y = 3, z = 0 }, radius = 35, tag = "GiantControl" },
 		},
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}

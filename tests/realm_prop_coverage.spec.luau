@@ -52,6 +52,7 @@ local function makeDescriptor(spawns, escapeRoutes, props)
 		constructionSites = EMPTY_SITES,
 		upgradeBoards = EMPTY_BOARDS,
 		controlZones = EMPTY_ZONES,
+		captureZones = {},
 		props = props,
 		routeGraph = EMPTY_ROUTE_GRAPH,
 	}

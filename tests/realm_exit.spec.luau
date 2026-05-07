@@ -77,6 +77,7 @@ local TWO_EXIT_DESCRIPTOR = {
 	constructionSites = EMPTY_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	captureZones      = {},
 	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
@@ -89,6 +90,7 @@ local PROTOTYPE_DESCRIPTOR = {
 	constructionSites = EMPTY_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	captureZones      = {},
 	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
@@ -155,6 +157,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -180,6 +183,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -206,6 +210,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -233,6 +238,7 @@ local function run()
 		constructionSites = EMPTY_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}

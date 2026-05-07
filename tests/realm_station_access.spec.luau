@@ -81,6 +81,7 @@ local PROTOTYPE_DESCRIPTOR = {
 	constructionSites = PROTOTYPE_SITES,
 	upgradeBoards     = EMPTY_BOARDS,
 	controlZones      = EMPTY_ZONES,
+	captureZones      = {},
 	props             = {},
 	routeGraph        = EMPTY_ROUTE_GRAPH,
 }
@@ -131,6 +132,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -158,6 +160,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -185,6 +188,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -209,6 +213,7 @@ local function run()
 		},
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
@@ -240,6 +245,7 @@ local function run()
 		constructionSites = PROTOTYPE_SITES,
 		upgradeBoards     = EMPTY_BOARDS,
 		controlZones      = EMPTY_ZONES,
+		captureZones      = {},
 		props             = {},
 		routeGraph        = EMPTY_ROUTE_GRAPH,
 	}
