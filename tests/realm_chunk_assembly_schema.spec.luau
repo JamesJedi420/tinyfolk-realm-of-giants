@@ -389,7 +389,8 @@ local function run()
 
 	-- BLOCK 21: Prototype assembly output exposes resolvedOccupiedSpace and resolvedOccupiedSpaceByPlacement.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		assert(out.resolvedOccupiedSpace ~= nil, "block21 resolvedOccupiedSpace present")
 		assert(out.resolvedOccupiedSpaceByPlacement ~= nil, "block21 resolvedOccupiedSpaceByPlacement present")
 		-- Two placements, each with one box.
@@ -402,9 +403,8 @@ local function run()
 
 	-- BLOCK 22: Identity placement (0 turns) resolves center by translation only; halfExtents unchanged.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			makeOccupiedSpaceProbeInput(0, { x = 100, y = 20, z = -40 })
-		)
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(makeOccupiedSpaceProbeInput(0, { x = 100, y = 20, z = -40 }))
 		local box = out.resolvedOccupiedSpace[1]
 		assertVector3Equal(box.worldCenter, { x = 110, y = 20, z = -35 }, "block22 worldCenter")
 		assertVector3Equal(box.halfExtents, { x = 8, y = 3, z = 4 }, "block22 halfExtents unchanged")
@@ -413,9 +413,8 @@ local function run()
 
 	-- BLOCK 23: 90-degree turn (1) rotates center and swaps x/z half-extents.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			makeOccupiedSpaceProbeInput(1, { x = 100, y = 20, z = -40 })
-		)
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(makeOccupiedSpaceProbeInput(1, { x = 100, y = 20, z = -40 }))
 		local box = out.resolvedOccupiedSpace[1]
 		-- rotate(10,0,5) at 1 turn → (-5,0,10); worldCenter = (95,20,-30)
 		assertVector3Equal(box.worldCenter, { x = 95, y = 20, z = -30 }, "block23 worldCenter")
@@ -425,9 +424,8 @@ local function run()
 
 	-- BLOCK 24: 180-degree turn (2) rotates center; halfExtents unchanged (symmetric swap).
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			makeOccupiedSpaceProbeInput(2, { x = 100, y = 20, z = -40 })
-		)
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(makeOccupiedSpaceProbeInput(2, { x = 100, y = 20, z = -40 }))
 		local box = out.resolvedOccupiedSpace[1]
 		-- rotate(10,0,5) at 2 turns → (-10,0,-5); worldCenter = (90,20,-45)
 		assertVector3Equal(box.worldCenter, { x = 90, y = 20, z = -45 }, "block24 worldCenter")
@@ -437,9 +435,8 @@ local function run()
 
 	-- BLOCK 25: 270-degree turn (3) rotates center and swaps x/z half-extents.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			makeOccupiedSpaceProbeInput(3, { x = 100, y = 20, z = -40 })
-		)
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(makeOccupiedSpaceProbeInput(3, { x = 100, y = 20, z = -40 }))
 		local box = out.resolvedOccupiedSpace[1]
 		-- rotate(10,0,5) at 3 turns → (5,0,-10); worldCenter = (105,20,-50)
 		assertVector3Equal(box.worldCenter, { x = 105, y = 20, z = -50 }, "block25 worldCenter")
@@ -449,12 +446,10 @@ local function run()
 
 	-- BLOCK 26: Repeated runs produce identical resolved occupied space ordering.
 	do
-		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
-		)
-		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(
-			RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
-		)
+		local outA =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local outB =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		assertEqual(#outA.resolvedOccupiedSpace, #outB.resolvedOccupiedSpace, "block26 count stable")
 		for index, boxA in ipairs(outA.resolvedOccupiedSpace) do
 			local boxB = outB.resolvedOccupiedSpace[index]
@@ -473,6 +468,82 @@ local function run()
 		local descriptor = RealmChunkAssemblySchema.ToRealmDescriptor(out)
 		assert(descriptor ~= nil, "block27 descriptor produced")
 		assert(descriptor.routeGraph ~= nil, "block27 descriptor routeGraph present")
+	end
+
+	-- Slice 5: landmark anchors and structural metadata contract
+
+	-- BLOCK 28: Assembly output exposes resolvedMetadata and resolvedMetadataByPlacement.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		assert(out.resolvedMetadata ~= nil, "block28 resolvedMetadata present")
+		assert(out.resolvedMetadataByPlacement ~= nil, "block28 resolvedMetadataByPlacement present")
+		assertEqual(#out.resolvedMetadata, 2, "block28 two placement metadata entries")
+		assert(out.resolvedMetadataByPlacement["P_Start"] ~= nil, "block28 P_Start metadata present")
+		assert(out.resolvedMetadataByPlacement["P_Exit"] ~= nil, "block28 P_Exit metadata present")
+	end
+
+	-- BLOCK 29: Landmark anchor metadata is preserved through assembly output.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
+		assert(startMeta ~= nil, "block29 P_Start metadata present")
+		assertEqual(startMeta.placementId, "P_Start", "block29 placementId")
+		assertEqual(startMeta.chunkId, "Chunk_Start", "block29 chunkId")
+		assertEqual(startMeta.isLandmarkAnchor, true, "block29 isLandmarkAnchor")
+		assertEqual(startMeta.landmarkAnchorId, "start_anchor", "block29 landmarkAnchorId")
+		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
+		assert(exitMeta ~= nil, "block29 P_Exit metadata present")
+		assertEqual(exitMeta.isLandmarkAnchor, false, "block29 P_Exit not landmark")
+		assert(exitMeta.landmarkAnchorId == nil, "block29 P_Exit no anchorId")
+	end
+
+	-- BLOCK 30: Tile-size class metadata is preserved through assembly output.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
+		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
+		assertEqual(startMeta.tileSizeClass, "large", "block30 P_Start tileSizeClass")
+		assertEqual(exitMeta.tileSizeClass, "medium", "block30 P_Exit tileSizeClass")
+	end
+
+	-- BLOCK 31: Recurring-structure tags are preserved with stable ordering.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
+		assert(startMeta.recurringStructureTags ~= nil, "block31 recurringStructureTags present")
+		assertEqual(#startMeta.recurringStructureTags, 2, "block31 tag count")
+		assertEqual(startMeta.recurringStructureTags[1], "spawn_chamber", "block31 tag[1]")
+		assertEqual(startMeta.recurringStructureTags[2], "entry_hub", "block31 tag[2]")
+		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
+		assert(exitMeta.recurringStructureTags ~= nil, "block31 P_Exit recurringStructureTags present")
+		assertEqual(exitMeta.recurringStructureTags[1], "exit_chamber", "block31 P_Exit tag[1]")
+	end
+
+	-- BLOCK 32: Indoor/outdoor and traversal-density metadata are preserved through assembly output.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
+		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
+		assertEqual(startMeta.environmentClass, "outdoor", "block32 P_Start environmentClass")
+		assertEqual(startMeta.traversalDensityClass, "moderate", "block32 P_Start traversalDensityClass")
+		assertEqual(exitMeta.environmentClass, "indoor", "block32 P_Exit environmentClass")
+		assertEqual(exitMeta.traversalDensityClass, "sparse", "block32 P_Exit traversalDensityClass")
+	end
+
+	-- BLOCK 33: Repeated runs produce identical resolved metadata ordering and values.
+	do
+		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		assertEqual(#outA.resolvedMetadata, #outB.resolvedMetadata, "block33 count stable")
+		for index, metaA in ipairs(outA.resolvedMetadata) do
+			local metaB = outB.resolvedMetadata[index]
+			assertEqual(metaA.placementId, metaB.placementId, "block33 placementId stable " .. tostring(index))
+			assertEqual(metaA.chunkId, metaB.chunkId, "block33 chunkId stable " .. tostring(index))
+			assertEqual(metaA.isLandmarkAnchor, metaB.isLandmarkAnchor, "block33 landmark stable " .. tostring(index))
+			assertEqual(metaA.tileSizeClass, metaB.tileSizeClass, "block33 tileSize stable " .. tostring(index))
+			assertEqual(metaA.environmentClass, metaB.environmentClass, "block33 env stable " .. tostring(index))
+			assertEqual(metaA.traversalDensityClass, metaB.traversalDensityClass, "block33 density stable " .. tostring(index))
+		end
 	end
 
 	print("realm_chunk_assembly_schema: all checks passed")

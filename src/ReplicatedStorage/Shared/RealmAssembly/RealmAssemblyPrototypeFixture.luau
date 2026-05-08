@@ -27,6 +27,14 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 		occupiedSpace = {
 			{ tag = "main", localCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 60, y = 4, z = 40 } },
 		},
+		structuralMetadata = {
+			isLandmarkAnchor = true,
+			landmarkAnchorId = "start_anchor",
+			tileSizeClass = "large",
+			recurringStructureTags = { "spawn_chamber", "entry_hub" },
+			environmentClass = "outdoor",
+			traversalDensityClass = "moderate",
+		},
 		content = {
 			spawns = {
 				{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
@@ -90,6 +98,13 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 		},
 		occupiedSpace = {
 			{ tag = "main", localCenter = { x = -30, y = 0, z = 0 }, halfExtents = { x = 60, y = 4, z = 40 } },
+		},
+		structuralMetadata = {
+			isLandmarkAnchor = false,
+			tileSizeClass = "medium",
+			recurringStructureTags = { "exit_chamber" },
+			environmentClass = "indoor",
+			traversalDensityClass = "sparse",
 		},
 		content = {
 			spawns = {},

@@ -52,6 +52,19 @@ export type ChunkOccupiedBox = {
 	halfExtents: Vector3Data,
 }
 
+export type ChunkTileSizeClass = "small" | "medium" | "large" | "xlarge"
+export type ChunkTraversalDensityClass = "open" | "sparse" | "moderate" | "dense"
+export type ChunkEnvironmentClass = "indoor" | "outdoor" | "mixed"
+
+export type ChunkStructuralMetadata = {
+	isLandmarkAnchor: boolean?,
+	landmarkAnchorId: string?,
+	tileSizeClass: ChunkTileSizeClass?,
+	recurringStructureTags: { string }?,
+	environmentClass: ChunkEnvironmentClass?,
+	traversalDensityClass: ChunkTraversalDensityClass?,
+}
+
 export type AuthoredChunk = {
 	chunkId: string,
 	chunkKind: string,
@@ -59,6 +72,7 @@ export type AuthoredChunk = {
 	tags: { string },
 	sockets: { ChunkSocket },
 	occupiedSpace: { ChunkOccupiedBox }?,
+	structuralMetadata: ChunkStructuralMetadata?,
 	content: ChunkLocalContent,
 }
 
@@ -104,6 +118,17 @@ export type ResolvedOccupiedBox = {
 	tag: string?,
 	worldCenter: Vector3Data,
 	halfExtents: Vector3Data,
+}
+
+export type ResolvedChunkMetadata = {
+	placementId: string,
+	chunkId: string,
+	isLandmarkAnchor: boolean?,
+	landmarkAnchorId: string?,
+	tileSizeClass: ChunkTileSizeClass?,
+	recurringStructureTags: { string }?,
+	environmentClass: ChunkEnvironmentClass?,
+	traversalDensityClass: ChunkTraversalDensityClass?,
 }
 
 export type ResolvedChunkConnection = {
@@ -162,6 +187,8 @@ export type AssemblyOutput = {
 	resolvedWorldSocketsByPlacement: { [string]: { ResolvedWorldSocket } },
 	resolvedOccupiedSpace: { ResolvedOccupiedBox },
 	resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } },
+	resolvedMetadata: { ResolvedChunkMetadata },
+	resolvedMetadataByPlacement: { [string]: ResolvedChunkMetadata },
 	resolvedConnections: { ResolvedChunkConnection },
 	stitchedGraph: AssemblyStitchedGraph,
 	integrity: AssemblyIntegrityResult,
@@ -375,6 +402,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 	local resolvedWorldSocketByPlacementSocketId: { [string]: ResolvedWorldSocket } = {}
 	local resolvedOccupiedSpace: { ResolvedOccupiedBox } = {}
 	local resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } } = {}
+	local resolvedMetadata: { ResolvedChunkMetadata } = {}
+	local resolvedMetadataByPlacement: { [string]: ResolvedChunkMetadata } = {}
 	for _, placement in ipairs(input.placements) do
 		stitchedGraph.adjacencyByPlacement[placement.placementId] = {}
 		resolvedWorldSocketsByPlacement[placement.placementId] = {}
@@ -412,6 +441,22 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 				table.insert(resolvedOccupiedSpace, resolvedBox)
 				table.insert(resolvedOccupiedSpaceByPlacement[placement.placementId], resolvedBox)
 			end
+		end
+
+		do
+			local meta = chunk.structuralMetadata
+			local resolved: ResolvedChunkMetadata = {
+				placementId = placement.placementId,
+				chunkId = placement.chunkId,
+				isLandmarkAnchor = if meta ~= nil then meta.isLandmarkAnchor else nil,
+				landmarkAnchorId = if meta ~= nil then meta.landmarkAnchorId else nil,
+				tileSizeClass = if meta ~= nil then meta.tileSizeClass else nil,
+				recurringStructureTags = if meta ~= nil then meta.recurringStructureTags else nil,
+				environmentClass = if meta ~= nil then meta.environmentClass else nil,
+				traversalDensityClass = if meta ~= nil then meta.traversalDensityClass else nil,
+			}
+			table.insert(resolvedMetadata, resolved)
+			resolvedMetadataByPlacement[placement.placementId] = resolved
 		end
 
 		appendTransformedPartList(descriptor.spawns, chunk.content.spawns, placement.placementId, placement.transform)
@@ -651,6 +696,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		resolvedWorldSocketsByPlacement = resolvedWorldSocketsByPlacement,
 		resolvedOccupiedSpace = resolvedOccupiedSpace,
 		resolvedOccupiedSpaceByPlacement = resolvedOccupiedSpaceByPlacement,
+		resolvedMetadata = resolvedMetadata,
+		resolvedMetadataByPlacement = resolvedMetadataByPlacement,
 		resolvedConnections = resolvedConnections,
 		stitchedGraph = stitchedGraph,
 		integrity = integrity,
