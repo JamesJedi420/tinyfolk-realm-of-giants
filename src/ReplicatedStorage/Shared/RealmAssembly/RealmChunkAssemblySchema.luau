@@ -26,6 +26,7 @@ export type ChunkSocket = {
 	localPosition: Vector3Data,
 	localForward: Vector3Data,
 	compatibility: ChunkSocketCompatibility,
+	allowMultipleConnections: boolean?,
 	tags: { string }?,
 }
 
@@ -70,6 +71,7 @@ export type DeclaredChunkConnection = {
 	fromSocketId: string,
 	toPlacementId: string,
 	toSocketId: string,
+	allowSelfConnection: boolean?,
 }
 
 export type AssemblyInput = {
@@ -83,14 +85,54 @@ export type ResolvedChunkConnection = {
 	fromSocketId: string,
 	toPlacementId: string,
 	toSocketId: string,
+	declaredConnectionIndex: number,
+	stitched: boolean,
 	compatible: boolean,
 	reason: string?,
+}
+
+export type StitchedConnectionEdge = {
+	declaredConnectionIndex: number,
+	fromPlacementId: string,
+	fromSocketId: string,
+	toPlacementId: string,
+	toSocketId: string,
+}
+
+export type StitchedAdjacencyEntry = {
+	declaredConnectionIndex: number,
+	placementId: string,
+	neighborPlacementId: string,
+	viaSocketId: string,
+	neighborSocketId: string,
+}
+
+export type AssemblyStitchedGraph = {
+	edges: { StitchedConnectionEdge },
+	adjacencyByPlacement: { [string]: { StitchedAdjacencyEntry } },
+}
+
+export type AssemblyIntegrityIssue = {
+	code: string,
+	message: string,
+	declaredConnectionIndex: number?,
+	fromPlacementId: string?,
+	fromSocketId: string?,
+	toPlacementId: string?,
+	toSocketId: string?,
+}
+
+export type AssemblyIntegrityResult = {
+	passed: boolean,
+	issues: { AssemblyIntegrityIssue },
 }
 
 export type AssemblyOutput = {
 	descriptor: RealmDescriptor,
 	placements: { ChunkPlacement },
 	resolvedConnections: { ResolvedChunkConnection },
+	stitchedGraph: AssemblyStitchedGraph,
+	integrity: AssemblyIntegrityResult,
 }
 
 local function rotateYawQuarterTurns(point: Vector3Data, turns: number): Vector3Data
@@ -219,9 +261,17 @@ function RealmChunkAssemblySchema.AreSocketsCompatible(
 	return true, nil
 end
 
+local function socketUsageKey(placementId: string, socketId: string): string
+	return placementId .. "::" .. socketId
+end
+
+local function addIntegrityIssue(issues: { AssemblyIntegrityIssue }, issue: AssemblyIntegrityIssue)
+	table.insert(issues, issue)
+end
+
 function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): AssemblyOutput
 	local placementById: { [string]: ChunkPlacement } = {}
-	for _, placement in input.placements do
+	for _, placement in ipairs(input.placements) do
 		placementById[placement.placementId] = placement
 	end
 
@@ -240,11 +290,29 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 			edges = {},
 		},
 	}
+	local stitchedGraph: AssemblyStitchedGraph = {
+		edges = {},
+		adjacencyByPlacement = {},
+	}
+	for _, placement in ipairs(input.placements) do
+		stitchedGraph.adjacencyByPlacement[placement.placementId] = {}
+	end
 
-	for _, placement in input.placements do
+	local integrityIssues: { AssemblyIntegrityIssue } = {}
+	local socketUseCount: { [string]: number } = {}
+
+	for _, placement in ipairs(input.placements) do
 		local chunk = input.chunkLibrary[placement.chunkId]
 		if chunk == nil then
-			error("missing chunk in library for chunkId=" .. placement.chunkId)
+			addIntegrityIssue(integrityIssues, {
+				code = "missing_chunk_reference",
+				message = "Placement '"
+					.. placement.placementId
+					.. "' references missing chunk '"
+					.. placement.chunkId
+					.. "'",
+			})
+			continue
 		end
 
 		appendTransformedPartList(descriptor.spawns, chunk.content.spawns, placement.placementId, placement.transform)
@@ -301,67 +369,182 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 	end
 
 	local resolvedConnections: { ResolvedChunkConnection } = {}
-	for _, conn in input.declaredConnections do
+	for index, conn in ipairs(input.declaredConnections) do
+		local issueCountBefore = #integrityIssues
 		local fromPlacement = placementById[conn.fromPlacementId]
 		local toPlacement = placementById[conn.toPlacementId]
+		local fromChunk: AuthoredChunk? = nil
+		local toChunk: AuthoredChunk? = nil
+		local fromSocket: ChunkSocket? = nil
+		local toSocket: ChunkSocket? = nil
+		local compatibilityReason: string? = nil
+
 		if fromPlacement == nil or toPlacement == nil then
-			table.insert(resolvedConnections, {
+			addIntegrityIssue(integrityIssues, {
+				code = "missing_placement_reference",
+				message = "Declared connection references missing placement",
+				declaredConnectionIndex = index,
 				fromPlacementId = conn.fromPlacementId,
 				fromSocketId = conn.fromSocketId,
 				toPlacementId = conn.toPlacementId,
 				toSocketId = conn.toSocketId,
-				compatible = false,
-				reason = "placement missing",
 			})
-			continue
+		else
+			fromChunk = input.chunkLibrary[fromPlacement.chunkId]
+			toChunk = input.chunkLibrary[toPlacement.chunkId]
+			if fromChunk == nil or toChunk == nil then
+				addIntegrityIssue(integrityIssues, {
+					code = "missing_chunk_reference",
+					message = "Declared connection references placement with missing chunk",
+					declaredConnectionIndex = index,
+					fromPlacementId = conn.fromPlacementId,
+					fromSocketId = conn.fromSocketId,
+					toPlacementId = conn.toPlacementId,
+					toSocketId = conn.toSocketId,
+				})
+			end
 		end
 
-		local fromChunk = input.chunkLibrary[fromPlacement.chunkId]
-		local toChunk = input.chunkLibrary[toPlacement.chunkId]
-		if fromChunk == nil or toChunk == nil then
-			table.insert(resolvedConnections, {
+		if fromPlacement ~= nil and toPlacement ~= nil and fromPlacement.placementId == toPlacement.placementId then
+			if not conn.allowSelfConnection then
+				addIntegrityIssue(integrityIssues, {
+					code = "self_connection_not_allowed",
+					message = "Declared self-connection is not explicitly allowed",
+					declaredConnectionIndex = index,
+					fromPlacementId = conn.fromPlacementId,
+					fromSocketId = conn.fromSocketId,
+					toPlacementId = conn.toPlacementId,
+					toSocketId = conn.toSocketId,
+				})
+			end
+		end
+
+		if fromChunk ~= nil and toChunk ~= nil then
+			fromSocket = getSocketById(fromChunk, conn.fromSocketId)
+			toSocket = getSocketById(toChunk, conn.toSocketId)
+			if fromSocket == nil or toSocket == nil then
+				addIntegrityIssue(integrityIssues, {
+					code = "missing_socket_reference",
+					message = "Declared connection references missing socket",
+					declaredConnectionIndex = index,
+					fromPlacementId = conn.fromPlacementId,
+					fromSocketId = conn.fromSocketId,
+					toPlacementId = conn.toPlacementId,
+					toSocketId = conn.toSocketId,
+				})
+			else
+				local compatible, reason =
+					RealmChunkAssemblySchema.AreSocketsCompatible(fromSocket.compatibility, toSocket.compatibility)
+				if not compatible then
+					compatibilityReason = reason
+					addIntegrityIssue(integrityIssues, {
+						code = "incompatible_socket_connection",
+						message = "Declared connection is incompatible: " .. tostring(reason),
+						declaredConnectionIndex = index,
+						fromPlacementId = conn.fromPlacementId,
+						fromSocketId = conn.fromSocketId,
+						toPlacementId = conn.toPlacementId,
+						toSocketId = conn.toSocketId,
+					})
+				end
+
+				local fromKey = socketUsageKey(conn.fromPlacementId, conn.fromSocketId)
+				local toKey = socketUsageKey(conn.toPlacementId, conn.toSocketId)
+				local fromCount = socketUseCount[fromKey] or 0
+				local toCount = socketUseCount[toKey] or 0
+				if fromCount > 0 and not fromSocket.allowMultipleConnections then
+					addIntegrityIssue(integrityIssues, {
+						code = "duplicate_socket_use",
+						message = "from socket is already consumed",
+						declaredConnectionIndex = index,
+						fromPlacementId = conn.fromPlacementId,
+						fromSocketId = conn.fromSocketId,
+						toPlacementId = conn.toPlacementId,
+						toSocketId = conn.toSocketId,
+					})
+				end
+				if toCount > 0 and not toSocket.allowMultipleConnections then
+					addIntegrityIssue(integrityIssues, {
+						code = "duplicate_socket_use",
+						message = "to socket is already consumed",
+						declaredConnectionIndex = index,
+						fromPlacementId = conn.fromPlacementId,
+						fromSocketId = conn.fromSocketId,
+						toPlacementId = conn.toPlacementId,
+						toSocketId = conn.toSocketId,
+					})
+				end
+
+				local stitchable = #integrityIssues == issueCountBefore
+				if stitchable then
+					socketUseCount[fromKey] = fromCount + 1
+					socketUseCount[toKey] = toCount + 1
+					table.insert(stitchedGraph.edges, {
+						declaredConnectionIndex = index,
+						fromPlacementId = conn.fromPlacementId,
+						fromSocketId = conn.fromSocketId,
+						toPlacementId = conn.toPlacementId,
+						toSocketId = conn.toSocketId,
+					})
+					table.insert(stitchedGraph.adjacencyByPlacement[conn.fromPlacementId], {
+						declaredConnectionIndex = index,
+						placementId = conn.fromPlacementId,
+						neighborPlacementId = conn.toPlacementId,
+						viaSocketId = conn.fromSocketId,
+						neighborSocketId = conn.toSocketId,
+					})
+					table.insert(stitchedGraph.adjacencyByPlacement[conn.toPlacementId], {
+						declaredConnectionIndex = index,
+						placementId = conn.toPlacementId,
+						neighborPlacementId = conn.fromPlacementId,
+						viaSocketId = conn.toSocketId,
+						neighborSocketId = conn.fromSocketId,
+					})
+				end
+			end
+		end
+
+		local stitched = #integrityIssues == issueCountBefore
+		if not stitched then
+			addIntegrityIssue(integrityIssues, {
+				code = "unstitchable_connection",
+				message = "Declared connection cannot be stitched into a valid assembly graph",
+				declaredConnectionIndex = index,
 				fromPlacementId = conn.fromPlacementId,
 				fromSocketId = conn.fromSocketId,
 				toPlacementId = conn.toPlacementId,
 				toSocketId = conn.toSocketId,
-				compatible = false,
-				reason = "chunk missing",
 			})
-			continue
 		end
 
-		local fromSocket = getSocketById(fromChunk, conn.fromSocketId)
-		local toSocket = getSocketById(toChunk, conn.toSocketId)
-		if fromSocket == nil or toSocket == nil then
-			table.insert(resolvedConnections, {
-				fromPlacementId = conn.fromPlacementId,
-				fromSocketId = conn.fromSocketId,
-				toPlacementId = conn.toPlacementId,
-				toSocketId = conn.toSocketId,
-				compatible = false,
-				reason = "socket missing",
-			})
-			continue
+		local resolvedReason: string? = nil
+		if not stitched then
+			resolvedReason = compatibilityReason
 		end
 
-		local compatible, reason = RealmChunkAssemblySchema.AreSocketsCompatible(
-			fromSocket.compatibility,
-			toSocket.compatibility
-		)
 		table.insert(resolvedConnections, {
 			fromPlacementId = conn.fromPlacementId,
 			fromSocketId = conn.fromSocketId,
 			toPlacementId = conn.toPlacementId,
 			toSocketId = conn.toSocketId,
-			compatible = compatible,
-			reason = reason,
+			declaredConnectionIndex = index,
+			stitched = stitched,
+			compatible = stitched,
+			reason = resolvedReason,
 		})
 	end
+
+	local integrity: AssemblyIntegrityResult = {
+		passed = #integrityIssues == 0,
+		issues = integrityIssues,
+	}
 
 	return {
 		descriptor = descriptor,
 		placements = input.placements,
 		resolvedConnections = resolvedConnections,
+		stitchedGraph = stitchedGraph,
+		integrity = integrity,
 	}
 end
 

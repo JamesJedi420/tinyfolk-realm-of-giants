@@ -1,7 +1,8 @@
 --!strict
 
 local RealmChunkAssemblySchema = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmChunkAssemblySchema")
-local RealmAssemblyPrototypeFixture = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmAssemblyPrototypeFixture")
+local RealmAssemblyPrototypeFixture =
+	require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmAssemblyPrototypeFixture")
 local RealmTopologyValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmTopologyValidator")
 
 local function assertEqual(actual, expected, label)
@@ -16,6 +17,15 @@ local function assertTrue(value, label)
 	if not value then
 		error("assertTrue failed [" .. label .. "]")
 	end
+end
+
+local function assertIssueCode(output, expectedCode, label)
+	for _, issue in output.integrity.issues do
+		if issue.code == expectedCode then
+			return
+		end
+	end
+	error("assertIssueCode failed [" .. label .. "]: missing code=" .. expectedCode)
 end
 
 local function run()
@@ -101,6 +111,103 @@ local function run()
 		local result = RealmTopologyValidator.ValidateRealm(descriptor, validationConfig)
 		assertTrue(type(result.passed) == "boolean", "block6 validator returned result")
 		assertTrue(#result.results > 0, "block6 validator produced checks")
+	end
+
+	-- BLOCK 7: Valid two-chunk connection stitches into stable graph output.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, true, "block7 integrity pass")
+		assertEqual(#output.stitchedGraph.edges, 1, "block7 stitched edge count")
+		assertEqual(#output.stitchedGraph.adjacencyByPlacement["P_Start"], 1, "block7 start adjacency count")
+		assertEqual(
+			output.stitchedGraph.adjacencyByPlacement["P_Start"][1].neighborPlacementId,
+			"P_Exit",
+			"block7 adjacency neighbor"
+		)
+	end
+
+	-- BLOCK 8: Missing chunk reference is reported deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetMissingChunkAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, false, "block8 integrity fail")
+		assertIssueCode(output, "missing_chunk_reference", "block8 missing chunk issue")
+		assertIssueCode(output, "unstitchable_connection", "block8 unstitchable issue")
+	end
+
+	-- BLOCK 9: Missing socket reference is reported deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetMissingSocketAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, false, "block9 integrity fail")
+		assertIssueCode(output, "missing_socket_reference", "block9 missing socket issue")
+		assertIssueCode(output, "unstitchable_connection", "block9 unstitchable issue")
+	end
+
+	-- BLOCK 10: Incompatible sockets are reported deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetIncompatibleSocketAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, false, "block10 integrity fail")
+		assertIssueCode(output, "incompatible_socket_connection", "block10 incompatible issue")
+		assertIssueCode(output, "unstitchable_connection", "block10 unstitchable issue")
+	end
+
+	-- BLOCK 11: Duplicate socket use is reported deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetDuplicateSocketUseAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, false, "block11 integrity fail")
+		assertIssueCode(output, "duplicate_socket_use", "block11 duplicate socket issue")
+		assertIssueCode(output, "unstitchable_connection", "block11 unstitchable issue")
+	end
+
+	-- BLOCK 12: Self-connection behavior is explicit and testable.
+	do
+		local disallowed = RealmAssemblyPrototypeFixture.GetSelfConnectionAssemblyInput(false)
+		local outputA = RealmChunkAssemblySchema.BuildAssemblyOutput(disallowed)
+		assertEqual(outputA.integrity.passed, false, "block12 disallowed self integrity fail")
+		assertIssueCode(outputA, "self_connection_not_allowed", "block12 self disallowed issue")
+
+		local allowed = RealmAssemblyPrototypeFixture.GetSelfConnectionAssemblyInput(true)
+		local outputB = RealmChunkAssemblySchema.BuildAssemblyOutput(allowed)
+		assertEqual(outputB.integrity.passed, true, "block12 allowed self integrity pass")
+		assertEqual(#outputB.stitchedGraph.edges, 1, "block12 allowed self stitched edge")
+	end
+
+	-- BLOCK 13: Repeated runs produce identical stitched graph and integrity output.
+	do
+		local inputA = RealmAssemblyPrototypeFixture.GetDuplicateSocketUseAssemblyInput()
+		local inputB = RealmAssemblyPrototypeFixture.GetDuplicateSocketUseAssemblyInput()
+		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(inputA)
+		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(inputB)
+		assertEqual(#outA.stitchedGraph.edges, #outB.stitchedGraph.edges, "block13 stitched edge count stable")
+		assertEqual(#outA.integrity.issues, #outB.integrity.issues, "block13 issue count stable")
+		assertEqual(outA.integrity.issues[1].code, outB.integrity.issues[1].code, "block13 first issue code stable")
+		assertEqual(
+			outA.integrity.issues[1].message,
+			outB.integrity.issues[1].message,
+			"block13 first issue message stable"
+		)
+	end
+
+	-- BLOCK 14: Validator handoff still works for a valid assembled output.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.integrity.passed, true, "block14 integrity pass")
+		local descriptor = RealmChunkAssemblySchema.ToRealmDescriptor(output)
+		local validationConfig: RealmTopologyValidator.RealmValidationConfig = {
+			escapeTriggerRadiusStuds = 10,
+			boardInteractionRangeStuds = 20,
+			stationActivationRangeStuds = 16,
+			constructionInteractionRangeStuds = 16,
+			requiredSpecialistStationIds = {},
+			constructionSiteIds = {},
+		}
+		local result = RealmTopologyValidator.ValidateRealm(descriptor, validationConfig)
+		assertTrue(type(result.passed) == "boolean", "block14 validator returned result")
 	end
 
 	print("realm_chunk_assembly_schema: all checks passed")

@@ -44,7 +44,12 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 			},
 			controlZones = {},
 			captureZones = {
-				{ name = "GiantCaptureZone_A", position = { x = 40, y = 0, z = 20 }, radius = 10, tag = "GiantCapture" },
+				{
+					name = "GiantCaptureZone_A",
+					position = { x = 40, y = 0, z = 20 },
+					radius = 10,
+					tag = "GiantCapture",
+				},
 			},
 			props = {
 				{ name = "Cover_A", position = { x = 10, y = 0, z = -8 }, propType = "cover" },
@@ -130,6 +135,61 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 			},
 		},
 	}
+end
+
+function Fixture.GetMissingChunkAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Exit"] = nil
+	return input
+end
+
+function Fixture.GetMissingSocketAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.declaredConnections[1].toSocketId = "missing_socket"
+	return input
+end
+
+function Fixture.GetIncompatibleSocketAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Exit"].sockets[1].compatibility.connectionClass = "route_side"
+	return input
+end
+
+function Fixture.GetDuplicateSocketUseAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+	local input = Fixture.GetPrototypeAssemblyInput()
+	table.insert(input.declaredConnections, {
+		fromPlacementId = "P_Start",
+		fromSocketId = "east_path",
+		toPlacementId = "P_Exit",
+		toSocketId = "west_path",
+	})
+	return input
+end
+
+function Fixture.GetSelfConnectionAssemblyInput(allowSelfConnection: boolean?): RealmChunkAssemblySchema.AssemblyInput
+	local input = Fixture.GetPrototypeAssemblyInput()
+	table.insert(input.chunkLibrary["Chunk_Start"].sockets, {
+		socketId = "west_path_self",
+		localPosition = { x = -60, y = 0, z = 0 },
+		localForward = { x = -1, y = 0, z = 0 },
+		compatibility = {
+			connectionClass = "route_main",
+			socketRole = "female",
+			lane = "main",
+			elevationTier = 0,
+		},
+		tags = { "PrimaryRoute" },
+	})
+	input.declaredConnections = {
+		{
+			fromPlacementId = "P_Start",
+			fromSocketId = "east_path",
+			toPlacementId = "P_Start",
+			toSocketId = "west_path_self",
+			allowSelfConnection = allowSelfConnection,
+		},
+	}
+	return input
 end
 
 return Fixture
