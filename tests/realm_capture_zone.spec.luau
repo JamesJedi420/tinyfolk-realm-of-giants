@@ -26,6 +26,8 @@ local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
 	minimumCaptureRadiusStuds = 8,
 	maximumCaptureRadiusStuds = 25,
 	minimumCaptureZoneGapStuds = 5,
+	captureZoneClusterRadiusStuds = 40,
+	maximumCaptureZoneNeighborsInClusterRadius = 2,
 }
 
 -- Block 1: Vacuous pass (empty captureZones)
@@ -970,3 +972,145 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 60 blocks passed")
+
+-- ── Slice 21: capture_zone_cluster_density_cap ──────────────────────────────
+-- Rule: for each GiantCapture zone, count how many other GiantCapture zone
+-- centers are within captureZoneClusterRadiusStuds.
+-- Fail if count exceeds maximumCaptureZoneNeighborsInClusterRadius.
+-- Boundary pass at exact maximum is allowed.
+-- Non-GiantCapture zones are ignored.
+
+-- Block 61: no capture zones -> vacuous pass
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 61: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 61: Reason should be nil")
+end
+
+-- Block 62: single capture zone -> vacuous pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 62: Single GiantCapture zone should vacuously pass")
+	assert(result.reason == nil, "Block 62: Reason should be nil")
+end
+
+-- Block 63: two zones inside radius but under cap -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- radius=40, each has 1 neighbor -> 1 <= max 2
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 63: Neighbor count below cap should pass")
+	assert(result.reason == nil, "Block 63: Reason should be nil")
+end
+
+-- Block 64: one zone with too many neighbors inside radius -> fail
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = -20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 0, y = 0, z = 20 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- Zone A has 3 neighbors within 40 -> exceeds max 2
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == false, "Block 64: Too many local neighbors should fail")
+	assert(result.reason ~= nil, "Block 64: Reason should describe violation")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 64: Reason should identify center zone")
+end
+
+-- Block 65: exact boundary at max neighbors -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = -20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- Zone A has exactly 2 neighbors within 40 -> boundary pass
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 65: Exact max neighbor boundary should pass")
+	assert(result.reason == nil, "Block 65: Reason should be nil")
+end
+
+-- Block 66: neighbors outside cluster radius do not count -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 45, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 0, y = 0, z = 45 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = -45, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- Distances from A are 45 (>40), so neighbor count is 0
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 66: Neighbors outside radius must not count")
+	assert(result.reason == nil, "Block 66: Reason should be nil")
+end
+
+-- Block 67: mixed tags: non-GiantCapture ignored -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "OtherZone_C", position = { x = -20, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+		{ name = "OtherZone_D", position = { x = 0, y = 0, z = 20 }, radius = 10, tag = "GiantControl" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- Counting only GiantCapture -> each has 1 neighbor within 40 -> pass
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == true, "Block 67: Non-GiantCapture zones should be ignored")
+	assert(result.reason == nil, "Block 67: Reason should be nil")
+end
+
+-- Block 68: 3D distance case uses full 3D counting
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 0, y = 30, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 0, y = -30, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 0, y = 0, z = 30 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- For A, all B/C/D are within 30 in 3D -> 3 neighbors > max 2 -> fail
+	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(result.passed == false, "Block 68: 3D neighbor counting should fail with 3 neighbors inside radius")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 68: Reason should identify center zone")
+end
+
+-- Block 69: deterministic failure reporting / stable repeat behavior
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = -20, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 0, y = 0, z = 20 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	local resultA = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	local resultB = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
+	assert(resultA.passed == false, "Block 69: First run should fail")
+	assert(resultB.passed == false, "Block 69: Second run should fail")
+	assert(resultA.reason == resultB.reason, "Block 69: Failure reason should be deterministic and stable")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 69 blocks passed")

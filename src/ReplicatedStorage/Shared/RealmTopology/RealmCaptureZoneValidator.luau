@@ -17,6 +17,8 @@ export type CaptureZoneConfig = {
 	minimumCaptureRadiusStuds: number,
 	maximumCaptureRadiusStuds: number,
 	minimumCaptureZoneGapStuds: number,
+	captureZoneClusterRadiusStuds: number,
+	maximumCaptureZoneNeighborsInClusterRadius: number,
 }
 
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
@@ -367,6 +369,66 @@ local function captureZoneMinimumSpacing(descriptor: RealmDescriptor, config: Ca
 	}
 end
 
+-- Slice 21: capture_zone_cluster_density_cap
+-- Rule: for each GiantCapture zone, count how many other GiantCapture zone
+-- centers are within config.captureZoneClusterRadiusStuds.
+-- Fail when count exceeds config.maximumCaptureZoneNeighborsInClusterRadius.
+-- Boundary pass when count equals the configured maximum.
+-- Non-GiantCapture zones are ignored.
+-- Vacuous pass when fewer than two GiantCapture zones exist.
+local function captureZoneClusterDensityCap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	for _, zone in ipairs(descriptor.captureZones) do
+		if zone.tag == "GiantCapture" then
+			table.insert(giantZones, zone)
+		end
+	end
+
+	if #giantZones < 2 then
+		return {
+			id = "capture_zone_cluster_density_cap",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for i = 1, #giantZones do
+		local centerZone = giantZones[i]
+		local neighborCount = 0
+		for j = 1, #giantZones do
+			if i == j then
+				continue
+			end
+			local d = distance(centerZone.position, giantZones[j].position)
+			if d <= config.captureZoneClusterRadiusStuds then
+				neighborCount += 1
+			end
+		end
+
+		if neighborCount > config.maximumCaptureZoneNeighborsInClusterRadius then
+			return {
+				id = "capture_zone_cluster_density_cap",
+				passed = false,
+				reason = "Capture zone '"
+					.. centerZone.name
+					.. "' has "
+					.. tostring(neighborCount)
+					.. " neighboring GiantCapture zone center(s) within "
+					.. tostring(config.captureZoneClusterRadiusStuds)
+					.. " studs (maximum allowed: "
+					.. tostring(config.maximumCaptureZoneNeighborsInClusterRadius)
+					.. ")",
+			}
+		end
+	end
+
+	return {
+		id = "capture_zone_cluster_density_cap",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
@@ -375,4 +437,5 @@ return {
 	captureZoneEscapePerimeterClearance = captureZoneEscapePerimeterClearance,
 	captureZoneOverlap = captureZoneOverlap,
 	captureZoneMinimumSpacing = captureZoneMinimumSpacing,
+	captureZoneClusterDensityCap = captureZoneClusterDensityCap,
 }
