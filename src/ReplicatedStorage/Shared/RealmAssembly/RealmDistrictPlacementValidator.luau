@@ -36,6 +36,8 @@ export type DistrictPlacementRejectReason = {
 	-- Slice 5 fields (nil for Slice 1/2/3/4 reasons).
 	conflictingEnvironmentClass: string?,
 	conflictingTraversalDensityClass: string?,
+	-- Slice 6 fields (nil for Slice 1/2/3/4/5 reasons).
+	conflictingRecurringStructureTag: string?,
 }
 
 -- Per-category exclusion radii (studs) for Slice 3 proximity gate.
@@ -57,11 +59,13 @@ export type DistrictPlacementResult = {
 	rejectReasons: { DistrictPlacementRejectReason },
 }
 
--- Allowed environment/density classes for a district placement (Slice 5).
+-- Allowed environment/density classes and disallowed recurring-structure tags
+-- for a district placement (Slices 5-6).
 -- Empty array for a field = that policy dimension is not enforced.
 export type DistrictPlacementPolicyConfig = {
 	allowedEnvironmentClasses: { string },
 	allowedTraversalDensityClasses: { string },
+	disallowedRecurringStructureTags: { string }?,
 }
 
 -- Returns the Euclidean distance from a world-space point to the nearest surface
@@ -511,7 +515,14 @@ local function checkRouteGraphEdgePreservation(
 				local found = false
 				for _, box in ipairs(proposed) do
 					if not found then
-						if lineSegmentIntersectsAABB(fromNode.position, toNode.position, box.worldCenter, box.halfExtents) then
+						if
+							lineSegmentIntersectsAABB(
+								fromNode.position,
+								toNode.position,
+								box.worldCenter,
+								box.halfExtents
+							)
+						then
 							table.insert(rejectReasons, {
 								code = "route_edge_intersection",
 								message = "Proposed district intersects protected route edge",
@@ -611,6 +622,60 @@ local function checkEnvironmentAndDensityPolicy(
 	end
 end
 
+-- Slice 6: recurring-structure policy gate.
+-- Rejects any proposed district box that overlaps an assembled chunk whose
+-- recurringStructureTags contain at least one disallowed tag.
+-- Each disallowed tag found in an overlapping chunk produces one reason.
+local function checkRecurringStructurePolicy(
+	request: DistrictPlacementRequest,
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	policyConfig: DistrictPlacementPolicyConfig,
+	rejectReasons: { DistrictPlacementRejectReason }
+)
+	if policyConfig.disallowedRecurringStructureTags == nil or #policyConfig.disallowedRecurringStructureTags == 0 then
+		return
+	end
+	local disallowedTags: { string } = policyConfig.disallowedRecurringStructureTags
+	local disallowedSet: { [string]: boolean } = {}
+	for _, tag in ipairs(disallowedTags) do
+		disallowedSet[tag] = true
+	end
+	for _, districtBox in ipairs(request.proposedOccupiedSpace) do
+		for _, assembledBox in ipairs(assemblyOutput.resolvedOccupiedSpace) do
+			if
+				aabbsOverlap(
+					districtBox.worldCenter,
+					districtBox.halfExtents,
+					assembledBox.worldCenter,
+					assembledBox.halfExtents
+				)
+			then
+				local meta = assemblyOutput.resolvedMetadataByPlacement[assembledBox.placementId]
+				if meta ~= nil and meta.recurringStructureTags ~= nil then
+					for _, structureTag in ipairs(meta.recurringStructureTags) do
+						if disallowedSet[structureTag] then
+							table.insert(rejectReasons, {
+								code = "recurring_structure_tag_exclusion",
+								message = "Proposed district overlaps placement '"
+									.. assembledBox.placementId
+									.. "' which carries disallowed recurring-structure tag '"
+									.. structureTag
+									.. "'",
+								districtBoxTag = districtBox.tag,
+								conflictingPlacementId = assembledBox.placementId,
+								conflictingChunkId = assembledBox.chunkId,
+								conflictingBoxTag = assembledBox.tag,
+								isLandmarkConflict = false,
+								conflictingRecurringStructureTag = structureTag,
+							})
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 -- Validate a district placement request against an assembled realm output.
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
@@ -618,6 +683,7 @@ end
 --   Slice 3: critical-point proximity (when criticalConfig is provided)
 --   Slice 4: route-graph edge preservation
 --   Slice 5: environment-class and traversal-density policy (when policyConfig is provided)
+--   Slice 6: recurring-structure tag policy (when policyConfig is provided)
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
 	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
@@ -634,6 +700,7 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 	checkRouteGraphEdgePreservation(request, assemblyOutput, rejectReasons)
 	if policyConfig ~= nil then
 		checkEnvironmentAndDensityPolicy(request, assemblyOutput, policyConfig, rejectReasons)
+		checkRecurringStructurePolicy(request, assemblyOutput, policyConfig, rejectReasons)
 	end
 
 	return {

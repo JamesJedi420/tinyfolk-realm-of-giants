@@ -949,6 +949,242 @@ local function run()
 		assertHasRejectCode(result, "environment_class_exclusion", "block33 slice5 code present")
 	end
 
+	-- ── Slice 6: recurring-structure policy gate ──────────────────────────────
+
+	-- Fixture reference (recurringStructureTags):
+	--   P_Start: { "spawn_chamber", "entry_hub" }   box: center=(30,0,0) half=(60,4,40)
+	--   P_Exit:  { "exit_chamber" }                 box: center=(90,0,0) half=(60,4,40)
+	--
+	-- Overlap positions (x, half=1, y=0, z=0):
+	--   x=0   → P_Start only
+	--   x=120 → P_Exit only
+	--   x=60  → both
+
+	-- BLOCK 34: nil disallowedRecurringStructureTags (empty list) → no Slice 6 rejection.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = {},
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_EmptyPolicy",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local hasRS = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "recurring_structure_tag_exclusion" then
+				hasRS = true
+			end
+		end
+		assertFalse(hasRS, "block34 no RS rejection when disallowed list empty")
+	end
+
+	-- BLOCK 35: Overlapping P_Start; disallow "entry_hub" (present) → rejects.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "entry_hub" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_EntryHubDisallowed",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block35 rejected")
+		assertHasRejectCode(result, "recurring_structure_tag_exclusion", "block35 code present")
+		local rsReason = nil
+		for _, reason in result.rejectReasons do
+			if reason.code == "recurring_structure_tag_exclusion" then
+				rsReason = reason
+			end
+		end
+		assertTrue(rsReason ~= nil, "block35 rsReason found")
+		if rsReason ~= nil then
+			assertEqual(rsReason.conflictingRecurringStructureTag, "entry_hub", "block35 conflicting tag")
+			assertEqual(rsReason.conflictingPlacementId, "P_Start", "block35 conflicting placement")
+		end
+	end
+
+	-- BLOCK 36: Overlapping P_Start; disallow "exit_chamber" (not present on P_Start) → passes Slice 6.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "exit_chamber" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_ExitChamberNotOnStart",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local hasRS = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "recurring_structure_tag_exclusion" then
+				hasRS = true
+			end
+		end
+		assertFalse(hasRS, "block36 no RS rejection when disallowed tag absent from overlapping chunk")
+	end
+
+	-- BLOCK 37: Chunk with multiple tags → fails when any disallowed tag is present.
+	-- P_Start has both "spawn_chamber" and "entry_hub"; disallow only "spawn_chamber".
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "spawn_chamber" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_SpawnChamberDisallowed",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block37 rejected on one disallowed tag in multi-tag chunk")
+		assertHasRejectCode(result, "recurring_structure_tag_exclusion", "block37 code present")
+	end
+
+	-- BLOCK 38: Box at x=60 overlaps both P_Start and P_Exit; disallow "entry_hub".
+	-- P_Start carries "entry_hub" → 1 reason; P_Exit does not → no extra reason for P_Exit.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "entry_hub" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_BothOverlap",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 60, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block38 rejected")
+		local rsCount = 0
+		for _, reason in result.rejectReasons do
+			if reason.code == "recurring_structure_tag_exclusion" then
+				rsCount += 1
+			end
+		end
+		-- Only P_Start carries "entry_hub" → exactly one RS reason.
+		assertEqual(rsCount, 1, "block38 exactly one RS reason (only P_Start has entry_hub)")
+	end
+
+	-- BLOCK 39: Both "spawn_chamber" and "exit_chamber" disallowed; box at x=60 overlaps both.
+	-- P_Start fires for "spawn_chamber"; P_Exit fires for "exit_chamber" → 2 reasons total.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "spawn_chamber", "exit_chamber" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_MultiReason",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 60, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block39 rejected")
+		local rsCount = 0
+		for _, reason in result.rejectReasons do
+			if reason.code == "recurring_structure_tag_exclusion" then
+				rsCount += 1
+			end
+		end
+		assertEqual(rsCount, 2, "block39 two RS reasons (one per chunk)")
+	end
+
+	-- BLOCK 40: Stability — repeated runs produce identical RS reason ordering.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "spawn_chamber", "entry_hub", "exit_chamber" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_Stability",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 60, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertEqual(outA.accepted, outB.accepted, "block40 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block40 count stable")
+		for i, reasonA in ipairs(outA.rejectReasons) do
+			local reasonB = outB.rejectReasons[i]
+			assertEqual(reasonA.code, reasonB.code, "block40 code stable " .. tostring(i))
+			assertEqual(
+				reasonA.conflictingRecurringStructureTag,
+				reasonB.conflictingRecurringStructureTag,
+				"block40 tag stable " .. tostring(i)
+			)
+		end
+	end
+
+	-- BLOCK 41: Slice 6 coexists with Slice 1 occupied_space_overlap.
+	-- x=120 overlaps P_Exit (Slice 1 fires) and P_Exit carries "exit_chamber" (Slice 6 fires).
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = { "exit_chamber" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RS_Slice1And6Coexist",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 2, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block41 rejected")
+		assertHasRejectCode(result, "occupied_space_overlap", "block41 slice1 code present")
+		assertHasRejectCode(result, "recurring_structure_tag_exclusion", "block41 slice6 code present")
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
