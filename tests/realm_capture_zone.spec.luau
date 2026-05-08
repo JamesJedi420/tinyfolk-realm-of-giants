@@ -684,3 +684,140 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 41 blocks passed")
+
+-- ── Slice 16: capture_zone_overlap ───────────────────────────────────────────
+-- Rule: fail if dist < r1 + r2 for any pair of GiantCapture zones.
+-- Touching (dist == r1 + r2) is allowed.
+-- Non-GiantCapture zones are ignored.
+-- Vacuous pass when fewer than two GiantCapture zones exist.
+
+-- Block 42: Vacuous pass (no capture zones)
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == true, "Block 42: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 42: Reason should be nil")
+end
+
+-- Block 43: Vacuous pass (single capture zone)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == true, "Block 43: Single zone should vacuously pass")
+	assert(result.reason == nil, "Block 43: Reason should be nil")
+end
+
+-- Block 44: Two clearly disjoint zones (dist >> r1 + r2)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- dist=200, r1+r2=20 → 200 >= 20 → pass
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == true, "Block 44: Clearly disjoint zones should pass")
+	assert(result.reason == nil, "Block 44: Reason should be nil")
+end
+
+-- Block 45: Two overlapping zones (dist < r1 + r2)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 20, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- dist=20, r1+r2=30 → 20 < 30 → fail
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == false, "Block 45: Overlapping zones should fail")
+	assert(result.reason ~= nil, "Block 45: Reason should describe the violation")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 45: Reason should include zone A name")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 45: Reason should include zone B name")
+end
+
+-- Block 46: Exact boundary touch (dist == r1 + r2) — allowed, should pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 30, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- dist=30, r1+r2=30 → 30 >= 30 → pass
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == true, "Block 46: Boundary touch (dist == r1+r2) should pass")
+	assert(result.reason == nil, "Block 46: Reason should be nil")
+end
+
+-- Block 47: Multiple zones with one bad pair
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 210, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- A-B: dist=200, r1+r2=20 → pass
+	-- A-C: dist=210, r1+r2=20 → pass
+	-- B-C: dist=10, r1+r2=20 → 10 < 20 → fail
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == false, "Block 47: Should fail when any pair overlaps")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 47: Reason should include zone B")
+	assert(string.find(result.reason, "GiantCaptureZone_C") ~= nil, "Block 47: Reason should include zone C")
+end
+
+-- Block 48: 3D overlap case (Y-axis separation)
+do
+	local descriptor = makeDescriptor({
+		-- center at (0,0,0) r=10 and center at (0,15,0) r=10: dist=15, r1+r2=20 → 15 < 20 → fail
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 0, y = 15, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == false, "Block 48: 3D Y-axis overlap (dist=15 < r1+r2=20) should fail")
+end
+
+-- Block 49: Non-GiantCapture zone ignored (overlapping with a differently tagged zone)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		-- Positioned to overlap with A, but tag is GiantControl — should be ignored
+		{ name = "OtherZone_B", position = { x = 5, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- Only one GiantCapture zone → vacuous pass (fewer than 2 GiantCapture zones)
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == true, "Block 49: Non-GiantCapture zone must be ignored; only one GiantCapture → vacuous pass")
+	assert(result.reason == nil, "Block 49: Reason should be nil")
+end
+
+-- Block 50: Deterministic pair reporting (first violating pair in index order is reported)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 5, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 3, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- A-B checked first (i=1, j=2): dist=5, r1+r2=20 → fail immediately with A and B
+	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
+	assert(result.passed == false, "Block 50: Should fail on first violating pair")
+	-- The first pair in iteration order (A, B) must be reported, not C
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 50: First zone in pair should be A")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 50: Second zone in pair should be B")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 50 blocks passed")

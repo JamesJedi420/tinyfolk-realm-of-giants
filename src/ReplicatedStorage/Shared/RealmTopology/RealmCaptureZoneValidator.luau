@@ -264,10 +264,65 @@ local function captureZoneEscapePerimeterClearance(descriptor: RealmDescriptor, 
 	}
 end
 
+-- Slice 16: capture_zone_overlap
+-- Rule: for each unique pair of GiantCapture zones, fail if dist < r1 + r2.
+-- Touching at exactly one point (dist == r1 + r2) is allowed.
+-- Non-GiantCapture zones are ignored, matching the convention used by
+-- captureZoneRadiusBounds, captureZoneSpawnPerimeterClearance, and
+-- captureZoneEscapePerimeterClearance.
+-- Vacuous pass when fewer than two GiantCapture zones exist.
+local function captureZoneOverlap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	-- Collect only GiantCapture zones so pair indices are stable and deterministic.
+	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	for _, zone in ipairs(descriptor.captureZones) do
+		if zone.tag == "GiantCapture" then
+			table.insert(giantZones, zone)
+		end
+	end
+
+	if #giantZones < 2 then
+		return {
+			id = "capture_zone_overlap",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for i = 1, #giantZones - 1 do
+		for j = i + 1, #giantZones do
+			local a = giantZones[i]
+			local b = giantZones[j]
+			local d = distance(a.position, b.position)
+			if d < a.radius + b.radius then
+				return {
+					id = "capture_zone_overlap",
+					passed = false,
+					reason = "Capture zones '"
+						.. a.name
+						.. "' and '"
+						.. b.name
+						.. "' overlap (dist="
+						.. string.format("%.2f", d)
+						.. ", r1+r2="
+						.. tostring(a.radius + b.radius)
+						.. ")",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_overlap",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
 	captureZoneRadiusBounds = captureZoneRadiusBounds,
 	captureZoneSpawnPerimeterClearance = captureZoneSpawnPerimeterClearance,
 	captureZoneEscapePerimeterClearance = captureZoneEscapePerimeterClearance,
+	captureZoneOverlap = captureZoneOverlap,
 }
