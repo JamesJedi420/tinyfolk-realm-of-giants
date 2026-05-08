@@ -19,6 +19,7 @@ export type CaptureZoneConfig = {
 	minimumCaptureZoneGapStuds: number,
 	captureZoneClusterRadiusStuds: number,
 	maximumCaptureZoneNeighborsInClusterRadius: number,
+	maximumCaptureZonesPerRealm: number,
 }
 
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
@@ -429,6 +430,37 @@ local function captureZoneClusterDensityCap(descriptor: RealmDescriptor, config:
 	}
 end
 
+-- Slice 22: capture_zone_total_cap
+-- Rule: count total GiantCapture zones in descriptor.captureZones and fail when
+-- the filtered total exceeds config.maximumCaptureZonesPerRealm.
+-- Boundary pass at exact maximum.
+-- Non-GiantCapture zones are ignored.
+local function captureZoneTotalCap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	local giantCaptureCount = 0
+	for _, zone in ipairs(descriptor.captureZones) do
+		if zone.tag == "GiantCapture" then
+			giantCaptureCount += 1
+		end
+	end
+
+	if giantCaptureCount > config.maximumCaptureZonesPerRealm then
+		return {
+			id = "capture_zone_total_cap",
+			passed = false,
+			reason = "Total GiantCapture zone count "
+				.. tostring(giantCaptureCount)
+				.. " exceeds maximumCaptureZonesPerRealm "
+				.. tostring(config.maximumCaptureZonesPerRealm),
+		}
+	end
+
+	return {
+		id = "capture_zone_total_cap",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
@@ -438,4 +470,5 @@ return {
 	captureZoneOverlap = captureZoneOverlap,
 	captureZoneMinimumSpacing = captureZoneMinimumSpacing,
 	captureZoneClusterDensityCap = captureZoneClusterDensityCap,
+	captureZoneTotalCap = captureZoneTotalCap,
 }

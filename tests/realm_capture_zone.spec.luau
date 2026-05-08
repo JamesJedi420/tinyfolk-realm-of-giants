@@ -28,6 +28,7 @@ local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
 	minimumCaptureZoneGapStuds = 5,
 	captureZoneClusterRadiusStuds = 40,
 	maximumCaptureZoneNeighborsInClusterRadius = 2,
+	maximumCaptureZonesPerRealm = 4,
 }
 
 -- Block 1: Vacuous pass (empty captureZones)
@@ -1114,3 +1115,114 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 69 blocks passed")
+
+-- ── Slice 22: capture_zone_total_cap ────────────────────────────────────────
+-- Rule: count only GiantCapture zones and fail when the total exceeds
+-- maximumCaptureZonesPerRealm.
+
+-- Block 70: no capture zones -> pass
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == true, "Block 70: No GiantCapture zones should pass")
+	assert(result.reason == nil, "Block 70: Reason should be nil")
+end
+
+-- Block 71: one capture zone under cap -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == true, "Block 71: Count 1 <= max 4 should pass")
+	assert(result.reason == nil, "Block 71: Reason should be nil")
+end
+
+-- Block 72: exact boundary at max -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 300, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == true, "Block 72: Count 4 == max 4 should pass")
+	assert(result.reason == nil, "Block 72: Reason should be nil")
+end
+
+-- Block 73: above max -> fail
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 300, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_E", position = { x = 400, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 700, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == false, "Block 73: Count 5 > max 4 should fail")
+	assert(result.reason ~= nil, "Block 73: Reason should describe the violation")
+	assert(string.find(result.reason, "5") ~= nil, "Block 73: Reason should include total count")
+end
+
+-- Block 74: mixed tags under cap after filtering -> pass
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "OtherZone_C", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+		{ name = "OtherZone_D", position = { x = 300, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 500, y = 0, z = 0 } },
+	})
+	-- Filtered GiantCapture count is 2 -> pass
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == true, "Block 74: Non-GiantCapture zones should be ignored in total count")
+	assert(result.reason == nil, "Block 74: Reason should be nil")
+end
+
+-- Block 75: mixed tags above cap after filtering -> fail
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 300, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_E", position = { x = 400, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "OtherZone_F", position = { x = 500, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 700, y = 0, z = 0 } },
+	})
+	-- Filtered GiantCapture count is 5 -> fail
+	local result = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(result.passed == false, "Block 75: Filtered GiantCapture count above max should fail")
+end
+
+-- Block 76: deterministic failure reporting / stable repeat behavior
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 200, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_D", position = { x = 300, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_E", position = { x = 400, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 700, y = 0, z = 0 } },
+	})
+	local resultA = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	local resultB = RealmCaptureZoneValidator.captureZoneTotalCap(descriptor, config)
+	assert(resultA.passed == false, "Block 76: First run should fail")
+	assert(resultB.passed == false, "Block 76: Second run should fail")
+	assert(resultA.reason == resultB.reason, "Block 76: Failure reason should be deterministic and stable")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 76 blocks passed")
