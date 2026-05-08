@@ -14,6 +14,8 @@ export type CheckResult = {
 export type CaptureZoneConfig = {
 	minimumSpawnSeparationStuds: number,
 	minimumEscapeSeparationStuds: number,
+	minimumCaptureRadiusStuds: number,
+	maximumCaptureRadiusStuds: number,
 }
 
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
@@ -113,7 +115,55 @@ local function captureZoneEscapeSeparation(descriptor: RealmDescriptor, config: 
 	}
 end
 
+local function captureZoneRadiusBounds(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_radius_bounds",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for _, captureZone in ipairs(descriptor.captureZones) do
+		if captureZone.tag ~= "GiantCapture" then
+			continue
+		end
+		if captureZone.radius < config.minimumCaptureRadiusStuds then
+			return {
+				id = "capture_zone_radius_bounds",
+				passed = false,
+				reason = "Capture zone '"
+					.. captureZone.name
+					.. "' radius "
+					.. tostring(captureZone.radius)
+					.. " is below minimum "
+					.. tostring(config.minimumCaptureRadiusStuds)
+					.. " studs",
+			}
+		elseif captureZone.radius > config.maximumCaptureRadiusStuds then
+			return {
+				id = "capture_zone_radius_bounds",
+				passed = false,
+				reason = "Capture zone '"
+					.. captureZone.name
+					.. "' radius "
+					.. tostring(captureZone.radius)
+					.. " exceeds maximum "
+					.. tostring(config.maximumCaptureRadiusStuds)
+					.. " studs",
+			}
+		end
+	end
+
+	return {
+		id = "capture_zone_radius_bounds",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
+	captureZoneRadiusBounds = captureZoneRadiusBounds,
 }

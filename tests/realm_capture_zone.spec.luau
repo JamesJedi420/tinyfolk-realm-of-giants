@@ -23,6 +23,8 @@ end
 local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
 	minimumSpawnSeparationStuds = 70,
 	minimumEscapeSeparationStuds = 80,
+	minimumCaptureRadiusStuds = 8,
+	maximumCaptureRadiusStuds = 25,
 }
 
 -- Block 1: Vacuous pass (empty captureZones)
@@ -260,4 +262,121 @@ do
 	assert(result.passed == false, "Block 16: Should use full 3D distance (≈64 studs, < 80)")
 end
 
-print("✓ realm_capture_zone.spec.luau: all 16 blocks passed")
+-- ── Slice 13: capture_zone_radius_bounds ────────────────────────────────────
+
+-- Block 17: Vacuous pass (no capture zones)
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == true, "Block 17: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 17: Reason should be nil")
+end
+
+-- Block 18: Single valid zone (radius within bounds)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == true, "Block 18: Should pass with radius 15 (within [8, 25])")
+	assert(result.reason == nil, "Block 18: Reason should be nil")
+end
+
+-- Block 19: Minimum boundary pass (radius exactly 8)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 8, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == true, "Block 19: Should pass at exact minimum radius 8")
+	assert(result.reason == nil, "Block 19: Reason should be nil")
+end
+
+-- Block 20: Maximum boundary pass (radius exactly 25)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 25, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == true, "Block 20: Should pass at exact maximum radius 25")
+	assert(result.reason == nil, "Block 20: Reason should be nil")
+end
+
+-- Block 21: Below minimum fail (radius 7)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 7, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == false, "Block 21: Should fail with radius 7 (< minimum 8)")
+	assert(result.reason ~= nil, "Block 21: Reason should describe the violation")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 21: Reason should include zone name")
+	assert(string.find(result.reason, "minimum") ~= nil, "Block 21: Reason should mention minimum")
+end
+
+-- Block 22: Above maximum fail (radius 26)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 26, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == false, "Block 22: Should fail with radius 26 (> maximum 25)")
+	assert(result.reason ~= nil, "Block 22: Reason should describe the violation")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 22: Reason should include zone name")
+	assert(string.find(result.reason, "maximum") ~= nil, "Block 22: Reason should mention maximum")
+end
+
+-- Block 23: Multiple zones mixed (one valid, one below minimum)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 300, y = 0, z = 0 }, radius = 5, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
+	assert(result.passed == false, "Block 23: Should fail when any zone violates radius bounds")
+	assert(
+		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
+		"Block 23: Reason should identify the violating zone"
+	)
+end
+
+-- Block 24: Non-GiantCapture tag is ignored
+-- Convention: captureZoneRadiusBounds only validates zones tagged GiantCapture.
+-- Zones with a different tag are skipped, regardless of their radius value.
+do
+	local d4 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 500, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "OtherZone_A", position = { x = 200, y = 0, z = 0 }, radius = 1, tag = "GiantControl" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 500, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 500 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(d4, config)
+	assert(result.passed == true, "Block 24: Non-GiantCapture tagged zones are not validated by this rule")
+	assert(result.reason == nil, "Block 24: Reason should be nil")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 24 blocks passed")
