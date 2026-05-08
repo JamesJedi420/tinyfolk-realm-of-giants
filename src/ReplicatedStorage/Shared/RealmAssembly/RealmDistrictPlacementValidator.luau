@@ -30,6 +30,9 @@ export type DistrictPlacementRejectReason = {
 	-- Slice 3 fields (nil for Slice 1/2 reasons).
 	conflictingCriticalPointName: string?,
 	criticalCategory: string?,
+	-- Slice 4 fields (nil for Slice 1/2/3 reasons).
+	conflictingRouteEdgeFrom: string?,
+	conflictingRouteEdgeTo: string?,
 }
 
 -- Per-category exclusion radii (studs) for Slice 3 proximity gate.
@@ -256,6 +259,125 @@ local function survivingEscapeRoutes(
 	return surviving
 end
 
+-- Returns the closest point on a line segment p1-p2 to a given point.
+local function closestPointOnSegment(
+	point: RealmChunkAssemblySchema.Vector3Data,
+	p1: RealmChunkAssemblySchema.Vector3Data,
+	p2: RealmChunkAssemblySchema.Vector3Data
+): RealmChunkAssemblySchema.Vector3Data
+	local dx = p2.x - p1.x
+	local dy = p2.y - p1.y
+	local dz = p2.z - p1.z
+	local lenSq = dx * dx + dy * dy + dz * dz
+
+	if lenSq == 0 then
+		return p1
+	end
+
+	local t = ((point.x - p1.x) * dx + (point.y - p1.y) * dy + (point.z - p1.z) * dz) / lenSq
+	t = math.max(0, math.min(1, t))
+
+	return {
+		x = p1.x + t * dx,
+		y = p1.y + t * dy,
+		z = p1.z + t * dz,
+	}
+end
+
+-- Returns distance from point to AABB surface (0 if inside).
+local function distPointToAABB(
+	point: RealmChunkAssemblySchema.Vector3Data,
+	center: RealmChunkAssemblySchema.Vector3Data,
+	halfExtents: RealmChunkAssemblySchema.Vector3Data
+): number
+	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
+	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
+	local dz = math.max(0, math.abs(point.z - center.z) - halfExtents.z)
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+-- Returns true if line segment intersects AABB.
+local function lineSegmentIntersectsAABB(
+	p1: RealmChunkAssemblySchema.Vector3Data,
+	p2: RealmChunkAssemblySchema.Vector3Data,
+	boxCenter: RealmChunkAssemblySchema.Vector3Data,
+	boxHalfExtents: RealmChunkAssemblySchema.Vector3Data
+): boolean
+	local closest = closestPointOnSegment(boxCenter, p1, p2)
+	return distPointToAABB(closest, boxCenter, boxHalfExtents) == 0
+end
+
+-- Build protected route edges (spawn-to-escape paths via BFS).
+local function buildProtectedRouteEdges(descriptor: RealmChunkAssemblySchema.RealmDescriptor): { [string]: boolean }
+	local graph = descriptor.routeGraph
+	local protected: { [string]: boolean } = {}
+
+	-- Find spawn and escape nodes.
+	local spawnNodeNames: { [string]: boolean } = {}
+	local escapeNodeNames: { [string]: boolean } = {}
+	for _, node in ipairs(graph.nodes) do
+		if node.nodeType == "spawn" then
+			spawnNodeNames[node.name] = true
+		elseif node.nodeType == "escape" then
+			escapeNodeNames[node.name] = true
+		end
+	end
+
+	-- If no spawns or escapes, no protected edges.
+	if not next(spawnNodeNames) or not next(escapeNodeNames) then
+		return protected
+	end
+
+	-- BFS forward from all spawn nodes.
+	local reachableFromSpawn: { [string]: boolean } = {}
+	local queue: { string } = {}
+	for name in pairs(spawnNodeNames) do
+		table.insert(queue, name)
+		reachableFromSpawn[name] = true
+	end
+
+	local front = 1
+	while front <= #queue do
+		local fromName = queue[front]
+		front = front + 1
+		for _, edge in ipairs(graph.edges) do
+			if edge.from == fromName and not reachableFromSpawn[edge.to] then
+				reachableFromSpawn[edge.to] = true
+				table.insert(queue, edge.to)
+			end
+		end
+	end
+
+	-- BFS backward from all escape nodes (reverse edges).
+	local canReachEscape: { [string]: boolean } = {}
+	queue = {}
+	for name in pairs(escapeNodeNames) do
+		table.insert(queue, name)
+		canReachEscape[name] = true
+	end
+
+	front = 1
+	while front <= #queue do
+		local toName = queue[front]
+		front = front + 1
+		for _, edge in ipairs(graph.edges) do
+			if edge.to == toName and not canReachEscape[edge.from] then
+				canReachEscape[edge.from] = true
+				table.insert(queue, edge.from)
+			end
+		end
+	end
+
+	-- Mark edges as protected if they bridge reachable-from-spawn to reachable-to-escape.
+	for _, edge in ipairs(graph.edges) do
+		if reachableFromSpawn[edge.from] and canReachEscape[edge.to] then
+			protected[edge.from .. "::" .. edge.to] = true
+		end
+	end
+
+	return protected
+end
+
 -- Check Slice 1: occupied-space and landmark exclusion.
 local function checkOccupiedSpaceExclusion(
 	request: DistrictPlacementRequest,
@@ -333,11 +455,81 @@ local function checkRouteEscapePreservation(
 	end
 end
 
+-- Check Slice 4: route-graph edge preservation.
+-- Rejects when proposed occupied space intersects protected route edges.
+local function checkRouteGraphEdgePreservation(
+	request: DistrictPlacementRequest,
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	rejectReasons: { DistrictPlacementRejectReason }
+)
+	local descriptor = assemblyOutput.descriptor
+	local graph = descriptor.routeGraph
+	local proposed = request.proposedOccupiedSpace
+
+	-- Vacuous pass: no route graph.
+	if #graph.nodes == 0 or #graph.edges == 0 then
+		return
+	end
+
+	-- Build the set of protected route edges (spawn-to-escape paths).
+	local protectedEdges = buildProtectedRouteEdges(descriptor)
+
+	-- Vacuous pass: no protected edges.
+	if not next(protectedEdges) then
+		return
+	end
+
+	-- Build a name-to-node map for efficient position lookup.
+	local nodesByName: { [string]: RealmChunkAssemblySchema.NamedNode } = {}
+	for _, node in ipairs(graph.nodes) do
+		nodesByName[node.name] = node
+	end
+
+	-- For each protected edge, check intersection against all proposed boxes.
+	for edgeKey in pairs(protectedEdges) do
+		-- Split the edge key "from::to" into components.
+		local fromIdx = string.find(edgeKey, "::", 1, true)
+		if fromIdx ~= nil then
+			local fromName = string.sub(edgeKey, 1, fromIdx - 1)
+			local toName = string.sub(edgeKey, fromIdx + 2)
+			local fromNode = nodesByName[fromName]
+			local toNode = nodesByName[toName]
+
+			-- Sanity check (should not happen if buildProtectedRouteEdges is correct).
+			if fromNode ~= nil and toNode ~= nil then
+				-- Test each proposed box against this edge segment.
+				local found = false
+				for _, box in ipairs(proposed) do
+					if not found then
+						if lineSegmentIntersectsAABB(fromNode.position, toNode.position, box.worldCenter, box.halfExtents) then
+							table.insert(rejectReasons, {
+								code = "route_edge_intersection",
+								message = "Proposed district intersects protected route edge",
+								districtBoxTag = box.tag,
+								conflictingPlacementId = nil,
+								conflictingChunkId = nil,
+								conflictingBoxTag = nil,
+								isLandmarkConflict = false,
+								conflictingCriticalPointName = nil,
+								criticalCategory = nil,
+								conflictingRouteEdgeFrom = fromName,
+								conflictingRouteEdgeTo = toName,
+							})
+							found = true
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 -- Validate a district placement request against an assembled realm output.
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
 --   Slice 2: route/escape preservation
 --   Slice 3: critical-point proximity (when criticalConfig is provided)
+--   Slice 4: route-graph edge preservation
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
 	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
@@ -350,6 +542,7 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 	if criticalConfig ~= nil then
 		checkCriticalPointProximity(request, assemblyOutput, criticalConfig, rejectReasons)
 	end
+	checkRouteGraphEdgePreservation(request, assemblyOutput, rejectReasons)
 
 	return {
 		districtId = request.districtId,
