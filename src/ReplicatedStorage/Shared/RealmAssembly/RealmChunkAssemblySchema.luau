@@ -46,12 +46,19 @@ export type ChunkLocalContent = {
 	},
 }
 
+export type ChunkOccupiedBox = {
+	tag: string?,
+	localCenter: Vector3Data,
+	halfExtents: Vector3Data,
+}
+
 export type AuthoredChunk = {
 	chunkId: string,
 	chunkKind: string,
 	authoringVersion: number,
 	tags: { string },
 	sockets: { ChunkSocket },
+	occupiedSpace: { ChunkOccupiedBox }?,
 	content: ChunkLocalContent,
 }
 
@@ -89,6 +96,14 @@ export type ResolvedWorldSocket = {
 	compatibility: ChunkSocketCompatibility,
 	allowMultipleConnections: boolean?,
 	tags: { string }?,
+}
+
+export type ResolvedOccupiedBox = {
+	placementId: string,
+	chunkId: string,
+	tag: string?,
+	worldCenter: Vector3Data,
+	halfExtents: Vector3Data,
 }
 
 export type ResolvedChunkConnection = {
@@ -145,6 +160,8 @@ export type AssemblyOutput = {
 	placements: { ChunkPlacement },
 	resolvedWorldSockets: { ResolvedWorldSocket },
 	resolvedWorldSocketsByPlacement: { [string]: { ResolvedWorldSocket } },
+	resolvedOccupiedSpace: { ResolvedOccupiedBox },
+	resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } },
 	resolvedConnections: { ResolvedChunkConnection },
 	stitchedGraph: AssemblyStitchedGraph,
 	integrity: AssemblyIntegrityResult,
@@ -297,10 +314,7 @@ local function addIntegrityIssue(issues: { AssemblyIntegrityIssue }, issue: Asse
 	table.insert(issues, issue)
 end
 
-local function resolveWorldSocket(
-	placement: ChunkPlacement,
-	socket: ChunkSocket
-): ResolvedWorldSocket
+local function resolveWorldSocket(placement: ChunkPlacement, socket: ChunkSocket): ResolvedWorldSocket
 	return {
 		placementId = placement.placementId,
 		chunkId = placement.chunkId,
@@ -310,6 +324,24 @@ local function resolveWorldSocket(
 		compatibility = socket.compatibility,
 		allowMultipleConnections = socket.allowMultipleConnections,
 		tags = socket.tags,
+	}
+end
+
+local function resolveOccupiedBoxHalfExtents(halfExtents: Vector3Data, turns: number): Vector3Data
+	local normalizedTurns = normalizeYawQuarterTurns(turns)
+	if normalizedTurns == 1 or normalizedTurns == 3 then
+		return { x = halfExtents.z, y = halfExtents.y, z = halfExtents.x }
+	end
+	return { x = halfExtents.x, y = halfExtents.y, z = halfExtents.z }
+end
+
+local function resolveOccupiedBox(placement: ChunkPlacement, box: ChunkOccupiedBox): ResolvedOccupiedBox
+	return {
+		placementId = placement.placementId,
+		chunkId = placement.chunkId,
+		tag = box.tag,
+		worldCenter = transformPoint(box.localCenter, placement.transform),
+		halfExtents = resolveOccupiedBoxHalfExtents(box.halfExtents, placement.transform.yawQuarterTurns),
 	}
 end
 
@@ -341,9 +373,12 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 	local resolvedWorldSockets: { ResolvedWorldSocket } = {}
 	local resolvedWorldSocketsByPlacement: { [string]: { ResolvedWorldSocket } } = {}
 	local resolvedWorldSocketByPlacementSocketId: { [string]: ResolvedWorldSocket } = {}
+	local resolvedOccupiedSpace: { ResolvedOccupiedBox } = {}
+	local resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } } = {}
 	for _, placement in ipairs(input.placements) do
 		stitchedGraph.adjacencyByPlacement[placement.placementId] = {}
 		resolvedWorldSocketsByPlacement[placement.placementId] = {}
+		resolvedOccupiedSpaceByPlacement[placement.placementId] = {}
 	end
 
 	local integrityIssues: { AssemblyIntegrityIssue } = {}
@@ -367,7 +402,16 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 			local resolvedSocket = resolveWorldSocket(placement, socket)
 			table.insert(resolvedWorldSockets, resolvedSocket)
 			table.insert(resolvedWorldSocketsByPlacement[placement.placementId], resolvedSocket)
-			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(placement.placementId, socket.socketId)] = resolvedSocket
+			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(placement.placementId, socket.socketId)] =
+				resolvedSocket
+		end
+
+		if chunk.occupiedSpace ~= nil then
+			for _, box in ipairs(chunk.occupiedSpace) do
+				local resolvedBox = resolveOccupiedBox(placement, box)
+				table.insert(resolvedOccupiedSpace, resolvedBox)
+				table.insert(resolvedOccupiedSpaceByPlacement[placement.placementId], resolvedBox)
+			end
 		end
 
 		appendTransformedPartList(descriptor.spawns, chunk.content.spawns, placement.placementId, placement.transform)
@@ -575,7 +619,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		local resolvedReason: string? = nil
 		local fromWorldSocket =
 			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.fromPlacementId, conn.fromSocketId)]
-		local toWorldSocket = resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.toPlacementId, conn.toSocketId)]
+		local toWorldSocket =
+			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.toPlacementId, conn.toSocketId)]
 		if not stitched then
 			resolvedReason = compatibilityReason
 		end
@@ -604,6 +649,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		placements = input.placements,
 		resolvedWorldSockets = resolvedWorldSockets,
 		resolvedWorldSocketsByPlacement = resolvedWorldSocketsByPlacement,
+		resolvedOccupiedSpace = resolvedOccupiedSpace,
+		resolvedOccupiedSpaceByPlacement = resolvedOccupiedSpaceByPlacement,
 		resolvedConnections = resolvedConnections,
 		stitchedGraph = stitchedGraph,
 		integrity = integrity,

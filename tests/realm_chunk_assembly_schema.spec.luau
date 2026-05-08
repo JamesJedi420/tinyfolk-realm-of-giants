@@ -332,9 +332,147 @@ local function run()
 			local socketB = outB.resolvedWorldSockets[index]
 			assertEqual(socketA.placementId, socketB.placementId, "block20 placement stable " .. tostring(index))
 			assertEqual(socketA.socketId, socketB.socketId, "block20 socket stable " .. tostring(index))
-			assertVector3Equal(socketA.worldPosition, socketB.worldPosition, "block20 position stable " .. tostring(index))
+			assertVector3Equal(
+				socketA.worldPosition,
+				socketB.worldPosition,
+				"block20 position stable " .. tostring(index)
+			)
 			assertVector3Equal(socketA.worldForward, socketB.worldForward, "block20 forward stable " .. tostring(index))
 		end
+	end
+
+	-- Slice 4: chunk footprint / occupied-space contract
+	-- Helper: single-placement input with one box, configurable yaw and position.
+	local function makeOccupiedSpaceProbeInput(
+		yawQuarterTurns: number,
+		position: RealmChunkAssemblySchema.Vector3Data
+	): RealmChunkAssemblySchema.AssemblyInput
+		return {
+			chunkLibrary = {
+				Probe = {
+					chunkId = "Probe",
+					chunkKind = "probe",
+					authoringVersion = 1,
+					tags = {},
+					sockets = {},
+					occupiedSpace = {
+						{
+							tag = "body",
+							localCenter = { x = 10, y = 0, z = 5 },
+							halfExtents = { x = 8, y = 3, z = 4 },
+						},
+					},
+					content = {
+						spawns = {},
+						escapeRoutes = {},
+						returnPoints = {},
+						stations = {},
+						constructionSites = {},
+						upgradeBoards = {},
+						controlZones = {},
+						captureZones = {},
+						props = {},
+						routeGraph = { nodes = {}, edges = {} },
+					},
+				},
+			},
+			placements = {
+				{
+					placementId = "P_Probe",
+					chunkId = "Probe",
+					transform = { position = position, yawQuarterTurns = yawQuarterTurns },
+				},
+			},
+			declaredConnections = {},
+		}
+	end
+
+	-- BLOCK 21: Prototype assembly output exposes resolvedOccupiedSpace and resolvedOccupiedSpaceByPlacement.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		assert(out.resolvedOccupiedSpace ~= nil, "block21 resolvedOccupiedSpace present")
+		assert(out.resolvedOccupiedSpaceByPlacement ~= nil, "block21 resolvedOccupiedSpaceByPlacement present")
+		-- Two placements, each with one box.
+		assertEqual(#out.resolvedOccupiedSpace, 2, "block21 total box count")
+		assertEqual(#out.resolvedOccupiedSpaceByPlacement["P_Start"], 1, "block21 P_Start box count")
+		assertEqual(#out.resolvedOccupiedSpaceByPlacement["P_Exit"], 1, "block21 P_Exit box count")
+		assertEqual(out.resolvedOccupiedSpace[1].placementId, "P_Start", "block21 first box from P_Start")
+		assertEqual(out.resolvedOccupiedSpace[1].tag, "main", "block21 first box tag")
+	end
+
+	-- BLOCK 22: Identity placement (0 turns) resolves center by translation only; halfExtents unchanged.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			makeOccupiedSpaceProbeInput(0, { x = 100, y = 20, z = -40 })
+		)
+		local box = out.resolvedOccupiedSpace[1]
+		assertVector3Equal(box.worldCenter, { x = 110, y = 20, z = -35 }, "block22 worldCenter")
+		assertVector3Equal(box.halfExtents, { x = 8, y = 3, z = 4 }, "block22 halfExtents unchanged")
+		assertEqual(box.tag, "body", "block22 tag preserved")
+	end
+
+	-- BLOCK 23: 90-degree turn (1) rotates center and swaps x/z half-extents.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			makeOccupiedSpaceProbeInput(1, { x = 100, y = 20, z = -40 })
+		)
+		local box = out.resolvedOccupiedSpace[1]
+		-- rotate(10,0,5) at 1 turn → (-5,0,10); worldCenter = (95,20,-30)
+		assertVector3Equal(box.worldCenter, { x = 95, y = 20, z = -30 }, "block23 worldCenter")
+		-- halfExtents x/z swapped: (8,3,4) → (4,3,8)
+		assertVector3Equal(box.halfExtents, { x = 4, y = 3, z = 8 }, "block23 halfExtents swapped")
+	end
+
+	-- BLOCK 24: 180-degree turn (2) rotates center; halfExtents unchanged (symmetric swap).
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			makeOccupiedSpaceProbeInput(2, { x = 100, y = 20, z = -40 })
+		)
+		local box = out.resolvedOccupiedSpace[1]
+		-- rotate(10,0,5) at 2 turns → (-10,0,-5); worldCenter = (90,20,-45)
+		assertVector3Equal(box.worldCenter, { x = 90, y = 20, z = -45 }, "block24 worldCenter")
+		-- halfExtents unchanged at 180°
+		assertVector3Equal(box.halfExtents, { x = 8, y = 3, z = 4 }, "block24 halfExtents unchanged")
+	end
+
+	-- BLOCK 25: 270-degree turn (3) rotates center and swaps x/z half-extents.
+	do
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			makeOccupiedSpaceProbeInput(3, { x = 100, y = 20, z = -40 })
+		)
+		local box = out.resolvedOccupiedSpace[1]
+		-- rotate(10,0,5) at 3 turns → (5,0,-10); worldCenter = (105,20,-50)
+		assertVector3Equal(box.worldCenter, { x = 105, y = 20, z = -50 }, "block25 worldCenter")
+		-- halfExtents x/z swapped: (8,3,4) → (4,3,8)
+		assertVector3Equal(box.halfExtents, { x = 4, y = 3, z = 8 }, "block25 halfExtents swapped")
+	end
+
+	-- BLOCK 26: Repeated runs produce identical resolved occupied space ordering.
+	do
+		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		)
+		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		)
+		assertEqual(#outA.resolvedOccupiedSpace, #outB.resolvedOccupiedSpace, "block26 count stable")
+		for index, boxA in ipairs(outA.resolvedOccupiedSpace) do
+			local boxB = outB.resolvedOccupiedSpace[index]
+			assertEqual(boxA.placementId, boxB.placementId, "block26 placementId stable " .. tostring(index))
+			assertEqual(boxA.tag, boxB.tag, "block26 tag stable " .. tostring(index))
+			assertVector3Equal(boxA.worldCenter, boxB.worldCenter, "block26 worldCenter stable " .. tostring(index))
+			assertVector3Equal(boxA.halfExtents, boxB.halfExtents, "block26 halfExtents stable " .. tostring(index))
+		end
+	end
+
+	-- BLOCK 27: Assembly with occupied space still hands off to validator via ToRealmDescriptor.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assert(out.integrity.passed, "block27 integrity passed with occupiedSpace present")
+		local descriptor = RealmChunkAssemblySchema.ToRealmDescriptor(out)
+		assert(descriptor ~= nil, "block27 descriptor produced")
+		assert(descriptor.routeGraph ~= nil, "block27 descriptor routeGraph present")
 	end
 
 	print("realm_chunk_assembly_schema: all checks passed")
