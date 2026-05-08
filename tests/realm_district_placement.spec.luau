@@ -229,6 +229,148 @@ local function run()
 		end
 	end
 
+	-- Slice 2: route/escape preservation gate
+	-- Prototype escape routes (world-space):
+	--   P_Exit::EscapeRoute_A at (120, 0, 0)  [from Chunk_Exit local (0,0,0) + P_Exit at (120,0,0)]
+
+	-- BLOCK 10: Disjoint placement that does not overlap any escape route position passes.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RouteDisjoint",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 500 },
+					halfExtents = { x = 30, y = 10, z = 30 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertTrue(result.accepted, "block10 route-disjoint passes")
+		assertEqual(#result.rejectReasons, 0, "block10 no reject reasons")
+	end
+
+	-- BLOCK 11: Placement whose box strictly contains the only escape route position fails.
+	-- EscapeRoute_A is at world (120,0,0). Box centered at (120,0,0) with halfExtents (5,5,5)
+	-- strictly contains that point.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_BlocksEscape",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertFalse(result.accepted, "block11 escape blocked rejected")
+		assertHasRejectCode(result, "route_escape_preservation_failure", "block11 code")
+		local reason = result.rejectReasons[#result.rejectReasons]
+		assertFalse(reason.isLandmarkConflict, "block11 not landmark conflict")
+	end
+
+	-- BLOCK 12: Escape route position exactly on box boundary is NOT blocked (boundary convention).
+	-- EscapeRoute_A at (120,0,0). Box at (115,0,0) halfExtents (5,5,5):
+	-- |120-115| = 5, halfExtents.x = 5 → 5 < 5 is false → not inside.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_EscapeBoundary",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 115, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		-- Occupied-space overlap with P_Exit box will fire (P_Exit center=90, half=60 → range [30,150]).
+		-- But route escape check should NOT fire (escape point at boundary, not inside).
+		local hasEscapeFailure = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "route_escape_preservation_failure" then
+				hasEscapeFailure = true
+			end
+		end
+		assertFalse(hasEscapeFailure, "block12 escape boundary not blocked")
+	end
+
+	-- BLOCK 13: Placement that is one unit inside boundary DOES block the escape route.
+	-- Box at (114,0,0) halfExtents (5,5,5): |120-114|=6 < 5? No... adjust.
+	-- Use box at (116,0,0) halfExtents (5,5,5): |120-116|=4 < 5 → inside → blocked.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_EscapeInsideBoundary",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 116, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertFalse(result.accepted, "block13 just-inside boundary blocks escape")
+		assertHasRejectCode(result, "route_escape_preservation_failure", "block13 code")
+	end
+
+	-- BLOCK 14: Slice 1 and Slice 2 rejections can coexist in the same result.
+	-- Use a box that both overlaps assembled occupied space AND blocks the escape route.
+	-- Box at (120,0,0) halfExtents (50,5,5):
+	--   Overlaps P_Exit box (center=90, half=60): dx=|120-90|=30 < 50+60=110 → yes.
+	--   Contains EscapeRoute_A at (120,0,0): |0|<50, |0|<5, |0|<5 → yes.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_BothFailures",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 50, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertFalse(result.accepted, "block14 both failures rejected")
+		assertHasRejectCode(result, "occupied_space_overlap", "block14 slice1 code present")
+		assertHasRejectCode(result, "route_escape_preservation_failure", "block14 slice2 code present")
+	end
+
+	-- BLOCK 15: Repeated runs on route-blocking placement produce identical reject ordering.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_RouteStability",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(
+			request,
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(
+			request,
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		)
+		assertEqual(outA.accepted, outB.accepted, "block15 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block15 reason count stable")
+		for index, reasonA in ipairs(outA.rejectReasons) do
+			local reasonB = outB.rejectReasons[index]
+			assertEqual(reasonA.code, reasonB.code, "block15 code stable " .. tostring(index))
+			assertEqual(
+				reasonA.isLandmarkConflict,
+				reasonB.isLandmarkConflict,
+				"block15 landmark stable " .. tostring(index)
+			)
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
