@@ -1185,6 +1185,219 @@ local function run()
 		assertHasRejectCode(result, "recurring_structure_tag_exclusion", "block41 slice6 code present")
 	end
 
+	-- ── Slice 7: soft devaluation / scoring track ─────────────────────────────
+
+	-- Fixture critical-point world positions (P_Start placed at origin):
+	--   TinyfolkSpawn        (0,  0, 0)
+	--   TinyfolkReturnPoint  (-20, 0, 0)
+	--   WorkStation_A        (25,  0, 0)
+	--   ConstructionSite_A   (15,  0, 10)
+	--   GiantCaptureZone_A   (40,  0, 20)
+	--   EscapeRoute_A        (120, 0, 0)  -- P_Exit
+	--
+	-- Test box at (0,0,-60) half=(1,1,1):
+	--   TinyfolkSpawn dist = 59.0  (sqrt(59^2))
+	--   TinyfolkReturnPoint dist = sqrt(19^2+59^2) ≈ 61.99
+	--   → softRadius=60 catches only TinyfolkSpawn (dist=59 < 60); score = floor(60-59) = 1
+
+	-- BLOCK 42: nil softConfig → devaluation always present, totalPenalty=0, penalties empty.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NoSoftConfig",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 500 },
+					halfExtents = { x = 10, y = 10, z = 10 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertTrue(result.devaluation ~= nil, "block42 devaluation present")
+		assertEqual(result.devaluation.totalPenalty, 0, "block42 totalPenalty zero")
+		assertEqual(#result.devaluation.penalties, 0, "block42 penalties empty")
+		assertTrue(result.accepted, "block42 accepted")
+	end
+
+	-- BLOCK 43: softConfig provided but placement far from all critical points → 0 penalties.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 60,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_FarFromEverything",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 500 },
+					halfExtents = { x = 10, y = 10, z = 10 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(result.accepted, "block43 accepted")
+		assertEqual(result.devaluation.totalPenalty, 0, "block43 no penalty when far")
+		assertEqual(#result.devaluation.penalties, 0, "block43 penalty list empty")
+	end
+
+	-- BLOCK 44: Placement near TinyfolkSpawn only → exactly 1 near_critical_point penalty.
+	-- Box at (0,0,-60) half=(1,1,1): TinyfolkSpawn dist=59 < 60 → score=1.
+	-- TinyfolkReturnPoint dist≈61.99 > 60 → no penalty for it.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NearSpawnOnly",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = -60 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(result.accepted, "block44 accepted (no hard reject)")
+		assertEqual(#result.devaluation.penalties, 1, "block44 exactly one penalty")
+		assertEqual(result.devaluation.totalPenalty, 1, "block44 total penalty = 1")
+		local p1 = result.devaluation.penalties[1]
+		assertEqual(p1.factor, "near_critical_point", "block44 factor")
+		assertTrue(
+			p1.nearCriticalPointName ~= nil and string.find(p1.nearCriticalPointName, "TinyfolkSpawn", 1, true) ~= nil,
+			"block44 point name"
+		)
+		assertEqual(tostring(p1.nearCriticalPointCategory), "tinyfolk_spawn", "block44 category")
+		assertEqual(p1.score, 1, "block44 score")
+	end
+
+	-- BLOCK 45: Placement near multiple critical points → multiple penalties.
+	-- Box at (0,0,-50) half=(1,1,1) softRadius=80:
+	-- TinyfolkSpawn dist=49 < 80 → penalty; several other close points also trigger.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 80,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NearMultiple",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = -50 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(result.accepted, "block45 accepted")
+		assertTrue(#result.devaluation.penalties >= 2, "block45 multiple penalties")
+		assertTrue(result.devaluation.totalPenalty >= 2, "block45 total penalty >= 2")
+		local hasCritPenalty = false
+		for _, p in result.devaluation.penalties do
+			if p.factor == "near_critical_point" then
+				hasCritPenalty = true
+			end
+		end
+		assertTrue(hasCritPenalty, "block45 near_critical_point factor present")
+	end
+
+	-- BLOCK 46: Hard-rejected placement (Slice 1 overlap) also accumulates soft penalties.
+	-- Box at (30,0,0) half=(1,1,1) overlaps P_Start → Slice 1 rejects.
+	-- TinyfolkSpawn (0,0,0): dist = |30-0|-1 = 29 studs < 40 → soft penalty, score=11.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 40,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_HardRejectWithPenalty",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 30, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertFalse(result.accepted, "block46 hard rejected")
+		assertHasRejectCode(result, "occupied_space_overlap", "block46 hard reject present")
+		assertTrue(result.devaluation.totalPenalty > 0, "block46 soft penalty still accumulated")
+		local hasSpawnPenalty = false
+		for _, p in result.devaluation.penalties do
+			if
+				p.factor == "near_critical_point"
+				and p.nearCriticalPointName ~= nil
+				and string.find(p.nearCriticalPointName, "TinyfolkSpawn", 1, true) ~= nil
+			then
+				hasSpawnPenalty = true
+			end
+		end
+		assertTrue(hasSpawnPenalty, "block46 TinyfolkSpawn soft penalty on rejected placement")
+	end
+
+	-- BLOCK 47: Near-route-edge factor — prototype fixture has no protected edges
+	--           (disconnected route graph) → 0 near_route_edge penalties (vacuous).
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 0,
+			nearRouteEdgeSoftRadius = 200,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NearEdgeVacuous",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 30, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		local hasEdgePenalty = false
+		for _, p in result.devaluation.penalties do
+			if p.factor == "near_route_edge" then
+				hasEdgePenalty = true
+			end
+		end
+		assertFalse(hasEdgePenalty, "block47 no route-edge penalty (no protected edges in prototype)")
+	end
+
+	-- BLOCK 48: Stability — repeated runs produce identical devaluation output.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 80,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_SoftStability",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = -50 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block48 totalPenalty stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block48 count stable")
+		for i, pA in ipairs(outA.devaluation.penalties) do
+			local pB = outB.devaluation.penalties[i]
+			assertEqual(pA.factor, pB.factor, "block48 factor stable " .. tostring(i))
+			assertEqual(pA.score, pB.score, "block48 score stable " .. tostring(i))
+			assertEqual(
+				tostring(pA.nearCriticalPointName),
+				tostring(pB.nearCriticalPointName),
+				"block48 name stable " .. tostring(i)
+			)
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

@@ -52,11 +52,39 @@ export type DistrictCriticalExclusionConfig = {
 	controlZoneExclusionRadius: number,
 }
 
+-- A single soft devaluation penalty entry (Slice 7).
+-- factor: "near_critical_point" | "near_route_edge"
+-- score: math.floor(softRadius - distance); always >= 1
+export type DistrictPlacementDevaluationPenalty = {
+	factor: string,
+	score: number,
+	message: string,
+	districtBoxTag: string?,
+	nearCriticalPointName: string?,
+	nearCriticalPointCategory: string?,
+	nearRouteEdgeFrom: string?,
+	nearRouteEdgeTo: string?,
+}
+
+-- Aggregated soft devaluation result (Slice 7).
+export type DistrictPlacementDevaluationResult = {
+	totalPenalty: number,
+	penalties: { DistrictPlacementDevaluationPenalty },
+}
+
+-- Soft scoring thresholds for Slice 7 devaluation.
+-- Set a radius to 0 to disable that scoring factor.
+export type DistrictPlacementSoftConfig = {
+	nearCriticalPointSoftRadius: number,
+	nearRouteEdgeSoftRadius: number,
+}
+
 -- The result of validating a single district placement request.
 export type DistrictPlacementResult = {
 	districtId: string,
 	accepted: boolean,
 	rejectReasons: { DistrictPlacementRejectReason },
+	devaluation: DistrictPlacementDevaluationResult,
 }
 
 -- Allowed environment/density classes and disallowed recurring-structure tags
@@ -676,6 +704,164 @@ local function checkRecurringStructurePolicy(
 	end
 end
 
+-- Slice 7: soft proximity penalty helper for near-critical-point scoring.
+-- Emits at most one penalty per critical point (first triggering box wins).
+-- Only fires when dist > 0 (no hard intersection) and dist < softRadius.
+local function addSoftProximityPenalty(
+	pointName: string,
+	pointPos: RealmChunkAssemblySchema.Vector3Data,
+	proposedOccupiedSpace: { DistrictOccupiedBox },
+	softRadius: number,
+	category: string,
+	penalties: { DistrictPlacementDevaluationPenalty }
+)
+	if softRadius <= 0 then
+		return
+	end
+	for _, box in ipairs(proposedOccupiedSpace) do
+		local dist = distPointToAABB(pointPos, box.worldCenter, box.halfExtents)
+		if dist > 0 and dist < softRadius then
+			local score = math.floor(softRadius - dist)
+			if score > 0 then
+				table.insert(penalties, {
+					factor = "near_critical_point",
+					score = score,
+					message = string.format(
+						"Proposed district is within soft proximity radius (%.0f studs) of %s '%s' at distance %.1f",
+						softRadius,
+						category,
+						pointName,
+						dist
+					),
+					districtBoxTag = box.tag,
+					nearCriticalPointName = pointName,
+					nearCriticalPointCategory = category,
+				})
+			end
+			return
+		end
+	end
+end
+
+-- Slice 7: compute soft devaluation result for a placement request.
+-- Runs both scoring factors when softConfig is provided.
+-- Always returns a valid DevaluationResult (empty when softConfig is nil).
+local function computeDevaluation(
+	request: DistrictPlacementRequest,
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	softConfig: DistrictPlacementSoftConfig?
+): DistrictPlacementDevaluationResult
+	local penalties: { DistrictPlacementDevaluationPenalty } = {}
+
+	if softConfig ~= nil then
+		local nearCritRadius = softConfig.nearCriticalPointSoftRadius
+		local nearEdgeRadius = softConfig.nearRouteEdgeSoftRadius
+		local descriptor = assemblyOutput.descriptor
+		local proposed = request.proposedOccupiedSpace
+
+		-- Factor 1: near protected critical points.
+		-- Checks the same categories as the Slice 3 hard gate.
+		if nearCritRadius > 0 then
+			for _, part in ipairs(descriptor.spawns) do
+				if string.find(part.name, "TinyfolkSpawn", 1, true) then
+					addSoftProximityPenalty(
+						part.name,
+						part.position,
+						proposed,
+						nearCritRadius,
+						"tinyfolk_spawn",
+						penalties
+					)
+				end
+			end
+			for _, part in ipairs(descriptor.escapeRoutes) do
+				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "escape_route", penalties)
+			end
+			for _, part in ipairs(descriptor.returnPoints) do
+				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "return_point", penalties)
+			end
+			for _, part in ipairs(descriptor.stations) do
+				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "station", penalties)
+			end
+			for _, part in ipairs(descriptor.constructionSites) do
+				addSoftProximityPenalty(
+					part.name,
+					part.position,
+					proposed,
+					nearCritRadius,
+					"construction_site",
+					penalties
+				)
+			end
+			for _, zone in ipairs(descriptor.captureZones) do
+				addSoftProximityPenalty(zone.name, zone.position, proposed, nearCritRadius, "capture_zone", penalties)
+			end
+			for _, zone in ipairs(descriptor.controlZones) do
+				addSoftProximityPenalty(zone.name, zone.position, proposed, nearCritRadius, "control_zone", penalties)
+			end
+		end
+
+		-- Factor 2: near protected route edges (but not intersecting them).
+		if nearEdgeRadius > 0 and #descriptor.routeGraph.nodes > 0 and #descriptor.routeGraph.edges > 0 then
+			local protectedEdges = buildProtectedRouteEdges(descriptor)
+			if next(protectedEdges) then
+				local nodesByName: { [string]: RealmChunkAssemblySchema.NamedNode } = {}
+				for _, node in ipairs(descriptor.routeGraph.nodes) do
+					nodesByName[node.name] = node
+				end
+				for edgeKey in pairs(protectedEdges) do
+					local fromIdx = string.find(edgeKey, "::", 1, true)
+					if fromIdx ~= nil then
+						local fromName = string.sub(edgeKey, 1, fromIdx - 1)
+						local toName = string.sub(edgeKey, fromIdx + 2)
+						local fromNode = nodesByName[fromName]
+						local toNode = nodesByName[toName]
+						if fromNode ~= nil and toNode ~= nil then
+							local found = false
+							for _, box in ipairs(proposed) do
+								if not found then
+									local closest =
+										closestPointOnSegment(box.worldCenter, fromNode.position, toNode.position)
+									local dist = distPointToAABB(closest, box.worldCenter, box.halfExtents)
+									if dist > 0 and dist < nearEdgeRadius then
+										local score = math.floor(nearEdgeRadius - dist)
+										if score > 0 then
+											table.insert(penalties, {
+												factor = "near_route_edge",
+												score = score,
+												message = string.format(
+													"Proposed district is within soft proximity radius (%.0f studs) of protected route edge '%s' -> '%s'",
+													nearEdgeRadius,
+													fromName,
+													toName
+												),
+												districtBoxTag = box.tag,
+												nearRouteEdgeFrom = fromName,
+												nearRouteEdgeTo = toName,
+											})
+											found = true
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	local totalPenalty = 0
+	for _, penalty in ipairs(penalties) do
+		totalPenalty += penalty.score
+	end
+
+	return {
+		totalPenalty = totalPenalty,
+		penalties = penalties,
+	}
+end
+
 -- Validate a district placement request against an assembled realm output.
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
@@ -684,11 +870,13 @@ end
 --   Slice 4: route-graph edge preservation
 --   Slice 5: environment-class and traversal-density policy (when policyConfig is provided)
 --   Slice 6: recurring-structure tag policy (when policyConfig is provided)
+--   Slice 7: soft devaluation scoring (when softConfig is provided)
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
 	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
 	criticalConfig: DistrictCriticalExclusionConfig?,
-	policyConfig: DistrictPlacementPolicyConfig?
+	policyConfig: DistrictPlacementPolicyConfig?,
+	softConfig: DistrictPlacementSoftConfig?
 ): DistrictPlacementResult
 	local rejectReasons: { DistrictPlacementRejectReason } = {}
 
@@ -707,6 +895,7 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 		districtId = request.districtId,
 		accepted = #rejectReasons == 0,
 		rejectReasons = rejectReasons,
+		devaluation = computeDevaluation(request, assemblyOutput, softConfig),
 	}
 end
 
