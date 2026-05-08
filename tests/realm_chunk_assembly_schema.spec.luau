@@ -19,6 +19,12 @@ local function assertTrue(value, label)
 	end
 end
 
+local function assertVector3Equal(actual, expected, label)
+	assertEqual(actual.x, expected.x, label .. " x")
+	assertEqual(actual.y, expected.y, label .. " y")
+	assertEqual(actual.z, expected.z, label .. " z")
+end
+
 local function assertIssueCode(output, expectedCode, label)
 	for _, issue in output.integrity.issues do
 		if issue.code == expectedCode then
@@ -29,6 +35,61 @@ local function assertIssueCode(output, expectedCode, label)
 end
 
 local function run()
+	local function makeRotationProbeInput(
+		yawQuarterTurns: number,
+		position: RealmChunkAssemblySchema.Vector3Data
+	): RealmChunkAssemblySchema.AssemblyInput
+		local chunk: RealmChunkAssemblySchema.AuthoredChunk = {
+			chunkId = "Chunk_Rotate",
+			chunkKind = "probe",
+			authoringVersion = 1,
+			tags = {},
+			sockets = {
+				{
+					socketId = "probe_socket",
+					localPosition = { x = 2, y = 3, z = 5 },
+					localForward = { x = 1, y = 0, z = 0 },
+					compatibility = {
+						connectionClass = "route_probe",
+						socketRole = "male",
+					},
+				},
+			},
+			content = {
+				spawns = {},
+				escapeRoutes = {},
+				returnPoints = {},
+				stations = {},
+				constructionSites = {},
+				upgradeBoards = {},
+				controlZones = {},
+				captureZones = {},
+				props = {},
+				routeGraph = {
+					nodes = {},
+					edges = {},
+				},
+			},
+		}
+
+		return {
+			chunkLibrary = {
+				[chunk.chunkId] = chunk,
+			},
+			placements = {
+				{
+					placementId = "P_Probe",
+					chunkId = chunk.chunkId,
+					transform = {
+						position = position,
+						yawQuarterTurns = yawQuarterTurns,
+					},
+				},
+			},
+			declaredConnections = {},
+		}
+	end
+
 	-- BLOCK 1: Chunk descriptors can be constructed deterministically.
 	do
 		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
@@ -208,6 +269,72 @@ local function run()
 		}
 		local result = RealmTopologyValidator.ValidateRealm(descriptor, validationConfig)
 		assertTrue(type(result.passed) == "boolean", "block14 validator returned result")
+	end
+
+	-- BLOCK 15: Identity transform resolves socket with translation only.
+	do
+		local input = makeRotationProbeInput(0, { x = 100, y = 20, z = -40 })
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(#output.resolvedWorldSockets, 1, "block15 resolved socket count")
+		local socket = output.resolvedWorldSockets[1]
+		assertVector3Equal(socket.worldPosition, { x = 102, y = 23, z = -35 }, "block15 world position")
+		assertVector3Equal(socket.worldForward, { x = 1, y = 0, z = 0 }, "block15 world forward")
+	end
+
+	-- BLOCK 16: Quarter turn 90 resolves socket position and forward deterministically.
+	do
+		local input = makeRotationProbeInput(1, { x = 100, y = 20, z = -40 })
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		local socket = output.resolvedWorldSockets[1]
+		assertVector3Equal(socket.worldPosition, { x = 95, y = 23, z = -38 }, "block16 world position")
+		assertVector3Equal(socket.worldForward, { x = 0, y = 0, z = 1 }, "block16 world forward")
+	end
+
+	-- BLOCK 17: Quarter turn 180 resolves socket position and forward deterministically.
+	do
+		local input = makeRotationProbeInput(2, { x = 100, y = 20, z = -40 })
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		local socket = output.resolvedWorldSockets[1]
+		assertVector3Equal(socket.worldPosition, { x = 98, y = 23, z = -45 }, "block17 world position")
+		assertVector3Equal(socket.worldForward, { x = -1, y = 0, z = 0 }, "block17 world forward")
+	end
+
+	-- BLOCK 18: Quarter turn 270 resolves socket position and forward deterministically.
+	do
+		local input = makeRotationProbeInput(3, { x = 100, y = 20, z = -40 })
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		local socket = output.resolvedWorldSockets[1]
+		assertVector3Equal(socket.worldPosition, { x = 105, y = 23, z = -42 }, "block18 world position")
+		assertVector3Equal(socket.worldForward, { x = 0, y = 0, z = -1 }, "block18 world forward")
+	end
+
+	-- BLOCK 19: Stitched connection exposes resolved endpoint sockets deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		local connection = output.resolvedConnections[1]
+		assertTrue(connection.fromWorldSocket ~= nil, "block19 from endpoint exists")
+		assertTrue(connection.toWorldSocket ~= nil, "block19 to endpoint exists")
+		assertEqual(connection.fromWorldSocket.socketId, "east_path", "block19 from socket id")
+		assertEqual(connection.toWorldSocket.socketId, "west_path", "block19 to socket id")
+		assertVector3Equal(connection.fromWorldSocket.worldPosition, { x = 60, y = 0, z = 0 }, "block19 from position")
+		assertVector3Equal(connection.toWorldSocket.worldPosition, { x = 60, y = 0, z = 0 }, "block19 to position")
+	end
+
+	-- BLOCK 20: Repeated runs keep resolved world socket ordering deterministic.
+	do
+		local inputA = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local inputB = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(inputA)
+		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(inputB)
+		assertEqual(#outA.resolvedWorldSockets, #outB.resolvedWorldSockets, "block20 socket count stable")
+		for index, socketA in ipairs(outA.resolvedWorldSockets) do
+			local socketB = outB.resolvedWorldSockets[index]
+			assertEqual(socketA.placementId, socketB.placementId, "block20 placement stable " .. tostring(index))
+			assertEqual(socketA.socketId, socketB.socketId, "block20 socket stable " .. tostring(index))
+			assertVector3Equal(socketA.worldPosition, socketB.worldPosition, "block20 position stable " .. tostring(index))
+			assertVector3Equal(socketA.worldForward, socketB.worldForward, "block20 forward stable " .. tostring(index))
+		end
 	end
 
 	print("realm_chunk_assembly_schema: all checks passed")

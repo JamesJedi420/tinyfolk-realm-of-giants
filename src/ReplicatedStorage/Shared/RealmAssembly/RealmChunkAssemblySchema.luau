@@ -80,6 +80,17 @@ export type AssemblyInput = {
 	declaredConnections: { DeclaredChunkConnection },
 }
 
+export type ResolvedWorldSocket = {
+	placementId: string,
+	chunkId: string,
+	socketId: string,
+	worldPosition: Vector3Data,
+	worldForward: Vector3Data,
+	compatibility: ChunkSocketCompatibility,
+	allowMultipleConnections: boolean?,
+	tags: { string }?,
+}
+
 export type ResolvedChunkConnection = {
 	fromPlacementId: string,
 	fromSocketId: string,
@@ -88,6 +99,8 @@ export type ResolvedChunkConnection = {
 	declaredConnectionIndex: number,
 	stitched: boolean,
 	compatible: boolean,
+	fromWorldSocket: ResolvedWorldSocket?,
+	toWorldSocket: ResolvedWorldSocket?,
 	reason: string?,
 }
 
@@ -130,17 +143,28 @@ export type AssemblyIntegrityResult = {
 export type AssemblyOutput = {
 	descriptor: RealmDescriptor,
 	placements: { ChunkPlacement },
+	resolvedWorldSockets: { ResolvedWorldSocket },
+	resolvedWorldSocketsByPlacement: { [string]: { ResolvedWorldSocket } },
 	resolvedConnections: { ResolvedChunkConnection },
 	stitchedGraph: AssemblyStitchedGraph,
 	integrity: AssemblyIntegrityResult,
 }
 
+local function normalizeYawQuarterTurns(turns: number): number
+	local normalized = turns % 4
+	if normalized < 0 then
+		return normalized + 4
+	end
+	return normalized
+end
+
 local function rotateYawQuarterTurns(point: Vector3Data, turns: number): Vector3Data
-	if turns == 0 then
+	local normalizedTurns = normalizeYawQuarterTurns(turns)
+	if normalizedTurns == 0 then
 		return { x = point.x, y = point.y, z = point.z }
-	elseif turns == 1 then
+	elseif normalizedTurns == 1 then
 		return { x = -point.z, y = point.y, z = point.x }
-	elseif turns == 2 then
+	elseif normalizedTurns == 2 then
 		return { x = -point.x, y = point.y, z = -point.z }
 	else
 		return { x = point.z, y = point.y, z = -point.x }
@@ -265,8 +289,28 @@ local function socketUsageKey(placementId: string, socketId: string): string
 	return placementId .. "::" .. socketId
 end
 
+local function resolvedSocketKey(placementId: string, socketId: string): string
+	return placementId .. "::" .. socketId
+end
+
 local function addIntegrityIssue(issues: { AssemblyIntegrityIssue }, issue: AssemblyIntegrityIssue)
 	table.insert(issues, issue)
+end
+
+local function resolveWorldSocket(
+	placement: ChunkPlacement,
+	socket: ChunkSocket
+): ResolvedWorldSocket
+	return {
+		placementId = placement.placementId,
+		chunkId = placement.chunkId,
+		socketId = socket.socketId,
+		worldPosition = transformPoint(socket.localPosition, placement.transform),
+		worldForward = rotateYawQuarterTurns(socket.localForward, placement.transform.yawQuarterTurns),
+		compatibility = socket.compatibility,
+		allowMultipleConnections = socket.allowMultipleConnections,
+		tags = socket.tags,
+	}
 end
 
 function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): AssemblyOutput
@@ -294,8 +338,12 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		edges = {},
 		adjacencyByPlacement = {},
 	}
+	local resolvedWorldSockets: { ResolvedWorldSocket } = {}
+	local resolvedWorldSocketsByPlacement: { [string]: { ResolvedWorldSocket } } = {}
+	local resolvedWorldSocketByPlacementSocketId: { [string]: ResolvedWorldSocket } = {}
 	for _, placement in ipairs(input.placements) do
 		stitchedGraph.adjacencyByPlacement[placement.placementId] = {}
+		resolvedWorldSocketsByPlacement[placement.placementId] = {}
 	end
 
 	local integrityIssues: { AssemblyIntegrityIssue } = {}
@@ -313,6 +361,13 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 					.. "'",
 			})
 			continue
+		end
+
+		for _, socket in ipairs(chunk.sockets) do
+			local resolvedSocket = resolveWorldSocket(placement, socket)
+			table.insert(resolvedWorldSockets, resolvedSocket)
+			table.insert(resolvedWorldSocketsByPlacement[placement.placementId], resolvedSocket)
+			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(placement.placementId, socket.socketId)] = resolvedSocket
 		end
 
 		appendTransformedPartList(descriptor.spawns, chunk.content.spawns, placement.placementId, placement.transform)
@@ -518,6 +573,9 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		end
 
 		local resolvedReason: string? = nil
+		local fromWorldSocket =
+			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.fromPlacementId, conn.fromSocketId)]
+		local toWorldSocket = resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.toPlacementId, conn.toSocketId)]
 		if not stitched then
 			resolvedReason = compatibilityReason
 		end
@@ -530,6 +588,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 			declaredConnectionIndex = index,
 			stitched = stitched,
 			compatible = stitched,
+			fromWorldSocket = fromWorldSocket,
+			toWorldSocket = toWorldSocket,
 			reason = resolvedReason,
 		})
 	end
@@ -542,6 +602,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 	return {
 		descriptor = descriptor,
 		placements = input.placements,
+		resolvedWorldSockets = resolvedWorldSockets,
+		resolvedWorldSocketsByPlacement = resolvedWorldSocketsByPlacement,
 		resolvedConnections = resolvedConnections,
 		stitchedGraph = stitchedGraph,
 		integrity = integrity,
