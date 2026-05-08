@@ -15,10 +15,16 @@ export type RealmChokepointConfig = {
 	zoneTagFilter: string,
 	-- Minimum number of edge-disjoint spawn-to-escape paths that must survive zone blocking
 	minimumDisjointPathCount: number,
+	-- Optional class-specific minimum for control-zone route blocking checks.
+	-- Falls back to minimumDisjointPathCount when nil.
+	minimumControlZoneDisjointPathCount: number?,
+	-- Optional class-specific minimum for capture-zone route blocking checks.
+	-- Falls back to minimumDisjointPathCount when nil.
+	minimumCaptureZoneDisjointPathCount: number?,
 	-- When true, asserts at least one tier=fallback escape node is reachable after zone blocking
 	requireFallbackEscapeReachability: boolean,
 	-- When true, also blocks route nodes and edges that intersect GiantCapture zones
-	-- (reads from descriptor.captureZones). Uses the same minimumDisjointPathCount threshold.
+	-- (reads from descriptor.captureZones). Uses capture-specific minimum when provided.
 	checkCaptureZoneEdgeBlocking: boolean,
 }
 
@@ -48,6 +54,20 @@ local function getZonesByTag(zones: { NamedZone }, tag: string): { NamedZone }
 		end
 	end
 	return result
+end
+
+local function resolveControlZoneMinDisjointPathCount(config: RealmChokepointConfig): number
+	if config.minimumControlZoneDisjointPathCount ~= nil then
+		return config.minimumControlZoneDisjointPathCount
+	end
+	return config.minimumDisjointPathCount
+end
+
+local function resolveCaptureZoneMinDisjointPathCount(config: RealmChokepointConfig): number
+	if config.minimumCaptureZoneDisjointPathCount ~= nil then
+		return config.minimumCaptureZoneDisjointPathCount
+	end
+	return config.minimumDisjointPathCount
 end
 
 -- Returns true when the line segment from p to q intersects or is tangent to the
@@ -228,12 +248,13 @@ local function countDisjointPaths(
 end
 
 -- Check: after blocking edges whose endpoints lie inside any matching Giant
--- control zone, at least minimumDisjointPathCount independent paths must
+-- control zone, at least the resolved control-zone minimum independent paths must
 -- remain from any spawn-typed node to any escape-typed node in the route graph.
 local function checkChokepointEscapeReachability(
 	descriptor: RealmDescriptor,
 	config: RealmChokepointConfig
 ): CheckResult
+	local minimumPathCount = resolveControlZoneMinDisjointPathCount(config)
 	local zones = getZonesByTag(descriptor.controlZones, config.zoneTagFilter)
 	local nodes = descriptor.routeGraph.nodes
 	local edges = descriptor.routeGraph.edges
@@ -277,7 +298,7 @@ local function checkChokepointEscapeReachability(
 		return { id = "choke_point_escape_reachability", passed = true }
 	end
 
-	if pathCount >= config.minimumDisjointPathCount then
+	if pathCount >= minimumPathCount then
 		return { id = "choke_point_escape_reachability", passed = true }
 	end
 
@@ -287,7 +308,7 @@ local function checkChokepointEscapeReachability(
 		reason = string.format(
 			"only %d edge-disjoint spawn-to-escape path(s) survive zone blocking (minimum %d required)",
 			pathCount,
-			config.minimumDisjointPathCount
+			minimumPathCount
 		),
 	}
 end
@@ -418,7 +439,7 @@ end
 
 -- Slice 19: capture_zone_route_edge_blocking
 -- Check: after blocking route nodes and edges that intersect any GiantCapture zone
--- (point-containment AND segment-sphere), at least minimumDisjointPathCount independent
+-- (point-containment AND segment-sphere), at least the resolved capture-zone minimum independent
 -- spawn-to-escape paths must survive.
 -- Reads from descriptor.captureZones (not controlZones).
 -- Tag is always "GiantCapture" — no tag-filter config needed here.
@@ -428,6 +449,7 @@ local function checkCaptureZoneRouteEdgeBlocking(
 	descriptor: RealmDescriptor,
 	config: RealmChokepointConfig
 ): CheckResult
+	local minimumPathCount = resolveCaptureZoneMinDisjointPathCount(config)
 	if not config.checkCaptureZoneEdgeBlocking then
 		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
 	end
@@ -478,7 +500,7 @@ local function checkCaptureZoneRouteEdgeBlocking(
 		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
 	end
 
-	if pathCount >= config.minimumDisjointPathCount then
+	if pathCount >= minimumPathCount then
 		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
 	end
 
@@ -488,7 +510,7 @@ local function checkCaptureZoneRouteEdgeBlocking(
 		reason = string.format(
 			"only %d edge-disjoint spawn-to-escape path(s) survive GiantCapture zone blocking (minimum %d required)",
 			pathCount,
-			config.minimumDisjointPathCount
+			minimumPathCount
 		),
 	}
 end
