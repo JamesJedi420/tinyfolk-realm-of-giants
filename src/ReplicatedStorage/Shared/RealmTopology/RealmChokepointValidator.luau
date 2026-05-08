@@ -17,6 +17,9 @@ export type RealmChokepointConfig = {
 	minimumDisjointPathCount: number,
 	-- When true, asserts at least one tier=fallback escape node is reachable after zone blocking
 	requireFallbackEscapeReachability: boolean,
+	-- When true, also blocks route nodes and edges that intersect GiantCapture zones
+	-- (reads from descriptor.captureZones). Uses the same minimumDisjointPathCount threshold.
+	checkCaptureZoneEdgeBlocking: boolean,
 }
 
 export type CheckResult = {
@@ -51,12 +54,7 @@ end
 -- sphere at `center` with the given `radius`.
 -- Convention: tangent (closest-point distance == radius) counts as blocked,
 -- matching the node-point rule which uses dist3 <= radius.
-local function segmentIntersectsSphere(
-	p: Vector3Data,
-	q: Vector3Data,
-	center: Vector3Data,
-	radius: number
-): boolean
+local function segmentIntersectsSphere(p: Vector3Data, q: Vector3Data, center: Vector3Data, radius: number): boolean
 	local dx = q.x - p.x
 	local dy = q.y - p.y
 	local dz = q.z - p.z
@@ -86,10 +84,7 @@ local function segmentIntersectsSphere(
 end
 
 -- Returns a set of node names whose positions fall within any matching zone's radius.
-local function buildBlockedNodeSet(
-	nodes: { NamedNode },
-	zones: { NamedZone }
-): { [string]: boolean }
+local function buildBlockedNodeSet(nodes: { NamedNode }, zones: { NamedZone }): { [string]: boolean }
 	local blocked: { [string]: boolean } = {}
 	for _, node in nodes do
 		for _, zone in zones do
@@ -299,10 +294,7 @@ end
 
 -- BFS reachability from a seed set through unblocked edges.
 -- Returns the set of all node names reachable from any seed node.
-local function bfsReachable(
-	seedSet: { [string]: boolean },
-	unlockedEdges: { RouteEdge }
-): { [string]: boolean }
+local function bfsReachable(seedSet: { [string]: boolean }, unlockedEdges: { RouteEdge }): { [string]: boolean }
 	-- Build adjacency list from unlocked edges.
 	local adj: { [string]: { string } } = {}
 	for _, edge in unlockedEdges do
@@ -424,6 +416,83 @@ local function checkChokepointFallbackReachability(
 	}
 end
 
+-- Slice 19: capture_zone_route_edge_blocking
+-- Check: after blocking route nodes and edges that intersect any GiantCapture zone
+-- (point-containment AND segment-sphere), at least minimumDisjointPathCount independent
+-- spawn-to-escape paths must survive.
+-- Reads from descriptor.captureZones (not controlZones).
+-- Tag is always "GiantCapture" — no tag-filter config needed here.
+-- Vacuous pass when disabled, or when there are no GiantCapture zones,
+-- or when the route graph has no spawn or escape nodes.
+local function checkCaptureZoneRouteEdgeBlocking(
+	descriptor: RealmDescriptor,
+	config: RealmChokepointConfig
+): CheckResult
+	if not config.checkCaptureZoneEdgeBlocking then
+		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
+	end
+
+	local zones = getZonesByTag(descriptor.captureZones, "GiantCapture")
+
+	-- Vacuous pass: no GiantCapture zones present.
+	if #zones == 0 then
+		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
+	end
+
+	local nodes = descriptor.routeGraph.nodes
+	local edges = descriptor.routeGraph.edges
+
+	local blocked = buildBlockedNodeSet(nodes, zones)
+
+	local nodePositions: { [string]: Vector3Data } = {}
+	for _, node in nodes do
+		nodePositions[node.name] = node.position
+	end
+
+	local unlockedEdges: { RouteEdge } = {}
+	for _, edge in edges do
+		if blocked[edge.from] or blocked[edge.to] then
+			continue
+		end
+		local fromPos = nodePositions[edge.from]
+		local toPos = nodePositions[edge.to]
+		if fromPos ~= nil and toPos ~= nil then
+			local crosses = false
+			for _, zone in zones do
+				if segmentIntersectsSphere(fromPos, toPos, zone.position, zone.radius) then
+					crosses = true
+					break
+				end
+			end
+			if crosses then
+				continue
+			end
+		end
+		table.insert(unlockedEdges, edge)
+	end
+
+	local pathCount = countDisjointPaths(nodes, unlockedEdges, blocked)
+
+	-- Vacuous pass: no spawn or escape nodes in route graph.
+	if pathCount == -1 then
+		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
+	end
+
+	if pathCount >= config.minimumDisjointPathCount then
+		return { id = "capture_zone_route_edge_blocking", passed = true, reason = nil }
+	end
+
+	return {
+		id = "capture_zone_route_edge_blocking",
+		passed = false,
+		reason = string.format(
+			"only %d edge-disjoint spawn-to-escape path(s) survive GiantCapture zone blocking (minimum %d required)",
+			pathCount,
+			config.minimumDisjointPathCount
+		),
+	}
+end
+
 function RealmChokepointValidator.ValidateChokepoints(
 	descriptor: RealmDescriptor,
 	config: RealmChokepointConfig
@@ -431,6 +500,7 @@ function RealmChokepointValidator.ValidateChokepoints(
 	local results: { CheckResult } = {
 		checkChokepointEscapeReachability(descriptor, config),
 		checkChokepointFallbackReachability(descriptor, config),
+		checkCaptureZoneRouteEdgeBlocking(descriptor, config),
 	}
 
 	local allPassed = true
