@@ -1398,6 +1398,139 @@ local function run()
 		end
 	end
 
+	-- BLOCK 49: Slice 8 - penalty entry carries category field.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block49",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(#result.devaluation.penalties >= 1, "block49 has penalties")
+		local p = result.devaluation.penalties[1]
+		assertTrue(p.category ~= nil, "block49 penalty has category field")
+		assertEqual(p.category, "proximity", "block49 near_critical_point is proximity category")
+	end
+
+	-- BLOCK 50: Slice 8 - proximity category total is correct.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block50",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(#result.devaluation.categoryTotals > 0, "block50 has category totals")
+		local proximityTotal = nil
+		for _, cat in ipairs(result.devaluation.categoryTotals) do
+			if cat.category == "proximity" then
+				proximityTotal = cat.totalScore
+				break
+			end
+		end
+		assertTrue(proximityTotal ~= nil, "block50 proximity category present in totals")
+		assertEqual(proximityTotal, result.devaluation.totalPenalty, "block50 proximity total matches single penalty")
+	end
+
+	-- BLOCK 51: Slice 8 - multiple penalty categories with stable ordering.
+	do
+		-- Create a scenario that might trigger both proximity and route_pressure (though
+		-- prototype fixture is disconnected, so route_pressure will be 0, but test ordering anyway).
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 80,
+			nearRouteEdgeSoftRadius = 200,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block51",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertTrue(#result.devaluation.categoryTotals >= 1, "block51 has category totals")
+		-- Verify ordering: proximity should come before route_pressure.
+		for i = 1, #result.devaluation.categoryTotals - 1 do
+			local cat1 = result.devaluation.categoryTotals[i].category
+			local cat2 = result.devaluation.categoryTotals[i + 1].category
+			local order1 = (cat1 == "proximity" and 0) or (cat1 == "route_pressure" and 1) or (cat1 == "density_pressure" and 2) or 999
+			local order2 = (cat2 == "proximity" and 0) or (cat2 == "route_pressure" and 1) or (cat2 == "density_pressure" and 2) or 999
+			assertTrue(order1 < order2, "block51 categories ordered deterministically at index " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 52: Slice 8 - hard-rejected placement still works with categories.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 40,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block52",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertFalse(result.accepted, "block52 hard rejected (Slice 1 overlap)")
+		assertTrue(#result.rejectReasons > 0, "block52 has reject reasons")
+		-- Devaluation should still be computed and categorized.
+		assertTrue(result.devaluation.totalPenalty > 0, "block52 devaluation still accumulated")
+		assertTrue(#result.devaluation.categoryTotals > 0, "block52 category totals present")
+		local hasProximity = false
+		for _, cat in ipairs(result.devaluation.categoryTotals) do
+			if cat.category == "proximity" and cat.totalScore > 0 then
+				hasProximity = true
+				break
+			end
+		end
+		assertTrue(hasProximity, "block52 proximity category has score on rejected placement")
+	end
+
+	-- BLOCK 53: Slice 8 - category totals are deterministic (repeated runs identical).
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 80,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block53",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertEqual(#outA.devaluation.categoryTotals, #outB.devaluation.categoryTotals, "block53 category count stable")
+		for i, catA in ipairs(outA.devaluation.categoryTotals) do
+			local catB = outB.devaluation.categoryTotals[i]
+			assertEqual(catA.category, catB.category, "block53 category name stable " .. tostring(i))
+			assertEqual(catA.totalScore, catB.totalScore, "block53 category score stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 54: Slice 8 - category totals always present and ordered, even with no penalties.
+	do
+		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 60,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_S8Block54",
+			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = 500 }, halfExtents = { x = 10, y = 10, z = 10 } }},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
+		assertEqual(result.devaluation.totalPenalty, 0, "block54 no penalties far away")
+		assertEqual(#result.devaluation.penalties, 0, "block54 penalty list empty")
+		-- Even with no penalties, category structure should be present and ordered.
+		assertTrue(#result.devaluation.categoryTotals > 0, "block54 category totals present even with no penalties")
+		local expectedOrder = { "proximity", "route_pressure", "density_pressure" }
+		for i, expectedCat in ipairs(expectedOrder) do
+			if i <= #result.devaluation.categoryTotals then
+				assertEqual(result.devaluation.categoryTotals[i].category, expectedCat, "block54 category order " .. tostring(i))
+			end
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

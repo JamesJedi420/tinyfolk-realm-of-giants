@@ -55,8 +55,10 @@ export type DistrictCriticalExclusionConfig = {
 -- A single soft devaluation penalty entry (Slice 7).
 -- factor: "near_critical_point" | "near_route_edge"
 -- score: math.floor(softRadius - distance); always >= 1
+-- category: "proximity" | "route_pressure" | "density_pressure" (Slice 8)
 export type DistrictPlacementDevaluationPenalty = {
 	factor: string,
+	category: string,
 	score: number,
 	message: string,
 	districtBoxTag: string?,
@@ -66,10 +68,18 @@ export type DistrictPlacementDevaluationPenalty = {
 	nearRouteEdgeTo: string?,
 }
 
--- Aggregated soft devaluation result (Slice 7).
+-- Category-wise penalty total (Slice 8).
+export type DistrictPlacementDevaluationCategoryTotal = {
+	category: string,
+	totalScore: number,
+}
+
+-- Aggregated soft devaluation result (Slice 7-8).
+-- categoryTotals is deterministically ordered: proximity, route_pressure, density_pressure.
 export type DistrictPlacementDevaluationResult = {
 	totalPenalty: number,
 	penalties: { DistrictPlacementDevaluationPenalty },
+	categoryTotals: { DistrictPlacementDevaluationCategoryTotal },
 }
 
 -- Soft scoring thresholds for Slice 7 devaluation.
@@ -704,15 +714,17 @@ local function checkRecurringStructurePolicy(
 	end
 end
 
--- Slice 7: soft proximity penalty helper for near-critical-point scoring.
+-- Slice 7-8: soft proximity penalty helper for near-critical-point scoring.
 -- Emits at most one penalty per critical point (first triggering box wins).
 -- Only fires when dist > 0 (no hard intersection) and dist < softRadius.
+-- Slice 8: adds penaltyCategory parameter to categorize the penalty.
 local function addSoftProximityPenalty(
 	pointName: string,
 	pointPos: RealmChunkAssemblySchema.Vector3Data,
 	proposedOccupiedSpace: { DistrictOccupiedBox },
 	softRadius: number,
 	category: string,
+	penaltyCategory: string,
 	penalties: { DistrictPlacementDevaluationPenalty }
 )
 	if softRadius <= 0 then
@@ -725,6 +737,7 @@ local function addSoftProximityPenalty(
 			if score > 0 then
 				table.insert(penalties, {
 					factor = "near_critical_point",
+					category = penaltyCategory,
 					score = score,
 					message = string.format(
 						"Proposed district is within soft proximity radius (%.0f studs) of %s '%s' at distance %.1f",
@@ -743,7 +756,8 @@ local function addSoftProximityPenalty(
 	end
 end
 
--- Slice 7: compute soft devaluation result for a placement request.
+-- Slice 7-8: compute soft devaluation result for a placement request.
+-- Slice 7 runs scoring factors; Slice 8 categorizes penalties.
 -- Runs both scoring factors when softConfig is provided.
 -- Always returns a valid DevaluationResult (empty when softConfig is nil).
 local function computeDevaluation(
@@ -759,7 +773,7 @@ local function computeDevaluation(
 		local descriptor = assemblyOutput.descriptor
 		local proposed = request.proposedOccupiedSpace
 
-		-- Factor 1: near protected critical points.
+		-- Factor 1: near protected critical points (category: proximity).
 		-- Checks the same categories as the Slice 3 hard gate.
 		if nearCritRadius > 0 then
 			for _, part in ipairs(descriptor.spawns) do
@@ -770,18 +784,43 @@ local function computeDevaluation(
 						proposed,
 						nearCritRadius,
 						"tinyfolk_spawn",
+						"proximity",
 						penalties
 					)
 				end
 			end
 			for _, part in ipairs(descriptor.escapeRoutes) do
-				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "escape_route", penalties)
+				addSoftProximityPenalty(
+					part.name,
+					part.position,
+					proposed,
+					nearCritRadius,
+					"escape_route",
+					"proximity",
+					penalties
+				)
 			end
 			for _, part in ipairs(descriptor.returnPoints) do
-				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "return_point", penalties)
+				addSoftProximityPenalty(
+					part.name,
+					part.position,
+					proposed,
+					nearCritRadius,
+					"return_point",
+					"proximity",
+					penalties
+				)
 			end
 			for _, part in ipairs(descriptor.stations) do
-				addSoftProximityPenalty(part.name, part.position, proposed, nearCritRadius, "station", penalties)
+				addSoftProximityPenalty(
+					part.name,
+					part.position,
+					proposed,
+					nearCritRadius,
+					"station",
+					"proximity",
+					penalties
+				)
 			end
 			for _, part in ipairs(descriptor.constructionSites) do
 				addSoftProximityPenalty(
@@ -790,18 +829,35 @@ local function computeDevaluation(
 					proposed,
 					nearCritRadius,
 					"construction_site",
+					"proximity",
 					penalties
 				)
 			end
 			for _, zone in ipairs(descriptor.captureZones) do
-				addSoftProximityPenalty(zone.name, zone.position, proposed, nearCritRadius, "capture_zone", penalties)
+				addSoftProximityPenalty(
+					zone.name,
+					zone.position,
+					proposed,
+					nearCritRadius,
+					"capture_zone",
+					"proximity",
+					penalties
+				)
 			end
 			for _, zone in ipairs(descriptor.controlZones) do
-				addSoftProximityPenalty(zone.name, zone.position, proposed, nearCritRadius, "control_zone", penalties)
+				addSoftProximityPenalty(
+					zone.name,
+					zone.position,
+					proposed,
+					nearCritRadius,
+					"control_zone",
+					"proximity",
+					penalties
+				)
 			end
 		end
 
-		-- Factor 2: near protected route edges (but not intersecting them).
+		-- Factor 2: near protected route edges but not intersecting (category: route_pressure).
 		if nearEdgeRadius > 0 and #descriptor.routeGraph.nodes > 0 and #descriptor.routeGraph.edges > 0 then
 			local protectedEdges = buildProtectedRouteEdges(descriptor)
 			if next(protectedEdges) then
@@ -828,6 +884,7 @@ local function computeDevaluation(
 										if score > 0 then
 											table.insert(penalties, {
 												factor = "near_route_edge",
+												category = "route_pressure",
 												score = score,
 												message = string.format(
 													"Proposed district is within soft proximity radius (%.0f studs) of protected route edge '%s' -> '%s'",
@@ -856,9 +913,30 @@ local function computeDevaluation(
 		totalPenalty += penalty.score
 	end
 
+	-- Slice 8: compute category totals (deterministic order: proximity, route_pressure, density_pressure).
+	-- Always include all three categories for deterministic representation.
+	local categoryTotals: { DistrictPlacementDevaluationCategoryTotal } = {}
+	local categoryScores: { [string]: number } = {
+		proximity = 0,
+		route_pressure = 0,
+		density_pressure = 0,
+	}
+	for _, penalty in ipairs(penalties) do
+		if categoryScores[penalty.category] ~= nil then
+			categoryScores[penalty.category] += penalty.score
+		end
+	end
+	for _, cat in ipairs({ "proximity", "route_pressure", "density_pressure" }) do
+		table.insert(categoryTotals, {
+			category = cat,
+			totalScore = categoryScores[cat],
+		})
+	end
+
 	return {
 		totalPenalty = totalPenalty,
 		penalties = penalties,
+		categoryTotals = categoryTotals,
 	}
 end
 
