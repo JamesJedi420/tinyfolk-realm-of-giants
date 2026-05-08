@@ -380,3 +380,307 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 24 blocks passed")
+
+-- ── Slice 14: capture_zone_spawn_perimeter_clearance ─────────────────────────
+-- Convention: vacuous pass when captureZones or spawns is empty.
+-- Non-GiantCapture tags are skipped.
+
+-- Block 25: Vacuous pass (no capture zones)
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 25: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 25: Reason should be nil")
+end
+
+-- Block 26: Vacuous pass (no spawns)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {})
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 26: Should vacuously pass with empty spawns")
+	assert(result.reason == nil, "Block 26: Reason should be nil")
+end
+
+-- Block 27: Spawn clearly outside perimeter (dist > radius)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	-- dist = 200, radius = 15 → dist - radius = 185 > 0 → pass
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 27: Spawn 200 studs away from radius-15 zone should pass")
+	assert(result.reason == nil, "Block 27: Reason should be nil")
+end
+
+-- Block 28: Spawn inside perimeter (dist < radius)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	-- dist = 10, radius = 15 → dist - radius = -5 ≤ 0 → fail
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == false, "Block 28: Spawn inside capture zone perimeter should fail")
+	assert(result.reason ~= nil, "Block 28: Reason should describe the violation")
+	assert(string.find(result.reason, "TinyfolkSpawn") ~= nil, "Block 28: Reason should include spawn name")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 28: Reason should include zone name")
+end
+
+-- Block 29: Spawn exactly on perimeter (dist == radius)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 15, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	-- dist = 15, radius = 15 → dist - radius = 0 ≤ 0 → fail
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == false, "Block 29: Spawn exactly on perimeter should fail (dist - radius = 0)")
+end
+
+-- Block 30: Multiple zones mixed (one valid, one encloses spawn)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 200, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 5, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == false, "Block 30: Should fail when any zone encloses a spawn")
+	assert(
+		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
+		"Block 30: Reason should identify the violating zone"
+	)
+end
+
+-- Block 31: Multiple spawns mixed (one outside, one inside)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 5, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn_A", position = { x = 200, y = 0, z = 0 } },
+		{ name = "TinyfolkSpawn_B", position = { x = 0, y = 0, z = 0 } },
+	})
+	-- TinyfolkSpawn_A: dist=195, radius=15 → pass; TinyfolkSpawn_B: dist=5, radius=15 → fail
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == false, "Block 31: Should fail when any spawn is inside any zone")
+	assert(string.find(result.reason, "TinyfolkSpawn_B") ~= nil, "Block 31: Reason should identify the enclosed spawn")
+end
+
+-- Block 32: 3D perimeter case (Y offset matters)
+do
+	local descriptor = makeDescriptor({
+		-- center at (0, 20, 0), radius 15. Spawn at (0,0,0): dist=20, 20-15=5 > 0 → pass
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 20, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 32: 3D distance (dist=20, radius=15) should pass")
+end
+
+-- Block 33: Non-GiantCapture zone is ignored
+do
+	local d5 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 500, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			-- radius 500 would enclose spawn if tag were GiantCapture, but it's not
+			{ name = "OtherZone_A", position = { x = 0, y = 0, z = 0 }, radius = 500, tag = "GiantControl" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 500, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 500 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(d5, config)
+	assert(result.passed == true, "Block 33: Non-GiantCapture zone is skipped by this rule")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 33 blocks passed (Slice 14 done)")
+
+-- ── Slice 15: capture_zone_escape_perimeter_clearance ────────────────────────
+-- Convention: vacuous pass when captureZones or escapeRoutes is empty.
+-- Non-GiantCapture tags are skipped.
+
+-- Block 34: Vacuous pass (no capture zones)
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 34: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 34: Reason should be nil")
+end
+
+-- Block 35: Vacuous pass (no escape routes)
+do
+	local d6 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = {},
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 50, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		routeGraph = {
+			nodes = { { name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } } },
+			edges = {},
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d6, config)
+	assert(result.passed == true, "Block 35: Should vacuously pass with empty escapeRoutes")
+	assert(result.reason == nil, "Block 35: Reason should be nil")
+end
+
+-- Block 36: Escape route clearly outside perimeter
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 200 } },
+	})
+	-- escape route in makeDescriptor is at (100,0,0): dist=100, radius=15 → 100-15=85 > 0 → pass
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(descriptor, config)
+	assert(result.passed == true, "Block 36: Escape route 100 studs away from radius-15 zone should pass")
+	assert(result.reason == nil, "Block 36: Reason should be nil")
+end
+
+-- Block 37: Escape route inside perimeter
+do
+	local d7 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 10, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 10, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 10 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	-- dist=10, radius=15 → dist-radius=-5 ≤ 0 → fail
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d7, config)
+	assert(result.passed == false, "Block 37: Escape route inside capture zone perimeter should fail")
+	assert(result.reason ~= nil, "Block 37: Reason should describe the violation")
+	assert(string.find(result.reason, "EscapeRoute_A") ~= nil, "Block 37: Reason should include escape route name")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 37: Reason should include zone name")
+end
+
+-- Block 38: Escape route exactly on perimeter (dist == radius)
+do
+	local d8 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 15, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 15, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 15 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	-- dist=15, radius=15 → dist-radius=0 ≤ 0 → fail
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d8, config)
+	assert(result.passed == false, "Block 38: Escape route exactly on perimeter should fail (dist - radius = 0)")
+end
+
+-- Block 39: Multiple zones mixed (one valid, one encloses escape route)
+do
+	local d9 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 100, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+			{ name = "GiantCaptureZone_B", position = { x = 100, y = 0, z = 0 }, radius = 20, tag = "GiantCapture" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 100, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 100 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	-- Zone_A at (0,0,0) radius 15: dist to escape = 100 → 100-15=85 > 0 → pass
+	-- Zone_B at (100,0,0) radius 20: dist to escape = 0 → 0-20=-20 ≤ 0 → fail
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d9, config)
+	assert(result.passed == false, "Block 39: Should fail when any zone encloses an escape route")
+	assert(
+		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
+		"Block 39: Reason should identify the violating zone"
+	)
+end
+
+-- Block 40: 3D perimeter case
+do
+	local d10 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		-- escape at (0,12,0), zone center (0,0,0) radius 15: dist=12, 12-15=-3 ≤ 0 → fail
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 0, y = 12, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 0, y = 12, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 12 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d10, config)
+	assert(result.passed == false, "Block 40: 3D Y-axis escape inside perimeter (dist=12 < radius=15) should fail")
+end
+
+-- Block 41: Non-GiantCapture zone is ignored
+do
+	local d11 = {
+		spawns = { { name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } } },
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 5, y = 0, z = 0 } } },
+		controlZones = {},
+		props = {},
+		captureZones = {
+			-- radius 500 would enclose escape route if tag were GiantCapture, but it's not
+			{ name = "OtherZone_A", position = { x = 0, y = 0, z = 0 }, radius = 500, tag = "GiantControl" },
+		},
+		routeGraph = {
+			nodes = {
+				{ name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } },
+				{ name = "EscapeRoute_A", nodeType = "escape", position = { x = 5, y = 0, z = 0 } },
+			},
+			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 5 } },
+		},
+	} :: RealmTopologyValidator.RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d11, config)
+	assert(result.passed == true, "Block 41: Non-GiantCapture zone is skipped by this rule")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 41 blocks passed")

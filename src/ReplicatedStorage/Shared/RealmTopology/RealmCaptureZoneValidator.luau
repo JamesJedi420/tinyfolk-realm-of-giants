@@ -162,8 +162,112 @@ local function captureZoneRadiusBounds(descriptor: RealmDescriptor, config: Capt
 	}
 end
 
+-- Slice 14: spawn perimeter clearance
+-- Convention: vacuous pass when captureZones or spawns is empty, matching spawn-separation rule.
+-- Non-GiantCapture tags are skipped (matching captureZoneRadiusBounds convention).
+local function captureZoneSpawnPerimeterClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_spawn_perimeter_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	if #descriptor.spawns == 0 then
+		return {
+			id = "capture_zone_spawn_perimeter_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for _, captureZone in ipairs(descriptor.captureZones) do
+		if captureZone.tag ~= "GiantCapture" then
+			continue
+		end
+		for _, spawn in ipairs(descriptor.spawns) do
+			local d = distance(captureZone.position, spawn.position)
+			if d - captureZone.radius <= 0 then
+				return {
+					id = "capture_zone_spawn_perimeter_clearance",
+					passed = false,
+					reason = "Spawn '"
+						.. spawn.name
+						.. "' lies inside or on the perimeter of capture zone '"
+						.. captureZone.name
+						.. "' (dist="
+						.. string.format("%.2f", d)
+						.. ", radius="
+						.. tostring(captureZone.radius)
+						.. ")",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_spawn_perimeter_clearance",
+		passed = true,
+		reason = nil,
+	}
+end
+
+-- Slice 15: escape perimeter clearance
+-- Convention: vacuous pass when captureZones or escapeRoutes is empty, matching escape-separation rule.
+-- Non-GiantCapture tags are skipped.
+local function captureZoneEscapePerimeterClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_escape_perimeter_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	if #descriptor.escapeRoutes == 0 then
+		return {
+			id = "capture_zone_escape_perimeter_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for _, captureZone in ipairs(descriptor.captureZones) do
+		if captureZone.tag ~= "GiantCapture" then
+			continue
+		end
+		for _, escapeRoute in ipairs(descriptor.escapeRoutes) do
+			local d = distance(captureZone.position, escapeRoute.position)
+			if d - captureZone.radius <= 0 then
+				return {
+					id = "capture_zone_escape_perimeter_clearance",
+					passed = false,
+					reason = "Escape route '"
+						.. escapeRoute.name
+						.. "' lies inside or on the perimeter of capture zone '"
+						.. captureZone.name
+						.. "' (dist="
+						.. string.format("%.2f", d)
+						.. ", radius="
+						.. tostring(captureZone.radius)
+						.. ")",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_escape_perimeter_clearance",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
 	captureZoneRadiusBounds = captureZoneRadiusBounds,
+	captureZoneSpawnPerimeterClearance = captureZoneSpawnPerimeterClearance,
+	captureZoneEscapePerimeterClearance = captureZoneEscapePerimeterClearance,
 }
