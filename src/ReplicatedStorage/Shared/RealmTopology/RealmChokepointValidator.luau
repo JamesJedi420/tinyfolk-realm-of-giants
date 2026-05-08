@@ -47,6 +47,44 @@ local function getZonesByTag(zones: { NamedZone }, tag: string): { NamedZone }
 	return result
 end
 
+-- Returns true when the line segment from p to q intersects or is tangent to the
+-- sphere at `center` with the given `radius`.
+-- Convention: tangent (closest-point distance == radius) counts as blocked,
+-- matching the node-point rule which uses dist3 <= radius.
+local function segmentIntersectsSphere(
+	p: Vector3Data,
+	q: Vector3Data,
+	center: Vector3Data,
+	radius: number
+): boolean
+	local dx = q.x - p.x
+	local dy = q.y - p.y
+	local dz = q.z - p.z
+	local len2 = dx * dx + dy * dy + dz * dz
+	local t: number
+	if len2 == 0 then
+		-- Degenerate segment (zero-length): treat as a point.
+		t = 0
+	else
+		local cx = center.x - p.x
+		local cy = center.y - p.y
+		local cz = center.z - p.z
+		t = (cx * dx + cy * dy + cz * dz) / len2
+		if t < 0 then
+			t = 0
+		end
+		if t > 1 then
+			t = 1
+		end
+	end
+	-- Closest point on segment to sphere center.
+	local ex = (p.x + t * dx) - center.x
+	local ey = (p.y + t * dy) - center.y
+	local ez = (p.z + t * dz) - center.z
+	-- Using <= so that tangent contact is blocked (matches node-point convention).
+	return (ex * ex + ey * ey + ez * ez) <= radius * radius
+end
+
 -- Returns a set of node names whose positions fall within any matching zone's radius.
 local function buildBlockedNodeSet(
 	nodes: { NamedNode },
@@ -207,12 +245,34 @@ local function checkChokepointEscapeReachability(
 
 	local blocked = buildBlockedNodeSet(nodes, zones)
 
-	-- Keep only edges where both endpoints are unblocked.
+	-- Build a name→position lookup for the segment-sphere crossing check.
+	local nodePositions: { [string]: Vector3Data } = {}
+	for _, node in nodes do
+		nodePositions[node.name] = node.position
+	end
+
+	-- Keep only edges where both endpoints are unblocked AND the edge segment
+	-- does not cross through any zone sphere.
 	local unlockedEdges: { RouteEdge } = {}
 	for _, edge in edges do
-		if not blocked[edge.from] and not blocked[edge.to] then
-			table.insert(unlockedEdges, edge)
+		if blocked[edge.from] or blocked[edge.to] then
+			continue
 		end
+		local fromPos = nodePositions[edge.from]
+		local toPos = nodePositions[edge.to]
+		if fromPos ~= nil and toPos ~= nil then
+			local crosses = false
+			for _, zone in zones do
+				if segmentIntersectsSphere(fromPos, toPos, zone.position, zone.radius) then
+					crosses = true
+					break
+				end
+			end
+			if crosses then
+				continue
+			end
+		end
+		table.insert(unlockedEdges, edge)
 	end
 
 	local pathCount = countDisjointPaths(nodes, unlockedEdges, blocked)
@@ -294,12 +354,34 @@ local function checkChokepointFallbackReachability(
 
 	local blocked = buildBlockedNodeSet(nodes, zones)
 
-	-- Build unlocked edge set.
+	-- Build a name→position lookup for the segment-sphere crossing check.
+	local nodePositions: { [string]: Vector3Data } = {}
+	for _, node in nodes do
+		nodePositions[node.name] = node.position
+	end
+
+	-- Keep only edges where both endpoints are unblocked AND the edge segment
+	-- does not cross through any zone sphere.
 	local unlockedEdges: { RouteEdge } = {}
 	for _, edge in edges do
-		if not blocked[edge.from] and not blocked[edge.to] then
-			table.insert(unlockedEdges, edge)
+		if blocked[edge.from] or blocked[edge.to] then
+			continue
 		end
+		local fromPos = nodePositions[edge.from]
+		local toPos = nodePositions[edge.to]
+		if fromPos ~= nil and toPos ~= nil then
+			local crosses = false
+			for _, zone in zones do
+				if segmentIntersectsSphere(fromPos, toPos, zone.position, zone.radius) then
+					crosses = true
+					break
+				end
+			end
+			if crosses then
+				continue
+			end
+		end
+		table.insert(unlockedEdges, edge)
 	end
 
 	-- Collect unblocked fallback escape nodes.
