@@ -13,6 +13,7 @@ export type CheckResult = {
 
 export type CaptureZoneConfig = {
 	minimumSpawnSeparationStuds: number,
+	minimumEscapeSeparationStuds: number,
 }
 
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
@@ -67,6 +68,52 @@ local function captureZoneSpawnSeparation(descriptor: RealmDescriptor, config: C
 	}
 end
 
+local function captureZoneEscapeSeparation(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_escape_separation",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	if #descriptor.escapeRoutes == 0 then
+		return {
+			id = "capture_zone_escape_separation",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for _, captureZone in ipairs(descriptor.captureZones) do
+		for _, escapeRoute in ipairs(descriptor.escapeRoutes) do
+			local d = distance(captureZone.position, escapeRoute.position)
+			if d < config.minimumEscapeSeparationStuds then
+				return {
+					id = "capture_zone_escape_separation",
+					passed = false,
+					reason = "Capture zone '"
+						.. captureZone.name
+						.. "' is "
+						.. string.format("%.1f", d)
+						.. " studs from escape route '"
+						.. escapeRoute.name
+						.. "' (minimum: "
+						.. tostring(config.minimumEscapeSeparationStuds)
+						.. " studs)",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_escape_separation",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
+	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
 }
