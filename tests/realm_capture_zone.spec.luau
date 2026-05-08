@@ -25,6 +25,7 @@ local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
 	minimumEscapeSeparationStuds = 80,
 	minimumCaptureRadiusStuds = 8,
 	maximumCaptureRadiusStuds = 25,
+	minimumCaptureZoneGapStuds = 5,
 }
 
 -- Block 1: Vacuous pass (empty captureZones)
@@ -799,7 +800,10 @@ do
 	})
 	-- Only one GiantCapture zone → vacuous pass (fewer than 2 GiantCapture zones)
 	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
-	assert(result.passed == true, "Block 49: Non-GiantCapture zone must be ignored; only one GiantCapture → vacuous pass")
+	assert(
+		result.passed == true,
+		"Block 49: Non-GiantCapture zone must be ignored; only one GiantCapture → vacuous pass"
+	)
 	assert(result.reason == nil, "Block 49: Reason should be nil")
 end
 
@@ -821,3 +825,148 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 50 blocks passed")
+
+-- ── Slice 17: capture_zone_minimum_spacing ──────────────────────────────────
+-- Rule: fail if perimeterGap = dist - (r1 + r2) is below minimumCaptureZoneGapStuds.
+-- Boundary pass at exact minimum gap is allowed.
+-- Non-GiantCapture zones are ignored.
+
+-- Block 51: Vacuous pass (no capture zones)
+do
+	local descriptor = makeDescriptor({}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == true, "Block 51: Should vacuously pass with empty captureZones")
+	assert(result.reason == nil, "Block 51: Reason should be nil")
+end
+
+-- Block 52: Vacuous pass (single GiantCapture zone)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == true, "Block 52: Single zone should vacuously pass")
+	assert(result.reason == nil, "Block 52: Reason should be nil")
+end
+
+-- Block 53: Two zones with gap above minimum (pass)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 30, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- dist=30, r1+r2=20, gap=10 >= minimum 5 → pass
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == true, "Block 53: Gap above minimum should pass")
+	assert(result.reason == nil, "Block 53: Reason should be nil")
+end
+
+-- Block 54: Two zones with gap below minimum (fail)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 24, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- dist=24, r1+r2=20, gap=4 < minimum 5 → fail
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == false, "Block 54: Gap below minimum should fail")
+	assert(result.reason ~= nil, "Block 54: Reason should describe the violation")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 54: Reason should include zone A")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 54: Reason should include zone B")
+end
+
+-- Block 55: Exact minimum gap boundary (pass)
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 25, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- dist=25, r1+r2=20, gap=5 == minimum 5 → pass
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == true, "Block 55: Exact minimum gap should pass")
+	assert(result.reason == nil, "Block 55: Reason should be nil")
+end
+
+-- Block 56: Overlapping zones also fail under spacing rule
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 15, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- dist=15, r1+r2=20, gap=-5 < minimum 5 → fail
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == false, "Block 56: Overlap should fail minimum-spacing rule as well")
+end
+
+-- Block 57: Multiple zones with one bad pair
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 60, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 84, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- A-B: gap=40 pass; A-C: gap=64 pass; B-C: dist=24 gap=4 fail
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == false, "Block 57: Any bad pair should fail")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 57: Reason should include zone B")
+	assert(string.find(result.reason, "GiantCaptureZone_C") ~= nil, "Block 57: Reason should include zone C")
+end
+
+-- Block 58: 3D spacing case
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 0, y = 0, z = 24 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- dist=24 in 3D, r1+r2=20, gap=4 < minimum 5 → fail
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == false, "Block 58: 3D spacing should use full center-to-center distance")
+end
+
+-- Block 59: Non-GiantCapture zone ignored
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "OtherZone_B", position = { x = 2, y = 0, z = 0 }, radius = 10, tag = "GiantControl" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- Only one GiantCapture zone after filtering → vacuous pass
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == true, "Block 59: Non-GiantCapture zones should be ignored")
+	assert(result.reason == nil, "Block 59: Reason should be nil")
+end
+
+-- Block 60: Deterministic pair reporting
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 0, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_B", position = { x = 24, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+		{ name = "GiantCaptureZone_C", position = { x = 23, y = 0, z = 0 }, radius = 10, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 200, y = 0, z = 0 } },
+	})
+	-- A-B is checked first and already violates gap minimum, so A/B should be reported.
+	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
+	assert(result.passed == false, "Block 60: Should fail on first violating pair")
+	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 60: First pair should include A")
+	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 60: First pair should include B")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 60 blocks passed")

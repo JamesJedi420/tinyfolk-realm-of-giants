@@ -16,6 +16,7 @@ export type CaptureZoneConfig = {
 	minimumEscapeSeparationStuds: number,
 	minimumCaptureRadiusStuds: number,
 	maximumCaptureRadiusStuds: number,
+	minimumCaptureZoneGapStuds: number,
 }
 
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
@@ -297,15 +298,10 @@ local function captureZoneOverlap(descriptor: RealmDescriptor, config: CaptureZo
 				return {
 					id = "capture_zone_overlap",
 					passed = false,
-					reason = "Capture zones '"
-						.. a.name
-						.. "' and '"
-						.. b.name
-						.. "' overlap (dist="
-						.. string.format("%.2f", d)
-						.. ", r1+r2="
-						.. tostring(a.radius + b.radius)
-						.. ")",
+					reason = "Capture zones '" .. a.name .. "' and '" .. b.name .. "' overlap (dist=" .. string.format(
+						"%.2f",
+						d
+					) .. ", r1+r2=" .. tostring(a.radius + b.radius) .. ")",
 				}
 			end
 		end
@@ -318,6 +314,59 @@ local function captureZoneOverlap(descriptor: RealmDescriptor, config: CaptureZo
 	}
 end
 
+-- Slice 17: capture_zone_minimum_spacing
+-- Rule: for each unique pair of GiantCapture zones, compute
+-- perimeterGap = dist - (r1 + r2), then fail if perimeterGap is below
+-- config.minimumCaptureZoneGapStuds.
+-- Non-GiantCapture zones are ignored.
+-- Vacuous pass when fewer than two GiantCapture zones exist.
+local function captureZoneMinimumSpacing(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	for _, zone in ipairs(descriptor.captureZones) do
+		if zone.tag == "GiantCapture" then
+			table.insert(giantZones, zone)
+		end
+	end
+
+	if #giantZones < 2 then
+		return {
+			id = "capture_zone_minimum_spacing",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for i = 1, #giantZones - 1 do
+		for j = i + 1, #giantZones do
+			local a = giantZones[i]
+			local b = giantZones[j]
+			local d = distance(a.position, b.position)
+			local perimeterGap = d - (a.radius + b.radius)
+			if perimeterGap < config.minimumCaptureZoneGapStuds then
+				return {
+					id = "capture_zone_minimum_spacing",
+					passed = false,
+					reason = "Capture zones '"
+						.. a.name
+						.. "' and '"
+						.. b.name
+						.. "' have perimeter gap "
+						.. string.format("%.2f", perimeterGap)
+						.. " studs (minimum: "
+						.. tostring(config.minimumCaptureZoneGapStuds)
+						.. " studs)",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_minimum_spacing",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
@@ -325,4 +374,5 @@ return {
 	captureZoneSpawnPerimeterClearance = captureZoneSpawnPerimeterClearance,
 	captureZoneEscapePerimeterClearance = captureZoneEscapePerimeterClearance,
 	captureZoneOverlap = captureZoneOverlap,
+	captureZoneMinimumSpacing = captureZoneMinimumSpacing,
 }
