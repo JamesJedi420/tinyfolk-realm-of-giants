@@ -229,6 +229,296 @@ local function run()
 		end
 	end
 
+	-- Slice 3: critical-point proximity gate
+	-- Prototype world-space critical points:
+	--   P_Start::TinyfolkSpawn      at (0,   0, 0)
+	--   P_Start::TinyfolkReturnPoint at (-20, 0, 0)
+	--   P_Start::WorkStation_A       at (25,  0, 0)
+	--   P_Start::ConstructionSite_A  at (15,  0, 10)
+	--   P_Start::GiantCaptureZone_A  at (40,  0, 20)
+	--   P_Exit::EscapeRoute_A        at (120, 0, 0)
+	-- All z=0 for P_Start content; P_Start occupiedBox z range is [-40, +40].
+	-- A box centered at (x, 0, 50) halfExtents (5,5,5) is:
+	--   - outside the P_Start occupied box (z: 50 < 40+5=45? false → no Slice 1 overlap)
+	--   - at surface distance 45 from any point at the same (x,0,0)
+
+	-- BLOCK 16: Disjoint placement far from all critical points passes Slice 3 with a
+	-- non-zero critical config (no spatial proximity violation).
+	do
+		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 50,
+			escapeRouteExclusionRadius = 50,
+			returnPointExclusionRadius = 50,
+			stationExclusionRadius = 50,
+			constructionSiteExclusionRadius = 50,
+			captureZoneExclusionRadius = 50,
+			controlZoneExclusionRadius = 50,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_CritDisjoint",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 500 },
+					halfExtents = { x = 20, y = 10, z = 20 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfg)
+		assertTrue(result.accepted, "block16 critical-disjoint passes")
+		assertEqual(#result.rejectReasons, 0, "block16 no reject reasons")
+	end
+
+	-- BLOCK 17: Box at surface distance 45 from TinyfolkSpawn.
+	-- exclusionRadius 50 → 45 < 50 → fires. exclusionRadius 40 → 45 < 40 → does not fire.
+	-- Box center (0,0,50) halfExtents (5,5,5):
+	--   distPointToAABB({0,0,0}, {0,0,50}, {5,5,5}) = dz = max(0, 50-5) = 45.
+	do
+		local cfgFires: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 50,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local cfgSafe: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 40,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_TinyfolkSpawnProx",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 0, y = 0, z = 50 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local resultFires = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfgFires)
+		assertFalse(resultFires.accepted, "block17 spawn proximity rejected")
+		assertHasRejectCode(resultFires, "tinyfolk_spawn_exclusion", "block17 code")
+		local r = resultFires.rejectReasons[#resultFires.rejectReasons]
+		assertEqual(r.criticalCategory, "tinyfolk_spawn", "block17 category")
+		assertTrue(
+			r.conflictingCriticalPointName ~= nil and string.find(r.conflictingCriticalPointName, "TinyfolkSpawn", 1, true) ~= nil,
+			"block17 conflicting name contains TinyfolkSpawn"
+		)
+		local resultSafe = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfgSafe)
+		assertTrue(resultSafe.accepted, "block17 below radius passes")
+	end
+
+	-- BLOCK 18: Box at surface distance 45 from EscapeRoute_A (world 120,0,0).
+	-- Box center (120,0,50) halfExtents (5,5,5).
+	-- P_Exit occupied box z range [-40,40]: |50-0|=50 < 45? false → no Slice 1 overlap.
+	do
+		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 0,
+			escapeRouteExclusionRadius = 50,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_EscapeRouteProx",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 120, y = 0, z = 50 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfg)
+		assertFalse(result.accepted, "block18 escape route proximity rejected")
+		assertHasRejectCode(result, "escape_route_exclusion", "block18 code")
+		local r = result.rejectReasons[#result.rejectReasons]
+		assertEqual(r.criticalCategory, "escape_route", "block18 category")
+	end
+
+	-- BLOCK 19: Box at surface distance 45 from WorkStation_A (world 25,0,0).
+	-- Box center (25,0,50) halfExtents (5,5,5).
+	-- P_Start occupied box z range [-40,40]: |50-0|=50 < 45? false → no Slice 1 overlap.
+	do
+		local cfgStation: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 0,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 50,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_StationProx",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 25, y = 0, z = 50 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfgStation)
+		assertFalse(result.accepted, "block19 station proximity rejected")
+		assertHasRejectCode(result, "station_exclusion", "block19 station code")
+
+		-- Also confirm construction site exclusion fires for ConstructionSite_A at (15,0,10).
+		-- Box center (15,0,60) halfExtents (5,5,5).
+		-- dz = max(0, |10-60|-5) = max(0,45) = 45 < constructionSiteExclusionRadius=50 → fires.
+		local cfgSite: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 0,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 50,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local reqSite: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_SiteProx",
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 15, y = 0, z = 60 },
+					halfExtents = { x = 5, y = 5, z = 5 },
+				},
+			},
+		}
+		local resultSite = RealmDistrictPlacementValidator.ValidatePlacement(reqSite, protoOutput, cfgSite)
+		assertFalse(resultSite.accepted, "block19 construction site proximity rejected")
+		assertHasRejectCode(resultSite, "construction_site_exclusion", "block19 site code")
+		local rSite = resultSite.rejectReasons[#resultSite.rejectReasons]
+		assertEqual(rSite.criticalCategory, "construction_site", "block19 site category")
+	end
+
+	-- BLOCK 20: Multiple critical violations coexist in one result.
+	-- Two proposed boxes: one close to TinyfolkSpawn, one close to EscapeRoute_A.
+	-- Both categories enabled → two reject reasons, one per violated critical point.
+	do
+		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 50,
+			escapeRouteExclusionRadius = 50,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_MultiCritical",
+			proposedOccupiedSpace = {
+				-- Near TinyfolkSpawn (0,0,0): surface dist = 45
+				{ tag = "box_a", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+				-- Near EscapeRoute_A (120,0,0): surface dist = 45
+				{ tag = "box_b", worldCenter = { x = 120, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfg)
+		assertFalse(result.accepted, "block20 multi-critical rejected")
+		assertHasRejectCode(result, "tinyfolk_spawn_exclusion", "block20 spawn code")
+		assertHasRejectCode(result, "escape_route_exclusion", "block20 escape code")
+		-- Both violations must be present.
+		local spawnCount, escapeCount = 0, 0
+		for _, reason in result.rejectReasons do
+			if reason.code == "tinyfolk_spawn_exclusion" then
+				spawnCount += 1
+			elseif reason.code == "escape_route_exclusion" then
+				escapeCount += 1
+			end
+		end
+		assertEqual(spawnCount, 1, "block20 one spawn violation")
+		assertEqual(escapeCount, 1, "block20 one escape violation")
+	end
+
+	-- BLOCK 21: All exclusion radii = 0 disables Slice 3 check entirely; placement passes.
+	do
+		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 0,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		-- Same box from block17 that would fire with radius=50.
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_ZeroRadius",
+			proposedOccupiedSpace = {
+				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfg)
+		assertTrue(result.accepted, "block21 zero-radius config passes")
+		assertEqual(#result.rejectReasons, 0, "block21 no reject reasons")
+	end
+
+	-- BLOCK 22: Nil criticalConfig leaves Slice 1/2 active but skips Slice 3.
+	-- Block17's box (near TinyfolkSpawn) has no occupied-space overlap → Slices 1 and 2 pass.
+	-- Without criticalConfig, Slice 3 does not fire.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NilConfig",
+			proposedOccupiedSpace = {
+				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertTrue(result.accepted, "block22 nil config skips slice3")
+	end
+
+	-- BLOCK 23: Stability — repeated Slice 3 runs with same input produce identical output.
+	do
+		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 50,
+			escapeRouteExclusionRadius = 50,
+			returnPointExclusionRadius = 50,
+			stationExclusionRadius = 50,
+			constructionSiteExclusionRadius = 50,
+			captureZoneExclusionRadius = 50,
+			controlZoneExclusionRadius = 50,
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_Stability3",
+			proposedOccupiedSpace = {
+				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local function build()
+			return RealmDistrictPlacementValidator.ValidatePlacement(
+				request,
+				RealmChunkAssemblySchema.BuildAssemblyOutput(
+					RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+				),
+				cfg
+			)
+		end
+		local outA = build()
+		local outB = build()
+		assertEqual(outA.accepted, outB.accepted, "block23 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block23 count stable")
+		for i, rA in ipairs(outA.rejectReasons) do
+			local rB = outB.rejectReasons[i]
+			assertEqual(rA.code, rB.code, "block23 code stable " .. i)
+			assertEqual(rA.criticalCategory, rB.criticalCategory, "block23 category stable " .. i)
+			assertEqual(
+				rA.conflictingCriticalPointName,
+				rB.conflictingCriticalPointName,
+				"block23 point name stable " .. i
+			)
+		end
+	end
+
 	-- Slice 2: route/escape preservation gate
 	-- Prototype escape routes (world-space):
 	--   P_Exit::EscapeRoute_A at (120, 0, 0)  [from Chunk_Exit local (0,0,0) + P_Exit at (120,0,0)]

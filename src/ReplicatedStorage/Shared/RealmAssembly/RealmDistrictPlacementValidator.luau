@@ -27,6 +27,21 @@ export type DistrictPlacementRejectReason = {
 	conflictingChunkId: string?,
 	conflictingBoxTag: string?,
 	isLandmarkConflict: boolean,
+	-- Slice 3 fields (nil for Slice 1/2 reasons).
+	conflictingCriticalPointName: string?,
+	criticalCategory: string?,
+}
+
+-- Per-category exclusion radii (studs) for Slice 3 proximity gate.
+-- A radius of 0 disables the check for that category.
+export type DistrictCriticalExclusionConfig = {
+	tinyfolkSpawnExclusionRadius: number,
+	escapeRouteExclusionRadius: number,
+	returnPointExclusionRadius: number,
+	stationExclusionRadius: number,
+	constructionSiteExclusionRadius: number,
+	captureZoneExclusionRadius: number,
+	controlZoneExclusionRadius: number,
 }
 
 -- The result of validating a single district placement request.
@@ -35,6 +50,164 @@ export type DistrictPlacementResult = {
 	accepted: boolean,
 	rejectReasons: { DistrictPlacementRejectReason },
 }
+
+-- Returns the Euclidean distance from a world-space point to the nearest surface
+-- of an AABB (0 when the point is strictly inside the AABB).
+local function distPointToAABB(
+	point: RealmChunkAssemblySchema.Vector3Data,
+	center: RealmChunkAssemblySchema.Vector3Data,
+	halfExtents: RealmChunkAssemblySchema.Vector3Data
+): number
+	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
+	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
+	local dz = math.max(0, math.abs(point.z - center.z) - halfExtents.z)
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+-- Appends one reject reason if any proposed box is within exclusionRadius of pointPos.
+-- Reports at most once per critical point (first triggering box wins).
+-- No-ops when exclusionRadius <= 0.
+local function rejectIfProximity(
+	pointName: string,
+	pointPos: RealmChunkAssemblySchema.Vector3Data,
+	proposedOccupiedSpace: { DistrictOccupiedBox },
+	exclusionRadius: number,
+	code: string,
+	category: string,
+	rejectReasons: { DistrictPlacementRejectReason }
+)
+	if exclusionRadius <= 0 then
+		return
+	end
+	for _, box in ipairs(proposedOccupiedSpace) do
+		if distPointToAABB(pointPos, box.worldCenter, box.halfExtents) < exclusionRadius then
+			table.insert(rejectReasons, {
+				code = code,
+				message = string.format(
+					"Proposed district is within exclusion radius (%.0f studs) of %s '%s'",
+					exclusionRadius,
+					category,
+					pointName
+				),
+				districtBoxTag = box.tag,
+				conflictingPlacementId = nil,
+				conflictingChunkId = nil,
+				conflictingBoxTag = nil,
+				isLandmarkConflict = false,
+				conflictingCriticalPointName = pointName,
+				criticalCategory = category,
+			})
+			return
+		end
+	end
+end
+
+-- Check Slice 3: critical-point proximity (containment/objective/rescue-route overlap rejection).
+-- For each protected category, any proposed box within the configured exclusion radius
+-- of a protected world-space point produces a deterministic reject reason.
+local function checkCriticalPointProximity(
+	request: DistrictPlacementRequest,
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	config: DistrictCriticalExclusionConfig,
+	rejectReasons: { DistrictPlacementRejectReason }
+)
+	local descriptor = assemblyOutput.descriptor
+	local proposed = request.proposedOccupiedSpace
+
+	-- Tinyfolk spawns (filter by name containing "TinyfolkSpawn" — consistent with
+	-- topology prefix convention; Giant spawns are not protected by this gate).
+	for _, part in ipairs(descriptor.spawns) do
+		if string.find(part.name, "TinyfolkSpawn", 1, true) then
+			rejectIfProximity(
+				part.name,
+				part.position,
+				proposed,
+				config.tinyfolkSpawnExclusionRadius,
+				"tinyfolk_spawn_exclusion",
+				"tinyfolk_spawn",
+				rejectReasons
+			)
+		end
+	end
+
+	-- Escape routes.
+	for _, part in ipairs(descriptor.escapeRoutes) do
+		rejectIfProximity(
+			part.name,
+			part.position,
+			proposed,
+			config.escapeRouteExclusionRadius,
+			"escape_route_exclusion",
+			"escape_route",
+			rejectReasons
+		)
+	end
+
+	-- Return points / rescue-route critical points.
+	for _, part in ipairs(descriptor.returnPoints) do
+		rejectIfProximity(
+			part.name,
+			part.position,
+			proposed,
+			config.returnPointExclusionRadius,
+			"return_point_exclusion",
+			"return_point",
+			rejectReasons
+		)
+	end
+
+	-- Required specialist stations (objective points).
+	for _, part in ipairs(descriptor.stations) do
+		rejectIfProximity(
+			part.name,
+			part.position,
+			proposed,
+			config.stationExclusionRadius,
+			"station_exclusion",
+			"station",
+			rejectReasons
+		)
+	end
+
+	-- Unfinished construction objectives.
+	for _, part in ipairs(descriptor.constructionSites) do
+		rejectIfProximity(
+			part.name,
+			part.position,
+			proposed,
+			config.constructionSiteExclusionRadius,
+			"construction_site_exclusion",
+			"construction_site",
+			rejectReasons
+		)
+	end
+
+	-- Capture zones.
+	for _, zone in ipairs(descriptor.captureZones) do
+		rejectIfProximity(
+			zone.name,
+			zone.position,
+			proposed,
+			config.captureZoneExclusionRadius,
+			"capture_zone_exclusion",
+			"capture_zone",
+			rejectReasons
+		)
+	end
+
+	-- Control zones.
+	for _, zone in ipairs(descriptor.controlZones) do
+		rejectIfProximity(
+			zone.name,
+			zone.position,
+			proposed,
+			config.controlZoneExclusionRadius,
+			"control_zone_exclusion",
+			"control_zone",
+			rejectReasons
+		)
+	end
+end
 
 -- Returns true if two AABBs overlap (strict: boundary-touch is NOT overlap).
 local function aabbsOverlap(
@@ -150,8 +323,7 @@ local function checkRouteEscapePreservation(
 		table.sort(blockedNames)
 		table.insert(rejectReasons, {
 			code = "route_escape_preservation_failure",
-			message = "Proposed district blocks all assembled escape routes: "
-				.. table.concat(blockedNames, ", "),
+			message = "Proposed district blocks all assembled escape routes: " .. table.concat(blockedNames, ", "),
 			districtBoxTag = nil,
 			conflictingPlacementId = nil,
 			conflictingChunkId = nil,
@@ -165,14 +337,19 @@ end
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
 --   Slice 2: route/escape preservation
+--   Slice 3: critical-point proximity (when criticalConfig is provided)
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	criticalConfig: DistrictCriticalExclusionConfig?
 ): DistrictPlacementResult
 	local rejectReasons: { DistrictPlacementRejectReason } = {}
 
 	checkOccupiedSpaceExclusion(request, assemblyOutput, rejectReasons)
 	checkRouteEscapePreservation(request, assemblyOutput, rejectReasons)
+	if criticalConfig ~= nil then
+		checkCriticalPointProximity(request, assemblyOutput, criticalConfig, rejectReasons)
+	end
 
 	return {
 		districtId = request.districtId,
@@ -182,4 +359,3 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 end
 
 return RealmDistrictPlacementValidator
-
