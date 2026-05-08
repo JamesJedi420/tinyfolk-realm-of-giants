@@ -33,6 +33,9 @@ export type DistrictPlacementRejectReason = {
 	-- Slice 4 fields (nil for Slice 1/2/3 reasons).
 	conflictingRouteEdgeFrom: string?,
 	conflictingRouteEdgeTo: string?,
+	-- Slice 5 fields (nil for Slice 1/2/3/4 reasons).
+	conflictingEnvironmentClass: string?,
+	conflictingTraversalDensityClass: string?,
 }
 
 -- Per-category exclusion radii (studs) for Slice 3 proximity gate.
@@ -52,6 +55,13 @@ export type DistrictPlacementResult = {
 	districtId: string,
 	accepted: boolean,
 	rejectReasons: { DistrictPlacementRejectReason },
+}
+
+-- Allowed environment/density classes for a district placement (Slice 5).
+-- Empty array for a field = that policy dimension is not enforced.
+export type DistrictPlacementPolicyConfig = {
+	allowedEnvironmentClasses: { string },
+	allowedTraversalDensityClasses: { string },
 }
 
 -- Returns the Euclidean distance from a world-space point to the nearest surface
@@ -524,16 +534,95 @@ local function checkRouteGraphEdgePreservation(
 	end
 end
 
+-- Slice 5: environment-class and traversal-density policy gate.
+-- Rejects any proposed district box that overlaps an assembled chunk whose
+-- environmentClass or traversalDensityClass is outside the allowed sets.
+-- Empty allowed-classes array for a dimension = that dimension is not enforced.
+local function checkEnvironmentAndDensityPolicy(
+	request: DistrictPlacementRequest,
+	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	policyConfig: DistrictPlacementPolicyConfig,
+	rejectReasons: { DistrictPlacementRejectReason }
+)
+	local allowedEnv: { [string]: boolean } = {}
+	for _, cls in ipairs(policyConfig.allowedEnvironmentClasses) do
+		allowedEnv[cls] = true
+	end
+	local allowedDensity: { [string]: boolean } = {}
+	for _, cls in ipairs(policyConfig.allowedTraversalDensityClasses) do
+		allowedDensity[cls] = true
+	end
+	local checkEnv = #policyConfig.allowedEnvironmentClasses > 0
+	local checkDensity = #policyConfig.allowedTraversalDensityClasses > 0
+	if not checkEnv and not checkDensity then
+		return
+	end
+	for _, districtBox in ipairs(request.proposedOccupiedSpace) do
+		for _, assembledBox in ipairs(assemblyOutput.resolvedOccupiedSpace) do
+			if
+				aabbsOverlap(
+					districtBox.worldCenter,
+					districtBox.halfExtents,
+					assembledBox.worldCenter,
+					assembledBox.halfExtents
+				)
+			then
+				local meta = assemblyOutput.resolvedMetadataByPlacement[assembledBox.placementId]
+				if meta ~= nil then
+					if checkEnv and meta.environmentClass ~= nil and not allowedEnv[meta.environmentClass] then
+						table.insert(rejectReasons, {
+							code = "environment_class_exclusion",
+							message = "Proposed district overlaps placement '"
+								.. assembledBox.placementId
+								.. "' with incompatible environment class '"
+								.. meta.environmentClass
+								.. "'",
+							districtBoxTag = districtBox.tag,
+							conflictingPlacementId = assembledBox.placementId,
+							conflictingChunkId = assembledBox.chunkId,
+							conflictingBoxTag = assembledBox.tag,
+							isLandmarkConflict = false,
+							conflictingEnvironmentClass = meta.environmentClass,
+						})
+					end
+					if
+						checkDensity
+						and meta.traversalDensityClass ~= nil
+						and not allowedDensity[meta.traversalDensityClass]
+					then
+						table.insert(rejectReasons, {
+							code = "traversal_density_exclusion",
+							message = "Proposed district overlaps placement '"
+								.. assembledBox.placementId
+								.. "' with disallowed traversal density '"
+								.. meta.traversalDensityClass
+								.. "'",
+							districtBoxTag = districtBox.tag,
+							conflictingPlacementId = assembledBox.placementId,
+							conflictingChunkId = assembledBox.chunkId,
+							conflictingBoxTag = assembledBox.tag,
+							isLandmarkConflict = false,
+							conflictingTraversalDensityClass = meta.traversalDensityClass,
+						})
+					end
+				end
+			end
+		end
+	end
+end
+
 -- Validate a district placement request against an assembled realm output.
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
 --   Slice 2: route/escape preservation
 --   Slice 3: critical-point proximity (when criticalConfig is provided)
 --   Slice 4: route-graph edge preservation
+--   Slice 5: environment-class and traversal-density policy (when policyConfig is provided)
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
 	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
-	criticalConfig: DistrictCriticalExclusionConfig?
+	criticalConfig: DistrictCriticalExclusionConfig?,
+	policyConfig: DistrictPlacementPolicyConfig?
 ): DistrictPlacementResult
 	local rejectReasons: { DistrictPlacementRejectReason } = {}
 
@@ -543,6 +632,9 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 		checkCriticalPointProximity(request, assemblyOutput, criticalConfig, rejectReasons)
 	end
 	checkRouteGraphEdgePreservation(request, assemblyOutput, rejectReasons)
+	if policyConfig ~= nil then
+		checkEnvironmentAndDensityPolicy(request, assemblyOutput, policyConfig, rejectReasons)
+	end
 
 	return {
 		districtId = request.districtId,

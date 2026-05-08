@@ -308,7 +308,8 @@ local function run()
 		local r = resultFires.rejectReasons[#resultFires.rejectReasons]
 		assertEqual(r.criticalCategory, "tinyfolk_spawn", "block17 category")
 		assertTrue(
-			r.conflictingCriticalPointName ~= nil and string.find(r.conflictingCriticalPointName, "TinyfolkSpawn", 1, true) ~= nil,
+			r.conflictingCriticalPointName ~= nil
+				and string.find(r.conflictingCriticalPointName, "TinyfolkSpawn", 1, true) ~= nil,
 			"block17 conflicting name contains TinyfolkSpawn"
 		)
 		local resultSafe = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, cfgSafe)
@@ -497,9 +498,7 @@ local function run()
 		local function build()
 			return RealmDistrictPlacementValidator.ValidatePlacement(
 				request,
-				RealmChunkAssemblySchema.BuildAssemblyOutput(
-					RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
-				),
+				RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()),
 				cfg
 			)
 		end
@@ -659,6 +658,295 @@ local function run()
 				"block15 landmark stable " .. tostring(index)
 			)
 		end
+	end
+
+	-- ── Slice 5: indoor/outdoor and traversal-density policy gate ─────────────
+
+	-- Fixture reference:
+	--   P_Start box: worldCenter=(30,0,0) halfExtents=(60,4,40)  env=outdoor  density=moderate
+	--   P_Exit  box: worldCenter=(90,0,0) halfExtents=(60,4,40)  env=indoor   density=sparse
+	--
+	-- Positions that isolate exactly one chunk:
+	--   x=0,  half=1 → overlaps P_Start only  (|0-30|=30 < 61; |0-90|=90 ≥ 61)
+	--   x=120, half=1 → overlaps P_Exit only  (|120-90|=30 < 61; |120-30|=90 ≥ 61)
+	--   x=60,  half=1 → overlaps BOTH          (|60-30|=30 < 61; |60-90|=30 < 61)
+
+	-- BLOCK 24: Disjoint district + restrictive policy → no overlaps → passes vacuously.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = { "sparse" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_PolicyDisjoint",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 500 },
+					halfExtents = { x = 10, y = 10, z = 10 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertTrue(result.accepted, "block24 disjoint accepted")
+		assertEqual(#result.rejectReasons, 0, "block24 no reject reasons")
+	end
+
+	-- BLOCK 25: Box overlapping P_Start (outdoor); allowedEnvironmentClasses={"outdoor"} → passes.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "outdoor" },
+			allowedTraversalDensityClasses = {},
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_OutdoorAllowed",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local hasEnvReject = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "environment_class_exclusion" then
+				hasEnvReject = true
+			end
+		end
+		assertFalse(hasEnvReject, "block25 no env rejection when outdoor allowed")
+	end
+
+	-- BLOCK 26: Box overlapping P_Start (outdoor); allowedEnvironmentClasses={"indoor"} → rejects.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = {},
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_IndoorOnly",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block26 env violation rejected")
+		assertHasRejectCode(result, "environment_class_exclusion", "block26 code present")
+		local envReason = nil
+		for _, reason in result.rejectReasons do
+			if reason.code == "environment_class_exclusion" then
+				envReason = reason
+			end
+		end
+		assertTrue(envReason ~= nil, "block26 envReason found")
+		if envReason ~= nil then
+			assertEqual(envReason.conflictingEnvironmentClass, "outdoor", "block26 conflictingEnvironmentClass")
+			assertEqual(envReason.conflictingPlacementId, "P_Start", "block26 conflictingPlacementId")
+			assertFalse(envReason.isLandmarkConflict, "block26 not landmark conflict")
+		end
+	end
+
+	-- BLOCK 27: Box overlapping P_Exit (indoor); allowedEnvironmentClasses={"indoor"} → passes.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = {},
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_ExitIndoorAllowed",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local hasEnvReject = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "environment_class_exclusion" then
+				hasEnvReject = true
+			end
+		end
+		assertFalse(hasEnvReject, "block27 no env rejection when indoor allowed and chunk is indoor")
+	end
+
+	-- BLOCK 28: Box overlapping P_Start (moderate density); allowedTraversalDensityClasses={"sparse"} → rejects.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = { "sparse" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_DensityViolation",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block28 density violation rejected")
+		assertHasRejectCode(result, "traversal_density_exclusion", "block28 code present")
+		local densityReason = nil
+		for _, reason in result.rejectReasons do
+			if reason.code == "traversal_density_exclusion" then
+				densityReason = reason
+			end
+		end
+		assertTrue(densityReason ~= nil, "block28 densityReason found")
+		if densityReason ~= nil then
+			assertEqual(densityReason.conflictingTraversalDensityClass, "moderate", "block28 conflictingDensity")
+			assertEqual(densityReason.conflictingPlacementId, "P_Start", "block28 density placementId")
+		end
+	end
+
+	-- BLOCK 29: Box overlapping P_Start (moderate); allowedTraversalDensityClasses={"moderate"} → passes density.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = {},
+			allowedTraversalDensityClasses = { "moderate" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_DensityAllowed",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local hasDensityReject = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "traversal_density_exclusion" then
+				hasDensityReject = true
+			end
+		end
+		assertFalse(hasDensityReject, "block29 no density rejection when moderate allowed")
+	end
+
+	-- BLOCK 30: nil policyConfig → Slice 5 is skipped entirely; Slices 1-4 still active.
+	do
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_NoPolicyConfig",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		-- No criticalConfig, no policyConfig — any rejects come from Slices 1-4 only.
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		local hasEnvReject = false
+		local hasDensityReject = false
+		for _, reason in result.rejectReasons do
+			if reason.code == "environment_class_exclusion" then
+				hasEnvReject = true
+			end
+			if reason.code == "traversal_density_exclusion" then
+				hasDensityReject = true
+			end
+		end
+		assertFalse(hasEnvReject, "block30 no env reject without policyConfig")
+		assertFalse(hasDensityReject, "block30 no density reject without policyConfig")
+	end
+
+	-- BLOCK 31: Both env and density violated in one overlapping run → multi-reason output.
+	-- Box at x=0 overlaps P_Start (outdoor, moderate).
+	-- Policy: only indoor + only sparse → two separate violations from the same box-pair.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = { "sparse" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_BothViolations",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block31 both violations rejected")
+		assertHasRejectCode(result, "environment_class_exclusion", "block31 env code")
+		assertHasRejectCode(result, "traversal_density_exclusion", "block31 density code")
+		local envCount = 0
+		local densityCount = 0
+		for _, reason in result.rejectReasons do
+			if reason.code == "environment_class_exclusion" then
+				envCount += 1
+			end
+			if reason.code == "traversal_density_exclusion" then
+				densityCount += 1
+			end
+		end
+		assertEqual(envCount, 1, "block31 exactly one env violation")
+		assertEqual(densityCount, 1, "block31 exactly one density violation")
+	end
+
+	-- BLOCK 32: Stability — repeated Slice 5 runs with same input produce identical output.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = { "sparse" },
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_PolicyStability",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 0, y = 0, z = 0 },
+					halfExtents = { x = 1, y = 1, z = 1 },
+				},
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertEqual(outA.accepted, outB.accepted, "block32 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block32 count stable")
+		for i, reasonA in ipairs(outA.rejectReasons) do
+			local reasonB = outB.rejectReasons[i]
+			assertEqual(reasonA.code, reasonB.code, "block32 code stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 33: Slice 5 env violation coexists with Slice 1 occupied_space_overlap.
+	-- x=120 overlaps P_Exit (occupied space → Slice 1 reject) and is indoor.
+	-- Policy: only outdoor allowed → Slice 5 also fires.
+	do
+		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "outdoor" },
+			allowedTraversalDensityClasses = {},
+		}
+		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+			districtId = "D_Slice1And5Coexist",
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 120, y = 0, z = 0 },
+					halfExtents = { x = 5, y = 2, z = 5 },
+				},
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, policyConfig)
+		assertFalse(result.accepted, "block33 rejected")
+		assertHasRejectCode(result, "occupied_space_overlap", "block33 slice1 code present")
+		assertHasRejectCode(result, "environment_class_exclusion", "block33 slice5 code present")
 	end
 
 	print("realm_district_placement: all checks passed")
