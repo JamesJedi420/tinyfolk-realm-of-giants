@@ -57,15 +57,17 @@ local function getZonesByTag(zones: { NamedZone }, tag: string): { NamedZone }
 end
 
 local function resolveControlZoneMinDisjointPathCount(config: RealmChokepointConfig): number
-	if config.minimumControlZoneDisjointPathCount ~= nil then
-		return config.minimumControlZoneDisjointPathCount
+	local specific = config.minimumControlZoneDisjointPathCount
+	if specific ~= nil then
+		return specific
 	end
 	return config.minimumDisjointPathCount
 end
 
 local function resolveCaptureZoneMinDisjointPathCount(config: RealmChokepointConfig): number
-	if config.minimumCaptureZoneDisjointPathCount ~= nil then
-		return config.minimumCaptureZoneDisjointPathCount
+	local specific = config.minimumCaptureZoneDisjointPathCount
+	if specific ~= nil then
+		return specific
 	end
 	return config.minimumDisjointPathCount
 end
