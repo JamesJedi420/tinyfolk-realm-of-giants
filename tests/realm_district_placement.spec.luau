@@ -3501,6 +3501,141 @@ local function run()
 		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block104 subject summaries stable")
 	end
 
+	-- BLOCK 105: Slice 23 - hard config snapshot reflects critical exclusion radii.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 40,
+				returnPointExclusionRadius = 30,
+				stationExclusionRadius = 20,
+				constructionSiteExclusionRadius = 10,
+				captureZoneExclusionRadius = 8,
+				controlZoneExclusionRadius = 6,
+			},
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S23CriticalSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig)
+		local snapshot = result.configSnapshot
+		assertTrue(result.accepted, "block105 accepted")
+		assertEqual(snapshot.criticalExclusionRadii.tinyfolk_spawn, 50, "block105 tinyfolk radius")
+		assertEqual(snapshot.criticalExclusionRadii.escape_route, 40, "block105 escape radius")
+		assertEqual(snapshot.criticalExclusionRadii.return_point, 30, "block105 return radius")
+		assertEqual(snapshot.criticalExclusionRadii.station, 20, "block105 station radius")
+		assertEqual(snapshot.criticalExclusionRadii.construction_site, 10, "block105 construction radius")
+		assertEqual(snapshot.criticalExclusionRadii.capture_zone, 8, "block105 capture radius")
+		assertEqual(snapshot.criticalExclusionRadii.control_zone, 6, "block105 control radius")
+		assertEqual(#snapshot.policy.allowedEnvironmentClasses, 0, "block105 no environment policy")
+		assertEqual(result.devaluation.totalPenalty, 0, "block105 devaluation unchanged")
+	end
+
+	-- BLOCK 106: Slice 23 - hard config snapshot reflects policy lists.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor", "outdoor" },
+				allowedTraversalDensityClasses = { "sparse", "moderate" },
+				disallowedRecurringStructureTags = { "entry_hub", "exit_chamber" },
+			},
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S23PolicySnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig)
+		local snapshot = result.configSnapshot
+		assertFalse(result.accepted, "block106 hard rejected by occupied/recurring policy")
+		assertEqual(snapshot.policy.allowedEnvironmentClasses[1], "indoor", "block106 env 1")
+		assertEqual(snapshot.policy.allowedEnvironmentClasses[2], "outdoor", "block106 env 2")
+		assertEqual(snapshot.policy.allowedTraversalDensityClasses[1], "sparse", "block106 density 1")
+		assertEqual(snapshot.policy.allowedTraversalDensityClasses[2], "moderate", "block106 density 2")
+		assertEqual(snapshot.policy.disallowedRecurringStructureTags[1], "entry_hub", "block106 tag 1")
+		assertEqual(snapshot.policy.disallowedRecurringStructureTags[2], "exit_chamber", "block106 tag 2")
+		assertEqual(snapshot.criticalExclusionRadii.tinyfolk_spawn, 0, "block106 no critical policy")
+		assertEqual(result.devaluation.totalPenalty, 0, "block106 devaluation unchanged")
+	end
+
+	-- BLOCK 107: Slice 23 - hard config snapshot reflects nil/disabled config paths.
+	do
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S23DisabledSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		local snapshot = result.configSnapshot
+		assertTrue(result.accepted, "block107 accepted")
+		assertEqual(snapshot.criticalExclusionRadii.tinyfolk_spawn, 0, "block107 tinyfolk disabled")
+		assertEqual(snapshot.criticalExclusionRadii.escape_route, 0, "block107 escape disabled")
+		assertEqual(snapshot.criticalExclusionRadii.return_point, 0, "block107 return disabled")
+		assertEqual(snapshot.criticalExclusionRadii.station, 0, "block107 station disabled")
+		assertEqual(snapshot.criticalExclusionRadii.construction_site, 0, "block107 construction disabled")
+		assertEqual(snapshot.criticalExclusionRadii.capture_zone, 0, "block107 capture disabled")
+		assertEqual(snapshot.criticalExclusionRadii.control_zone, 0, "block107 control disabled")
+		assertEqual(#snapshot.policy.allowedEnvironmentClasses, 0, "block107 environment disabled")
+		assertEqual(#snapshot.policy.allowedTraversalDensityClasses, 0, "block107 density disabled")
+		assertEqual(#snapshot.policy.disallowedRecurringStructureTags, 0, "block107 recurring disabled")
+	end
+
+	-- BLOCK 108: Slice 23 - hard config snapshot remains stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S23StableSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig)
+		assertEqual(outA.accepted, outB.accepted, "block108 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block108 reject count stable")
+		assertEqual(
+			outA.configSnapshot.criticalExclusionRadii.tinyfolk_spawn,
+			outB.configSnapshot.criticalExclusionRadii.tinyfolk_spawn,
+			"block108 tinyfolk stable"
+		)
+		assertEqual(
+			outA.configSnapshot.policy.allowedEnvironmentClasses[1],
+			outB.configSnapshot.policy.allowedEnvironmentClasses[1],
+			"block108 environment stable"
+		)
+		assertEqual(
+			outA.configSnapshot.policy.allowedTraversalDensityClasses[1],
+			outB.configSnapshot.policy.allowedTraversalDensityClasses[1],
+			"block108 density stable"
+		)
+		assertEqual(
+			outA.configSnapshot.policy.disallowedRecurringStructureTags[1],
+			outB.configSnapshot.policy.disallowedRecurringStructureTags[1],
+			"block108 recurring stable"
+		)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block108 devaluation stable")
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

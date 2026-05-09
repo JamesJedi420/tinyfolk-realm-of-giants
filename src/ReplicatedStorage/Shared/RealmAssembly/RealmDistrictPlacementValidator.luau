@@ -222,6 +222,23 @@ export type DistrictPlacementDevaluationInvariantResult = {
 	errors: { string },
 }
 
+export type DistrictPlacementHardConfigSnapshot = {
+	criticalExclusionRadii: {
+		tinyfolk_spawn: number,
+		escape_route: number,
+		return_point: number,
+		station: number,
+		construction_site: number,
+		capture_zone: number,
+		control_zone: number,
+	},
+	policy: {
+		allowedEnvironmentClasses: { string },
+		allowedTraversalDensityClasses: { string },
+		disallowedRecurringStructureTags: { string },
+	},
+}
+
 -- Soft scoring thresholds for Slice 7 devaluation.
 -- Set a radius to 0 to disable that scoring factor.
 export type DistrictPlacementSoftConfig = {
@@ -250,6 +267,7 @@ export type DistrictPlacementResult = {
 	accepted: boolean,
 	rejectReasons: { DistrictPlacementRejectReason },
 	devaluation: DistrictPlacementDevaluationResult,
+	configSnapshot: DistrictPlacementHardConfigSnapshot,
 }
 
 -- Allowed environment/density classes and disallowed recurring-structure tags
@@ -1130,6 +1148,42 @@ local function buildSoftConfigSnapshot(
 	}
 end
 
+local function copyStringList(values: { string }?): { string }
+	local copy: { string } = {}
+	if values == nil then
+		return copy
+	end
+	for _, value in ipairs(values) do
+		table.insert(copy, value)
+	end
+	return copy
+end
+
+local function buildHardConfigSnapshot(hardConfig: DistrictPlacementHardConfig): DistrictPlacementHardConfigSnapshot
+	local criticalExclusion = hardConfig.criticalExclusion
+	local policy = hardConfig.policy
+	return {
+		criticalExclusionRadii = {
+			tinyfolk_spawn = if criticalExclusion ~= nil then criticalExclusion.tinyfolkSpawnExclusionRadius else 0,
+			escape_route = if criticalExclusion ~= nil then criticalExclusion.escapeRouteExclusionRadius else 0,
+			return_point = if criticalExclusion ~= nil then criticalExclusion.returnPointExclusionRadius else 0,
+			station = if criticalExclusion ~= nil then criticalExclusion.stationExclusionRadius else 0,
+			construction_site = if criticalExclusion ~= nil then criticalExclusion.constructionSiteExclusionRadius else 0,
+			capture_zone = if criticalExclusion ~= nil then criticalExclusion.captureZoneExclusionRadius else 0,
+			control_zone = if criticalExclusion ~= nil then criticalExclusion.controlZoneExclusionRadius else 0,
+		},
+		policy = {
+			allowedEnvironmentClasses = if policy ~= nil then copyStringList(policy.allowedEnvironmentClasses) else {},
+			allowedTraversalDensityClasses = if policy ~= nil
+				then copyStringList(policy.allowedTraversalDensityClasses)
+				else {},
+			disallowedRecurringStructureTags = if policy ~= nil
+				then copyStringList(policy.disallowedRecurringStructureTags)
+				else {},
+		},
+	}
+end
+
 -- Slice 7-8: compute soft devaluation result for a placement request.
 -- Slice 7 runs scoring factors; Slice 8 categorizes penalties.
 -- Runs both scoring factors when softConfig is provided.
@@ -1593,6 +1647,7 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 		accepted = #rejectReasons == 0,
 		rejectReasons = rejectReasons,
 		devaluation = computeDevaluation(request, assemblyOutput, softConfig),
+		configSnapshot = buildHardConfigSnapshot(hardConfig),
 	}
 end
 
