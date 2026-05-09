@@ -146,6 +146,20 @@ local function assertSummaryMatrix(result: any, expectPenalties: boolean, label:
 	assertEqual(#result.devaluation.subjectSummaries > 0, expectPenalties, label .. " subject summary mode")
 end
 
+local function assertReasonMatrix(result: any, expectRejects: boolean, expectPenalties: boolean, label: string)
+	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons")
+	assertEqual(#result.rejectReasons > 0, expectRejects, label .. " reject count mode")
+	for i, reason in ipairs(result.rejectReasons) do
+		assertTrue(type(reason.code) == "string", label .. " reason code " .. tostring(i))
+		assertTrue(type(reason.message) == "string", label .. " reason message " .. tostring(i))
+		assertTrue(type(reason.isLandmarkConflict) == "boolean", label .. " reason landmark flag " .. tostring(i))
+	end
+	if expectRejects and expectPenalties then
+		assertTrue(result.devaluation.totalPenalty > 0, label .. " reject/devalue total coexistence")
+		assertTrue(#result.devaluation.penalties > 0, label .. " reject/devalue penalty coexistence")
+	end
+end
+
 local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.accepted) == "boolean", label .. " accepted readable")
 	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons readable")
@@ -165,7 +179,7 @@ local function assertResultModeMatrix(
 )
 	assertValidationResultShape(result, label .. " shape")
 	assertEqual(result.accepted, expectedAccepted, label .. " accepted")
-	assertEqual(#result.rejectReasons > 0, expectRejects, label .. " reject mode")
+	assertReasonMatrix(result, expectRejects, expectPenalties, label .. " reasons")
 	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
 	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
 	assertSnapshotMatrix(result, label .. " snapshot")
@@ -4443,6 +4457,42 @@ local function run()
 		assertEqual(#outA.devaluation.factorSummaries, #outB.devaluation.factorSummaries, "block128 factor count stable")
 		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block128 subject count stable")
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block128 total stable")
+	end
+
+	-- BLOCK 129: Slice 33 - reason matrix helper remains stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 20,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S33StableReasonMatrix",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 5, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertReasonMatrix(outA, true, true, "block129 reasons A")
+		assertReasonMatrix(outB, true, true, "block129 reasons B")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block129 reason count stable")
+		for i, reasonA in ipairs(outA.rejectReasons) do
+			local reasonB = outB.rejectReasons[i]
+			assertEqual(reasonA.code, reasonB.code, "block129 reason code stable " .. tostring(i))
+			assertEqual(reasonA.message, reasonB.message, "block129 reason message stable " .. tostring(i))
+		end
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block129 devaluation stable")
 	end
 
 	print("realm_district_placement: all checks passed")
