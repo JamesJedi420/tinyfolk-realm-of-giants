@@ -2921,6 +2921,149 @@ local function run()
 		end
 	end
 
+	-- BLOCK 91: Slice 19 - factor summary reflects a single-factor penalty.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S19SingleFactorSummary",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block91 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block91 total unchanged")
+		assertEqual(#result.devaluation.penalties, 1, "block91 raw penalty preserved")
+		assertEqual(#result.devaluation.groupSummaries, 3, "block91 category summaries preserved")
+		assertEqual(#result.devaluation.factorSummaries, 1, "block91 one factor summary")
+		local summary = result.devaluation.factorSummaries[1]
+		assertEqual(summary.factor, "near_critical_point", "block91 factor")
+		assertEqual(summary.penaltyCount, 1, "block91 count")
+		assertEqual(summary.totalScore, 1, "block91 score")
+		assertEqual(
+			summary.firstSortKey,
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"block91 first key"
+		)
+		assertEqual(
+			summary.lastSortKey,
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"block91 last key"
+		)
+	end
+
+	-- BLOCK 92: Slice 19 - factor summary reflects multiple factors deterministically.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S19MixedFactorSummary",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertFalse(result.accepted, "block92 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 21, "block92 total unchanged")
+		assertEqual(#result.devaluation.penalties, 3, "block92 raw penalties preserved")
+		assertEqual(#result.devaluation.groupSummaries, 3, "block92 category summaries preserved")
+		assertEqual(#result.devaluation.factorSummaries, 3, "block92 three factor summaries")
+		local expectedFactors = { "near_critical_point", "near_route_edge", "density_pressure" }
+		local expectedScores = { 1, 11, 9 }
+		local expectedKeys = {
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"02:route_pressure|near_route_edge|route_edge|SpawnNode->EscapeNode",
+			"03:density_pressure|density_pressure|chunk_density|P_Dense/Chunk_Dense",
+		}
+		for i, expectedFactor in ipairs(expectedFactors) do
+			local summary = result.devaluation.factorSummaries[i]
+			assertEqual(summary.factor, expectedFactor, "block92 factor " .. tostring(i))
+			assertEqual(summary.penaltyCount, 1, "block92 count " .. tostring(i))
+			assertEqual(summary.totalScore, expectedScores[i], "block92 score " .. tostring(i))
+			assertEqual(summary.firstSortKey, expectedKeys[i], "block92 first key " .. tostring(i))
+			assertEqual(summary.lastSortKey, expectedKeys[i], "block92 last key " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 93: Slice 19 - factor summaries remain stable across repeated runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S19StableFactorSummary",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block93 total stable")
+		assertEqual(#outA.devaluation.factorSummaries, #outB.devaluation.factorSummaries, "block93 summary count stable")
+		for i, summaryA in ipairs(outA.devaluation.factorSummaries) do
+			local summaryB = outB.devaluation.factorSummaries[i]
+			assertEqual(summaryA.factor, summaryB.factor, "block93 factor stable " .. tostring(i))
+			assertEqual(summaryA.penaltyCount, summaryB.penaltyCount, "block93 count stable " .. tostring(i))
+			assertEqual(summaryA.totalScore, summaryB.totalScore, "block93 score stable " .. tostring(i))
+			assertEqual(summaryA.firstSortKey, summaryB.firstSortKey, "block93 first key stable " .. tostring(i))
+			assertEqual(summaryA.lastSortKey, summaryB.lastSortKey, "block93 last key stable " .. tostring(i))
+		end
+		for i, summaryA in ipairs(outA.devaluation.groupSummaries) do
+			local summaryB = outB.devaluation.groupSummaries[i]
+			assertEqual(summaryA.category, summaryB.category, "block93 category summary stable " .. tostring(i))
+			assertEqual(summaryA.totalScore, summaryB.totalScore, "block93 category score stable " .. tostring(i))
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

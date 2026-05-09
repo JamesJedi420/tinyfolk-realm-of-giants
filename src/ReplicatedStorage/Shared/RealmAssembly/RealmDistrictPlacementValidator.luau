@@ -169,6 +169,14 @@ export type DistrictPlacementDevaluationGroupSummary = {
 	lastSortKey: string?,
 }
 
+export type DistrictPlacementDevaluationFactorSummary = {
+	factor: string,
+	penaltyCount: number,
+	totalScore: number,
+	firstSortKey: string,
+	lastSortKey: string,
+}
+
 -- Aggregated soft devaluation result (Slice 7-8).
 -- categoryTotals is deterministically ordered: proximity, route_pressure, density_pressure.
 export type DistrictPlacementDevaluationResult = {
@@ -176,6 +184,7 @@ export type DistrictPlacementDevaluationResult = {
 	penalties: { DistrictPlacementDevaluationPenalty },
 	categoryTotals: { DistrictPlacementDevaluationCategoryTotal },
 	groupSummaries: { DistrictPlacementDevaluationGroupSummary },
+	factorSummaries: { DistrictPlacementDevaluationFactorSummary },
 }
 
 -- Soft scoring thresholds for Slice 7 devaluation.
@@ -885,6 +894,16 @@ local function makeSoftPenaltySortKey(
 		.. subjectName
 end
 
+local function sortFactorSummaries(
+	left: DistrictPlacementDevaluationFactorSummary,
+	right: DistrictPlacementDevaluationFactorSummary
+): boolean
+	if left.firstSortKey == right.firstSortKey then
+		return left.factor < right.factor
+	end
+	return left.firstSortKey < right.firstSortKey
+end
+
 -- Slice 7-8: soft proximity penalty helper for near-critical-point scoring.
 -- Emits at most one penalty per critical point (first triggering box wins).
 -- Only fires when dist > 0 (no hard intersection) and dist < softRadius.
@@ -1157,6 +1176,7 @@ local function computeDevaluation(
 	}
 	local categoryFirstSortKeys: { [string]: string } = {}
 	local categoryLastSortKeys: { [string]: string } = {}
+	local factorSummariesByFactor: { [string]: DistrictPlacementDevaluationFactorSummary } = {}
 	for _, penalty in ipairs(penalties) do
 		if categoryScores[penalty.category] ~= nil then
 			categoryScores[penalty.category] += penalty.score
@@ -1168,6 +1188,25 @@ local function computeDevaluation(
 			end
 			if lastSortKey == nil or penalty.sortKey > lastSortKey then
 				categoryLastSortKeys[penalty.category] = penalty.sortKey
+			end
+		end
+		local factorSummary = factorSummariesByFactor[penalty.factor]
+		if factorSummary == nil then
+			factorSummariesByFactor[penalty.factor] = {
+				factor = penalty.factor,
+				penaltyCount = 1,
+				totalScore = penalty.score,
+				firstSortKey = penalty.sortKey,
+				lastSortKey = penalty.sortKey,
+			}
+		else
+			factorSummary.penaltyCount += 1
+			factorSummary.totalScore += penalty.score
+			if penalty.sortKey < factorSummary.firstSortKey then
+				factorSummary.firstSortKey = penalty.sortKey
+			end
+			if penalty.sortKey > factorSummary.lastSortKey then
+				factorSummary.lastSortKey = penalty.sortKey
 			end
 		end
 	end
@@ -1185,12 +1224,18 @@ local function computeDevaluation(
 			lastSortKey = categoryLastSortKeys[cat],
 		})
 	end
+	local factorSummaries: { DistrictPlacementDevaluationFactorSummary } = {}
+	for _, summary in pairs(factorSummariesByFactor) do
+		table.insert(factorSummaries, summary)
+	end
+	table.sort(factorSummaries, sortFactorSummaries)
 
 	return {
 		totalPenalty = totalPenalty,
 		penalties = penalties,
 		categoryTotals = categoryTotals,
 		groupSummaries = groupSummaries,
+		factorSummaries = factorSummaries,
 	}
 end
 
