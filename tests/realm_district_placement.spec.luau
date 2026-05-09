@@ -125,6 +125,27 @@ local function assertSnapshotMatrix(result: any, label: string)
 	assertCompatibilitySnapshotPaths(result, label .. " compatibility")
 end
 
+local function assertSummaryMatrix(result: any, expectPenalties: boolean, label: string)
+	assertTrue(type(result.devaluation.categoryTotals) == "table", label .. " category totals")
+	assertTrue(type(result.devaluation.groupSummaries) == "table", label .. " group summaries")
+	assertTrue(type(result.devaluation.factorSummaries) == "table", label .. " factor summaries")
+	assertTrue(type(result.devaluation.subjectSummaries) == "table", label .. " subject summaries")
+	assertTrue(#result.devaluation.categoryTotals > 0, label .. " category totals present")
+	assertTrue(#result.devaluation.groupSummaries > 0, label .. " group summaries present")
+	assertEqual(
+		#result.devaluation.groupSummaries,
+		#result.devaluation.categoryTotals,
+		label .. " category/group summary count"
+	)
+	for i, categoryTotal in ipairs(result.devaluation.categoryTotals) do
+		local groupSummary = result.devaluation.groupSummaries[i]
+		assertEqual(groupSummary.category, categoryTotal.category, label .. " summary category " .. tostring(i))
+		assertEqual(groupSummary.totalScore, categoryTotal.totalScore, label .. " summary score " .. tostring(i))
+	end
+	assertEqual(#result.devaluation.factorSummaries > 0, expectPenalties, label .. " factor summary mode")
+	assertEqual(#result.devaluation.subjectSummaries > 0, expectPenalties, label .. " subject summary mode")
+end
+
 local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.accepted) == "boolean", label .. " accepted readable")
 	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons readable")
@@ -148,8 +169,7 @@ local function assertResultModeMatrix(
 	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
 	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
 	assertSnapshotMatrix(result, label .. " snapshot")
-	assertTrue(#result.devaluation.groupSummaries > 0, label .. " group summary presence")
-	assertTrue(#result.devaluation.categoryTotals > 0, label .. " category total presence")
+	assertSummaryMatrix(result, expectPenalties, label .. " summaries")
 end
 
 local protoOutput =
@@ -4400,6 +4420,29 @@ local function run()
 			"block127 soft snapshot stable"
 		)
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block127 total stable")
+	end
+
+	-- BLOCK 128: Slice 32 - summary matrix helper remains stable across repeated runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S32StableSummaryMatrix",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertSummaryMatrix(outA, true, "block128 summaries A")
+		assertSummaryMatrix(outB, true, "block128 summaries B")
+		assertEqual(#outA.devaluation.categoryTotals, #outB.devaluation.categoryTotals, "block128 category count stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block128 group count stable")
+		assertEqual(#outA.devaluation.factorSummaries, #outB.devaluation.factorSummaries, "block128 factor count stable")
+		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block128 subject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block128 total stable")
 	end
 
 	print("realm_district_placement: all checks passed")
