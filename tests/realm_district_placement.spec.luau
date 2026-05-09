@@ -118,6 +118,13 @@ local function assertCompatibilitySnapshotPaths(result: any, label: string)
 	)
 end
 
+local function assertSnapshotMatrix(result: any, label: string)
+	assertTrue(type(result.validationSnapshot) == "table", label .. " validation snapshot")
+	assertTrue(type(result.validationSnapshot.hardConfig) == "table", label .. " unified hard snapshot")
+	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " unified soft snapshot")
+	assertCompatibilitySnapshotPaths(result, label .. " compatibility")
+end
+
 local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.accepted) == "boolean", label .. " accepted readable")
 	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons readable")
@@ -125,7 +132,7 @@ local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.devaluation.categoryTotals) == "table", label .. " category totals readable")
 	assertTrue(type(result.validationSnapshot.hardConfig) == "table", label .. " hard snapshot readable")
 	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " soft snapshot readable")
-	assertCompatibilitySnapshotPaths(result, label .. " compatibility")
+	assertSnapshotMatrix(result, label .. " snapshot")
 end
 
 local function assertResultModeMatrix(
@@ -140,7 +147,7 @@ local function assertResultModeMatrix(
 	assertEqual(#result.rejectReasons > 0, expectRejects, label .. " reject mode")
 	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
 	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
-	assertTrue(result.validationSnapshot ~= nil, label .. " snapshot presence")
+	assertSnapshotMatrix(result, label .. " snapshot")
 	assertTrue(#result.devaluation.groupSummaries > 0, label .. " group summary presence")
 	assertTrue(#result.devaluation.categoryTotals > 0, label .. " category total presence")
 end
@@ -4357,6 +4364,42 @@ local function run()
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			"block126 snapshot stable"
 		)
+	end
+
+	-- BLOCK 127: Slice 31 - snapshot matrix helper remains stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S31StableSnapshotMatrix",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertSnapshotMatrix(outA, "block127 snapshot A")
+		assertSnapshotMatrix(outB, "block127 snapshot B")
+		assertEqual(
+			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			"block127 hard snapshot stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block127 soft snapshot stable"
+		)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block127 total stable")
 	end
 
 	print("realm_district_placement: all checks passed")
