@@ -37,6 +37,27 @@ Roblox Studio CLI use in this repository is launch/navigation support only.
 Do not claim Roblox Studio CLI replaces the manual Play Solo or multi-client Output capture path unless a concrete supported command path is documented and verified.
 Fold Studio-open smoke test checklist work into TIN-157 instead of creating a separate validation workflow.
 
+## Issue-to-workflow mapping
+
+Use pure-Luau tests for deterministic validator/spec work.
+Start in `tests/`, then run the relevant local script from the repo root.
+
+Use Rojo build/open workflow for source-layout and map changes.
+Start in `docs/ROJO_WORKFLOW.md`, rebuild `TinyfolkRealmOfGiants.rbxlx`, then open the local built place in Studio.
+
+Use manual Studio runtime validation for behavior that depends on live Roblox runtime state, player input, multiplayer clients, physics, Output logs, or Explorer state.
+For the current batched manual Studio sweep, use TIN-157 as the evidence path.
+
+Use published-place rollback/open workflow only for published Roblox place concerns.
+Do not use rollback/open steps as a substitute for local source validation.
+
+## Navigation quick start
+
+* Rebuild: `docs/ROJO_WORKFLOW.md` -> Primary build command
+* Local runtime validation: `docs/ROJO_WORKFLOW.md` -> Local build/open path
+* Manual Studio sweep: TIN-157 runbook, with this document defining validation boundaries
+* Rollback/open decisions: `docs/ROJO_WORKFLOW.md` -> Publish and rollback records
+
 ## Known TIN-157 upgrade-board runtime blocker
 
 Current source positions:

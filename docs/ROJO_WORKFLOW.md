@@ -120,6 +120,43 @@ Studio launch and script-navigation helpers are for opening the right place or s
 They are not proof of runtime validation.
 Manual runtime evidence still belongs in the TIN-157 Studio validation path described in `docs/TESTING.md`.
 
+### Local build/open path
+
+Use the local built place when validating repository source or Rojo-managed layout changes.
+
+From the repo root:
+
+```powershell
+rojo build default.project.json -o TinyfolkRealmOfGiants.rbxlx
+```
+
+Then open:
+
+```text
+TinyfolkRealmOfGiants.rbxlx
+```
+
+Opening the place file is an operator step unless a supported repo-local launch task exists.
+If a launch helper is added later, it should rebuild or clearly state whether it uses the existing local `.rbxlx`.
+
+### Local built place vs published place
+
+Use the local built place for:
+
+* source-layout and map changes under `src/Workspace`
+* local Studio runtime checks before issue closure
+* manual TIN-157 validation sweeps
+* confirming Rojo output reflects repository source
+
+Use the Studio-published place for:
+
+* live-place investigation
+* published-version rollback/open decisions
+* checking behavior that depends on the deployed Roblox place version
+
+Do not use a published place revision as proof that current repository source is valid.
+Do not use a local `.rbxlx` check as proof that a published Roblox place version is correct.
+
 ## Common failure modes
 
 ### 1. Wrong working directory
@@ -200,6 +237,13 @@ Upgrade-board runtime validation no longer requires the documented teleport miti
 Git rollback and Roblox place revision rollback are separate operations.
 Rolling back source commits does not roll back a published Roblox place version.
 Rolling back a Roblox place revision does not change repository source.
+
+Rollback is relevant when the published Roblox place version is wrong, unsafe, or needs comparison against an earlier published version.
+It is not the normal path for validating local source/layout changes.
+
+For local source/layout issues, rebuild the local `.rbxlx` and validate in Studio.
+For published-place concerns, use Roblox place revision open/rollback workflow in Studio or the Roblox creator tools available to the operator.
+Record the outcome in the linked issue.
 
 When a major Studio-side change is published, record:
 
