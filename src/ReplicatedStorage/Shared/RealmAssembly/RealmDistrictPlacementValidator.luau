@@ -186,6 +186,25 @@ export type DistrictPlacementDevaluationSubjectSummary = {
 	lastSortKey: string,
 }
 
+export type DistrictPlacementDevaluationConfigSnapshot = {
+	criticalPointSoftRadii: {
+		tinyfolk_spawn: number,
+		escape_route: number,
+		return_point: number,
+		station: number,
+		construction_site: number,
+		capture_zone: number,
+		control_zone: number,
+	},
+	routeEdgeSoftRadius: number,
+	densityPressurePenaltyScores: {
+		open: number,
+		sparse: number,
+		moderate: number,
+		dense: number,
+	},
+}
+
 -- Aggregated soft devaluation result (Slice 7-8).
 -- categoryTotals is deterministically ordered: proximity, route_pressure, density_pressure.
 export type DistrictPlacementDevaluationResult = {
@@ -195,6 +214,7 @@ export type DistrictPlacementDevaluationResult = {
 	groupSummaries: { DistrictPlacementDevaluationGroupSummary },
 	factorSummaries: { DistrictPlacementDevaluationFactorSummary },
 	subjectSummaries: { DistrictPlacementDevaluationSubjectSummary },
+	configSnapshot: DistrictPlacementDevaluationConfigSnapshot,
 }
 
 export type DistrictPlacementDevaluationInvariantResult = {
@@ -1066,6 +1086,50 @@ local function resolveCriticalPointSoftRadius(softConfig: DistrictPlacementSoftC
 	return sharedRadius
 end
 
+local function buildSoftConfigSnapshot(
+	softConfig: DistrictPlacementSoftConfig?
+): DistrictPlacementDevaluationConfigSnapshot
+	if softConfig == nil then
+		return {
+			criticalPointSoftRadii = {
+				tinyfolk_spawn = 0,
+				escape_route = 0,
+				return_point = 0,
+				station = 0,
+				construction_site = 0,
+				capture_zone = 0,
+				control_zone = 0,
+			},
+			routeEdgeSoftRadius = 0,
+			densityPressurePenaltyScores = {
+				open = 0,
+				sparse = 0,
+				moderate = 0,
+				dense = 0,
+			},
+		}
+	end
+
+	return {
+		criticalPointSoftRadii = {
+			tinyfolk_spawn = resolveCriticalPointSoftRadius(softConfig, "tinyfolk_spawn"),
+			escape_route = resolveCriticalPointSoftRadius(softConfig, "escape_route"),
+			return_point = resolveCriticalPointSoftRadius(softConfig, "return_point"),
+			station = resolveCriticalPointSoftRadius(softConfig, "station"),
+			construction_site = resolveCriticalPointSoftRadius(softConfig, "construction_site"),
+			capture_zone = resolveCriticalPointSoftRadius(softConfig, "capture_zone"),
+			control_zone = resolveCriticalPointSoftRadius(softConfig, "control_zone"),
+		},
+		routeEdgeSoftRadius = softConfig.routeEdgeSoftRadius or softConfig.nearRouteEdgeSoftRadius or 0,
+		densityPressurePenaltyScores = {
+			open = resolveDensityPressurePenaltyScore(softConfig, "open"),
+			sparse = resolveDensityPressurePenaltyScore(softConfig, "sparse"),
+			moderate = resolveDensityPressurePenaltyScore(softConfig, "moderate"),
+			dense = resolveDensityPressurePenaltyScore(softConfig, "dense"),
+		},
+	}
+end
+
 -- Slice 7-8: compute soft devaluation result for a placement request.
 -- Slice 7 runs scoring factors; Slice 8 categorizes penalties.
 -- Runs both scoring factors when softConfig is provided.
@@ -1292,6 +1356,7 @@ local function computeDevaluation(
 		groupSummaries = groupSummaries,
 		factorSummaries = factorSummaries,
 		subjectSummaries = subjectSummaries,
+		configSnapshot = buildSoftConfigSnapshot(softConfig),
 	}
 end
 

@@ -3343,6 +3343,164 @@ local function run()
 		assertTrue(#invariant.errors > 0, "block100 invariant errors reported")
 	end
 
+	-- BLOCK 101: Slice 22 - config snapshot reflects basic split soft config values.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S22BasicSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local snapshot = result.devaluation.configSnapshot
+		assertEqual(result.devaluation.totalPenalty, 21, "block101 total unchanged")
+		assertEqual(snapshot.criticalPointSoftRadii.tinyfolk_spawn, 60, "block101 tinyfolk radius")
+		assertEqual(snapshot.criticalPointSoftRadii.escape_route, 0, "block101 escape radius")
+		assertEqual(snapshot.routeEdgeSoftRadius, 20, "block101 route radius")
+		assertEqual(snapshot.densityPressurePenaltyScores.dense, 9, "block101 dense penalty")
+		assertEqual(snapshot.densityPressurePenaltyScores.moderate, 0, "block101 moderate penalty")
+	end
+
+	-- BLOCK 102: Slice 22 - config snapshot reflects shared critical-point fallback.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 40,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S22SharedFallbackSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -40 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		local snapshot = result.devaluation.configSnapshot
+		assertEqual(result.devaluation.totalPenalty, 1, "block102 total unchanged")
+		assertEqual(snapshot.criticalPointSoftRadii.tinyfolk_spawn, 40, "block102 tinyfolk fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.escape_route, 40, "block102 escape fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.return_point, 40, "block102 return fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.station, 40, "block102 station fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.construction_site, 40, "block102 construction fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.capture_zone, 40, "block102 capture fallback")
+		assertEqual(snapshot.criticalPointSoftRadii.control_zone, 40, "block102 control fallback")
+		assertEqual(snapshot.routeEdgeSoftRadius, 0, "block102 route fallback")
+	end
+
+	-- BLOCK 103: Slice 22 - config snapshot reflects category and density class overrides.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 50,
+			tinyfolkSpawnSoftRadius = 0,
+			escapeRouteSoftRadius = 70,
+			routeEdgeSoftRadius = 15,
+			penalizedTraversalDensityClasses = { "moderate", "dense" },
+			densityPressurePenaltyScore = 6,
+			moderateDensityPressurePenaltyScore = 0,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S22OverrideSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -70 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		local snapshot = result.devaluation.configSnapshot
+		assertEqual(result.devaluation.totalPenalty, 1, "block103 total unchanged")
+		assertEqual(snapshot.criticalPointSoftRadii.tinyfolk_spawn, 0, "block103 tinyfolk override")
+		assertEqual(snapshot.criticalPointSoftRadii.escape_route, 70, "block103 escape override")
+		assertEqual(snapshot.criticalPointSoftRadii.return_point, 50, "block103 return shared")
+		assertEqual(snapshot.routeEdgeSoftRadius, 15, "block103 route split")
+		assertEqual(snapshot.densityPressurePenaltyScores.open, 0, "block103 open penalty")
+		assertEqual(snapshot.densityPressurePenaltyScores.sparse, 0, "block103 sparse penalty")
+		assertEqual(snapshot.densityPressurePenaltyScores.moderate, 0, "block103 moderate override")
+		assertEqual(snapshot.densityPressurePenaltyScores.dense, 9, "block103 dense override")
+	end
+
+	-- BLOCK 104: Slice 22 - config snapshot remains stable across repeated runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S22StableSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block104 total stable")
+		assertEqual(
+			outA.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+			"block104 tinyfolk stable"
+		)
+		assertEqual(
+			outA.devaluation.configSnapshot.routeEdgeSoftRadius,
+			outB.devaluation.configSnapshot.routeEdgeSoftRadius,
+			"block104 route stable"
+		)
+		assertEqual(
+			outA.devaluation.configSnapshot.densityPressurePenaltyScores.dense,
+			outB.devaluation.configSnapshot.densityPressurePenaltyScores.dense,
+			"block104 dense stable"
+		)
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block104 penalties stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block104 group summaries stable")
+		assertEqual(#outA.devaluation.factorSummaries, #outB.devaluation.factorSummaries, "block104 factor summaries stable")
+		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block104 subject summaries stable")
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
