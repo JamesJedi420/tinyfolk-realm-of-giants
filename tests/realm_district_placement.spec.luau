@@ -128,6 +128,23 @@ local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertCompatibilitySnapshotPaths(result, label .. " compatibility")
 end
 
+local function assertResultModeMatrix(
+	result: any,
+	expectedAccepted: boolean,
+	expectRejects: boolean,
+	expectPenalties: boolean,
+	label: string
+)
+	assertValidationResultShape(result, label .. " shape")
+	assertEqual(result.accepted, expectedAccepted, label .. " accepted")
+	assertEqual(#result.rejectReasons > 0, expectRejects, label .. " reject mode")
+	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
+	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
+	assertTrue(result.validationSnapshot ~= nil, label .. " snapshot presence")
+	assertTrue(#result.devaluation.groupSummaries > 0, label .. " group summary presence")
+	assertTrue(#result.devaluation.categoryTotals > 0, label .. " category total presence")
+end
+
 local protoOutput =
 	RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 
@@ -4259,12 +4276,8 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertValidationResultShape(result, "block122 shape")
-		assertTrue(result.accepted, "block122 accepted")
-		assertEqual(#result.rejectReasons, 0, "block122 reject count")
+		assertResultModeMatrix(result, true, false, false, "block122")
 		assertEqual(result.devaluation.totalPenalty, 0, "block122 total penalty")
-		assertEqual(#result.devaluation.groupSummaries, 3, "block122 summary presence")
-		assertTrue(result.validationSnapshot ~= nil, "block122 snapshot presence")
 	end
 
 	-- BLOCK 123: Slice 29 - fixture example: accepted with devaluation.
@@ -4281,12 +4294,9 @@ local function run()
 		}
 		local result =
 			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
-		assertValidationResultShape(result, "block123 shape")
-		assertTrue(result.accepted, "block123 accepted")
-		assertEqual(#result.rejectReasons, 0, "block123 reject count")
+		assertResultModeMatrix(result, true, false, true, "block123")
 		assertEqual(result.devaluation.totalPenalty, 1, "block123 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block123 proximity summary")
-		assertTrue(result.validationSnapshot ~= nil, "block123 snapshot presence")
 	end
 
 	-- BLOCK 124: Slice 29 - fixture example: rejected with devaluation.
@@ -4302,12 +4312,9 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertValidationResultShape(result, "block124 shape")
-		assertFalse(result.accepted, "block124 rejected")
-		assertTrue(#result.rejectReasons > 0, "block124 reject count")
+		assertResultModeMatrix(result, false, true, true, "block124")
 		assertEqual(result.devaluation.totalPenalty, 11, "block124 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 11, "block124 proximity summary")
-		assertTrue(result.validationSnapshot ~= nil, "block124 snapshot presence")
 	end
 
 	-- BLOCK 125: Slice 29 - fixture example: rejected with no devaluation.
@@ -4319,12 +4326,9 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertValidationResultShape(result, "block125 shape")
-		assertFalse(result.accepted, "block125 rejected")
-		assertTrue(#result.rejectReasons > 0, "block125 reject count")
+		assertResultModeMatrix(result, false, true, false, "block125")
 		assertEqual(result.devaluation.totalPenalty, 0, "block125 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 0, "block125 proximity summary")
-		assertTrue(result.validationSnapshot ~= nil, "block125 snapshot presence")
 	end
 
 	-- BLOCK 126: Slice 29 - fixture examples remain stable across repeated runs.
@@ -4341,8 +4345,8 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertValidationResultShape(outA, "block126 shape A")
-		assertValidationResultShape(outB, "block126 shape B")
+		assertResultModeMatrix(outA, false, true, true, "block126 A")
+		assertResultModeMatrix(outB, false, true, true, "block126 B")
 		assertEqual(outA.accepted, outB.accepted, "block126 accepted stable")
 		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block126 reject count stable")
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block126 total stable")
