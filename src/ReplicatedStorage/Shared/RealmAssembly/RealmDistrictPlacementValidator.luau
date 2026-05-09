@@ -205,8 +205,13 @@ export type DistrictPlacementDevaluationConfigSnapshot = {
 	},
 }
 
--- Aggregated soft devaluation result (Slice 7-8).
--- categoryTotals is deterministically ordered: proximity, route_pressure, density_pressure.
+-- Aggregated soft devaluation contract:
+--   penalties: full ordered soft penalty entries.
+--   categoryTotals: deterministic score totals ordered proximity, route_pressure, density_pressure.
+--   groupSummaries: category-level counts/scores/sort-key bounds in the same category order.
+--   factorSummaries: factor-level counts/scores/sort-key bounds ordered by firstSortKey.
+--   subjectSummaries: subject-level counts/scores/sort-key bounds ordered by firstSortKey.
+--   configSnapshot: effective soft tuning used for scoring.
 export type DistrictPlacementDevaluationResult = {
 	totalPenalty: number,
 	penalties: { DistrictPlacementDevaluationPenalty },
@@ -266,7 +271,11 @@ export type DistrictPlacementSoftConfig = {
 	denseDensityPressurePenaltyScore: number?,
 }
 
--- The result of validating a single district placement request.
+-- District placement validation result contract:
+--   accepted/rejectReasons: hard legality result and deterministic reject details.
+--   devaluation: soft penalty details, summaries, invariants, and soft-config snapshot.
+--   configSnapshot: legacy top-level effective hard-config snapshot.
+--   validationSnapshot: unified effective hard+soft config snapshot for downstream consumers.
 export type DistrictPlacementResult = {
 	districtId: string,
 	accepted: boolean,

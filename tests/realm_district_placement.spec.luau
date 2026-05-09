@@ -47,6 +47,22 @@ local function assertHasRejectCode(
 end
 
 -- Prototype assembly output — shared across all blocks.
+local function assertValidationResultShape(result: any, label: string)
+	assertTrue(type(result.accepted) == "boolean", label .. " accepted")
+	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons")
+	assertTrue(type(result.devaluation) == "table", label .. " devaluation")
+	assertTrue(type(result.devaluation.penalties) == "table", label .. " penalties")
+	assertTrue(type(result.devaluation.categoryTotals) == "table", label .. " category totals")
+	assertTrue(type(result.devaluation.groupSummaries) == "table", label .. " group summaries")
+	assertTrue(type(result.devaluation.factorSummaries) == "table", label .. " factor summaries")
+	assertTrue(type(result.devaluation.subjectSummaries) == "table", label .. " subject summaries")
+	assertTrue(type(result.devaluation.configSnapshot) == "table", label .. " soft config snapshot")
+	assertTrue(type(result.configSnapshot) == "table", label .. " hard config snapshot")
+	assertTrue(type(result.validationSnapshot) == "table", label .. " validation snapshot")
+	assertTrue(type(result.validationSnapshot.hardConfig) == "table", label .. " validation hard snapshot")
+	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " validation soft snapshot")
+end
+
 local protoOutput =
 	RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 
@@ -3767,6 +3783,117 @@ local function run()
 			outA.validationSnapshot.softConfig.densityPressurePenaltyScores.dense,
 			outB.validationSnapshot.softConfig.densityPressurePenaltyScores.dense,
 			"block111 soft density stable"
+		)
+	end
+
+	-- BLOCK 112: Slice 25 - validation result exposes the documented top-level contract.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S25ResultShape",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertValidationResultShape(result, "block112 shape")
+		assertEqual(result.devaluation.totalPenalty, 11, "block112 devaluation unchanged")
+		assertEqual(result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1], "indoor", "block112 hard snapshot")
+		assertEqual(result.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn, 40, "block112 soft snapshot")
+	end
+
+	-- BLOCK 113: Slice 25 - contracted devaluation summary sections are present.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S25DevaluationShape",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertValidationResultShape(result, "block113 shape")
+		assertEqual(#result.devaluation.penalties, 3, "block113 penalties present")
+		assertEqual(#result.devaluation.categoryTotals, 3, "block113 category totals present")
+		assertEqual(#result.devaluation.groupSummaries, 3, "block113 group summaries present")
+		assertEqual(#result.devaluation.factorSummaries, 3, "block113 factor summaries present")
+		assertEqual(#result.devaluation.subjectSummaries, 3, "block113 subject summaries present")
+		assertEqual(result.devaluation.totalPenalty, 21, "block113 total unchanged")
+	end
+
+	-- BLOCK 114: Slice 25 - result shape and output stay stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S25StableShape",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertValidationResultShape(outA, "block114 shape A")
+		assertValidationResultShape(outB, "block114 shape B")
+		assertEqual(outA.accepted, outB.accepted, "block114 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block114 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block114 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block114 penalties stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block114 group summaries stable")
+		assertEqual(#outA.devaluation.factorSummaries, #outB.devaluation.factorSummaries, "block114 factor summaries stable")
+		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block114 subject summaries stable")
+		assertEqual(
+			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			"block114 hard snapshot stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block114 soft snapshot stable"
 		)
 	end
 
