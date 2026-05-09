@@ -2428,6 +2428,11 @@ local function run()
 		)
 		assertEqual(penalty.subjectType, "critical_point", "block80 subject type")
 		assertEqual(penalty.subjectName, "TinyfolkSpawn", "block80 subject name")
+		assertEqual(
+			penalty.sortKey,
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"block80 sort key"
+		)
 		assertEqual(penalty.nearCriticalPointName, "TinyfolkSpawn", "block80 retained point name")
 		assertEqual(penalty.nearCriticalPointCategory, "tinyfolk_spawn", "block80 retained point category")
 	end
@@ -2460,6 +2465,11 @@ local function run()
 		)
 		assertEqual(penalty.subjectType, "route_edge", "block81 subject type")
 		assertEqual(penalty.subjectName, "SpawnNode->EscapeNode", "block81 subject name")
+		assertEqual(
+			penalty.sortKey,
+			"02:route_pressure|near_route_edge|route_edge|SpawnNode->EscapeNode",
+			"block81 sort key"
+		)
 		assertEqual(penalty.nearRouteEdgeFrom, "SpawnNode", "block81 retained edge from")
 		assertEqual(penalty.nearRouteEdgeTo, "EscapeNode", "block81 retained edge to")
 	end
@@ -2493,6 +2503,11 @@ local function run()
 		)
 		assertEqual(penalty.subjectType, "chunk_density", "block82 subject type")
 		assertEqual(penalty.subjectName, "P_Dense/Chunk_Dense", "block82 subject name")
+		assertEqual(
+			penalty.sortKey,
+			"03:density_pressure|density_pressure|chunk_density|P_Dense/Chunk_Dense",
+			"block82 sort key"
+		)
 		assertEqual(penalty.densityPressurePlacementId, "P_Dense", "block82 retained placement")
 		assertEqual(penalty.densityPressureChunkId, "Chunk_Dense", "block82 retained chunk")
 		assertEqual(penalty.densityPressureClass, "dense", "block82 retained class")
@@ -2584,6 +2599,7 @@ local function run()
 			assertEqual(penaltyA.message, penaltyB.message, "block84 message stable " .. tostring(i))
 			assertEqual(penaltyA.subjectType, penaltyB.subjectType, "block84 subject type stable " .. tostring(i))
 			assertEqual(penaltyA.subjectName, penaltyB.subjectName, "block84 subject name stable " .. tostring(i))
+			assertEqual(penaltyA.sortKey, penaltyB.sortKey, "block84 sort key stable " .. tostring(i))
 		end
 		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
 			local categoryB = outB.devaluation.categoryTotals[i]
@@ -2690,21 +2706,80 @@ local function run()
 			"Soft penalty: near_route_edge subject=SpawnNode->EscapeNode reason=within_soft_radius",
 			"Soft penalty: density_pressure subject=P_Dense/Chunk_Dense reason=penalized_density_class",
 		}
+		local expectedSortKeys = {
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"02:route_pressure|near_route_edge|route_edge|SpawnNode->EscapeNode",
+			"03:density_pressure|density_pressure|chunk_density|P_Dense/Chunk_Dense",
+		}
 		assertEqual(outA.devaluation.totalPenalty, 21, "block86 total unchanged")
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block86 total stable")
 		assertEqual(#outA.devaluation.penalties, 3, "block86 three penalties")
 		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block86 penalty count stable")
 		for i, expectedMessage in ipairs(expectedMessages) do
 			assertEqual(outA.devaluation.penalties[i].message, expectedMessage, "block86 message " .. tostring(i))
+			assertEqual(outA.devaluation.penalties[i].sortKey, expectedSortKeys[i], "block86 sort key " .. tostring(i))
 			assertEqual(
 				outA.devaluation.penalties[i].message,
 				outB.devaluation.penalties[i].message,
 				"block86 message stable " .. tostring(i)
 			)
+			assertEqual(
+				outA.devaluation.penalties[i].sortKey,
+				outB.devaluation.penalties[i].sortKey,
+				"block86 sort key stable " .. tostring(i)
+			)
 		end
 		assertEqual(outA.devaluation.categoryTotals[1].totalScore, 1, "block86 proximity total")
 		assertEqual(outA.devaluation.categoryTotals[2].totalScore, 11, "block86 route total")
 		assertEqual(outA.devaluation.categoryTotals[3].totalScore, 9, "block86 density total")
+	end
+
+	-- BLOCK 87: Slice 17 - mixed penalties expose explicit deterministic sort-key ordering contract.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S17SortKey",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertFalse(result.accepted, "block87 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 21, "block87 total unchanged")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block87 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block87 route total")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 9, "block87 density total")
+		assertEqual(#result.devaluation.penalties, 3, "block87 three soft penalties")
+		local previousKey = ""
+		for i, penalty in ipairs(result.devaluation.penalties) do
+			assertTrue(type(penalty.sortKey) == "string" and #penalty.sortKey > 0, "block87 sort key exists " .. tostring(i))
+			assertTrue(previousKey < penalty.sortKey, "block87 sort key order " .. tostring(i))
+			previousKey = penalty.sortKey
+		end
 	end
 
 	print("realm_district_placement: all checks passed")

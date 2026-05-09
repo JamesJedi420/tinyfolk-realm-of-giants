@@ -136,6 +136,7 @@ export type DistrictCriticalExclusionConfig = {
 -- score: math.floor(softRadius - distance); always >= 1
 -- category: "proximity" | "route_pressure" | "density_pressure" (Slice 8)
 -- subjectType: "critical_point" | "route_edge" | "chunk_density"
+-- sortKey: category precedence, then category/factor/subjectType/subjectName.
 export type DistrictPlacementDevaluationPenalty = {
 	factor: string,
 	category: string,
@@ -143,6 +144,7 @@ export type DistrictPlacementDevaluationPenalty = {
 	message: string,
 	subjectType: string,
 	subjectName: string,
+	sortKey: string,
 	districtBoxTag: string?,
 	nearCriticalPointName: string?,
 	nearCriticalPointCategory: string?,
@@ -846,6 +848,34 @@ local function checkRecurringStructurePolicy(
 	end
 end
 
+local function softPenaltyCategorySortRank(category: string): string
+	if category == "proximity" then
+		return "01"
+	elseif category == "route_pressure" then
+		return "02"
+	elseif category == "density_pressure" then
+		return "03"
+	end
+	return "99"
+end
+
+local function makeSoftPenaltySortKey(
+	category: string,
+	factor: string,
+	subjectType: string,
+	subjectName: string
+): string
+	return softPenaltyCategorySortRank(category)
+		.. ":"
+		.. category
+		.. "|"
+		.. factor
+		.. "|"
+		.. subjectType
+		.. "|"
+		.. subjectName
+end
+
 -- Slice 7-8: soft proximity penalty helper for near-critical-point scoring.
 -- Emits at most one penalty per critical point (first triggering box wins).
 -- Only fires when dist > 0 (no hard intersection) and dist < softRadius.
@@ -874,6 +904,7 @@ local function addSoftProximityPenalty(
 					message = "Soft penalty: near_critical_point subject=" .. pointName .. " reason=within_soft_radius",
 					subjectType = "critical_point",
 					subjectName = pointName,
+					sortKey = makeSoftPenaltySortKey("proximity", "near_critical_point", "critical_point", pointName),
 					districtBoxTag = box.tag,
 					nearCriticalPointName = pointName,
 					nearCriticalPointCategory = category,
@@ -936,6 +967,12 @@ local function addDensityPressurePenalties(
 							score = penaltyScore,
 							subjectType = "chunk_density",
 							subjectName = assembledBox.placementId .. "/" .. assembledBox.chunkId,
+							sortKey = makeSoftPenaltySortKey(
+								"density_pressure",
+								"density_pressure",
+								"chunk_density",
+								assembledBox.placementId .. "/" .. assembledBox.chunkId
+							),
 							message = "Soft penalty: density_pressure subject="
 								.. assembledBox.placementId
 								.. "/"
@@ -1061,6 +1098,12 @@ local function computeDevaluation(
 												score = score,
 												subjectType = "route_edge",
 												subjectName = fromName .. "->" .. toName,
+												sortKey = makeSoftPenaltySortKey(
+													"route_pressure",
+													"near_route_edge",
+													"route_edge",
+													fromName .. "->" .. toName
+												),
 												message = "Soft penalty: near_route_edge subject="
 													.. fromName
 													.. "->"
