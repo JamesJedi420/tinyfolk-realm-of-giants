@@ -4461,6 +4461,43 @@ local function run()
 		return getValidationResultCaseBuilder(caseKey)()
 	end
 
+	local function assertValidationResultCaseRegistryConsistency(label: string)
+		local canonicalKeys = {
+			"accepted_no_penalty",
+			"accepted_with_penalty",
+			"rejected_with_penalty",
+			"rejected_no_penalty",
+		}
+		local aliasPairs = {
+			{ aliasKey = "a0", canonicalKey = "accepted_no_penalty" },
+			{ aliasKey = "a1", canonicalKey = "accepted_with_penalty" },
+			{ aliasKey = "r1", canonicalKey = "rejected_with_penalty" },
+			{ aliasKey = "r0", canonicalKey = "rejected_no_penalty" },
+		}
+		for _, canonicalKey in ipairs(canonicalKeys) do
+			local metadata = getValidationResultCaseMetadata(canonicalKey)
+			assertEqual(metadata.keys.canonical, canonicalKey, label .. " canonical metadata " .. canonicalKey)
+			assertTrue(type(getValidationResultCaseBuilder(canonicalKey)) == "function", label .. " canonical builder " .. canonicalKey)
+		end
+		for _, pair in ipairs(aliasPairs) do
+			local aliasKey = pair.aliasKey
+			local canonicalKey = pair.canonicalKey
+			assertEqual(resolveValidationResultCaseKey(aliasKey), canonicalKey, label .. " alias resolution " .. aliasKey)
+			local aliasMetadata = getValidationResultCaseMetadata(aliasKey)
+			local canonicalMetadata = getValidationResultCaseMetadata(canonicalKey)
+			assertEqual(aliasMetadata.keys.canonical, canonicalMetadata.keys.canonical, label .. " metadata canonical " .. aliasKey)
+			assertEqual(aliasMetadata.mode.expectedAccepted, canonicalMetadata.mode.expectedAccepted, label .. " metadata accepted " .. aliasKey)
+			assertEqual(aliasMetadata.mode.expectRejects, canonicalMetadata.mode.expectRejects, label .. " metadata rejects " .. aliasKey)
+			assertEqual(aliasMetadata.mode.expectPenalties, canonicalMetadata.mode.expectPenalties, label .. " metadata penalties " .. aliasKey)
+			local aliasResult = makeValidationResultExample(aliasKey)
+			local canonicalResult = makeValidationResultExample(canonicalKey)
+			assertEqual(aliasResult.accepted, canonicalResult.accepted, label .. " result accepted " .. aliasKey)
+			assertEqual(#aliasResult.rejectReasons, #canonicalResult.rejectReasons, label .. " result rejects " .. aliasKey)
+			assertEqual(aliasResult.devaluation.totalPenalty, canonicalResult.devaluation.totalPenalty, label .. " result total " .. aliasKey)
+			assertEqual(#aliasResult.devaluation.penalties, #canonicalResult.devaluation.penalties, label .. " result penalties " .. aliasKey)
+		end
+	end
+
 	local resultContractRegressionGrid: { any } = {
 		{ key = "a0", label = "accepted/no-penalty" },
 		{ key = "a1", label = "accepted/penalty" },
@@ -4503,21 +4540,9 @@ local function run()
 		end
 	end
 
-	-- BLOCK 125: Slice 38 - alias metadata remains mapped to canonical examples.
+	-- BLOCK 125: Slice 41 - case registry consistency guard covers metadata and builders.
 	do
-		local aliasPairs = {
-			{ aliasKey = "a0", canonicalKey = "accepted_no_penalty" },
-			{ aliasKey = "a1", canonicalKey = "accepted_with_penalty" },
-			{ aliasKey = "r1", canonicalKey = "rejected_with_penalty" },
-			{ aliasKey = "r0", canonicalKey = "rejected_no_penalty" },
-		}
-		for _, pair in ipairs(aliasPairs) do
-			local aliasKey = pair.aliasKey
-			local canonicalKey = pair.canonicalKey
-			local metadata = getValidationResultCaseMetadata(aliasKey)
-			assertEqual(metadata.keys.canonical, canonicalKey, "block125 canonical " .. aliasKey)
-			assertEqual(metadata.keys.aliases[1], aliasKey, "block125 alias " .. aliasKey)
-		end
+		assertValidationResultCaseRegistryConsistency("block125")
 	end
 
 	-- BLOCK 126: Slice 40 - case registry index resolves canonical and alias keys.
@@ -4539,25 +4564,10 @@ local function run()
 		assertTrue(type(getValidationResultCaseBuilder("accepted_no_penalty")) == "function", "block126 canonical builder")
 	end
 
-	-- BLOCK 127: Slice 40 - alias-backed outputs match canonical registry outputs.
+	-- BLOCK 127: Slice 41 - case registry consistency guard remains stable across repeated runs.
 	do
-		local aliasPairs = {
-			{ aliasKey = "a0", canonicalKey = "accepted_no_penalty" },
-			{ aliasKey = "a1", canonicalKey = "accepted_with_penalty" },
-			{ aliasKey = "r1", canonicalKey = "rejected_with_penalty" },
-			{ aliasKey = "r0", canonicalKey = "rejected_no_penalty" },
-		}
-		for _, pair in ipairs(aliasPairs) do
-			local aliasKey = pair.aliasKey
-			local canonicalKey = pair.canonicalKey
-			local aliasResult = makeValidationResultExample(aliasKey)
-			local canonicalResult = makeValidationResultExample(canonicalKey)
-			local label = "block127 " .. aliasKey
-			assertEqual(aliasResult.accepted, canonicalResult.accepted, label .. " accepted")
-			assertEqual(#aliasResult.rejectReasons, #canonicalResult.rejectReasons, label .. " reject count")
-			assertEqual(aliasResult.devaluation.totalPenalty, canonicalResult.devaluation.totalPenalty, label .. " total")
-			assertEqual(#aliasResult.devaluation.penalties, #canonicalResult.devaluation.penalties, label .. " penalty count")
-		end
+		assertValidationResultCaseRegistryConsistency("block127 A")
+		assertValidationResultCaseRegistryConsistency("block127 B")
 	end
 
 	-- BLOCK 128: Slice 40 - metadata-backed validation result contract grid covers all major modes.
