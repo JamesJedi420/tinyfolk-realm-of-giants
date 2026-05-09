@@ -2476,8 +2476,8 @@ local function run()
 		assertEqual(penalty.category, "density_pressure", "block82 category")
 		assertEqual(penalty.score, 9, "block82 score")
 		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block82 message")
-		assertEqual(penalty.subjectType, "placement", "block82 subject type")
-		assertEqual(penalty.subjectName, "P_Dense", "block82 subject name")
+		assertEqual(penalty.subjectType, "chunk_density", "block82 subject type")
+		assertEqual(penalty.subjectName, "P_Dense/Chunk_Dense", "block82 subject name")
 		assertEqual(penalty.densityPressurePlacementId, "P_Dense", "block82 retained placement")
 		assertEqual(penalty.densityPressureChunkId, "Chunk_Dense", "block82 retained chunk")
 		assertEqual(penalty.densityPressureClass, "dense", "block82 retained class")
@@ -2486,7 +2486,9 @@ local function run()
 	-- BLOCK 83: Slice 14 - normalized payload keeps category totals and total score unchanged.
 	do
 		local softConfig: DistrictPlacementSoftConfig = {
-			criticalPointSoftRadius = 60,
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
 			routeEdgeSoftRadius = 20,
 			denseDensityPressurePenaltyScore = 9,
 		}
@@ -2525,7 +2527,9 @@ local function run()
 	-- BLOCK 84: Slice 14 - repeated runs preserve normalized payload ordering.
 	do
 		local softConfig: DistrictPlacementSoftConfig = {
-			criticalPointSoftRadius = 60,
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
 			routeEdgeSoftRadius = 20,
 			denseDensityPressurePenaltyScore = 9,
 		}
@@ -2569,6 +2573,64 @@ local function run()
 			local categoryB = outB.devaluation.categoryTotals[i]
 			assertEqual(categoryA.category, categoryB.category, "block84 category total stable " .. tostring(i))
 			assertEqual(categoryA.totalScore, categoryB.totalScore, "block84 category score stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 85: Slice 15 - subject types use the finite taxonomy and deterministic names.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S15SubjectTaxonomy",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertFalse(result.accepted, "block85 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 21, "block85 total unchanged")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block85 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block85 route total")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 9, "block85 density total")
+		assertEqual(#result.devaluation.penalties, 3, "block85 three soft penalties")
+
+		local expectedSubjects = {
+			{ subjectType = "critical_point", subjectName = "TinyfolkSpawn" },
+			{ subjectType = "route_edge", subjectName = "SpawnNode->EscapeNode" },
+			{ subjectType = "chunk_density", subjectName = "P_Dense/Chunk_Dense" },
+		}
+		local allowedSubjectTypes = {
+			critical_point = true,
+			route_edge = true,
+			chunk_density = true,
+		}
+		for i, penalty in ipairs(result.devaluation.penalties) do
+			assertTrue(allowedSubjectTypes[penalty.subjectType] == true, "block85 allowed subject type " .. tostring(i))
+			assertEqual(penalty.subjectType, expectedSubjects[i].subjectType, "block85 subject type " .. tostring(i))
+			assertEqual(penalty.subjectName, expectedSubjects[i].subjectName, "block85 subject name " .. tostring(i))
 		end
 	end
 

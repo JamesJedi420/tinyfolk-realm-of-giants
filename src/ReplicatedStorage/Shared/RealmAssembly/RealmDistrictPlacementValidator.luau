@@ -135,6 +135,7 @@ export type DistrictCriticalExclusionConfig = {
 -- factor: "near_critical_point" | "near_route_edge"
 -- score: math.floor(softRadius - distance); always >= 1
 -- category: "proximity" | "route_pressure" | "density_pressure" (Slice 8)
+-- subjectType: "critical_point" | "route_edge" | "chunk_density"
 export type DistrictPlacementDevaluationPenalty = {
 	factor: string,
 	category: string,
@@ -944,8 +945,8 @@ local function addDensityPressurePenalties(
 								.. "' with penalized traversal density '"
 								.. meta.traversalDensityClass
 								.. "'",
-							subjectType = "placement",
-							subjectName = assembledBox.placementId,
+							subjectType = "chunk_density",
+							subjectName = assembledBox.placementId .. "/" .. assembledBox.chunkId,
 							districtBoxTag = districtBox.tag,
 							densityPressurePlacementId = assembledBox.placementId,
 							densityPressureChunkId = assembledBox.chunkId,
