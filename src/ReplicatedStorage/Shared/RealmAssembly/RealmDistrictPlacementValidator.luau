@@ -145,6 +145,9 @@ export type DistrictPlacementDevaluationPenalty = {
 	nearCriticalPointCategory: string?,
 	nearRouteEdgeFrom: string?,
 	nearRouteEdgeTo: string?,
+	densityPressurePlacementId: string?,
+	densityPressureChunkId: string?,
+	densityPressureClass: string?,
 }
 
 -- Category-wise penalty total (Slice 8).
@@ -166,6 +169,8 @@ export type DistrictPlacementDevaluationResult = {
 export type DistrictPlacementSoftConfig = {
 	nearCriticalPointSoftRadius: number,
 	nearRouteEdgeSoftRadius: number,
+	penalizedTraversalDensityClasses: { string }?,
+	densityPressurePenaltyScore: number?,
 }
 
 -- The result of validating a single district placement request.
@@ -362,6 +367,22 @@ local function aabbsOverlap(
 	local dy = math.abs(centerA.y - centerB.y)
 	local dz = math.abs(centerA.z - centerB.z)
 	if dx < halfA.x + halfB.x and dy < halfA.y + halfB.y and dz < halfA.z + halfB.z then
+		return true
+	end
+	return false
+end
+
+-- Returns true if two AABBs overlap or touch at a boundary.
+local function aabbsTouchOrOverlap(
+	centerA: Vector3Data,
+	halfA: Vector3Data,
+	centerB: Vector3Data,
+	halfB: Vector3Data
+): boolean
+	local dx = math.abs(centerA.x - centerB.x)
+	local dy = math.abs(centerA.y - centerB.y)
+	local dz = math.abs(centerA.z - centerB.z)
+	if dx <= halfA.x + halfB.x and dy <= halfA.y + halfB.y and dz <= halfA.z + halfB.z then
 		return true
 	end
 	return false
@@ -851,6 +872,55 @@ local function addSoftProximityPenalty(
 	end
 end
 
+local function addDensityPressurePenalties(
+	request: DistrictPlacementRequest,
+	assemblyOutput: AssemblyOutput,
+	softConfig: DistrictPlacementSoftConfig,
+	penalties: { DistrictPlacementDevaluationPenalty }
+)
+	local penalizedClasses = softConfig.penalizedTraversalDensityClasses
+	local penaltyScore = softConfig.densityPressurePenaltyScore
+	if penalizedClasses == nil or #penalizedClasses == 0 or penaltyScore == nil or penaltyScore <= 0 then
+		return
+	end
+
+	local penalizedSet: { [string]: boolean } = {}
+	for _, densityClass in ipairs(penalizedClasses) do
+		penalizedSet[densityClass] = true
+	end
+
+	for _, districtBox in ipairs(request.proposedOccupiedSpace) do
+		for _, assembledBox in ipairs(assemblyOutput.resolvedOccupiedSpace) do
+			if
+				aabbsTouchOrOverlap(
+					districtBox.worldCenter,
+					districtBox.halfExtents,
+					assembledBox.worldCenter,
+					assembledBox.halfExtents
+				)
+			then
+				local meta = assemblyOutput.resolvedMetadataByPlacement[assembledBox.placementId]
+				if meta ~= nil and meta.traversalDensityClass ~= nil and penalizedSet[meta.traversalDensityClass] then
+					table.insert(penalties, {
+						factor = "density_pressure",
+						category = "density_pressure",
+						score = penaltyScore,
+						message = "Proposed district touches placement '"
+							.. assembledBox.placementId
+							.. "' with penalized traversal density '"
+							.. meta.traversalDensityClass
+							.. "'",
+						districtBoxTag = districtBox.tag,
+						densityPressurePlacementId = assembledBox.placementId,
+						densityPressureChunkId = assembledBox.chunkId,
+						densityPressureClass = meta.traversalDensityClass,
+					})
+				end
+			end
+		end
+	end
+end
+
 -- Slice 7-8: compute soft devaluation result for a placement request.
 -- Slice 7 runs scoring factors; Slice 8 categorizes penalties.
 -- Runs both scoring factors when softConfig is provided.
@@ -1001,6 +1071,9 @@ local function computeDevaluation(
 				end
 			end
 		end
+
+		-- Factor 3: touch/overlap with configured traversal-density classes.
+		addDensityPressurePenalties(request, assemblyOutput, softConfig, penalties)
 	end
 
 	local totalPenalty = 0

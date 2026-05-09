@@ -1740,6 +1740,142 @@ local function run()
 		end
 	end
 
+	-- BLOCK 60: Slice 10 - sparse/allowed density overlap yields no density_pressure penalty.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 0,
+			nearRouteEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate" },
+			densityPressurePenaltyScore = 7,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S10SparseAllowed",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 120, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertFalse(result.accepted, "block60 still hard rejected by occupied overlap")
+		local densityTotal = result.devaluation.categoryTotals[3]
+		assertEqual(densityTotal.category, "density_pressure", "block60 density category")
+		assertEqual(densityTotal.totalScore, 0, "block60 no density pressure for sparse")
+		for _, penalty in ipairs(result.devaluation.penalties) do
+			assertFalse(penalty.factor == "density_pressure", "block60 no density_pressure penalty")
+		end
+	end
+
+	-- BLOCK 61: Slice 10 - configured moderate density overlap yields density_pressure penalty.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 0,
+			nearRouteEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate" },
+			densityPressurePenaltyScore = 7,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S10ModeratePenalty",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertFalse(result.accepted, "block61 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 7, "block61 density pressure score")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 7, "block61 density category total")
+		assertEqual(#result.devaluation.penalties, 1, "block61 one density penalty")
+		local penalty = result.devaluation.penalties[1]
+		assertEqual(penalty.factor, "density_pressure", "block61 factor")
+		assertEqual(penalty.category, "density_pressure", "block61 category")
+		assertEqual(penalty.densityPressurePlacementId, "P_Start", "block61 placement")
+		assertEqual(penalty.densityPressureChunkId, "Chunk_Start", "block61 chunk")
+		assertEqual(penalty.densityPressureClass, "moderate", "block61 density class")
+	end
+
+	-- BLOCK 62: Slice 10 - proximity and density_pressure accumulate with stable category totals.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 40,
+			nearRouteEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate" },
+			densityPressurePenaltyScore = 7,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S10ProximityAndDensity",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertFalse(result.accepted, "block62 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 18, "block62 combined soft score")
+		assertEqual(result.devaluation.categoryTotals[1].category, "proximity", "block62 proximity category")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 11, "block62 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].category, "route_pressure", "block62 route category")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 0, "block62 route total")
+		assertEqual(result.devaluation.categoryTotals[3].category, "density_pressure", "block62 density category")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 7, "block62 density total")
+	end
+
+	-- BLOCK 63: Slice 10 - hard reject behavior is unchanged when density pressure is active.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 0,
+			nearRouteEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate" },
+			densityPressurePenaltyScore = 7,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S10HardRejectUnchanged",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local noSoft = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		local withDensity = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertEqual(withDensity.accepted, noSoft.accepted, "block63 accepted unchanged")
+		assertEqual(#withDensity.rejectReasons, #noSoft.rejectReasons, "block63 reject count unchanged")
+		for i, reason in ipairs(withDensity.rejectReasons) do
+			assertEqual(reason.code, noSoft.rejectReasons[i].code, "block63 reject code " .. tostring(i))
+		end
+		assertEqual(withDensity.devaluation.categoryTotals[3].totalScore, 7, "block63 density still scored")
+	end
+
+	-- BLOCK 64: Slice 10 - repeated density-pressure runs preserve ordering and totals.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 40,
+			nearRouteEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate", "sparse" },
+			densityPressurePenaltyScore = 7,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S10DensityStable",
+			proposedOccupiedSpace = {
+				{ tag = "start", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "exit", worldCenter = { x = 120, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block64 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block64 penalty count stable")
+		for i, penaltyA in ipairs(outA.devaluation.penalties) do
+			local penaltyB = outB.devaluation.penalties[i]
+			assertEqual(penaltyA.factor, penaltyB.factor, "block64 factor stable " .. tostring(i))
+			assertEqual(penaltyA.score, penaltyB.score, "block64 score stable " .. tostring(i))
+			assertEqual(
+				tostring(penaltyA.densityPressurePlacementId),
+				tostring(penaltyB.densityPressurePlacementId),
+				"block64 density placement stable " .. tostring(i)
+			)
+		end
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block64 category stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block64 category score stable " .. tostring(i))
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
