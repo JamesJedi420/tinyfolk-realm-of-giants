@@ -168,6 +168,13 @@ export type DistrictPlacementDevaluationResult = {
 -- Set a radius to 0 to disable that scoring factor.
 export type DistrictPlacementSoftConfig = {
 	criticalPointSoftRadius: number?,
+	tinyfolkSpawnSoftRadius: number?,
+	escapeRouteSoftRadius: number?,
+	returnPointSoftRadius: number?,
+	stationSoftRadius: number?,
+	constructionSiteSoftRadius: number?,
+	captureZoneSoftRadius: number?,
+	controlZoneSoftRadius: number?,
 	routeEdgeSoftRadius: number?,
 	nearCriticalPointSoftRadius: number?,
 	nearRouteEdgeSoftRadius: number?,
@@ -923,6 +930,26 @@ local function addDensityPressurePenalties(
 	end
 end
 
+local function resolveCriticalPointSoftRadius(softConfig: DistrictPlacementSoftConfig, category: string): number
+	local sharedRadius = softConfig.criticalPointSoftRadius or softConfig.nearCriticalPointSoftRadius or 0
+	if category == "tinyfolk_spawn" and softConfig.tinyfolkSpawnSoftRadius ~= nil then
+		return softConfig.tinyfolkSpawnSoftRadius
+	elseif category == "escape_route" and softConfig.escapeRouteSoftRadius ~= nil then
+		return softConfig.escapeRouteSoftRadius
+	elseif category == "return_point" and softConfig.returnPointSoftRadius ~= nil then
+		return softConfig.returnPointSoftRadius
+	elseif category == "station" and softConfig.stationSoftRadius ~= nil then
+		return softConfig.stationSoftRadius
+	elseif category == "construction_site" and softConfig.constructionSiteSoftRadius ~= nil then
+		return softConfig.constructionSiteSoftRadius
+	elseif category == "capture_zone" and softConfig.captureZoneSoftRadius ~= nil then
+		return softConfig.captureZoneSoftRadius
+	elseif category == "control_zone" and softConfig.controlZoneSoftRadius ~= nil then
+		return softConfig.controlZoneSoftRadius
+	end
+	return sharedRadius
+end
+
 -- Slice 7-8: compute soft devaluation result for a placement request.
 -- Slice 7 runs scoring factors; Slice 8 categorizes penalties.
 -- Runs both scoring factors when softConfig is provided.
@@ -935,93 +962,49 @@ local function computeDevaluation(
 	local penalties: { DistrictPlacementDevaluationPenalty } = {}
 
 	if softConfig ~= nil then
-		local nearCritRadius = softConfig.criticalPointSoftRadius or softConfig.nearCriticalPointSoftRadius or 0
 		local nearEdgeRadius = softConfig.routeEdgeSoftRadius or softConfig.nearRouteEdgeSoftRadius or 0
 		local descriptor = assemblyOutput.descriptor
 		local proposed = request.proposedOccupiedSpace
 
 		-- Factor 1: near protected critical points (category: proximity).
 		-- Checks the same categories as the Slice 3 hard gate.
-		if nearCritRadius > 0 then
-			for _, part in ipairs(descriptor.spawns) do
-				if string.find(part.name, "TinyfolkSpawn", 1, true) then
-					addSoftProximityPenalty(
-						part.name,
-						part.position,
-						proposed,
-						nearCritRadius,
-						"tinyfolk_spawn",
-						"proximity",
-						penalties
-					)
-				end
-			end
-			for _, part in ipairs(descriptor.escapeRoutes) do
+		for _, part in ipairs(descriptor.spawns) do
+			if string.find(part.name, "TinyfolkSpawn", 1, true) then
+				local radius = resolveCriticalPointSoftRadius(softConfig, "tinyfolk_spawn")
 				addSoftProximityPenalty(
 					part.name,
 					part.position,
 					proposed,
-					nearCritRadius,
-					"escape_route",
+					radius,
+					"tinyfolk_spawn",
 					"proximity",
 					penalties
 				)
 			end
-			for _, part in ipairs(descriptor.returnPoints) do
-				addSoftProximityPenalty(
-					part.name,
-					part.position,
-					proposed,
-					nearCritRadius,
-					"return_point",
-					"proximity",
-					penalties
-				)
-			end
-			for _, part in ipairs(descriptor.stations) do
-				addSoftProximityPenalty(
-					part.name,
-					part.position,
-					proposed,
-					nearCritRadius,
-					"station",
-					"proximity",
-					penalties
-				)
-			end
-			for _, part in ipairs(descriptor.constructionSites) do
-				addSoftProximityPenalty(
-					part.name,
-					part.position,
-					proposed,
-					nearCritRadius,
-					"construction_site",
-					"proximity",
-					penalties
-				)
-			end
-			for _, zone in ipairs(descriptor.captureZones) do
-				addSoftProximityPenalty(
-					zone.name,
-					zone.position,
-					proposed,
-					nearCritRadius,
-					"capture_zone",
-					"proximity",
-					penalties
-				)
-			end
-			for _, zone in ipairs(descriptor.controlZones) do
-				addSoftProximityPenalty(
-					zone.name,
-					zone.position,
-					proposed,
-					nearCritRadius,
-					"control_zone",
-					"proximity",
-					penalties
-				)
-			end
+		end
+		for _, part in ipairs(descriptor.escapeRoutes) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "escape_route")
+			addSoftProximityPenalty(part.name, part.position, proposed, radius, "escape_route", "proximity", penalties)
+		end
+		for _, part in ipairs(descriptor.returnPoints) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "return_point")
+			addSoftProximityPenalty(part.name, part.position, proposed, radius, "return_point", "proximity", penalties)
+		end
+		for _, part in ipairs(descriptor.stations) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "station")
+			addSoftProximityPenalty(part.name, part.position, proposed, radius, "station", "proximity", penalties)
+		end
+		for _, part in ipairs(descriptor.constructionSites) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "construction_site")
+			addSoftProximityPenalty(part.name, part.position, proposed, radius, "construction_site", "proximity", penalties)
+		end
+		for _, zone in ipairs(descriptor.captureZones) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "capture_zone")
+			addSoftProximityPenalty(zone.name, zone.position, proposed, radius, "capture_zone", "proximity", penalties)
+		end
+		for _, zone in ipairs(descriptor.controlZones) do
+			local radius = resolveCriticalPointSoftRadius(softConfig, "control_zone")
+			addSoftProximityPenalty(zone.name, zone.position, proposed, radius, "control_zone", "proximity", penalties)
 		end
 
 		-- Factor 2: near protected route edges but not intersecting (category: route_pressure).
@@ -1132,6 +1115,13 @@ local function isSoftConfig(config: any): boolean
 		return false
 	end
 	return config.criticalPointSoftRadius ~= nil
+		or config.tinyfolkSpawnSoftRadius ~= nil
+		or config.escapeRouteSoftRadius ~= nil
+		or config.returnPointSoftRadius ~= nil
+		or config.stationSoftRadius ~= nil
+		or config.constructionSiteSoftRadius ~= nil
+		or config.captureZoneSoftRadius ~= nil
+		or config.controlZoneSoftRadius ~= nil
 		or config.routeEdgeSoftRadius ~= nil
 		or config.nearCriticalPointSoftRadius ~= nil
 		or config.nearRouteEdgeSoftRadius ~= nil

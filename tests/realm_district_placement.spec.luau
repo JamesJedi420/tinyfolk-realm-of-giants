@@ -82,6 +82,43 @@ local function makeRoutePressureOutput(): any
 	}
 end
 
+local function makeCriticalCategoryOutput(): any
+	return {
+		descriptor = {
+			spawns = {
+				{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+			},
+			escapeRoutes = {
+				{ name = "EscapeRoute_A", position = { x = 100, y = 0, z = 0 } },
+			},
+			returnPoints = {
+				{ name = "ReturnPoint_A", position = { x = 200, y = 0, z = 0 } },
+			},
+			stations = {
+				{ name = "Station_A", position = { x = 300, y = 0, z = 0 } },
+			},
+			constructionSites = {
+				{ name = "ConstructionSite_A", position = { x = 400, y = 0, z = 0 } },
+			},
+			upgradeBoards = {},
+			controlZones = {
+				{ name = "ControlZone_A", position = { x = 500, y = 0, z = 0 } },
+			},
+			captureZones = {
+				{ name = "CaptureZone_A", position = { x = 600, y = 0, z = 0 } },
+			},
+			props = {},
+			routeGraph = {
+				nodes = {},
+				edges = {},
+			},
+		},
+		resolvedOccupiedSpace = {},
+		resolvedMetadata = {},
+		resolvedMetadataByPlacement = {},
+	}
+end
+
 -- Prototype occupied space reference (from Slice 4 fixture):
 --   P_Start box: worldCenter=(30,0,0), halfExtents=(60,4,40), isLandmarkAnchor=true
 --   P_Exit  box: worldCenter=(90,0,0), halfExtents=(60,4,40), isLandmarkAnchor=false
@@ -2034,6 +2071,136 @@ local function run()
 			local categoryB = outB.devaluation.categoryTotals[i]
 			assertEqual(categoryA.category, categoryB.category, "block69 category stable " .. tostring(i))
 			assertEqual(categoryA.totalScore, categoryB.totalScore, "block69 category score stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 70: Slice 12 - spawn proximity can be tuned independently of escape proximity.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S12SpawnOnly",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block70 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block70 spawn-only penalty score")
+		assertEqual(#result.devaluation.penalties, 1, "block70 one spawn penalty")
+		assertEqual(result.devaluation.penalties[1].nearCriticalPointCategory, "tinyfolk_spawn", "block70 spawn category")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block70 proximity total")
+	end
+
+	-- BLOCK 71: Slice 12 - escape proximity can be tuned independently of spawn proximity.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 0,
+			escapeRouteSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S12EscapeOnly",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block71 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block71 escape-only penalty score")
+		assertEqual(#result.devaluation.penalties, 1, "block71 one escape penalty")
+		assertEqual(result.devaluation.penalties[1].nearCriticalPointCategory, "escape_route", "block71 escape category")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block71 proximity total")
+	end
+
+	-- BLOCK 72: Slice 12 - shared critical-point fallback still applies by category order.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S12SharedFallback",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block72 accepted")
+		assertEqual(result.devaluation.totalPenalty, 2, "block72 shared fallback total")
+		assertEqual(#result.devaluation.penalties, 2, "block72 two proximity penalties")
+		assertEqual(result.devaluation.penalties[1].nearCriticalPointCategory, "tinyfolk_spawn", "block72 spawn first")
+		assertEqual(result.devaluation.penalties[2].nearCriticalPointCategory, "escape_route", "block72 escape second")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 2, "block72 proximity total")
+	end
+
+	-- BLOCK 73: Slice 12 - category-specific radius overrides shared critical-point fallback.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			tinyfolkSpawnSoftRadius = 0,
+			escapeRouteSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S12Override",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block73 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block73 override total")
+		assertEqual(#result.devaluation.penalties, 1, "block73 one override penalty")
+		assertEqual(result.devaluation.penalties[1].nearCriticalPointCategory, "escape_route", "block73 escape only")
+	end
+
+	-- BLOCK 74: Slice 12 - repeated category-specific runs remain stable.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			tinyfolkSpawnSoftRadius = 0,
+			escapeRouteSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S12Stable",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "near_escape", worldCenter = { x = 100, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block74 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block74 penalty count stable")
+		for i, penaltyA in ipairs(outA.devaluation.penalties) do
+			local penaltyB = outB.devaluation.penalties[i]
+			assertEqual(penaltyA.factor, penaltyB.factor, "block74 factor stable " .. tostring(i))
+			assertEqual(
+				penaltyA.nearCriticalPointCategory,
+				penaltyB.nearCriticalPointCategory,
+				"block74 category stable " .. tostring(i)
+			)
+			assertEqual(penaltyA.score, penaltyB.score, "block74 score stable " .. tostring(i))
+		end
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block74 category total stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block74 category score stable " .. tostring(i))
 		end
 	end
 
