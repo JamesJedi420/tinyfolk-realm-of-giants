@@ -54,7 +54,7 @@ local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 --   Warehouse_A:         ( 52, 3.5,   0)
 --   Shrine_A:            (-20, 4,     0)
 --   Granary_A:           (  4, 3.5,   0)
---   GiantUpgradeBoard_A: ( 32, 4,     0)  -- ~20.3 studs from GiantSpawn (max=32)
+--   GiantUpgradeBoard_A: ( 24, 4,     0)  -- ~12.5 studs from GiantSpawn (max=32)
 --   ConstructionSite_A:  ( 12, 0.5,  32)
 local PROTOTYPE_DESCRIPTOR = {
 	spawns = {
@@ -78,7 +78,7 @@ local PROTOTYPE_DESCRIPTOR = {
 		{ name = "ConstructionSite_A", position = { x = 12, y = 0.5, z = 32 } },
 	},
 	upgradeBoards = {
-		{ name = "GiantUpgradeBoard_A", position = { x = 32, y = 4, z = 0 } },
+		{ name = "GiantUpgradeBoard_A", position = { x = 24, y = 4, z = 0 } },
 	},
 	controlZones = {},
 	captureZones = {},
