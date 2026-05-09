@@ -140,6 +140,8 @@ export type DistrictPlacementDevaluationPenalty = {
 	category: string,
 	score: number,
 	message: string,
+	subjectType: string,
+	subjectName: string,
 	districtBoxTag: string?,
 	nearCriticalPointName: string?,
 	nearCriticalPointCategory: string?,
@@ -875,6 +877,8 @@ local function addSoftProximityPenalty(
 						pointName,
 						dist
 					),
+					subjectType = "critical_point",
+					subjectName = pointName,
 					districtBoxTag = box.tag,
 					nearCriticalPointName = pointName,
 					nearCriticalPointCategory = category,
@@ -940,6 +944,8 @@ local function addDensityPressurePenalties(
 								.. "' with penalized traversal density '"
 								.. meta.traversalDensityClass
 								.. "'",
+							subjectType = "placement",
+							subjectName = assembledBox.placementId,
 							districtBoxTag = districtBox.tag,
 							densityPressurePlacementId = assembledBox.placementId,
 							densityPressureChunkId = assembledBox.chunkId,
@@ -1064,6 +1070,8 @@ local function computeDevaluation(
 													fromName,
 													toName
 												),
+												subjectType = "route_edge",
+												subjectName = fromName .. "->" .. toName,
 												districtBoxTag = box.tag,
 												nearRouteEdgeFrom = fromName,
 												nearRouteEdgeTo = toName,

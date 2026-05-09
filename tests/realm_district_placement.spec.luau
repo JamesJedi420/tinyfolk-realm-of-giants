@@ -2400,6 +2400,178 @@ local function run()
 		end
 	end
 
+	-- BLOCK 80: Slice 14 - proximity penalties expose normalized core fields and retained details.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S14ProximityCore",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block80 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block80 total unchanged")
+		local penalty = result.devaluation.penalties[1]
+		assertEqual(penalty.factor, "near_critical_point", "block80 factor")
+		assertEqual(penalty.category, "proximity", "block80 category")
+		assertEqual(penalty.score, 1, "block80 score")
+		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block80 message")
+		assertEqual(penalty.subjectType, "critical_point", "block80 subject type")
+		assertEqual(penalty.subjectName, "TinyfolkSpawn", "block80 subject name")
+		assertEqual(penalty.nearCriticalPointName, "TinyfolkSpawn", "block80 retained point name")
+		assertEqual(penalty.nearCriticalPointCategory, "tinyfolk_spawn", "block80 retained point category")
+	end
+
+	-- BLOCK 81: Slice 14 - route-pressure penalties expose normalized core fields and retained details.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S14RouteCore",
+			proposedOccupiedSpace = {
+				{ tag = "near_edge", worldCenter = { x = 50, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block81 accepted")
+		assertEqual(result.devaluation.totalPenalty, 11, "block81 total unchanged")
+		local penalty = result.devaluation.penalties[1]
+		assertEqual(penalty.factor, "near_route_edge", "block81 factor")
+		assertEqual(penalty.category, "route_pressure", "block81 category")
+		assertEqual(penalty.score, 11, "block81 score")
+		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block81 message")
+		assertEqual(penalty.subjectType, "route_edge", "block81 subject type")
+		assertEqual(penalty.subjectName, "SpawnNode->EscapeNode", "block81 subject name")
+		assertEqual(penalty.nearRouteEdgeFrom, "SpawnNode", "block81 retained edge from")
+		assertEqual(penalty.nearRouteEdgeTo, "EscapeNode", "block81 retained edge to")
+	end
+
+	-- BLOCK 82: Slice 14 - density-pressure penalties expose normalized core fields and retained details.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S14DensityCore",
+			proposedOccupiedSpace = {
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block82 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 9, "block82 total unchanged")
+		local penalty = result.devaluation.penalties[1]
+		assertEqual(penalty.factor, "density_pressure", "block82 factor")
+		assertEqual(penalty.category, "density_pressure", "block82 category")
+		assertEqual(penalty.score, 9, "block82 score")
+		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block82 message")
+		assertEqual(penalty.subjectType, "placement", "block82 subject type")
+		assertEqual(penalty.subjectName, "P_Dense", "block82 subject name")
+		assertEqual(penalty.densityPressurePlacementId, "P_Dense", "block82 retained placement")
+		assertEqual(penalty.densityPressureChunkId, "Chunk_Dense", "block82 retained chunk")
+		assertEqual(penalty.densityPressureClass, "dense", "block82 retained class")
+	end
+
+	-- BLOCK 83: Slice 14 - normalized payload keeps category totals and total score unchanged.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S14Totals",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertFalse(result.accepted, "block83 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 21, "block83 total unchanged")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block83 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block83 route total")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 9, "block83 density total")
+	end
+
+	-- BLOCK 84: Slice 14 - repeated runs preserve normalized payload ordering.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S14Stable",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block84 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block84 penalty count stable")
+		for i, penaltyA in ipairs(outA.devaluation.penalties) do
+			local penaltyB = outB.devaluation.penalties[i]
+			assertEqual(penaltyA.factor, penaltyB.factor, "block84 factor stable " .. tostring(i))
+			assertEqual(penaltyA.category, penaltyB.category, "block84 category stable " .. tostring(i))
+			assertEqual(penaltyA.score, penaltyB.score, "block84 score stable " .. tostring(i))
+			assertEqual(penaltyA.subjectType, penaltyB.subjectType, "block84 subject type stable " .. tostring(i))
+			assertEqual(penaltyA.subjectName, penaltyB.subjectName, "block84 subject name stable " .. tostring(i))
+		end
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block84 category total stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block84 category score stable " .. tostring(i))
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
