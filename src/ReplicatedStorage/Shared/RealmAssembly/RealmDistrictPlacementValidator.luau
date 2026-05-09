@@ -4,12 +4,91 @@ local RealmChunkAssemblySchema = require("./RealmChunkAssemblySchema")
 
 local RealmDistrictPlacementValidator = {}
 
+export type Vector3Data = {
+	x: number,
+	y: number,
+	z: number,
+}
+
+export type NamedPart = {
+	name: string,
+	position: Vector3Data,
+}
+
+export type NamedZone = {
+	name: string,
+	position: Vector3Data,
+	radius: number,
+	tag: string,
+}
+
+export type NamedProp = {
+	name: string,
+	position: Vector3Data,
+	propType: string,
+}
+
+export type NamedNode = {
+	name: string,
+	position: Vector3Data,
+	nodeType: "spawn" | "waypoint" | "escape" | "station",
+	tier: ("primary" | "fallback")?,
+}
+
+export type RouteEdge = {
+	from: string,
+	to: string,
+	distance: number,
+}
+
+export type RealmDescriptor = {
+	spawns: { NamedPart },
+	escapeRoutes: { NamedPart },
+	returnPoints: { NamedPart },
+	stations: { NamedPart },
+	constructionSites: { NamedPart },
+	upgradeBoards: { NamedPart },
+	controlZones: { NamedZone },
+	captureZones: { NamedZone },
+	props: { NamedProp },
+	routeGraph: {
+		nodes: { NamedNode },
+		edges: { RouteEdge },
+	},
+}
+
+export type ResolvedOccupiedBox = {
+	placementId: string,
+	chunkId: string,
+	tag: string?,
+	worldCenter: Vector3Data,
+	halfExtents: Vector3Data,
+}
+
+export type ResolvedChunkMetadata = {
+	placementId: string,
+	chunkId: string,
+	isLandmarkAnchor: boolean?,
+	landmarkAnchorId: string?,
+	tileSizeClass: string?,
+	recurringStructureTags: { string }?,
+	environmentClass: string?,
+	traversalDensityClass: string?,
+}
+
+export type AssemblyOutput = {
+	descriptor: RealmDescriptor,
+	resolvedOccupiedSpace: { ResolvedOccupiedBox },
+	resolvedMetadata: { ResolvedChunkMetadata },
+	resolvedMetadataByPlacement: { [string]: ResolvedChunkMetadata },
+}
+
 -- A proposed occupied-space box for a district placement, axis-aligned,
 -- expressed as world-space center + half-extents (matching ResolvedOccupiedBox).
 export type DistrictOccupiedBox = {
 	tag: string?,
-	worldCenter: RealmChunkAssemblySchema.Vector3Data,
-	halfExtents: RealmChunkAssemblySchema.Vector3Data,
+	worldCenter: Vector3Data,
+	halfExtents: Vector3Data,
 }
 
 -- The minimal district placement request: an identifier and proposed occupied space.
@@ -106,12 +185,20 @@ export type DistrictPlacementPolicyConfig = {
 	disallowedRecurringStructureTags: { string }?,
 }
 
+-- Hard reject tuning for Slice 9.
+-- Nil nested configs leave that hard-policy dimension inactive while preserving
+-- always-on occupied-space, escape-route, and route-edge preservation checks.
+export type DistrictPlacementHardConfig = {
+	criticalExclusion: DistrictCriticalExclusionConfig?,
+	policy: DistrictPlacementPolicyConfig?,
+}
+
 -- Returns the Euclidean distance from a world-space point to the nearest surface
 -- of an AABB (0 when the point is strictly inside the AABB).
 local function distPointToAABB(
-	point: RealmChunkAssemblySchema.Vector3Data,
-	center: RealmChunkAssemblySchema.Vector3Data,
-	halfExtents: RealmChunkAssemblySchema.Vector3Data
+	point: Vector3Data,
+	center: Vector3Data,
+	halfExtents: Vector3Data
 ): number
 	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
 	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
@@ -124,7 +211,7 @@ end
 -- No-ops when exclusionRadius <= 0.
 local function rejectIfProximity(
 	pointName: string,
-	pointPos: RealmChunkAssemblySchema.Vector3Data,
+	pointPos: Vector3Data,
 	proposedOccupiedSpace: { DistrictOccupiedBox },
 	exclusionRadius: number,
 	code: string,
@@ -162,7 +249,7 @@ end
 -- of a protected world-space point produces a deterministic reject reason.
 local function checkCriticalPointProximity(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	config: DistrictCriticalExclusionConfig,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
@@ -266,36 +353,44 @@ end
 
 -- Returns true if two AABBs overlap (strict: boundary-touch is NOT overlap).
 local function aabbsOverlap(
-	centerA: RealmChunkAssemblySchema.Vector3Data,
-	halfA: RealmChunkAssemblySchema.Vector3Data,
-	centerB: RealmChunkAssemblySchema.Vector3Data,
-	halfB: RealmChunkAssemblySchema.Vector3Data
+	centerA: Vector3Data,
+	halfA: Vector3Data,
+	centerB: Vector3Data,
+	halfB: Vector3Data
 ): boolean
 	local dx = math.abs(centerA.x - centerB.x)
 	local dy = math.abs(centerA.y - centerB.y)
 	local dz = math.abs(centerA.z - centerB.z)
-	return dx < halfA.x + halfB.x and dy < halfA.y + halfB.y and dz < halfA.z + halfB.z
+	if dx < halfA.x + halfB.x and dy < halfA.y + halfB.y and dz < halfA.z + halfB.z then
+		return true
+	end
+	return false
 end
 
 -- Returns true if a world-space point falls strictly inside an AABB
 -- (same boundary convention as aabbsOverlap: boundary touch is NOT inside).
 local function pointInsideAABB(
-	point: RealmChunkAssemblySchema.Vector3Data,
-	center: RealmChunkAssemblySchema.Vector3Data,
-	halfExtents: RealmChunkAssemblySchema.Vector3Data
+	point: Vector3Data,
+	center: Vector3Data,
+	halfExtents: Vector3Data
 ): boolean
-	return math.abs(point.x - center.x) < halfExtents.x
+	if
+		math.abs(point.x - center.x) < halfExtents.x
 		and math.abs(point.y - center.y) < halfExtents.y
 		and math.abs(point.z - center.z) < halfExtents.z
+	then
+		return true
+	end
+	return false
 end
 
 -- Returns the subset of escapeRoutes whose positions are NOT inside any proposed box.
 -- "Blocked" escape routes are those whose center point falls strictly inside a district box.
 local function survivingEscapeRoutes(
-	escapeRoutes: { RealmChunkAssemblySchema.NamedPart },
+	escapeRoutes: { NamedPart },
 	proposedOccupiedSpace: { DistrictOccupiedBox }
-): { RealmChunkAssemblySchema.NamedPart }
-	local surviving: { RealmChunkAssemblySchema.NamedPart } = {}
+): { NamedPart }
+	local surviving: { NamedPart } = {}
 	for _, route in ipairs(escapeRoutes) do
 		local blocked = false
 		for _, box in ipairs(proposedOccupiedSpace) do
@@ -313,10 +408,10 @@ end
 
 -- Returns the closest point on a line segment p1-p2 to a given point.
 local function closestPointOnSegment(
-	point: RealmChunkAssemblySchema.Vector3Data,
-	p1: RealmChunkAssemblySchema.Vector3Data,
-	p2: RealmChunkAssemblySchema.Vector3Data
-): RealmChunkAssemblySchema.Vector3Data
+	point: Vector3Data,
+	p1: Vector3Data,
+	p2: Vector3Data
+): Vector3Data
 	local dx = p2.x - p1.x
 	local dy = p2.y - p1.y
 	local dz = p2.z - p1.z
@@ -338,9 +433,9 @@ end
 
 -- Returns distance from point to AABB surface (0 if inside).
 local function distPointToAABB(
-	point: RealmChunkAssemblySchema.Vector3Data,
-	center: RealmChunkAssemblySchema.Vector3Data,
-	halfExtents: RealmChunkAssemblySchema.Vector3Data
+	point: Vector3Data,
+	center: Vector3Data,
+	halfExtents: Vector3Data
 ): number
 	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
 	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
@@ -350,17 +445,17 @@ end
 
 -- Returns true if line segment intersects AABB.
 local function lineSegmentIntersectsAABB(
-	p1: RealmChunkAssemblySchema.Vector3Data,
-	p2: RealmChunkAssemblySchema.Vector3Data,
-	boxCenter: RealmChunkAssemblySchema.Vector3Data,
-	boxHalfExtents: RealmChunkAssemblySchema.Vector3Data
+	p1: Vector3Data,
+	p2: Vector3Data,
+	boxCenter: Vector3Data,
+	boxHalfExtents: Vector3Data
 ): boolean
 	local closest = closestPointOnSegment(boxCenter, p1, p2)
 	return distPointToAABB(closest, boxCenter, boxHalfExtents) == 0
 end
 
 -- Build protected route edges (spawn-to-escape paths via BFS).
-local function buildProtectedRouteEdges(descriptor: RealmChunkAssemblySchema.RealmDescriptor): { [string]: boolean }
+local function buildProtectedRouteEdges(descriptor: RealmDescriptor): { [string]: boolean }
 	local graph = descriptor.routeGraph
 	local protected: { [string]: boolean } = {}
 
@@ -433,7 +528,7 @@ end
 -- Check Slice 1: occupied-space and landmark exclusion.
 local function checkOccupiedSpaceExclusion(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
 	for _, districtBox in ipairs(request.proposedOccupiedSpace) do
@@ -475,7 +570,7 @@ end
 -- remaining escape routes (violating the topology escape_route_exists invariant).
 local function checkRouteEscapePreservation(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
 	local descriptor = assemblyOutput.descriptor
@@ -511,7 +606,7 @@ end
 -- Rejects when proposed occupied space intersects protected route edges.
 local function checkRouteGraphEdgePreservation(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
 	local descriptor = assemblyOutput.descriptor
@@ -532,7 +627,7 @@ local function checkRouteGraphEdgePreservation(
 	end
 
 	-- Build a name-to-node map for efficient position lookup.
-	local nodesByName: { [string]: RealmChunkAssemblySchema.NamedNode } = {}
+	local nodesByName: { [string]: NamedNode } = {}
 	for _, node in ipairs(graph.nodes) do
 		nodesByName[node.name] = node
 	end
@@ -589,7 +684,7 @@ end
 -- Empty allowed-classes array for a dimension = that dimension is not enforced.
 local function checkEnvironmentAndDensityPolicy(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	policyConfig: DistrictPlacementPolicyConfig,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
@@ -666,14 +761,14 @@ end
 -- Each disallowed tag found in an overlapping chunk produces one reason.
 local function checkRecurringStructurePolicy(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	policyConfig: DistrictPlacementPolicyConfig,
 	rejectReasons: { DistrictPlacementRejectReason }
 )
-	if policyConfig.disallowedRecurringStructureTags == nil or #policyConfig.disallowedRecurringStructureTags == 0 then
+	local disallowedTags = policyConfig.disallowedRecurringStructureTags
+	if disallowedTags == nil or #disallowedTags == 0 then
 		return
 	end
-	local disallowedTags: { string } = policyConfig.disallowedRecurringStructureTags
 	local disallowedSet: { [string]: boolean } = {}
 	for _, tag in ipairs(disallowedTags) do
 		disallowedSet[tag] = true
@@ -720,7 +815,7 @@ end
 -- Slice 8: adds penaltyCategory parameter to categorize the penalty.
 local function addSoftProximityPenalty(
 	pointName: string,
-	pointPos: RealmChunkAssemblySchema.Vector3Data,
+	pointPos: Vector3Data,
 	proposedOccupiedSpace: { DistrictOccupiedBox },
 	softRadius: number,
 	category: string,
@@ -762,7 +857,7 @@ end
 -- Always returns a valid DevaluationResult (empty when softConfig is nil).
 local function computeDevaluation(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
+	assemblyOutput: AssemblyOutput,
 	softConfig: DistrictPlacementSoftConfig?
 ): DistrictPlacementDevaluationResult
 	local penalties: { DistrictPlacementDevaluationPenalty } = {}
@@ -861,7 +956,7 @@ local function computeDevaluation(
 		if nearEdgeRadius > 0 and #descriptor.routeGraph.nodes > 0 and #descriptor.routeGraph.edges > 0 then
 			local protectedEdges = buildProtectedRouteEdges(descriptor)
 			if next(protectedEdges) then
-				local nodesByName: { [string]: RealmChunkAssemblySchema.NamedNode } = {}
+				local nodesByName: { [string]: NamedNode } = {}
 				for _, node in ipairs(descriptor.routeGraph.nodes) do
 					nodesByName[node.name] = node
 				end
@@ -940,33 +1035,78 @@ local function computeDevaluation(
 	}
 end
 
+local function isHardConfig(config: any): boolean
+	if type(config) ~= "table" then
+		return false
+	end
+	if config.criticalExclusion ~= nil or config.policy ~= nil then
+		return true
+	end
+	if
+		config.tinyfolkSpawnExclusionRadius ~= nil
+		or config.allowedEnvironmentClasses ~= nil
+		or config.nearCriticalPointSoftRadius ~= nil
+	then
+		return false
+	end
+	return true
+end
+
+local function isSoftConfig(config: any): boolean
+	if type(config) ~= "table" then
+		return false
+	end
+	return config.nearCriticalPointSoftRadius ~= nil or config.nearRouteEdgeSoftRadius ~= nil
+end
+
+local function resolveValidationConfigs(
+	hardOrCriticalConfig: DistrictPlacementHardConfig | DistrictCriticalExclusionConfig | nil,
+	policyOrSoftConfig: DistrictPlacementPolicyConfig | DistrictPlacementSoftConfig | nil,
+	legacySoftConfig: DistrictPlacementSoftConfig?
+): (DistrictPlacementHardConfig, DistrictPlacementSoftConfig?)
+	if isHardConfig(hardOrCriticalConfig) then
+		return hardOrCriticalConfig :: DistrictPlacementHardConfig, policyOrSoftConfig :: DistrictPlacementSoftConfig?
+	end
+	if hardOrCriticalConfig == nil and isSoftConfig(policyOrSoftConfig) then
+		return {}, policyOrSoftConfig :: DistrictPlacementSoftConfig
+	end
+
+	return {
+		criticalExclusion = hardOrCriticalConfig :: DistrictCriticalExclusionConfig?,
+		policy = policyOrSoftConfig :: DistrictPlacementPolicyConfig?,
+	}, legacySoftConfig
+end
+
 -- Validate a district placement request against an assembled realm output.
 -- Runs all active gate checks in a single deterministic pass:
 --   Slice 1: occupied-space and landmark exclusion
 --   Slice 2: route/escape preservation
---   Slice 3: critical-point proximity (when criticalConfig is provided)
+--   Slice 3: critical-point proximity (when hardConfig.criticalExclusion is provided)
 --   Slice 4: route-graph edge preservation
---   Slice 5: environment-class and traversal-density policy (when policyConfig is provided)
---   Slice 6: recurring-structure tag policy (when policyConfig is provided)
+--   Slice 5: environment-class and traversal-density policy (when hardConfig.policy is provided)
+--   Slice 6: recurring-structure tag policy (when hardConfig.policy is provided)
 --   Slice 7: soft devaluation scoring (when softConfig is provided)
+-- Preferred Slice 9 call shape: ValidatePlacement(request, assemblyOutput, hardConfig, softConfig)
+-- Legacy call shape remains supported: ValidatePlacement(request, assemblyOutput, criticalConfig, policyConfig, softConfig)
 function RealmDistrictPlacementValidator.ValidatePlacement(
 	request: DistrictPlacementRequest,
-	assemblyOutput: RealmChunkAssemblySchema.AssemblyOutput,
-	criticalConfig: DistrictCriticalExclusionConfig?,
-	policyConfig: DistrictPlacementPolicyConfig?,
-	softConfig: DistrictPlacementSoftConfig?
+	assemblyOutput: AssemblyOutput,
+	hardOrCriticalConfig: DistrictPlacementHardConfig | DistrictCriticalExclusionConfig | nil,
+	policyOrSoftConfig: DistrictPlacementPolicyConfig | DistrictPlacementSoftConfig | nil,
+	legacySoftConfig: DistrictPlacementSoftConfig?
 ): DistrictPlacementResult
 	local rejectReasons: { DistrictPlacementRejectReason } = {}
+	local hardConfig, softConfig = resolveValidationConfigs(hardOrCriticalConfig, policyOrSoftConfig, legacySoftConfig)
 
 	checkOccupiedSpaceExclusion(request, assemblyOutput, rejectReasons)
 	checkRouteEscapePreservation(request, assemblyOutput, rejectReasons)
-	if criticalConfig ~= nil then
-		checkCriticalPointProximity(request, assemblyOutput, criticalConfig, rejectReasons)
+	if hardConfig.criticalExclusion ~= nil then
+		checkCriticalPointProximity(request, assemblyOutput, hardConfig.criticalExclusion, rejectReasons)
 	end
 	checkRouteGraphEdgePreservation(request, assemblyOutput, rejectReasons)
-	if policyConfig ~= nil then
-		checkEnvironmentAndDensityPolicy(request, assemblyOutput, policyConfig, rejectReasons)
-		checkRecurringStructurePolicy(request, assemblyOutput, policyConfig, rejectReasons)
+	if hardConfig.policy ~= nil then
+		checkEnvironmentAndDensityPolicy(request, assemblyOutput, hardConfig.policy, rejectReasons)
+		checkRecurringStructurePolicy(request, assemblyOutput, hardConfig.policy, rejectReasons)
 	end
 
 	return {

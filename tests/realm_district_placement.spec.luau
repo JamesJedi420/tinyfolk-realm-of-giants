@@ -6,6 +6,13 @@ local RealmAssemblyPrototypeFixture =
 local RealmDistrictPlacementValidator =
 	require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmDistrictPlacementValidator")
 
+type DistrictPlacementRequest = any
+type DistrictPlacementResult = any
+type DistrictCriticalExclusionConfig = any
+type DistrictPlacementPolicyConfig = any
+type DistrictPlacementHardConfig = any
+type DistrictPlacementSoftConfig = any
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -27,7 +34,7 @@ local function assertFalse(value, label)
 end
 
 local function assertHasRejectCode(
-	result: RealmDistrictPlacementValidator.DistrictPlacementResult,
+	result: DistrictPlacementResult,
 	code: string,
 	label: string
 )
@@ -57,7 +64,7 @@ local function run()
 
 	-- BLOCK 2: Disjoint placement passes (far away from all assembled boxes).
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_Disjoint",
 			proposedOccupiedSpace = {
 				{
@@ -78,7 +85,7 @@ local function run()
 	-- P_Start box: center=(30,0,0), half=(60,4,40), x range [-30,90].
 	-- Use district at x=120 to land inside P_Exit only (dx from P_Start = 90, halfSum = 65, no overlap).
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_OverlapGeneric",
 			proposedOccupiedSpace = {
 				{
@@ -102,7 +109,7 @@ local function run()
 	-- BLOCK 4: Overlap with landmark-anchored occupied space is rejected with landmark code.
 	-- P_Start box center=(30,0,0), half=(60,4,40). District centered at (30,0,0).
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_OverlapLandmark",
 			proposedOccupiedSpace = {
 				{
@@ -125,7 +132,7 @@ local function run()
 	-- District at center=(0,0,80) half=(20,4,40): dz from P_Start = 80, halfSumZ = 80 → 80<80 false.
 	-- dx from P_Exit = 90, halfSumX = 80 → 90<80 false. Both axes fail → no overlap.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_BoundaryTouch",
 			proposedOccupiedSpace = {
 				{
@@ -143,7 +150,7 @@ local function run()
 	-- BLOCK 6: Overlap by one unit past z-boundary is rejected.
 	-- center=(0,0,79) half=(20,4,40): dz=79, halfSumZ=80 → 79<80 true → overlap with P_Start.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_BoundaryOverlap",
 			proposedOccupiedSpace = {
 				{
@@ -160,7 +167,7 @@ local function run()
 
 	-- BLOCK 7: Multiple proposed boxes — one disjoint, one overlapping — produces rejection.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_MixedBoxes",
 			proposedOccupiedSpace = {
 				{
@@ -182,7 +189,7 @@ local function run()
 
 	-- BLOCK 8: Empty proposed occupied space always passes (vacuous).
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_Empty",
 			proposedOccupiedSpace = {},
 		}
@@ -193,7 +200,7 @@ local function run()
 
 	-- BLOCK 9: Repeated runs produce identical reject ordering and reason count.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_Stability",
 			proposedOccupiedSpace = {
 				{
@@ -245,7 +252,7 @@ local function run()
 	-- BLOCK 16: Disjoint placement far from all critical points passes Slice 3 with a
 	-- non-zero critical config (no spatial proximity violation).
 	do
-		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfg: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 50,
 			escapeRouteExclusionRadius = 50,
 			returnPointExclusionRadius = 50,
@@ -254,7 +261,7 @@ local function run()
 			captureZoneExclusionRadius = 50,
 			controlZoneExclusionRadius = 50,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_CritDisjoint",
 			proposedOccupiedSpace = {
 				{
@@ -274,7 +281,7 @@ local function run()
 	-- Box center (0,0,50) halfExtents (5,5,5):
 	--   distPointToAABB({0,0,0}, {0,0,50}, {5,5,5}) = dz = max(0, 50-5) = 45.
 	do
-		local cfgFires: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfgFires: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 50,
 			escapeRouteExclusionRadius = 0,
 			returnPointExclusionRadius = 0,
@@ -283,7 +290,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local cfgSafe: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfgSafe: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 40,
 			escapeRouteExclusionRadius = 0,
 			returnPointExclusionRadius = 0,
@@ -292,7 +299,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_TinyfolkSpawnProx",
 			proposedOccupiedSpace = {
 				{
@@ -320,7 +327,7 @@ local function run()
 	-- Box center (120,0,50) halfExtents (5,5,5).
 	-- P_Exit occupied box z range [-40,40]: |50-0|=50 < 45? false → no Slice 1 overlap.
 	do
-		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfg: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 0,
 			escapeRouteExclusionRadius = 50,
 			returnPointExclusionRadius = 0,
@@ -329,7 +336,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_EscapeRouteProx",
 			proposedOccupiedSpace = {
 				{
@@ -350,7 +357,7 @@ local function run()
 	-- Box center (25,0,50) halfExtents (5,5,5).
 	-- P_Start occupied box z range [-40,40]: |50-0|=50 < 45? false → no Slice 1 overlap.
 	do
-		local cfgStation: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfgStation: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 0,
 			escapeRouteExclusionRadius = 0,
 			returnPointExclusionRadius = 0,
@@ -359,7 +366,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_StationProx",
 			proposedOccupiedSpace = {
 				{
@@ -376,7 +383,7 @@ local function run()
 		-- Also confirm construction site exclusion fires for ConstructionSite_A at (15,0,10).
 		-- Box center (15,0,60) halfExtents (5,5,5).
 		-- dz = max(0, |10-60|-5) = max(0,45) = 45 < constructionSiteExclusionRadius=50 → fires.
-		local cfgSite: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfgSite: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 0,
 			escapeRouteExclusionRadius = 0,
 			returnPointExclusionRadius = 0,
@@ -385,7 +392,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local reqSite: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local reqSite: DistrictPlacementRequest = {
 			districtId = "D_SiteProx",
 			proposedOccupiedSpace = {
 				{
@@ -406,7 +413,7 @@ local function run()
 	-- Two proposed boxes: one close to TinyfolkSpawn, one close to EscapeRoute_A.
 	-- Both categories enabled → two reject reasons, one per violated critical point.
 	do
-		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfg: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 50,
 			escapeRouteExclusionRadius = 50,
 			returnPointExclusionRadius = 0,
@@ -415,7 +422,7 @@ local function run()
 			captureZoneExclusionRadius = 0,
 			controlZoneExclusionRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_MultiCritical",
 			proposedOccupiedSpace = {
 				-- Near TinyfolkSpawn (0,0,0): surface dist = 45
@@ -443,7 +450,7 @@ local function run()
 
 	-- BLOCK 21: All exclusion radii = 0 disables Slice 3 check entirely; placement passes.
 	do
-		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfg: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 0,
 			escapeRouteExclusionRadius = 0,
 			returnPointExclusionRadius = 0,
@@ -453,7 +460,7 @@ local function run()
 			controlZoneExclusionRadius = 0,
 		}
 		-- Same box from block17 that would fire with radius=50.
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_ZeroRadius",
 			proposedOccupiedSpace = {
 				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
@@ -468,7 +475,7 @@ local function run()
 	-- Block17's box (near TinyfolkSpawn) has no occupied-space overlap → Slices 1 and 2 pass.
 	-- Without criticalConfig, Slice 3 does not fire.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NilConfig",
 			proposedOccupiedSpace = {
 				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
@@ -480,7 +487,7 @@ local function run()
 
 	-- BLOCK 23: Stability — repeated Slice 3 runs with same input produce identical output.
 	do
-		local cfg: RealmDistrictPlacementValidator.DistrictCriticalExclusionConfig = {
+		local cfg: DistrictCriticalExclusionConfig = {
 			tinyfolkSpawnExclusionRadius = 50,
 			escapeRouteExclusionRadius = 50,
 			returnPointExclusionRadius = 50,
@@ -489,7 +496,7 @@ local function run()
 			captureZoneExclusionRadius = 50,
 			controlZoneExclusionRadius = 50,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_Stability3",
 			proposedOccupiedSpace = {
 				{ tag = "core", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
@@ -524,7 +531,7 @@ local function run()
 
 	-- BLOCK 10: Disjoint placement that does not overlap any escape route position passes.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RouteDisjoint",
 			proposedOccupiedSpace = {
 				{
@@ -543,7 +550,7 @@ local function run()
 	-- EscapeRoute_A is at world (120,0,0). Box centered at (120,0,0) with halfExtents (5,5,5)
 	-- strictly contains that point.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_BlocksEscape",
 			proposedOccupiedSpace = {
 				{
@@ -564,7 +571,7 @@ local function run()
 	-- EscapeRoute_A at (120,0,0). Box at (115,0,0) halfExtents (5,5,5):
 	-- |120-115| = 5, halfExtents.x = 5 → 5 < 5 is false → not inside.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_EscapeBoundary",
 			proposedOccupiedSpace = {
 				{
@@ -590,7 +597,7 @@ local function run()
 	-- Box at (114,0,0) halfExtents (5,5,5): |120-114|=6 < 5? No... adjust.
 	-- Use box at (116,0,0) halfExtents (5,5,5): |120-116|=4 < 5 → inside → blocked.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_EscapeInsideBoundary",
 			proposedOccupiedSpace = {
 				{
@@ -611,7 +618,7 @@ local function run()
 	--   Overlaps P_Exit box (center=90, half=60): dx=|120-90|=30 < 50+60=110 → yes.
 	--   Contains EscapeRoute_A at (120,0,0): |0|<50, |0|<5, |0|<5 → yes.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_BothFailures",
 			proposedOccupiedSpace = {
 				{
@@ -629,7 +636,7 @@ local function run()
 
 	-- BLOCK 15: Repeated runs on route-blocking placement produce identical reject ordering.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RouteStability",
 			proposedOccupiedSpace = {
 				{
@@ -673,11 +680,11 @@ local function run()
 
 	-- BLOCK 24: Disjoint district + restrictive policy → no overlaps → passes vacuously.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "indoor" },
 			allowedTraversalDensityClasses = { "sparse" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_PolicyDisjoint",
 			proposedOccupiedSpace = {
 				{
@@ -694,11 +701,11 @@ local function run()
 
 	-- BLOCK 25: Box overlapping P_Start (outdoor); allowedEnvironmentClasses={"outdoor"} → passes.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "outdoor" },
 			allowedTraversalDensityClasses = {},
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_OutdoorAllowed",
 			proposedOccupiedSpace = {
 				{
@@ -720,11 +727,11 @@ local function run()
 
 	-- BLOCK 26: Box overlapping P_Start (outdoor); allowedEnvironmentClasses={"indoor"} → rejects.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "indoor" },
 			allowedTraversalDensityClasses = {},
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_IndoorOnly",
 			proposedOccupiedSpace = {
 				{
@@ -753,11 +760,11 @@ local function run()
 
 	-- BLOCK 27: Box overlapping P_Exit (indoor); allowedEnvironmentClasses={"indoor"} → passes.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "indoor" },
 			allowedTraversalDensityClasses = {},
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_ExitIndoorAllowed",
 			proposedOccupiedSpace = {
 				{
@@ -779,11 +786,11 @@ local function run()
 
 	-- BLOCK 28: Box overlapping P_Start (moderate density); allowedTraversalDensityClasses={"sparse"} → rejects.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = { "sparse" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_DensityViolation",
 			proposedOccupiedSpace = {
 				{
@@ -811,11 +818,11 @@ local function run()
 
 	-- BLOCK 29: Box overlapping P_Start (moderate); allowedTraversalDensityClasses={"moderate"} → passes density.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = { "moderate" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_DensityAllowed",
 			proposedOccupiedSpace = {
 				{
@@ -837,7 +844,7 @@ local function run()
 
 	-- BLOCK 30: nil policyConfig → Slice 5 is skipped entirely; Slices 1-4 still active.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NoPolicyConfig",
 			proposedOccupiedSpace = {
 				{
@@ -867,11 +874,11 @@ local function run()
 	-- Box at x=0 overlaps P_Start (outdoor, moderate).
 	-- Policy: only indoor + only sparse → two separate violations from the same box-pair.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "indoor" },
 			allowedTraversalDensityClasses = { "sparse" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_BothViolations",
 			proposedOccupiedSpace = {
 				{
@@ -901,11 +908,11 @@ local function run()
 
 	-- BLOCK 32: Stability — repeated Slice 5 runs with same input produce identical output.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "indoor" },
 			allowedTraversalDensityClasses = { "sparse" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_PolicyStability",
 			proposedOccupiedSpace = {
 				{
@@ -929,11 +936,11 @@ local function run()
 	-- x=120 overlaps P_Exit (occupied space → Slice 1 reject) and is indoor.
 	-- Policy: only outdoor allowed → Slice 5 also fires.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = { "outdoor" },
 			allowedTraversalDensityClasses = {},
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_Slice1And5Coexist",
 			proposedOccupiedSpace = {
 				{
@@ -962,12 +969,12 @@ local function run()
 
 	-- BLOCK 34: nil disallowedRecurringStructureTags (empty list) → no Slice 6 rejection.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = {},
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_EmptyPolicy",
 			proposedOccupiedSpace = {
 				{
@@ -989,12 +996,12 @@ local function run()
 
 	-- BLOCK 35: Overlapping P_Start; disallow "entry_hub" (present) → rejects.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "entry_hub" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_EntryHubDisallowed",
 			proposedOccupiedSpace = {
 				{
@@ -1022,12 +1029,12 @@ local function run()
 
 	-- BLOCK 36: Overlapping P_Start; disallow "exit_chamber" (not present on P_Start) → passes Slice 6.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "exit_chamber" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_ExitChamberNotOnStart",
 			proposedOccupiedSpace = {
 				{
@@ -1050,12 +1057,12 @@ local function run()
 	-- BLOCK 37: Chunk with multiple tags → fails when any disallowed tag is present.
 	-- P_Start has both "spawn_chamber" and "entry_hub"; disallow only "spawn_chamber".
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "spawn_chamber" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_SpawnChamberDisallowed",
 			proposedOccupiedSpace = {
 				{
@@ -1073,12 +1080,12 @@ local function run()
 	-- BLOCK 38: Box at x=60 overlaps both P_Start and P_Exit; disallow "entry_hub".
 	-- P_Start carries "entry_hub" → 1 reason; P_Exit does not → no extra reason for P_Exit.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "entry_hub" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_BothOverlap",
 			proposedOccupiedSpace = {
 				{
@@ -1103,12 +1110,12 @@ local function run()
 	-- BLOCK 39: Both "spawn_chamber" and "exit_chamber" disallowed; box at x=60 overlaps both.
 	-- P_Start fires for "spawn_chamber"; P_Exit fires for "exit_chamber" → 2 reasons total.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "spawn_chamber", "exit_chamber" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_MultiReason",
 			proposedOccupiedSpace = {
 				{
@@ -1131,12 +1138,12 @@ local function run()
 
 	-- BLOCK 40: Stability — repeated runs produce identical RS reason ordering.
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "spawn_chamber", "entry_hub", "exit_chamber" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_Stability",
 			proposedOccupiedSpace = {
 				{
@@ -1164,12 +1171,12 @@ local function run()
 	-- BLOCK 41: Slice 6 coexists with Slice 1 occupied_space_overlap.
 	-- x=120 overlaps P_Exit (Slice 1 fires) and P_Exit carries "exit_chamber" (Slice 6 fires).
 	do
-		local policyConfig: RealmDistrictPlacementValidator.DistrictPlacementPolicyConfig = {
+		local policyConfig: DistrictPlacementPolicyConfig = {
 			allowedEnvironmentClasses = {},
 			allowedTraversalDensityClasses = {},
 			disallowedRecurringStructureTags = { "exit_chamber" },
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_RS_Slice1And6Coexist",
 			proposedOccupiedSpace = {
 				{
@@ -1202,7 +1209,7 @@ local function run()
 
 	-- BLOCK 42: nil softConfig → devaluation always present, totalPenalty=0, penalties empty.
 	do
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NoSoftConfig",
 			proposedOccupiedSpace = {
 				{
@@ -1221,11 +1228,11 @@ local function run()
 
 	-- BLOCK 43: softConfig provided but placement far from all critical points → 0 penalties.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 60,
 			nearRouteEdgeSoftRadius = 60,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_FarFromEverything",
 			proposedOccupiedSpace = {
 				{
@@ -1245,11 +1252,11 @@ local function run()
 	-- Box at (0,0,-60) half=(1,1,1): TinyfolkSpawn dist=59 < 60 → score=1.
 	-- TinyfolkReturnPoint dist≈61.99 > 60 → no penalty for it.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 60,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NearSpawnOnly",
 			proposedOccupiedSpace = {
 				{
@@ -1277,11 +1284,11 @@ local function run()
 	-- Box at (0,0,-50) half=(1,1,1) softRadius=80:
 	-- TinyfolkSpawn dist=49 < 80 → penalty; several other close points also trigger.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 80,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NearMultiple",
 			proposedOccupiedSpace = {
 				{
@@ -1308,11 +1315,11 @@ local function run()
 	-- Box at (30,0,0) half=(1,1,1) overlaps P_Start → Slice 1 rejects.
 	-- TinyfolkSpawn (0,0,0): dist = |30-0|-1 = 29 studs < 40 → soft penalty, score=11.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 40,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_HardRejectWithPenalty",
 			proposedOccupiedSpace = {
 				{
@@ -1342,11 +1349,11 @@ local function run()
 	-- BLOCK 47: Near-route-edge factor — prototype fixture has no protected edges
 	--           (disconnected route graph) → 0 near_route_edge penalties (vacuous).
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 0,
 			nearRouteEdgeSoftRadius = 200,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_NearEdgeVacuous",
 			proposedOccupiedSpace = {
 				{
@@ -1368,11 +1375,11 @@ local function run()
 
 	-- BLOCK 48: Stability — repeated runs produce identical devaluation output.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 80,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_SoftStability",
 			proposedOccupiedSpace = {
 				{
@@ -1400,13 +1407,15 @@ local function run()
 
 	-- BLOCK 49: Slice 8 - penalty entry carries category field.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 60,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block49",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		assertTrue(#result.devaluation.penalties >= 1, "block49 has penalties")
@@ -1417,13 +1426,15 @@ local function run()
 
 	-- BLOCK 50: Slice 8 - proximity category total is correct.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 60,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block50",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		assertTrue(#result.devaluation.categoryTotals > 0, "block50 has category totals")
@@ -1442,13 +1453,15 @@ local function run()
 	do
 		-- Create a scenario that might trigger both proximity and route_pressure (though
 		-- prototype fixture is disconnected, so route_pressure will be 0, but test ordering anyway).
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 80,
 			nearRouteEdgeSoftRadius = 200,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block51",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		assertTrue(#result.devaluation.categoryTotals >= 1, "block51 has category totals")
@@ -1456,21 +1469,29 @@ local function run()
 		for i = 1, #result.devaluation.categoryTotals - 1 do
 			local cat1 = result.devaluation.categoryTotals[i].category
 			local cat2 = result.devaluation.categoryTotals[i + 1].category
-			local order1 = (cat1 == "proximity" and 0) or (cat1 == "route_pressure" and 1) or (cat1 == "density_pressure" and 2) or 999
-			local order2 = (cat2 == "proximity" and 0) or (cat2 == "route_pressure" and 1) or (cat2 == "density_pressure" and 2) or 999
+			local order1 = (cat1 == "proximity" and 0)
+				or (cat1 == "route_pressure" and 1)
+				or (cat1 == "density_pressure" and 2)
+				or 999
+			local order2 = (cat2 == "proximity" and 0)
+				or (cat2 == "route_pressure" and 1)
+				or (cat2 == "density_pressure" and 2)
+				or 999
 			assertTrue(order1 < order2, "block51 categories ordered deterministically at index " .. tostring(i))
 		end
 	end
 
 	-- BLOCK 52: Slice 8 - hard-rejected placement still works with categories.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 40,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block52",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		assertFalse(result.accepted, "block52 hard rejected (Slice 1 overlap)")
@@ -1490,13 +1511,15 @@ local function run()
 
 	-- BLOCK 53: Slice 8 - category totals are deterministic (repeated runs identical).
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 80,
 			nearRouteEdgeSoftRadius = 0,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block53",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = -50 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
@@ -1510,13 +1533,15 @@ local function run()
 
 	-- BLOCK 54: Slice 8 - category totals always present and ordered, even with no penalties.
 	do
-		local softConfig: RealmDistrictPlacementValidator.DistrictPlacementSoftConfig = {
+		local softConfig: DistrictPlacementSoftConfig = {
 			nearCriticalPointSoftRadius = 60,
 			nearRouteEdgeSoftRadius = 60,
 		}
-		local request: RealmDistrictPlacementValidator.DistrictPlacementRequest = {
+		local request: DistrictPlacementRequest = {
 			districtId = "D_S8Block54",
-			proposedOccupiedSpace = {{ tag = "body", worldCenter = { x = 0, y = 0, z = 500 }, halfExtents = { x = 10, y = 10, z = 10 } }},
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 500 }, halfExtents = { x = 10, y = 10, z = 10 } },
+			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, nil, softConfig)
 		assertEqual(result.devaluation.totalPenalty, 0, "block54 no penalties far away")
@@ -1526,8 +1551,192 @@ local function run()
 		local expectedOrder = { "proximity", "route_pressure", "density_pressure" }
 		for i, expectedCat in ipairs(expectedOrder) do
 			if i <= #result.devaluation.categoryTotals then
-				assertEqual(result.devaluation.categoryTotals[i].category, expectedCat, "block54 category order " .. tostring(i))
+				assertEqual(
+					result.devaluation.categoryTotals[i].category,
+					expectedCat,
+					"block54 category order " .. tostring(i)
+				)
 			end
+		end
+	end
+
+	-- BLOCK 55: Slice 9 - hard config alone can reject while soft config is nil.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S9HardOnly",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig)
+		assertFalse(result.accepted, "block55 hard config rejects")
+		assertHasRejectCode(result, "tinyfolk_spawn_exclusion", "block55 hard reject code")
+		assertEqual(result.devaluation.totalPenalty, 0, "block55 no soft penalty")
+	end
+
+	-- BLOCK 56: Slice 9 - soft config alone can devalue while hard config is nil.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S9SoftOnly",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertTrue(result.accepted, "block56 soft-only accepted")
+		assertEqual(#result.rejectReasons, 0, "block56 no reject reasons")
+		assertEqual(result.devaluation.totalPenalty, 1, "block56 soft penalty applied")
+		assertEqual(result.devaluation.categoryTotals[1].category, "proximity", "block56 proximity first")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block56 proximity total")
+	end
+
+	-- BLOCK 57: Slice 9 - hard and soft configs together produce combined behavior.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S9HardAndSoft",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertFalse(result.accepted, "block57 hard config rejects")
+		assertHasRejectCode(result, "tinyfolk_spawn_exclusion", "block57 hard reject code")
+		assertEqual(result.devaluation.totalPenalty, 15, "block57 soft penalty also applied")
+	end
+
+	-- BLOCK 58: Slice 9 - equivalent legacy and separated config paths match.
+	do
+		local criticalConfig: DistrictCriticalExclusionConfig = {
+			tinyfolkSpawnExclusionRadius = 50,
+			escapeRouteExclusionRadius = 0,
+			returnPointExclusionRadius = 0,
+			stationExclusionRadius = 0,
+			constructionSiteExclusionRadius = 0,
+			captureZoneExclusionRadius = 0,
+			controlZoneExclusionRadius = 0,
+		}
+		local policyConfig: DistrictPlacementPolicyConfig = {
+			allowedEnvironmentClasses = { "indoor" },
+			allowedTraversalDensityClasses = {},
+			disallowedRecurringStructureTags = {},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = criticalConfig,
+			policy = policyConfig,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S9Compat",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local legacy = RealmDistrictPlacementValidator.ValidatePlacement(
+			request,
+			protoOutput,
+			criticalConfig,
+			policyConfig,
+			softConfig
+		)
+		local separated = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertEqual(separated.accepted, legacy.accepted, "block58 accepted equivalent")
+		assertEqual(#separated.rejectReasons, #legacy.rejectReasons, "block58 reject count equivalent")
+		for i, reason in ipairs(separated.rejectReasons) do
+			assertEqual(reason.code, legacy.rejectReasons[i].code, "block58 reject code " .. tostring(i))
+		end
+		assertEqual(separated.devaluation.totalPenalty, legacy.devaluation.totalPenalty, "block58 total penalty")
+		assertEqual(#separated.devaluation.penalties, #legacy.devaluation.penalties, "block58 penalty count")
+		for i, category in ipairs(separated.devaluation.categoryTotals) do
+			assertEqual(category.category, legacy.devaluation.categoryTotals[i].category, "block58 category " .. tostring(i))
+			assertEqual(
+				category.totalScore,
+				legacy.devaluation.categoryTotals[i].totalScore,
+				"block58 category score " .. tostring(i)
+			)
+		end
+	end
+
+	-- BLOCK 59: Slice 9 - repeated separated-config runs remain stable.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 50,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S9Stable",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+				{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertEqual(outA.accepted, outB.accepted, "block59 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block59 reject count stable")
+		for i, reasonA in ipairs(outA.rejectReasons) do
+			local reasonB = outB.rejectReasons[i]
+			assertEqual(reasonA.code, reasonB.code, "block59 reject code stable " .. tostring(i))
+			assertEqual(
+				tostring(reasonA.conflictingPlacementId),
+				tostring(reasonB.conflictingPlacementId),
+				"block59 placement stable " .. tostring(i)
+			)
+		end
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block59 penalty stable")
+		assertEqual(#outA.devaluation.categoryTotals, #outB.devaluation.categoryTotals, "block59 category count stable")
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block59 category stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block59 category total stable " .. tostring(i))
 		end
 	end
 
