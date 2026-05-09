@@ -4369,9 +4369,23 @@ local function run()
 		end,
 	}
 
+	local validationResultExampleAliases: { [string]: string } = {
+		a0 = "accepted_no_penalty",
+		a1 = "accepted_with_penalty",
+		r1 = "rejected_with_penalty",
+		r0 = "rejected_no_penalty",
+	}
+
+	local function makeValidationResultExample(caseKey: string)
+		local canonicalKey = validationResultExampleAliases[caseKey] or caseKey
+		local makeResult = validationResultExampleRegistry[canonicalKey]
+		assertTrue(type(makeResult) == "function", "example registry entry " .. canonicalKey)
+		return makeResult()
+	end
+
 	local resultContractRegressionGrid: { any } = {
 		{
-			key = "accepted_no_penalty",
+			key = "a0",
 			label = "accepted/no-penalty",
 			expectedAccepted = true,
 			expectRejects = false,
@@ -4380,7 +4394,7 @@ local function run()
 			expectedFirstCategoryTotal = 0,
 		},
 		{
-			key = "accepted_with_penalty",
+			key = "a1",
 			label = "accepted/penalty",
 			expectedAccepted = true,
 			expectRejects = false,
@@ -4389,7 +4403,7 @@ local function run()
 			expectedFirstCategoryTotal = 1,
 		},
 		{
-			key = "rejected_with_penalty",
+			key = "r1",
 			label = "rejected/penalty",
 			expectedAccepted = false,
 			expectRejects = true,
@@ -4398,7 +4412,7 @@ local function run()
 			expectedFirstCategoryTotal = 11,
 		},
 		{
-			key = "rejected_no_penalty",
+			key = "r0",
 			label = "rejected/no-penalty",
 			expectedAccepted = false,
 			expectRejects = true,
@@ -4416,14 +4430,41 @@ local function run()
 		assertTrue(type(validationResultExampleRegistry.rejected_no_penalty) == "function", "block122 rejected no penalty")
 	end
 
-	-- BLOCK 123: Slice 36 - registry-backed validation result contract grid covers all major modes.
+	-- BLOCK 123: Slice 37 - validation result example aliases resolve to canonical entries.
 	do
-		assertEqual(#resultContractRegressionGrid, 4, "block123 grid mode count")
+		assertEqual(validationResultExampleAliases.a0, "accepted_no_penalty", "block123 a0 alias")
+		assertEqual(validationResultExampleAliases.a1, "accepted_with_penalty", "block123 a1 alias")
+		assertEqual(validationResultExampleAliases.r1, "rejected_with_penalty", "block123 r1 alias")
+		assertEqual(validationResultExampleAliases.r0, "rejected_no_penalty", "block123 r0 alias")
+	end
+
+	-- BLOCK 124: Slice 37 - alias-backed outputs match canonical registry outputs.
+	do
+		local aliasPairs = {
+			{ aliasKey = "a0", canonicalKey = "accepted_no_penalty" },
+			{ aliasKey = "a1", canonicalKey = "accepted_with_penalty" },
+			{ aliasKey = "r1", canonicalKey = "rejected_with_penalty" },
+			{ aliasKey = "r0", canonicalKey = "rejected_no_penalty" },
+		}
+		for _, pair in ipairs(aliasPairs) do
+			local aliasKey = pair.aliasKey
+			local canonicalKey = pair.canonicalKey
+			local aliasResult = makeValidationResultExample(aliasKey)
+			local canonicalResult = makeValidationResultExample(canonicalKey)
+			local label = "block124 " .. aliasKey
+			assertEqual(aliasResult.accepted, canonicalResult.accepted, label .. " accepted")
+			assertEqual(#aliasResult.rejectReasons, #canonicalResult.rejectReasons, label .. " reject count")
+			assertEqual(aliasResult.devaluation.totalPenalty, canonicalResult.devaluation.totalPenalty, label .. " total")
+			assertEqual(#aliasResult.devaluation.penalties, #canonicalResult.devaluation.penalties, label .. " penalty count")
+		end
+	end
+
+	-- BLOCK 125: Slice 37 - alias-backed validation result contract grid covers all major modes.
+	do
+		assertEqual(#resultContractRegressionGrid, 4, "block125 grid mode count")
 		for i, gridCase in ipairs(resultContractRegressionGrid) do
-			local makeResult = validationResultExampleRegistry[gridCase.key]
-			assertTrue(type(makeResult) == "function", "block123 registry entry " .. gridCase.key)
-			local result = makeResult()
-			local label = "block123 " .. gridCase.label
+			local result = makeValidationResultExample(gridCase.key)
+			local label = "block125 " .. gridCase.label
 			assertValidationResultContract(
 				result,
 				gridCase.expectedAccepted,
@@ -4437,18 +4478,16 @@ local function run()
 				gridCase.expectedFirstCategoryTotal,
 				label .. " first category total"
 			)
-			assertEqual(i >= 1 and i <= 4, true, "block123 grid index " .. tostring(i))
+			assertEqual(i >= 1 and i <= 4, true, "block125 grid index " .. tostring(i))
 		end
 	end
 
-	-- BLOCK 124: Slice 36 - registry-backed validation result contract grid remains stable across repeated runs.
+	-- BLOCK 126: Slice 37 - alias-backed validation result contract grid remains stable across repeated runs.
 	do
 		for _, gridCase in ipairs(resultContractRegressionGrid) do
-			local makeResult = validationResultExampleRegistry[gridCase.key]
-			assertTrue(type(makeResult) == "function", "block124 registry entry " .. gridCase.key)
-			local outA = makeResult()
-			local outB = makeResult()
-			local label = "block124 " .. gridCase.label
+			local outA = makeValidationResultExample(gridCase.key)
+			local outB = makeValidationResultExample(gridCase.key)
+			local label = "block126 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
 				gridCase.expectedAccepted,
