@@ -119,6 +119,68 @@ local function makeCriticalCategoryOutput(): any
 	}
 end
 
+local function makeDensityCategoryOutput(): any
+	return {
+		descriptor = {
+			spawns = {},
+			escapeRoutes = {},
+			returnPoints = {},
+			stations = {},
+			constructionSites = {},
+			upgradeBoards = {},
+			controlZones = {},
+			captureZones = {},
+			props = {},
+			routeGraph = {
+				nodes = {},
+				edges = {},
+			},
+		},
+		resolvedOccupiedSpace = {
+			{
+				placementId = "P_Moderate",
+				chunkId = "Chunk_Moderate",
+				tag = "moderate_body",
+				worldCenter = { x = 0, y = 0, z = 0 },
+				halfExtents = { x = 5, y = 5, z = 5 },
+				isLandmarkAnchor = false,
+			},
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 30, y = 0, z = 0 },
+				halfExtents = { x = 5, y = 5, z = 5 },
+				isLandmarkAnchor = false,
+			},
+		},
+		resolvedMetadata = {
+			{
+				placementId = "P_Moderate",
+				chunkId = "Chunk_Moderate",
+				traversalDensityClass = "moderate",
+			},
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		},
+		resolvedMetadataByPlacement = {
+			P_Moderate = {
+				placementId = "P_Moderate",
+				chunkId = "Chunk_Moderate",
+				traversalDensityClass = "moderate",
+			},
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		},
+	}
+end
+
 -- Prototype occupied space reference (from Slice 4 fixture):
 --   P_Start box: worldCenter=(30,0,0), halfExtents=(60,4,40), isLandmarkAnchor=true
 --   P_Exit  box: worldCenter=(90,0,0), halfExtents=(60,4,40), isLandmarkAnchor=false
@@ -2201,6 +2263,140 @@ local function run()
 			local categoryB = outB.devaluation.categoryTotals[i]
 			assertEqual(categoryA.category, categoryB.category, "block74 category total stable " .. tostring(i))
 			assertEqual(categoryA.totalScore, categoryB.totalScore, "block74 category score stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 75: Slice 13 - dense density can be penalized independently of moderate.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			moderateDensityPressurePenaltyScore = 0,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S13DenseOnly",
+			proposedOccupiedSpace = {
+				{ tag = "moderate_touch", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block75 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 9, "block75 dense-only total")
+		assertEqual(#result.devaluation.penalties, 1, "block75 one density penalty")
+		assertEqual(result.devaluation.penalties[1].densityPressureClass, "dense", "block75 dense class")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 9, "block75 density total")
+	end
+
+	-- BLOCK 76: Slice 13 - moderate density can be penalized independently of dense.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			moderateDensityPressurePenaltyScore = 5,
+			denseDensityPressurePenaltyScore = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S13ModerateOnly",
+			proposedOccupiedSpace = {
+				{ tag = "moderate_touch", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block76 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 5, "block76 moderate-only total")
+		assertEqual(#result.devaluation.penalties, 1, "block76 one density penalty")
+		assertEqual(result.devaluation.penalties[1].densityPressureClass, "moderate", "block76 moderate class")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 5, "block76 density total")
+	end
+
+	-- BLOCK 77: Slice 13 - shared density-pressure fallback still works.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate", "dense" },
+			densityPressurePenaltyScore = 6,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S13SharedFallback",
+			proposedOccupiedSpace = {
+				{ tag = "moderate_touch", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block77 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 12, "block77 shared fallback total")
+		assertEqual(#result.devaluation.penalties, 2, "block77 two density penalties")
+		assertEqual(result.devaluation.penalties[1].densityPressureClass, "moderate", "block77 moderate first")
+		assertEqual(result.devaluation.penalties[2].densityPressureClass, "dense", "block77 dense second")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 12, "block77 density total")
+	end
+
+	-- BLOCK 78: Slice 13 - class-specific score overrides shared density-pressure fallback.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			penalizedTraversalDensityClasses = { "moderate", "dense" },
+			densityPressurePenaltyScore = 6,
+			moderateDensityPressurePenaltyScore = 0,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S13Override",
+			proposedOccupiedSpace = {
+				{ tag = "moderate_touch", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block78 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 9, "block78 override total")
+		assertEqual(#result.devaluation.penalties, 1, "block78 one override penalty")
+		assertEqual(result.devaluation.penalties[1].densityPressureClass, "dense", "block78 dense override")
+	end
+
+	-- BLOCK 79: Slice 13 - repeated class-specific density runs remain stable.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			moderateDensityPressurePenaltyScore = 5,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S13Stable",
+			proposedOccupiedSpace = {
+				{ tag = "moderate_touch", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block79 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block79 penalty count stable")
+		for i, penaltyA in ipairs(outA.devaluation.penalties) do
+			local penaltyB = outB.devaluation.penalties[i]
+			assertEqual(penaltyA.factor, penaltyB.factor, "block79 factor stable " .. tostring(i))
+			assertEqual(penaltyA.score, penaltyB.score, "block79 score stable " .. tostring(i))
+			assertEqual(
+				penaltyA.densityPressureClass,
+				penaltyB.densityPressureClass,
+				"block79 density class stable " .. tostring(i)
+			)
+		end
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block79 category stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block79 category score stable " .. tostring(i))
 		end
 	end
 

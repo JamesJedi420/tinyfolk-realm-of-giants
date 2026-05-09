@@ -180,6 +180,10 @@ export type DistrictPlacementSoftConfig = {
 	nearRouteEdgeSoftRadius: number?,
 	penalizedTraversalDensityClasses: { string }?,
 	densityPressurePenaltyScore: number?,
+	openDensityPressurePenaltyScore: number?,
+	sparseDensityPressurePenaltyScore: number?,
+	moderateDensityPressurePenaltyScore: number?,
+	denseDensityPressurePenaltyScore: number?,
 }
 
 -- The result of validating a single district placement request.
@@ -881,23 +885,38 @@ local function addSoftProximityPenalty(
 	end
 end
 
+local function resolveDensityPressurePenaltyScore(
+	softConfig: DistrictPlacementSoftConfig,
+	densityClass: string
+): number
+	if densityClass == "open" and softConfig.openDensityPressurePenaltyScore ~= nil then
+		return softConfig.openDensityPressurePenaltyScore
+	elseif densityClass == "sparse" and softConfig.sparseDensityPressurePenaltyScore ~= nil then
+		return softConfig.sparseDensityPressurePenaltyScore
+	elseif densityClass == "moderate" and softConfig.moderateDensityPressurePenaltyScore ~= nil then
+		return softConfig.moderateDensityPressurePenaltyScore
+	elseif densityClass == "dense" and softConfig.denseDensityPressurePenaltyScore ~= nil then
+		return softConfig.denseDensityPressurePenaltyScore
+	end
+	local penalizedClasses = softConfig.penalizedTraversalDensityClasses
+	local sharedPenaltyScore = softConfig.densityPressurePenaltyScore or 0
+	if penalizedClasses == nil or sharedPenaltyScore <= 0 then
+		return 0
+	end
+	for _, penalizedClass in ipairs(penalizedClasses) do
+		if penalizedClass == densityClass then
+			return sharedPenaltyScore
+		end
+	end
+	return 0
+end
+
 local function addDensityPressurePenalties(
 	request: DistrictPlacementRequest,
 	assemblyOutput: AssemblyOutput,
 	softConfig: DistrictPlacementSoftConfig,
 	penalties: { DistrictPlacementDevaluationPenalty }
 )
-	local penalizedClasses = softConfig.penalizedTraversalDensityClasses
-	local penaltyScore = softConfig.densityPressurePenaltyScore
-	if penalizedClasses == nil or #penalizedClasses == 0 or penaltyScore == nil or penaltyScore <= 0 then
-		return
-	end
-
-	local penalizedSet: { [string]: boolean } = {}
-	for _, densityClass in ipairs(penalizedClasses) do
-		penalizedSet[densityClass] = true
-	end
-
 	for _, districtBox in ipairs(request.proposedOccupiedSpace) do
 		for _, assembledBox in ipairs(assemblyOutput.resolvedOccupiedSpace) do
 			if
@@ -909,21 +928,24 @@ local function addDensityPressurePenalties(
 				)
 			then
 				local meta = assemblyOutput.resolvedMetadataByPlacement[assembledBox.placementId]
-				if meta ~= nil and meta.traversalDensityClass ~= nil and penalizedSet[meta.traversalDensityClass] then
-					table.insert(penalties, {
-						factor = "density_pressure",
-						category = "density_pressure",
-						score = penaltyScore,
-						message = "Proposed district touches placement '"
-							.. assembledBox.placementId
-							.. "' with penalized traversal density '"
-							.. meta.traversalDensityClass
-							.. "'",
-						districtBoxTag = districtBox.tag,
-						densityPressurePlacementId = assembledBox.placementId,
-						densityPressureChunkId = assembledBox.chunkId,
-						densityPressureClass = meta.traversalDensityClass,
-					})
+				if meta ~= nil and meta.traversalDensityClass ~= nil then
+					local penaltyScore = resolveDensityPressurePenaltyScore(softConfig, meta.traversalDensityClass)
+					if penaltyScore > 0 then
+						table.insert(penalties, {
+							factor = "density_pressure",
+							category = "density_pressure",
+							score = penaltyScore,
+							message = "Proposed district touches placement '"
+								.. assembledBox.placementId
+								.. "' with penalized traversal density '"
+								.. meta.traversalDensityClass
+								.. "'",
+							districtBoxTag = districtBox.tag,
+							densityPressurePlacementId = assembledBox.placementId,
+							densityPressureChunkId = assembledBox.chunkId,
+							densityPressureClass = meta.traversalDensityClass,
+						})
+					end
 				end
 			end
 		end
@@ -1127,6 +1149,10 @@ local function isSoftConfig(config: any): boolean
 		or config.nearRouteEdgeSoftRadius ~= nil
 		or config.penalizedTraversalDensityClasses ~= nil
 		or config.densityPressurePenaltyScore ~= nil
+		or config.openDensityPressurePenaltyScore ~= nil
+		or config.sparseDensityPressurePenaltyScore ~= nil
+		or config.moderateDensityPressurePenaltyScore ~= nil
+		or config.denseDensityPressurePenaltyScore ~= nil
 end
 
 local function resolveValidationConfigs(
