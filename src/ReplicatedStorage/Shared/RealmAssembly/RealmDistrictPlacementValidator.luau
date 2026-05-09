@@ -161,12 +161,21 @@ export type DistrictPlacementDevaluationCategoryTotal = {
 	totalScore: number,
 }
 
+export type DistrictPlacementDevaluationGroupSummary = {
+	category: string,
+	penaltyCount: number,
+	totalScore: number,
+	firstSortKey: string?,
+	lastSortKey: string?,
+}
+
 -- Aggregated soft devaluation result (Slice 7-8).
 -- categoryTotals is deterministically ordered: proximity, route_pressure, density_pressure.
 export type DistrictPlacementDevaluationResult = {
 	totalPenalty: number,
 	penalties: { DistrictPlacementDevaluationPenalty },
 	categoryTotals: { DistrictPlacementDevaluationCategoryTotal },
+	groupSummaries: { DistrictPlacementDevaluationGroupSummary },
 }
 
 -- Soft scoring thresholds for Slice 7 devaluation.
@@ -1141,15 +1150,39 @@ local function computeDevaluation(
 		route_pressure = 0,
 		density_pressure = 0,
 	}
+	local categoryCounts: { [string]: number } = {
+		proximity = 0,
+		route_pressure = 0,
+		density_pressure = 0,
+	}
+	local categoryFirstSortKeys: { [string]: string } = {}
+	local categoryLastSortKeys: { [string]: string } = {}
 	for _, penalty in ipairs(penalties) do
 		if categoryScores[penalty.category] ~= nil then
 			categoryScores[penalty.category] += penalty.score
+			categoryCounts[penalty.category] += 1
+			local firstSortKey = categoryFirstSortKeys[penalty.category]
+			local lastSortKey = categoryLastSortKeys[penalty.category]
+			if firstSortKey == nil or penalty.sortKey < firstSortKey then
+				categoryFirstSortKeys[penalty.category] = penalty.sortKey
+			end
+			if lastSortKey == nil or penalty.sortKey > lastSortKey then
+				categoryLastSortKeys[penalty.category] = penalty.sortKey
+			end
 		end
 	end
+	local groupSummaries: { DistrictPlacementDevaluationGroupSummary } = {}
 	for _, cat in ipairs({ "proximity", "route_pressure", "density_pressure" }) do
 		table.insert(categoryTotals, {
 			category = cat,
 			totalScore = categoryScores[cat],
+		})
+		table.insert(groupSummaries, {
+			category = cat,
+			penaltyCount = categoryCounts[cat],
+			totalScore = categoryScores[cat],
+			firstSortKey = categoryFirstSortKeys[cat],
+			lastSortKey = categoryLastSortKeys[cat],
 		})
 	end
 
@@ -1157,6 +1190,7 @@ local function computeDevaluation(
 		totalPenalty = totalPenalty,
 		penalties = penalties,
 		categoryTotals = categoryTotals,
+		groupSummaries = groupSummaries,
 	}
 end
 
