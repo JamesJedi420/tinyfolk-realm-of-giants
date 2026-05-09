@@ -13,6 +13,25 @@ type DistrictPlacementPolicyConfig = any
 type DistrictPlacementHardConfig = any
 type DistrictPlacementSoftConfig = any
 
+local EXPECTED_RESULT_SECTION_ORDER = {
+	"districtId",
+	"accepted",
+	"rejectReasons",
+	"devaluation",
+	"configSnapshot",
+	"validationSnapshot",
+}
+
+local EXPECTED_DEVALUATION_SECTION_ORDER = {
+	"penalties",
+	"totalPenalty",
+	"categoryTotals",
+	"groupSummaries",
+	"factorSummaries",
+	"subjectSummaries",
+	"configSnapshot",
+}
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -48,6 +67,12 @@ end
 
 -- Prototype assembly output — shared across all blocks.
 local function assertValidationResultShape(result: any, label: string)
+	for i, sectionName in ipairs(EXPECTED_RESULT_SECTION_ORDER) do
+		assertTrue(result[sectionName] ~= nil, label .. " result section " .. tostring(i))
+	end
+	for i, sectionName in ipairs(EXPECTED_DEVALUATION_SECTION_ORDER) do
+		assertTrue(result.devaluation[sectionName] ~= nil, label .. " devaluation section " .. tostring(i))
+	end
 	assertTrue(type(result.accepted) == "boolean", label .. " accepted")
 	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons")
 	assertTrue(type(result.devaluation) == "table", label .. " devaluation")
@@ -3894,6 +3919,50 @@ local function run()
 			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			"block114 soft snapshot stable"
+		)
+	end
+
+	-- BLOCK 115: Slice 26 - documented result and devaluation section order is stable.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S26SectionOrder",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertValidationResultShape(outA, "block115 shape A")
+		assertValidationResultShape(outB, "block115 shape B")
+		for i, sectionName in ipairs(EXPECTED_RESULT_SECTION_ORDER) do
+			assertTrue(outA[sectionName] ~= nil and outB[sectionName] ~= nil, "block115 result order " .. tostring(i))
+		end
+		for i, sectionName in ipairs(EXPECTED_DEVALUATION_SECTION_ORDER) do
+			assertTrue(
+				outA.devaluation[sectionName] ~= nil and outB.devaluation[sectionName] ~= nil,
+				"block115 devaluation order " .. tostring(i)
+			)
+		end
+		assertEqual(outA.accepted, outB.accepted, "block115 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block115 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block115 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block115 penalties stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block115 summaries stable")
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block115 snapshot stable"
 		)
 	end
 

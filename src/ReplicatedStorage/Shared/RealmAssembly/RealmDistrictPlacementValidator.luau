@@ -207,14 +207,15 @@ export type DistrictPlacementDevaluationConfigSnapshot = {
 
 -- Aggregated soft devaluation contract:
 --   penalties: full ordered soft penalty entries.
+--   totalPenalty: sum of all penalty scores.
 --   categoryTotals: deterministic score totals ordered proximity, route_pressure, density_pressure.
 --   groupSummaries: category-level counts/scores/sort-key bounds in the same category order.
 --   factorSummaries: factor-level counts/scores/sort-key bounds ordered by firstSortKey.
 --   subjectSummaries: subject-level counts/scores/sort-key bounds ordered by firstSortKey.
 --   configSnapshot: effective soft tuning used for scoring.
 export type DistrictPlacementDevaluationResult = {
-	totalPenalty: number,
 	penalties: { DistrictPlacementDevaluationPenalty },
+	totalPenalty: number,
 	categoryTotals: { DistrictPlacementDevaluationCategoryTotal },
 	groupSummaries: { DistrictPlacementDevaluationGroupSummary },
 	factorSummaries: { DistrictPlacementDevaluationFactorSummary },
@@ -272,6 +273,7 @@ export type DistrictPlacementSoftConfig = {
 }
 
 -- District placement validation result contract:
+--   districtId: validated district identifier.
 --   accepted/rejectReasons: hard legality result and deterministic reject details.
 --   devaluation: soft penalty details, summaries, invariants, and soft-config snapshot.
 --   configSnapshot: legacy top-level effective hard-config snapshot.
@@ -1419,8 +1421,8 @@ local function computeDevaluation(
 	table.sort(subjectSummaries, sortSubjectSummaries)
 
 	return {
-		totalPenalty = totalPenalty,
 		penalties = penalties,
+		totalPenalty = totalPenalty,
 		categoryTotals = categoryTotals,
 		groupSummaries = groupSummaries,
 		factorSummaries = factorSummaries,
