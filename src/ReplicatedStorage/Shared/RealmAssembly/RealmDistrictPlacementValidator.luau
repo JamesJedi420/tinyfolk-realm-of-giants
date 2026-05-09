@@ -276,7 +276,8 @@ export type DistrictPlacementSoftConfig = {
 --   districtId: validated district identifier.
 --   accepted/rejectReasons: hard legality result and deterministic reject details.
 --   devaluation: soft penalty details, summaries, invariants, and soft-config snapshot.
---   configSnapshot: legacy top-level effective hard-config snapshot.
+--   configSnapshot: preserved compatibility path for the effective hard-config snapshot.
+--   devaluation.configSnapshot: preserved compatibility path for the effective soft-config snapshot.
 --   validationSnapshot: unified effective hard+soft config snapshot for downstream consumers.
 export type DistrictPlacementResult = {
 	districtId: string,

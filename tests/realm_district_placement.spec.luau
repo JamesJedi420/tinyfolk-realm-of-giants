@@ -88,6 +88,36 @@ local function assertValidationResultShape(result: any, label: string)
 	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " validation soft snapshot")
 end
 
+local function assertCompatibilitySnapshotPaths(result: any, label: string)
+	assertTrue(result.configSnapshot == result.validationSnapshot.hardConfig, label .. " hard snapshot reference")
+	assertTrue(result.devaluation.configSnapshot == result.validationSnapshot.softConfig, label .. " soft snapshot reference")
+	assertEqual(
+		result.configSnapshot.criticalExclusionRadii.tinyfolk_spawn,
+		result.validationSnapshot.hardConfig.criticalExclusionRadii.tinyfolk_spawn,
+		label .. " hard critical"
+	)
+	assertEqual(
+		#result.configSnapshot.policy.allowedEnvironmentClasses,
+		#result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses,
+		label .. " hard environment count"
+	)
+	assertEqual(
+		result.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+		result.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+		label .. " soft critical"
+	)
+	assertEqual(
+		result.devaluation.configSnapshot.routeEdgeSoftRadius,
+		result.validationSnapshot.softConfig.routeEdgeSoftRadius,
+		label .. " soft route"
+	)
+	assertEqual(
+		result.devaluation.configSnapshot.densityPressurePenaltyScores.dense,
+		result.validationSnapshot.softConfig.densityPressurePenaltyScores.dense,
+		label .. " soft density"
+	)
+end
+
 local protoOutput =
 	RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 
@@ -3963,6 +3993,131 @@ local function run()
 			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			"block115 snapshot stable"
+		)
+	end
+
+	-- BLOCK 116: Slice 27 - preserved hard snapshot path matches unified hard snapshot.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S27HardCompatibility",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertValidationResultShape(result, "block116 shape")
+		assertCompatibilitySnapshotPaths(result, "block116 compatibility")
+		assertEqual(result.configSnapshot.policy.allowedEnvironmentClasses[1], "indoor", "block116 legacy hard env")
+		assertEqual(result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1], "indoor", "block116 unified hard env")
+		assertEqual(result.devaluation.totalPenalty, 11, "block116 output unchanged")
+	end
+
+	-- BLOCK 117: Slice 27 - preserved soft snapshot path matches unified soft snapshot.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S27SoftCompatibility",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertValidationResultShape(result, "block117 shape")
+		assertCompatibilitySnapshotPaths(result, "block117 compatibility")
+		assertEqual(result.devaluation.configSnapshot.routeEdgeSoftRadius, 20, "block117 legacy soft route")
+		assertEqual(result.validationSnapshot.softConfig.routeEdgeSoftRadius, 20, "block117 unified soft route")
+		assertEqual(result.devaluation.totalPenalty, 21, "block117 output unchanged")
+	end
+
+	-- BLOCK 118: Slice 27 - compatibility-visible outputs remain stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S27StableCompatibility",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertCompatibilitySnapshotPaths(outA, "block118 compatibility A")
+		assertCompatibilitySnapshotPaths(outB, "block118 compatibility B")
+		assertEqual(outA.accepted, outB.accepted, "block118 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block118 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block118 total stable")
+		assertEqual(
+			outA.configSnapshot.policy.allowedEnvironmentClasses[1],
+			outB.configSnapshot.policy.allowedEnvironmentClasses[1],
+			"block118 legacy hard stable"
+		)
+		assertEqual(
+			outA.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+			"block118 legacy soft stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			"block118 unified hard stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block118 unified soft stable"
 		)
 	end
 
