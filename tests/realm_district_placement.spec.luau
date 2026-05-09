@@ -3064,6 +3064,142 @@ local function run()
 		end
 	end
 
+	-- BLOCK 94: Slice 20 - subject summary reflects a single penalty.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S20SingleSubjectSummary",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block94 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block94 total unchanged")
+		assertEqual(#result.devaluation.penalties, 1, "block94 raw penalty preserved")
+		assertEqual(#result.devaluation.groupSummaries, 3, "block94 category summaries preserved")
+		assertEqual(#result.devaluation.factorSummaries, 1, "block94 factor summaries preserved")
+		assertEqual(#result.devaluation.subjectSummaries, 1, "block94 one subject summary")
+		local summary = result.devaluation.subjectSummaries[1]
+		assertEqual(summary.subjectType, "critical_point", "block94 subject type")
+		assertEqual(summary.subjectName, "TinyfolkSpawn", "block94 subject name")
+		assertEqual(summary.penaltyCount, 1, "block94 count")
+		assertEqual(summary.totalScore, 1, "block94 score")
+		assertEqual(
+			summary.firstSortKey,
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"block94 first key"
+		)
+		assertEqual(
+			summary.lastSortKey,
+			"01:proximity|near_critical_point|critical_point|TinyfolkSpawn",
+			"block94 last key"
+		)
+	end
+
+	-- BLOCK 95: Slice 20 - subject summary aggregates multiple penalties on the same subject.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 0,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S20AggregatedSubjectSummary",
+			proposedOccupiedSpace = {
+				{ tag = "dense_touch_a", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				{ tag = "dense_touch_b", worldCenter = { x = 31, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeDensityCategoryOutput(), nil, softConfig)
+		assertFalse(result.accepted, "block95 hard rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 18, "block95 total unchanged")
+		assertEqual(#result.devaluation.penalties, 2, "block95 raw penalties preserved")
+		assertEqual(#result.devaluation.subjectSummaries, 1, "block95 one subject summary")
+		local summary = result.devaluation.subjectSummaries[1]
+		assertEqual(summary.subjectType, "chunk_density", "block95 subject type")
+		assertEqual(summary.subjectName, "P_Dense/Chunk_Dense", "block95 subject name")
+		assertEqual(summary.penaltyCount, 2, "block95 count")
+		assertEqual(summary.totalScore, 18, "block95 score")
+		assertEqual(
+			summary.firstSortKey,
+			"03:density_pressure|density_pressure|chunk_density|P_Dense/Chunk_Dense",
+			"block95 first key"
+		)
+		assertEqual(
+			summary.lastSortKey,
+			"03:density_pressure|density_pressure|chunk_density|P_Dense/Chunk_Dense",
+			"block95 last key"
+		)
+		assertEqual(result.devaluation.groupSummaries[3].penaltyCount, 2, "block95 category count preserved")
+		assertEqual(result.devaluation.factorSummaries[1].penaltyCount, 2, "block95 factor count preserved")
+	end
+
+	-- BLOCK 96: Slice 20 - subject summaries are deterministic across subjects and runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S20StableSubjectSummary",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, 21, "block96 total unchanged")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block96 total stable")
+		assertEqual(#outA.devaluation.subjectSummaries, 3, "block96 three subject summaries")
+		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block96 subject count stable")
+		local expectedSubjects = {
+			{ subjectType = "critical_point", subjectName = "TinyfolkSpawn", totalScore = 1 },
+			{ subjectType = "route_edge", subjectName = "SpawnNode->EscapeNode", totalScore = 11 },
+			{ subjectType = "chunk_density", subjectName = "P_Dense/Chunk_Dense", totalScore = 9 },
+		}
+		for i, expected in ipairs(expectedSubjects) do
+			local summaryA = outA.devaluation.subjectSummaries[i]
+			local summaryB = outB.devaluation.subjectSummaries[i]
+			assertEqual(summaryA.subjectType, expected.subjectType, "block96 subject type " .. tostring(i))
+			assertEqual(summaryA.subjectName, expected.subjectName, "block96 subject name " .. tostring(i))
+			assertEqual(summaryA.penaltyCount, 1, "block96 count " .. tostring(i))
+			assertEqual(summaryA.totalScore, expected.totalScore, "block96 score " .. tostring(i))
+			assertEqual(summaryA.subjectType, summaryB.subjectType, "block96 subject type stable " .. tostring(i))
+			assertEqual(summaryA.subjectName, summaryB.subjectName, "block96 subject name stable " .. tostring(i))
+			assertEqual(summaryA.penaltyCount, summaryB.penaltyCount, "block96 count stable " .. tostring(i))
+			assertEqual(summaryA.totalScore, summaryB.totalScore, "block96 score stable " .. tostring(i))
+			assertEqual(summaryA.firstSortKey, summaryB.firstSortKey, "block96 first key stable " .. tostring(i))
+			assertEqual(summaryA.lastSortKey, summaryB.lastSortKey, "block96 last key stable " .. tostring(i))
+		end
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
