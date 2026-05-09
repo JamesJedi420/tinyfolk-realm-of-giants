@@ -118,6 +118,16 @@ local function assertCompatibilitySnapshotPaths(result: any, label: string)
 	)
 end
 
+local function assertMinimalConsumerReadPaths(result: any, label: string)
+	assertTrue(type(result.accepted) == "boolean", label .. " accepted readable")
+	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons readable")
+	assertTrue(type(result.devaluation.totalPenalty) == "number", label .. " total penalty readable")
+	assertTrue(type(result.devaluation.categoryTotals) == "table", label .. " category totals readable")
+	assertTrue(type(result.validationSnapshot.hardConfig) == "table", label .. " hard snapshot readable")
+	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " soft snapshot readable")
+	assertCompatibilitySnapshotPaths(result, label .. " compatibility")
+end
+
 local protoOutput =
 	RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 
@@ -4118,6 +4128,125 @@ local function run()
 			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			"block118 unified soft stable"
+		)
+	end
+
+	-- BLOCK 119: Slice 28 - minimal consumer can read accepted and rejectReasons.
+	do
+		local acceptedRequest: DistrictPlacementRequest = {
+			districtId = "D_S28AcceptedConsumer",
+			proposedOccupiedSpace = {
+				{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local rejectedRequest: DistrictPlacementRequest = {
+			districtId = "D_S28RejectedConsumer",
+			proposedOccupiedSpace = {
+				{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local accepted = RealmDistrictPlacementValidator.ValidatePlacement(acceptedRequest, protoOutput)
+		local rejected = RealmDistrictPlacementValidator.ValidatePlacement(rejectedRequest, protoOutput)
+		assertMinimalConsumerReadPaths(accepted, "block119 accepted")
+		assertMinimalConsumerReadPaths(rejected, "block119 rejected")
+		assertTrue(accepted.accepted, "block119 accepted result")
+		assertEqual(#accepted.rejectReasons, 0, "block119 accepted reject count")
+		assertFalse(rejected.accepted, "block119 rejected result")
+		assertTrue(#rejected.rejectReasons > 0, "block119 rejected reject count")
+	end
+
+	-- BLOCK 120: Slice 28 - minimal consumer can read penalty totals, summaries, and unified snapshots.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S28PenaltyConsumer",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, hardConfig, softConfig)
+		assertMinimalConsumerReadPaths(result, "block120 consumer")
+		assertFalse(result.accepted, "block120 rejected by occupied overlap")
+		assertEqual(result.devaluation.totalPenalty, 21, "block120 total penalty")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block120 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block120 route total")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 9, "block120 density total")
+		assertEqual(result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1], "indoor", "block120 hard snapshot")
+		assertEqual(result.validationSnapshot.softConfig.routeEdgeSoftRadius, 20, "block120 soft route snapshot")
+		assertEqual(result.validationSnapshot.softConfig.densityPressurePenaltyScores.dense, 9, "block120 soft density snapshot")
+	end
+
+	-- BLOCK 121: Slice 28 - consumer-visible outputs remain stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S28StableConsumer",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertMinimalConsumerReadPaths(outA, "block121 consumer A")
+		assertMinimalConsumerReadPaths(outB, "block121 consumer B")
+		assertEqual(outA.accepted, outB.accepted, "block121 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block121 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block121 total stable")
+		assertEqual(
+			outA.devaluation.categoryTotals[1].totalScore,
+			outB.devaluation.categoryTotals[1].totalScore,
+			"block121 category total stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			"block121 hard snapshot stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block121 soft snapshot stable"
 		)
 	end
 
