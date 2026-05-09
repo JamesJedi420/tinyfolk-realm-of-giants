@@ -2421,6 +2421,11 @@ local function run()
 		assertEqual(penalty.category, "proximity", "block80 category")
 		assertEqual(penalty.score, 1, "block80 score")
 		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block80 message")
+		assertEqual(
+			penalty.message,
+			"Soft penalty: near_critical_point subject=TinyfolkSpawn reason=within_soft_radius",
+			"block80 normalized message"
+		)
 		assertEqual(penalty.subjectType, "critical_point", "block80 subject type")
 		assertEqual(penalty.subjectName, "TinyfolkSpawn", "block80 subject name")
 		assertEqual(penalty.nearCriticalPointName, "TinyfolkSpawn", "block80 retained point name")
@@ -2448,6 +2453,11 @@ local function run()
 		assertEqual(penalty.category, "route_pressure", "block81 category")
 		assertEqual(penalty.score, 11, "block81 score")
 		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block81 message")
+		assertEqual(
+			penalty.message,
+			"Soft penalty: near_route_edge subject=SpawnNode->EscapeNode reason=within_soft_radius",
+			"block81 normalized message"
+		)
 		assertEqual(penalty.subjectType, "route_edge", "block81 subject type")
 		assertEqual(penalty.subjectName, "SpawnNode->EscapeNode", "block81 subject name")
 		assertEqual(penalty.nearRouteEdgeFrom, "SpawnNode", "block81 retained edge from")
@@ -2476,6 +2486,11 @@ local function run()
 		assertEqual(penalty.category, "density_pressure", "block82 category")
 		assertEqual(penalty.score, 9, "block82 score")
 		assertTrue(type(penalty.message) == "string" and #penalty.message > 0, "block82 message")
+		assertEqual(
+			penalty.message,
+			"Soft penalty: density_pressure subject=P_Dense/Chunk_Dense reason=penalized_density_class",
+			"block82 normalized message"
+		)
 		assertEqual(penalty.subjectType, "chunk_density", "block82 subject type")
 		assertEqual(penalty.subjectName, "P_Dense/Chunk_Dense", "block82 subject name")
 		assertEqual(penalty.densityPressurePlacementId, "P_Dense", "block82 retained placement")
@@ -2566,6 +2581,7 @@ local function run()
 			assertEqual(penaltyA.factor, penaltyB.factor, "block84 factor stable " .. tostring(i))
 			assertEqual(penaltyA.category, penaltyB.category, "block84 category stable " .. tostring(i))
 			assertEqual(penaltyA.score, penaltyB.score, "block84 score stable " .. tostring(i))
+			assertEqual(penaltyA.message, penaltyB.message, "block84 message stable " .. tostring(i))
 			assertEqual(penaltyA.subjectType, penaltyB.subjectType, "block84 subject type stable " .. tostring(i))
 			assertEqual(penaltyA.subjectName, penaltyB.subjectName, "block84 subject name stable " .. tostring(i))
 		end
@@ -2632,6 +2648,63 @@ local function run()
 			assertEqual(penalty.subjectType, expectedSubjects[i].subjectType, "block85 subject type " .. tostring(i))
 			assertEqual(penalty.subjectName, expectedSubjects[i].subjectName, "block85 subject name " .. tostring(i))
 		end
+	end
+
+	-- BLOCK 86: Slice 16 - normalized messages remain stable across all current soft factors.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S16MessageStable",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local expectedMessages = {
+			"Soft penalty: near_critical_point subject=TinyfolkSpawn reason=within_soft_radius",
+			"Soft penalty: near_route_edge subject=SpawnNode->EscapeNode reason=within_soft_radius",
+			"Soft penalty: density_pressure subject=P_Dense/Chunk_Dense reason=penalized_density_class",
+		}
+		assertEqual(outA.devaluation.totalPenalty, 21, "block86 total unchanged")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block86 total stable")
+		assertEqual(#outA.devaluation.penalties, 3, "block86 three penalties")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block86 penalty count stable")
+		for i, expectedMessage in ipairs(expectedMessages) do
+			assertEqual(outA.devaluation.penalties[i].message, expectedMessage, "block86 message " .. tostring(i))
+			assertEqual(
+				outA.devaluation.penalties[i].message,
+				outB.devaluation.penalties[i].message,
+				"block86 message stable " .. tostring(i)
+			)
+		end
+		assertEqual(outA.devaluation.categoryTotals[1].totalScore, 1, "block86 proximity total")
+		assertEqual(outA.devaluation.categoryTotals[2].totalScore, 11, "block86 route total")
+		assertEqual(outA.devaluation.categoryTotals[3].totalScore, 9, "block86 density total")
 	end
 
 	print("realm_district_placement: all checks passed")

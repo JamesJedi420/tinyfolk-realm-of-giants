@@ -871,13 +871,7 @@ local function addSoftProximityPenalty(
 					factor = "near_critical_point",
 					category = penaltyCategory,
 					score = score,
-					message = string.format(
-						"Proposed district is within soft proximity radius (%.0f studs) of %s '%s' at distance %.1f",
-						softRadius,
-						category,
-						pointName,
-						dist
-					),
+					message = "Soft penalty: near_critical_point subject=" .. pointName .. " reason=within_soft_radius",
 					subjectType = "critical_point",
 					subjectName = pointName,
 					districtBoxTag = box.tag,
@@ -940,13 +934,13 @@ local function addDensityPressurePenalties(
 							factor = "density_pressure",
 							category = "density_pressure",
 							score = penaltyScore,
-							message = "Proposed district touches placement '"
-								.. assembledBox.placementId
-								.. "' with penalized traversal density '"
-								.. meta.traversalDensityClass
-								.. "'",
 							subjectType = "chunk_density",
 							subjectName = assembledBox.placementId .. "/" .. assembledBox.chunkId,
+							message = "Soft penalty: density_pressure subject="
+								.. assembledBox.placementId
+								.. "/"
+								.. assembledBox.chunkId
+								.. " reason=penalized_density_class",
 							districtBoxTag = districtBox.tag,
 							densityPressurePlacementId = assembledBox.placementId,
 							densityPressureChunkId = assembledBox.chunkId,
@@ -1065,14 +1059,13 @@ local function computeDevaluation(
 												factor = "near_route_edge",
 												category = "route_pressure",
 												score = score,
-												message = string.format(
-													"Proposed district is within soft proximity radius (%.0f studs) of protected route edge '%s' -> '%s'",
-													nearEdgeRadius,
-													fromName,
-													toName
-												),
 												subjectType = "route_edge",
 												subjectName = fromName .. "->" .. toName,
+												message = "Soft penalty: near_route_edge subject="
+													.. fromName
+													.. "->"
+													.. toName
+													.. " reason=within_soft_radius",
 												districtBoxTag = box.tag,
 												nearRouteEdgeFrom = fromName,
 												nearRouteEdgeTo = toName,
