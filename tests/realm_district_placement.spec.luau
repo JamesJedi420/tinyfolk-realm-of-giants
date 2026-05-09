@@ -3636,6 +3636,140 @@ local function run()
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block108 devaluation stable")
 	end
 
+	-- BLOCK 109: Slice 24 - unified validation snapshot contains hard and soft snapshot content.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S24UnifiedSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertFalse(result.accepted, "block109 hard rejected")
+		assertEqual(result.validationSnapshot.hardConfig.criticalExclusionRadii.tinyfolk_spawn, 50, "block109 hard critical")
+		assertEqual(result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1], "indoor", "block109 hard env")
+		assertEqual(result.validationSnapshot.hardConfig.policy.allowedTraversalDensityClasses[1], "sparse", "block109 hard density")
+		assertEqual(result.validationSnapshot.hardConfig.policy.disallowedRecurringStructureTags[1], "entry_hub", "block109 hard recurring")
+		assertEqual(result.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn, 60, "block109 soft critical")
+		assertEqual(result.validationSnapshot.softConfig.routeEdgeSoftRadius, 20, "block109 soft route")
+		assertEqual(result.validationSnapshot.softConfig.densityPressurePenaltyScores.dense, 9, "block109 soft density")
+		assertEqual(result.devaluation.totalPenalty, 15, "block109 devaluation unchanged")
+	end
+
+	-- BLOCK 110: Slice 24 - unified snapshot preserves old separate access paths.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S24SnapshotCompatibility",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertEqual(
+			result.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			result.configSnapshot.policy.allowedEnvironmentClasses[1],
+			"block110 hard path equivalent"
+		)
+		assertEqual(
+			result.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			result.devaluation.configSnapshot.criticalPointSoftRadii.tinyfolk_spawn,
+			"block110 soft path equivalent"
+		)
+		assertEqual(result.devaluation.totalPenalty, 11, "block110 devaluation unchanged")
+	end
+
+	-- BLOCK 111: Slice 24 - unified validation snapshot remains stable across repeated runs.
+	do
+		local hardConfig: DistrictPlacementHardConfig = {
+			criticalExclusion = {
+				tinyfolkSpawnExclusionRadius = 50,
+				escapeRouteExclusionRadius = 0,
+				returnPointExclusionRadius = 0,
+				stationExclusionRadius = 0,
+				constructionSiteExclusionRadius = 0,
+				captureZoneExclusionRadius = 0,
+				controlZoneExclusionRadius = 0,
+			},
+			policy = {
+				allowedEnvironmentClasses = { "indoor" },
+				allowedTraversalDensityClasses = { "sparse" },
+				disallowedRecurringStructureTags = { "entry_hub" },
+			},
+		}
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S24StableUnifiedSnapshot",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 0, y = 0, z = 50 }, halfExtents = { x = 5, y = 5, z = 5 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
+		assertEqual(outA.accepted, outB.accepted, "block111 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block111 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block111 devaluation stable")
+		assertEqual(
+			outA.validationSnapshot.hardConfig.criticalExclusionRadii.tinyfolk_spawn,
+			outB.validationSnapshot.hardConfig.criticalExclusionRadii.tinyfolk_spawn,
+			"block111 hard critical stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
+			"block111 hard policy stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block111 soft critical stable"
+		)
+		assertEqual(
+			outA.validationSnapshot.softConfig.densityPressurePenaltyScores.dense,
+			outB.validationSnapshot.softConfig.densityPressurePenaltyScores.dense,
+			"block111 soft density stable"
+		)
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

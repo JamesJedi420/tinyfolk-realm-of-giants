@@ -239,6 +239,11 @@ export type DistrictPlacementHardConfigSnapshot = {
 	},
 }
 
+export type DistrictPlacementValidationSnapshot = {
+	hardConfig: DistrictPlacementHardConfigSnapshot,
+	softConfig: DistrictPlacementDevaluationConfigSnapshot,
+}
+
 -- Soft scoring thresholds for Slice 7 devaluation.
 -- Set a radius to 0 to disable that scoring factor.
 export type DistrictPlacementSoftConfig = {
@@ -268,6 +273,7 @@ export type DistrictPlacementResult = {
 	rejectReasons: { DistrictPlacementRejectReason },
 	devaluation: DistrictPlacementDevaluationResult,
 	configSnapshot: DistrictPlacementHardConfigSnapshot,
+	validationSnapshot: DistrictPlacementValidationSnapshot,
 }
 
 -- Allowed environment/density classes and disallowed recurring-structure tags
@@ -1642,12 +1648,19 @@ function RealmDistrictPlacementValidator.ValidatePlacement(
 		checkRecurringStructurePolicy(request, assemblyOutput, hardConfig.policy, rejectReasons)
 	end
 
+	local devaluation = computeDevaluation(request, assemblyOutput, softConfig)
+	local hardSnapshot = buildHardConfigSnapshot(hardConfig)
+
 	return {
 		districtId = request.districtId,
 		accepted = #rejectReasons == 0,
 		rejectReasons = rejectReasons,
-		devaluation = computeDevaluation(request, assemblyOutput, softConfig),
-		configSnapshot = buildHardConfigSnapshot(hardConfig),
+		devaluation = devaluation,
+		configSnapshot = hardSnapshot,
+		validationSnapshot = {
+			hardConfig = hardSnapshot,
+			softConfig = devaluation.configSnapshot,
+		},
 	}
 end
 
