@@ -4376,6 +4376,15 @@ local function run()
 		r0 = "rejected_no_penalty",
 	}
 
+	local VALIDATION_RESULT_CANONICAL_CASE_ORDER = {
+		"accepted_no_penalty",
+		"accepted_with_penalty",
+		"rejected_with_penalty",
+		"rejected_no_penalty",
+	}
+
+	local VALIDATION_RESULT_ALIAS_CASE_ORDER = { "a0", "a1", "r1", "r0" }
+
 	local validationResultCaseMetadata: { [string]: any } = {
 		accepted_no_penalty = {
 			keys = {
@@ -4462,16 +4471,19 @@ local function run()
 	end
 
 	local function enumerateValidationResultCanonicalCaseKeys(): { string }
-		return {
-			"accepted_no_penalty",
-			"accepted_with_penalty",
-			"rejected_with_penalty",
-			"rejected_no_penalty",
-		}
+		local keys = {}
+		for _, canonicalKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			table.insert(keys, canonicalKey)
+		end
+		return keys
 	end
 
 	local function enumerateValidationResultAliasCaseKeys(): { string }
-		return { "a0", "a1", "r1", "r0" }
+		local keys = {}
+		for _, aliasKey in ipairs(VALIDATION_RESULT_ALIAS_CASE_ORDER) do
+			table.insert(keys, aliasKey)
+		end
+		return keys
 	end
 
 	local function enumerateValidationResultCanonicalCaseEntries(): { any }
@@ -4566,21 +4578,29 @@ local function run()
 		assertValidationResultCaseRegistryConsistency("block125")
 	end
 
-	-- BLOCK 126: Slice 42 - case registry enumeration helpers are deterministic.
+	-- BLOCK 126: Slice 43 - case registry enumeration helpers honor explicit order contracts.
 	do
-		local canonicalKeys = enumerateValidationResultCanonicalCaseKeys()
-		assertEqual(canonicalKeys[1], "accepted_no_penalty", "block126 canonical 1")
-		assertEqual(canonicalKeys[2], "accepted_with_penalty", "block126 canonical 2")
-		assertEqual(canonicalKeys[3], "rejected_with_penalty", "block126 canonical 3")
-		assertEqual(canonicalKeys[4], "rejected_no_penalty", "block126 canonical 4")
-		local aliasKeys = enumerateValidationResultAliasCaseKeys()
-		assertEqual(aliasKeys[1], "a0", "block126 alias 1")
-		assertEqual(aliasKeys[2], "a1", "block126 alias 2")
-		assertEqual(aliasKeys[3], "r1", "block126 alias 3")
-		assertEqual(aliasKeys[4], "r0", "block126 alias 4")
+		local canonicalKeysA = enumerateValidationResultCanonicalCaseKeys()
+		local canonicalKeysB = enumerateValidationResultCanonicalCaseKeys()
+		assertEqual(#canonicalKeysA, #VALIDATION_RESULT_CANONICAL_CASE_ORDER, "block126 canonical count")
+		assertEqual(#canonicalKeysB, #VALIDATION_RESULT_CANONICAL_CASE_ORDER, "block126 canonical repeat count")
+		for i, expectedKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			assertEqual(canonicalKeysA[i], expectedKey, "block126 canonical order A " .. tostring(i))
+			assertEqual(canonicalKeysB[i], expectedKey, "block126 canonical order B " .. tostring(i))
+		end
+		local aliasKeysA = enumerateValidationResultAliasCaseKeys()
+		local aliasKeysB = enumerateValidationResultAliasCaseKeys()
+		assertEqual(#aliasKeysA, #VALIDATION_RESULT_ALIAS_CASE_ORDER, "block126 alias count")
+		assertEqual(#aliasKeysB, #VALIDATION_RESULT_ALIAS_CASE_ORDER, "block126 alias repeat count")
+		for i, expectedKey in ipairs(VALIDATION_RESULT_ALIAS_CASE_ORDER) do
+			assertEqual(aliasKeysA[i], expectedKey, "block126 alias order A " .. tostring(i))
+			assertEqual(aliasKeysB[i], expectedKey, "block126 alias order B " .. tostring(i))
+		end
 		local canonicalEntries = enumerateValidationResultCanonicalCaseEntries()
-		assertEqual(canonicalEntries[1].key, "accepted_no_penalty", "block126 entry 1")
-		assertEqual(canonicalEntries[4].key, "rejected_no_penalty", "block126 entry 4")
+		assertEqual(#canonicalEntries, #VALIDATION_RESULT_CANONICAL_CASE_ORDER, "block126 entry count")
+		for i, expectedKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			assertEqual(canonicalEntries[i].key, expectedKey, "block126 entry order " .. tostring(i))
+		end
 	end
 
 	-- BLOCK 127: Slice 40 - case registry index resolves canonical and alias keys.
