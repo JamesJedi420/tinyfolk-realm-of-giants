@@ -4318,95 +4318,112 @@ local function run()
 		)
 	end
 
+	local validationResultExampleRegistry: { [string]: any } = {
+		accepted_no_penalty = function()
+			local request: DistrictPlacementRequest = {
+				districtId = "D_S36AcceptedNoPenalty",
+				proposedOccupiedSpace = {
+					{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				},
+			}
+			return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		end,
+		accepted_with_penalty = function()
+			local softConfig: DistrictPlacementSoftConfig = {
+				criticalPointSoftRadius = 60,
+				routeEdgeSoftRadius = 0,
+			}
+			local request: DistrictPlacementRequest = {
+				districtId = "D_S36AcceptedPenalty",
+				proposedOccupiedSpace = {
+					{
+						tag = "near_spawn",
+						worldCenter = { x = 0, y = 0, z = -60 },
+						halfExtents = { x = 1, y = 1, z = 1 },
+					},
+				},
+			}
+			return RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		end,
+		rejected_with_penalty = function()
+			local softConfig: DistrictPlacementSoftConfig = {
+				criticalPointSoftRadius = 40,
+				routeEdgeSoftRadius = 0,
+			}
+			local request: DistrictPlacementRequest = {
+				districtId = "D_S36RejectedPenalty",
+				proposedOccupiedSpace = {
+					{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				},
+			}
+			return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		end,
+		rejected_no_penalty = function()
+			local request: DistrictPlacementRequest = {
+				districtId = "D_S36RejectedNoPenalty",
+				proposedOccupiedSpace = {
+					{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+				},
+			}
+			return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		end,
+	}
+
 	local resultContractRegressionGrid: { any } = {
 		{
+			key = "accepted_no_penalty",
 			label = "accepted/no-penalty",
 			expectedAccepted = true,
 			expectRejects = false,
 			expectPenalties = false,
 			expectedTotalPenalty = 0,
 			expectedFirstCategoryTotal = 0,
-			makeResult = function()
-				local request: DistrictPlacementRequest = {
-					districtId = "D_S35AcceptedNoPenalty",
-					proposedOccupiedSpace = {
-						{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
-					},
-				}
-				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-			end,
 		},
 		{
+			key = "accepted_with_penalty",
 			label = "accepted/penalty",
 			expectedAccepted = true,
 			expectRejects = false,
 			expectPenalties = true,
 			expectedTotalPenalty = 1,
 			expectedFirstCategoryTotal = 1,
-			makeResult = function()
-				local softConfig: DistrictPlacementSoftConfig = {
-					criticalPointSoftRadius = 60,
-					routeEdgeSoftRadius = 0,
-				}
-				local request: DistrictPlacementRequest = {
-					districtId = "D_S35AcceptedPenalty",
-					proposedOccupiedSpace = {
-						{
-							tag = "near_spawn",
-							worldCenter = { x = 0, y = 0, z = -60 },
-							halfExtents = { x = 1, y = 1, z = 1 },
-						},
-					},
-				}
-				return RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
-			end,
 		},
 		{
+			key = "rejected_with_penalty",
 			label = "rejected/penalty",
 			expectedAccepted = false,
 			expectRejects = true,
 			expectPenalties = true,
 			expectedTotalPenalty = 11,
 			expectedFirstCategoryTotal = 11,
-			makeResult = function()
-				local softConfig: DistrictPlacementSoftConfig = {
-					criticalPointSoftRadius = 40,
-					routeEdgeSoftRadius = 0,
-				}
-				local request: DistrictPlacementRequest = {
-					districtId = "D_S35RejectedPenalty",
-					proposedOccupiedSpace = {
-						{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
-					},
-				}
-				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-			end,
 		},
 		{
+			key = "rejected_no_penalty",
 			label = "rejected/no-penalty",
 			expectedAccepted = false,
 			expectRejects = true,
 			expectPenalties = false,
 			expectedTotalPenalty = 0,
 			expectedFirstCategoryTotal = 0,
-			makeResult = function()
-				local request: DistrictPlacementRequest = {
-					districtId = "D_S35RejectedNoPenalty",
-					proposedOccupiedSpace = {
-						{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
-					},
-				}
-				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-			end,
 		},
 	}
 
-	-- BLOCK 122: Slice 35 - validation result contract regression grid covers all major modes.
+	-- BLOCK 122: Slice 36 - validation result example registry exposes all major named modes.
 	do
-		assertEqual(#resultContractRegressionGrid, 4, "block122 grid mode count")
+		assertTrue(type(validationResultExampleRegistry.accepted_no_penalty) == "function", "block122 accepted no penalty")
+		assertTrue(type(validationResultExampleRegistry.accepted_with_penalty) == "function", "block122 accepted penalty")
+		assertTrue(type(validationResultExampleRegistry.rejected_with_penalty) == "function", "block122 rejected penalty")
+		assertTrue(type(validationResultExampleRegistry.rejected_no_penalty) == "function", "block122 rejected no penalty")
+	end
+
+	-- BLOCK 123: Slice 36 - registry-backed validation result contract grid covers all major modes.
+	do
+		assertEqual(#resultContractRegressionGrid, 4, "block123 grid mode count")
 		for i, gridCase in ipairs(resultContractRegressionGrid) do
-			local result = gridCase.makeResult()
-			local label = "block122 " .. gridCase.label
+			local makeResult = validationResultExampleRegistry[gridCase.key]
+			assertTrue(type(makeResult) == "function", "block123 registry entry " .. gridCase.key)
+			local result = makeResult()
+			local label = "block123 " .. gridCase.label
 			assertValidationResultContract(
 				result,
 				gridCase.expectedAccepted,
@@ -4420,16 +4437,18 @@ local function run()
 				gridCase.expectedFirstCategoryTotal,
 				label .. " first category total"
 			)
-			assertEqual(i >= 1 and i <= 4, true, "block122 grid index " .. tostring(i))
+			assertEqual(i >= 1 and i <= 4, true, "block123 grid index " .. tostring(i))
 		end
 	end
 
-	-- BLOCK 123: Slice 35 - validation result contract regression grid remains stable across repeated runs.
+	-- BLOCK 124: Slice 36 - registry-backed validation result contract grid remains stable across repeated runs.
 	do
 		for _, gridCase in ipairs(resultContractRegressionGrid) do
-			local outA = gridCase.makeResult()
-			local outB = gridCase.makeResult()
-			local label = "block123 " .. gridCase.label
+			local makeResult = validationResultExampleRegistry[gridCase.key]
+			assertTrue(type(makeResult) == "function", "block124 registry entry " .. gridCase.key)
+			local outA = makeResult()
+			local outB = makeResult()
+			local label = "block124 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
 				gridCase.expectedAccepted,
