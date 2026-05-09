@@ -160,6 +160,22 @@ local function assertReasonMatrix(result: any, expectRejects: boolean, expectPen
 	end
 end
 
+local function assertValidationResultContract(
+	result: any,
+	expectedAccepted: boolean,
+	expectRejects: boolean,
+	expectPenalties: boolean,
+	label: string
+)
+	assertValidationResultShape(result, label .. " shape")
+	assertEqual(result.accepted, expectedAccepted, label .. " accepted")
+	assertReasonMatrix(result, expectRejects, expectPenalties, label .. " reasons")
+	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
+	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
+	assertSnapshotMatrix(result, label .. " snapshot")
+	assertSummaryMatrix(result, expectPenalties, label .. " summaries")
+end
+
 local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.accepted) == "boolean", label .. " accepted readable")
 	assertTrue(type(result.rejectReasons) == "table", label .. " reject reasons readable")
@@ -177,13 +193,7 @@ local function assertResultModeMatrix(
 	expectPenalties: boolean,
 	label: string
 )
-	assertValidationResultShape(result, label .. " shape")
-	assertEqual(result.accepted, expectedAccepted, label .. " accepted")
-	assertReasonMatrix(result, expectRejects, expectPenalties, label .. " reasons")
-	assertEqual(result.devaluation.totalPenalty > 0, expectPenalties, label .. " penalty score mode")
-	assertEqual(#result.devaluation.penalties > 0, expectPenalties, label .. " penalty count mode")
-	assertSnapshotMatrix(result, label .. " snapshot")
-	assertSummaryMatrix(result, expectPenalties, label .. " summaries")
+	assertValidationResultContract(result, expectedAccepted, expectRejects, expectPenalties, label)
 end
 
 local protoOutput =
@@ -4317,7 +4327,7 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertResultModeMatrix(result, true, false, false, "block122")
+		assertValidationResultContract(result, true, false, false, "block122")
 		assertEqual(result.devaluation.totalPenalty, 0, "block122 total penalty")
 	end
 
@@ -4335,7 +4345,7 @@ local function run()
 		}
 		local result =
 			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
-		assertResultModeMatrix(result, true, false, true, "block123")
+		assertValidationResultContract(result, true, false, true, "block123")
 		assertEqual(result.devaluation.totalPenalty, 1, "block123 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block123 proximity summary")
 	end
@@ -4353,7 +4363,7 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertResultModeMatrix(result, false, true, true, "block124")
+		assertValidationResultContract(result, false, true, true, "block124")
 		assertEqual(result.devaluation.totalPenalty, 11, "block124 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 11, "block124 proximity summary")
 	end
@@ -4367,7 +4377,7 @@ local function run()
 			},
 		}
 		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertResultModeMatrix(result, false, true, false, "block125")
+		assertValidationResultContract(result, false, true, false, "block125")
 		assertEqual(result.devaluation.totalPenalty, 0, "block125 total penalty")
 		assertEqual(result.devaluation.categoryTotals[1].totalScore, 0, "block125 proximity summary")
 	end
@@ -4386,8 +4396,8 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertResultModeMatrix(outA, false, true, true, "block126 A")
-		assertResultModeMatrix(outB, false, true, true, "block126 B")
+		assertValidationResultContract(outA, false, true, true, "block126 A")
+		assertValidationResultContract(outB, false, true, true, "block126 B")
 		assertEqual(outA.accepted, outB.accepted, "block126 accepted stable")
 		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block126 reject count stable")
 		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block126 total stable")
