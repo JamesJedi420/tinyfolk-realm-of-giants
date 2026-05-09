@@ -3200,6 +3200,149 @@ local function run()
 		end
 	end
 
+	-- BLOCK 97: Slice 21 - summary invariants pass for a single-penalty result.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S21SingleInvariant",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		local invariant = RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(result.devaluation)
+		assertTrue(invariant.passed, "block97 invariant passed")
+		assertEqual(#invariant.errors, 0, "block97 no invariant errors")
+		assertEqual(result.devaluation.totalPenalty, 1, "block97 total unchanged")
+	end
+
+	-- BLOCK 98: Slice 21 - summary invariants pass for multi-penalty, multi-category output.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S21MixedInvariant",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local invariant = RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(result.devaluation)
+		assertTrue(invariant.passed, "block98 invariant passed")
+		assertEqual(#invariant.errors, 0, "block98 no invariant errors")
+		assertEqual(result.devaluation.totalPenalty, 21, "block98 total unchanged")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block98 category proximity")
+		assertEqual(result.devaluation.factorSummaries[2].totalScore, 11, "block98 factor route")
+		assertEqual(result.devaluation.subjectSummaries[3].totalScore, 9, "block98 subject density")
+	end
+
+	-- BLOCK 99: Slice 21 - invariant results are stable across repeated runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			tinyfolkSpawnSoftRadius = 60,
+			escapeRouteSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+			denseDensityPressurePenaltyScore = 9,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S21StableInvariant",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local assemblyOutput = makeRoutePressureOutput()
+		assemblyOutput.resolvedOccupiedSpace = {
+			{
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				tag = "dense_body",
+				worldCenter = { x = 59, y = 0, z = 10 },
+				halfExtents = { x = 1, y = 1, z = 1 },
+				isLandmarkAnchor = false,
+			},
+		}
+		assemblyOutput.resolvedMetadataByPlacement = {
+			P_Dense = {
+				placementId = "P_Dense",
+				chunkId = "Chunk_Dense",
+				traversalDensityClass = "dense",
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, assemblyOutput, nil, softConfig)
+		local invariantA = RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(outA.devaluation)
+		local invariantB = RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(outB.devaluation)
+		assertTrue(invariantA.passed, "block99 invariant A passed")
+		assertTrue(invariantB.passed, "block99 invariant B passed")
+		assertEqual(#invariantA.errors, #invariantB.errors, "block99 error count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block99 total stable")
+		assertEqual(#outA.devaluation.subjectSummaries, #outB.devaluation.subjectSummaries, "block99 subject summary count stable")
+	end
+
+	-- BLOCK 100: Slice 21 - invariant helper detects a deliberate summary mismatch.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S21MismatchInvariant",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		local mismatchedFactorSummaries = {
+			{
+				factor = result.devaluation.factorSummaries[1].factor,
+				penaltyCount = result.devaluation.factorSummaries[1].penaltyCount,
+				totalScore = result.devaluation.factorSummaries[1].totalScore + 1,
+				firstSortKey = result.devaluation.factorSummaries[1].firstSortKey,
+				lastSortKey = result.devaluation.factorSummaries[1].lastSortKey,
+			},
+		}
+		local mismatched = {
+			totalPenalty = result.devaluation.totalPenalty,
+			penalties = result.devaluation.penalties,
+			categoryTotals = result.devaluation.categoryTotals,
+			groupSummaries = result.devaluation.groupSummaries,
+			factorSummaries = mismatchedFactorSummaries,
+			subjectSummaries = result.devaluation.subjectSummaries,
+		}
+		local invariant = RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(mismatched)
+		assertFalse(invariant.passed, "block100 invariant failed")
+		assertTrue(#invariant.errors > 0, "block100 invariant errors reported")
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 

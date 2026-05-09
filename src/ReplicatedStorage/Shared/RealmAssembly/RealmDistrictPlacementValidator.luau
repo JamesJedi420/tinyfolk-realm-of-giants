@@ -197,6 +197,11 @@ export type DistrictPlacementDevaluationResult = {
 	subjectSummaries: { DistrictPlacementDevaluationSubjectSummary },
 }
 
+export type DistrictPlacementDevaluationInvariantResult = {
+	passed: boolean,
+	errors: { string },
+}
+
 -- Soft scoring thresholds for Slice 7 devaluation.
 -- Set a radius to 0 to disable that scoring factor.
 export type DistrictPlacementSoftConfig = {
@@ -1346,6 +1351,144 @@ local function resolveValidationConfigs(
 		criticalExclusion = hardOrCriticalConfig :: DistrictCriticalExclusionConfig?,
 		policy = policyOrSoftConfig :: DistrictPlacementPolicyConfig?,
 	}, legacySoftConfig
+end
+
+local function appendInvariantError(errors: { string }, label: string)
+	table.insert(errors, label)
+end
+
+local function validateSummaryScoreAndCount(
+	errors: { string },
+	label: string,
+	actualCount: number,
+	actualScore: number,
+	expectedCount: number,
+	expectedScore: number
+)
+	if actualCount ~= expectedCount then
+		appendInvariantError(
+			errors,
+			string.format("%s penaltyCount mismatch: expected=%d actual=%d", label, expectedCount, actualCount)
+		)
+	end
+	if actualScore ~= expectedScore then
+		appendInvariantError(
+			errors,
+			string.format("%s totalScore mismatch: expected=%d actual=%d", label, expectedScore, actualScore)
+		)
+	end
+end
+
+function RealmDistrictPlacementValidator.ValidateDevaluationSummaryConsistency(
+	devaluation: DistrictPlacementDevaluationResult
+): DistrictPlacementDevaluationInvariantResult
+	local errors: { string } = {}
+	local totalScore = 0
+	local categoryScores: { [string]: number } = {}
+	local categoryCounts: { [string]: number } = {}
+	local factorScores: { [string]: number } = {}
+	local factorCounts: { [string]: number } = {}
+	local subjectScores: { [string]: number } = {}
+	local subjectCounts: { [string]: number } = {}
+	local seenCategoryTotals: { [string]: boolean } = {}
+	local seenGroupSummaries: { [string]: boolean } = {}
+	local seenFactorSummaries: { [string]: boolean } = {}
+	local seenSubjectSummaries: { [string]: boolean } = {}
+
+	for _, penalty in ipairs(devaluation.penalties) do
+		totalScore += penalty.score
+		categoryScores[penalty.category] = (categoryScores[penalty.category] or 0) + penalty.score
+		categoryCounts[penalty.category] = (categoryCounts[penalty.category] or 0) + 1
+		factorScores[penalty.factor] = (factorScores[penalty.factor] or 0) + penalty.score
+		factorCounts[penalty.factor] = (factorCounts[penalty.factor] or 0) + 1
+		local subjectKey = penalty.subjectType .. "|" .. penalty.subjectName
+		subjectScores[subjectKey] = (subjectScores[subjectKey] or 0) + penalty.score
+		subjectCounts[subjectKey] = (subjectCounts[subjectKey] or 0) + 1
+	end
+
+	if devaluation.totalPenalty ~= totalScore then
+		appendInvariantError(
+			errors,
+			string.format("totalPenalty mismatch: expected=%d actual=%d", totalScore, devaluation.totalPenalty)
+		)
+	end
+
+	for _, categoryTotal in ipairs(devaluation.categoryTotals) do
+		seenCategoryTotals[categoryTotal.category] = true
+		local expectedScore = categoryScores[categoryTotal.category] or 0
+		if categoryTotal.totalScore ~= expectedScore then
+			appendInvariantError(
+				errors,
+				string.format(
+					"categoryTotals[%s] totalScore mismatch: expected=%d actual=%d",
+					categoryTotal.category,
+					expectedScore,
+					categoryTotal.totalScore
+				)
+			)
+		end
+	end
+
+	for _, summary in ipairs(devaluation.groupSummaries) do
+		seenGroupSummaries[summary.category] = true
+		validateSummaryScoreAndCount(
+			errors,
+			"groupSummaries[" .. summary.category .. "]",
+			summary.penaltyCount,
+			summary.totalScore,
+			categoryCounts[summary.category] or 0,
+			categoryScores[summary.category] or 0
+		)
+	end
+
+	for _, summary in ipairs(devaluation.factorSummaries) do
+		seenFactorSummaries[summary.factor] = true
+		validateSummaryScoreAndCount(
+			errors,
+			"factorSummaries[" .. summary.factor .. "]",
+			summary.penaltyCount,
+			summary.totalScore,
+			factorCounts[summary.factor] or 0,
+			factorScores[summary.factor] or 0
+		)
+	end
+
+	for _, summary in ipairs(devaluation.subjectSummaries) do
+		local subjectKey = summary.subjectType .. "|" .. summary.subjectName
+		seenSubjectSummaries[subjectKey] = true
+		validateSummaryScoreAndCount(
+			errors,
+			"subjectSummaries[" .. subjectKey .. "]",
+			summary.penaltyCount,
+			summary.totalScore,
+			subjectCounts[subjectKey] or 0,
+			subjectScores[subjectKey] or 0
+		)
+	end
+
+	for category in pairs(categoryScores) do
+		if not seenCategoryTotals[category] then
+			appendInvariantError(errors, "categoryTotals missing category: " .. category)
+		end
+		if not seenGroupSummaries[category] then
+			appendInvariantError(errors, "groupSummaries missing category: " .. category)
+		end
+	end
+	for factor in pairs(factorScores) do
+		if not seenFactorSummaries[factor] then
+			appendInvariantError(errors, "factorSummaries missing factor: " .. factor)
+		end
+	end
+	for subjectKey in pairs(subjectScores) do
+		if not seenSubjectSummaries[subjectKey] then
+			appendInvariantError(errors, "subjectSummaries missing subject: " .. subjectKey)
+		end
+	end
+
+	return {
+		passed = #errors == 0,
+		errors = errors,
+	}
 end
 
 -- Validate a district placement request against an assembled realm output.
