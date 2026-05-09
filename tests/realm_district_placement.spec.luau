@@ -50,6 +50,38 @@ end
 local protoOutput =
 	RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 
+local function makeRoutePressureOutput(): any
+	return {
+		descriptor = {
+			spawns = {
+				{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+			},
+			escapeRoutes = {
+				{ name = "EscapeRoute_A", position = { x = 100, y = 0, z = 0 } },
+			},
+			returnPoints = {},
+			stations = {},
+			constructionSites = {},
+			upgradeBoards = {},
+			controlZones = {},
+			captureZones = {},
+			props = {},
+			routeGraph = {
+				nodes = {
+					{ name = "SpawnNode", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
+					{ name = "EscapeNode", position = { x = 100, y = 0, z = 0 }, nodeType = "escape" },
+				},
+				edges = {
+					{ from = "SpawnNode", to = "EscapeNode", distance = 100 },
+				},
+			},
+		},
+		resolvedOccupiedSpace = {},
+		resolvedMetadata = {},
+		resolvedMetadataByPlacement = {},
+	}
+end
+
 -- Prototype occupied space reference (from Slice 4 fixture):
 --   P_Start box: worldCenter=(30,0,0), halfExtents=(60,4,40), isLandmarkAnchor=true
 --   P_Exit  box: worldCenter=(90,0,0), halfExtents=(60,4,40), isLandmarkAnchor=false
@@ -1873,6 +1905,135 @@ local function run()
 			local categoryB = outB.devaluation.categoryTotals[i]
 			assertEqual(categoryA.category, categoryB.category, "block64 category stable " .. tostring(i))
 			assertEqual(categoryA.totalScore, categoryB.totalScore, "block64 category score stable " .. tostring(i))
+		end
+	end
+
+	-- BLOCK 65: Slice 11 - route pressure can be enabled while proximity is disabled.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 0,
+			routeEdgeSoftRadius = 20,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S11RouteOnly",
+			proposedOccupiedSpace = {
+				{ tag = "near_edge", worldCenter = { x = 50, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block65 accepted")
+		assertEqual(result.devaluation.totalPenalty, 11, "block65 route penalty score")
+		assertEqual(#result.devaluation.penalties, 1, "block65 one route penalty")
+		assertEqual(result.devaluation.penalties[1].factor, "near_route_edge", "block65 route factor")
+		assertEqual(result.devaluation.penalties[1].category, "route_pressure", "block65 route category")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 0, "block65 proximity disabled")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block65 route total")
+	end
+
+	-- BLOCK 66: Slice 11 - proximity can be enabled while route pressure is disabled.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S11ProximityOnly",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertTrue(result.accepted, "block66 accepted")
+		assertEqual(result.devaluation.totalPenalty, 1, "block66 proximity penalty score")
+		assertEqual(#result.devaluation.penalties, 1, "block66 one proximity penalty")
+		assertEqual(result.devaluation.penalties[1].factor, "near_critical_point", "block66 proximity factor")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block66 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 0, "block66 route disabled")
+	end
+
+	-- BLOCK 67: Slice 11 - route and proximity split fields accumulate together.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 20,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S11BothSplit",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, softConfig)
+		assertTrue(result.accepted, "block67 accepted")
+		assertEqual(result.devaluation.totalPenalty, 12, "block67 combined penalty")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block67 proximity total")
+		assertEqual(result.devaluation.categoryTotals[2].totalScore, 11, "block67 route total")
+		assertEqual(result.devaluation.categoryTotals[3].totalScore, 0, "block67 density total")
+	end
+
+	-- BLOCK 68: Slice 11 - legacy and split soft config paths are equivalent.
+	do
+		local legacySoftConfig: DistrictPlacementSoftConfig = {
+			nearCriticalPointSoftRadius = 60,
+			nearRouteEdgeSoftRadius = 20,
+		}
+		local splitSoftConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 20,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S11Compat",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local legacy =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, legacySoftConfig)
+		local split =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, splitSoftConfig)
+		assertEqual(split.devaluation.totalPenalty, legacy.devaluation.totalPenalty, "block68 total equivalent")
+		assertEqual(#split.devaluation.penalties, #legacy.devaluation.penalties, "block68 penalty count equivalent")
+		for i, penalty in ipairs(split.devaluation.penalties) do
+			assertEqual(penalty.factor, legacy.devaluation.penalties[i].factor, "block68 factor " .. tostring(i))
+			assertEqual(penalty.score, legacy.devaluation.penalties[i].score, "block68 score " .. tostring(i))
+		end
+		for i, category in ipairs(split.devaluation.categoryTotals) do
+			assertEqual(category.category, legacy.devaluation.categoryTotals[i].category, "block68 category " .. tostring(i))
+			assertEqual(
+				category.totalScore,
+				legacy.devaluation.categoryTotals[i].totalScore,
+				"block68 category score " .. tostring(i)
+			)
+		end
+	end
+
+	-- BLOCK 69: Slice 11 - repeated split-config runs remain stable.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 20,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S11Stable",
+			proposedOccupiedSpace = {
+				{ tag = "near_both", worldCenter = { x = 59, y = 0, z = 10 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, makeRoutePressureOutput(), nil, softConfig)
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block69 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block69 penalty count stable")
+		for i, penaltyA in ipairs(outA.devaluation.penalties) do
+			local penaltyB = outB.devaluation.penalties[i]
+			assertEqual(penaltyA.factor, penaltyB.factor, "block69 factor stable " .. tostring(i))
+			assertEqual(penaltyA.score, penaltyB.score, "block69 score stable " .. tostring(i))
+		end
+		for i, categoryA in ipairs(outA.devaluation.categoryTotals) do
+			local categoryB = outB.devaluation.categoryTotals[i]
+			assertEqual(categoryA.category, categoryB.category, "block69 category stable " .. tostring(i))
+			assertEqual(categoryA.totalScore, categoryB.totalScore, "block69 category score stable " .. tostring(i))
 		end
 	end
 

@@ -167,8 +167,10 @@ export type DistrictPlacementDevaluationResult = {
 -- Soft scoring thresholds for Slice 7 devaluation.
 -- Set a radius to 0 to disable that scoring factor.
 export type DistrictPlacementSoftConfig = {
-	nearCriticalPointSoftRadius: number,
-	nearRouteEdgeSoftRadius: number,
+	criticalPointSoftRadius: number?,
+	routeEdgeSoftRadius: number?,
+	nearCriticalPointSoftRadius: number?,
+	nearRouteEdgeSoftRadius: number?,
 	penalizedTraversalDensityClasses: { string }?,
 	densityPressurePenaltyScore: number?,
 }
@@ -933,8 +935,8 @@ local function computeDevaluation(
 	local penalties: { DistrictPlacementDevaluationPenalty } = {}
 
 	if softConfig ~= nil then
-		local nearCritRadius = softConfig.nearCriticalPointSoftRadius
-		local nearEdgeRadius = softConfig.nearRouteEdgeSoftRadius
+		local nearCritRadius = softConfig.criticalPointSoftRadius or softConfig.nearCriticalPointSoftRadius or 0
+		local nearEdgeRadius = softConfig.routeEdgeSoftRadius or softConfig.nearRouteEdgeSoftRadius or 0
 		local descriptor = assemblyOutput.descriptor
 		local proposed = request.proposedOccupiedSpace
 
@@ -1129,7 +1131,12 @@ local function isSoftConfig(config: any): boolean
 	if type(config) ~= "table" then
 		return false
 	end
-	return config.nearCriticalPointSoftRadius ~= nil or config.nearRouteEdgeSoftRadius ~= nil
+	return config.criticalPointSoftRadius ~= nil
+		or config.routeEdgeSoftRadius ~= nil
+		or config.nearCriticalPointSoftRadius ~= nil
+		or config.nearRouteEdgeSoftRadius ~= nil
+		or config.penalizedTraversalDensityClasses ~= nil
+		or config.densityPressurePenaltyScore ~= nil
 end
 
 local function resolveValidationConfigs(
