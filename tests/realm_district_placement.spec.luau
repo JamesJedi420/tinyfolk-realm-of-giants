@@ -4318,96 +4318,142 @@ local function run()
 		)
 	end
 
-	-- BLOCK 122: Slice 29 - fixture example: accepted with no penalties.
+	local resultContractRegressionGrid: { any } = {
+		{
+			label = "accepted/no-penalty",
+			expectedAccepted = true,
+			expectRejects = false,
+			expectPenalties = false,
+			expectedTotalPenalty = 0,
+			expectedFirstCategoryTotal = 0,
+			makeResult = function()
+				local request: DistrictPlacementRequest = {
+					districtId = "D_S35AcceptedNoPenalty",
+					proposedOccupiedSpace = {
+						{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+					},
+				}
+				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+			end,
+		},
+		{
+			label = "accepted/penalty",
+			expectedAccepted = true,
+			expectRejects = false,
+			expectPenalties = true,
+			expectedTotalPenalty = 1,
+			expectedFirstCategoryTotal = 1,
+			makeResult = function()
+				local softConfig: DistrictPlacementSoftConfig = {
+					criticalPointSoftRadius = 60,
+					routeEdgeSoftRadius = 0,
+				}
+				local request: DistrictPlacementRequest = {
+					districtId = "D_S35AcceptedPenalty",
+					proposedOccupiedSpace = {
+						{
+							tag = "near_spawn",
+							worldCenter = { x = 0, y = 0, z = -60 },
+							halfExtents = { x = 1, y = 1, z = 1 },
+						},
+					},
+				}
+				return RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+			end,
+		},
+		{
+			label = "rejected/penalty",
+			expectedAccepted = false,
+			expectRejects = true,
+			expectPenalties = true,
+			expectedTotalPenalty = 11,
+			expectedFirstCategoryTotal = 11,
+			makeResult = function()
+				local softConfig: DistrictPlacementSoftConfig = {
+					criticalPointSoftRadius = 40,
+					routeEdgeSoftRadius = 0,
+				}
+				local request: DistrictPlacementRequest = {
+					districtId = "D_S35RejectedPenalty",
+					proposedOccupiedSpace = {
+						{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+					},
+				}
+				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+			end,
+		},
+		{
+			label = "rejected/no-penalty",
+			expectedAccepted = false,
+			expectRejects = true,
+			expectPenalties = false,
+			expectedTotalPenalty = 0,
+			expectedFirstCategoryTotal = 0,
+			makeResult = function()
+				local request: DistrictPlacementRequest = {
+					districtId = "D_S35RejectedNoPenalty",
+					proposedOccupiedSpace = {
+						{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+					},
+				}
+				return RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+			end,
+		},
+	}
+
+	-- BLOCK 122: Slice 35 - validation result contract regression grid covers all major modes.
 	do
-		local request: DistrictPlacementRequest = {
-			districtId = "D_S29AcceptedNoPenalty",
-			proposedOccupiedSpace = {
-				{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
-			},
-		}
-		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertValidationResultContract(result, true, false, false, "block122")
-		assertEqual(result.devaluation.totalPenalty, 0, "block122 total penalty")
+		assertEqual(#resultContractRegressionGrid, 4, "block122 grid mode count")
+		for i, gridCase in ipairs(resultContractRegressionGrid) do
+			local result = gridCase.makeResult()
+			local label = "block122 " .. gridCase.label
+			assertValidationResultContract(
+				result,
+				gridCase.expectedAccepted,
+				gridCase.expectRejects,
+				gridCase.expectPenalties,
+				label
+			)
+			assertEqual(result.devaluation.totalPenalty, gridCase.expectedTotalPenalty, label .. " total penalty")
+			assertEqual(
+				result.devaluation.categoryTotals[1].totalScore,
+				gridCase.expectedFirstCategoryTotal,
+				label .. " first category total"
+			)
+			assertEqual(i >= 1 and i <= 4, true, "block122 grid index " .. tostring(i))
+		end
 	end
 
-	-- BLOCK 123: Slice 29 - fixture example: accepted with devaluation.
+	-- BLOCK 123: Slice 35 - validation result contract regression grid remains stable across repeated runs.
 	do
-		local softConfig: DistrictPlacementSoftConfig = {
-			criticalPointSoftRadius = 60,
-			routeEdgeSoftRadius = 0,
-		}
-		local request: DistrictPlacementRequest = {
-			districtId = "D_S29AcceptedPenalty",
-			proposedOccupiedSpace = {
-				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
-			},
-		}
-		local result =
-			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
-		assertValidationResultContract(result, true, false, true, "block123")
-		assertEqual(result.devaluation.totalPenalty, 1, "block123 total penalty")
-		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block123 proximity summary")
-	end
-
-	-- BLOCK 124: Slice 29 - fixture example: rejected with devaluation.
-	do
-		local softConfig: DistrictPlacementSoftConfig = {
-			criticalPointSoftRadius = 40,
-			routeEdgeSoftRadius = 0,
-		}
-		local request: DistrictPlacementRequest = {
-			districtId = "D_S29RejectedPenalty",
-			proposedOccupiedSpace = {
-				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
-			},
-		}
-		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertValidationResultContract(result, false, true, true, "block124")
-		assertEqual(result.devaluation.totalPenalty, 11, "block124 total penalty")
-		assertEqual(result.devaluation.categoryTotals[1].totalScore, 11, "block124 proximity summary")
-	end
-
-	-- BLOCK 125: Slice 29 - fixture example: rejected with no devaluation.
-	do
-		local request: DistrictPlacementRequest = {
-			districtId = "D_S29RejectedNoPenalty",
-			proposedOccupiedSpace = {
-				{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
-			},
-		}
-		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
-		assertValidationResultContract(result, false, true, false, "block125")
-		assertEqual(result.devaluation.totalPenalty, 0, "block125 total penalty")
-		assertEqual(result.devaluation.categoryTotals[1].totalScore, 0, "block125 proximity summary")
-	end
-
-	-- BLOCK 126: Slice 29 - fixture examples remain stable across repeated runs.
-	do
-		local softConfig: DistrictPlacementSoftConfig = {
-			criticalPointSoftRadius = 40,
-			routeEdgeSoftRadius = 0,
-		}
-		local request: DistrictPlacementRequest = {
-			districtId = "D_S29StableFixture",
-			proposedOccupiedSpace = {
-				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
-			},
-		}
-		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertValidationResultContract(outA, false, true, true, "block126 A")
-		assertValidationResultContract(outB, false, true, true, "block126 B")
-		assertEqual(outA.accepted, outB.accepted, "block126 accepted stable")
-		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block126 reject count stable")
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block126 total stable")
-		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block126 penalty count stable")
-		assertEqual(outA.devaluation.categoryTotals[1].totalScore, outB.devaluation.categoryTotals[1].totalScore, "block126 category stable")
-		assertEqual(
-			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
-			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
-			"block126 snapshot stable"
-		)
+		for _, gridCase in ipairs(resultContractRegressionGrid) do
+			local outA = gridCase.makeResult()
+			local outB = gridCase.makeResult()
+			local label = "block123 " .. gridCase.label
+			assertValidationResultContract(
+				outA,
+				gridCase.expectedAccepted,
+				gridCase.expectRejects,
+				gridCase.expectPenalties,
+				label .. " A"
+			)
+			assertValidationResultContract(
+				outB,
+				gridCase.expectedAccepted,
+				gridCase.expectRejects,
+				gridCase.expectPenalties,
+				label .. " B"
+			)
+			assertEqual(outA.accepted, outB.accepted, label .. " accepted stable")
+			assertEqual(#outA.rejectReasons, #outB.rejectReasons, label .. " reject count stable")
+			assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, label .. " total stable")
+			assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, label .. " penalty count stable")
+			assertEqual(
+				outA.devaluation.categoryTotals[1].totalScore,
+				outB.devaluation.categoryTotals[1].totalScore,
+				label .. " category stable"
+			)
+		end
 	end
 
 	-- BLOCK 127: Slice 31 - snapshot matrix helper remains stable across repeated runs.
