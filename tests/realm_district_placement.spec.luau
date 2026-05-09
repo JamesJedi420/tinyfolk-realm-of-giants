@@ -4378,40 +4378,64 @@ local function run()
 
 	local validationResultCaseMetadata: { [string]: any } = {
 		accepted_no_penalty = {
-			canonicalKey = "accepted_no_penalty",
-			aliasKeys = { "a0" },
-			expectedAccepted = true,
-			expectRejects = false,
-			expectPenalties = false,
-			expectedTotalPenalty = 0,
-			expectedFirstCategoryTotal = 0,
+			keys = {
+				canonical = "accepted_no_penalty",
+				aliases = { "a0" },
+			},
+			mode = {
+				expectedAccepted = true,
+				expectRejects = false,
+				expectPenalties = false,
+			},
+			devaluation = {
+				expectedTotalPenalty = 0,
+				expectedFirstCategoryTotal = 0,
+			},
 		},
 		accepted_with_penalty = {
-			canonicalKey = "accepted_with_penalty",
-			aliasKeys = { "a1" },
-			expectedAccepted = true,
-			expectRejects = false,
-			expectPenalties = true,
-			expectedTotalPenalty = 1,
-			expectedFirstCategoryTotal = 1,
+			keys = {
+				canonical = "accepted_with_penalty",
+				aliases = { "a1" },
+			},
+			mode = {
+				expectedAccepted = true,
+				expectRejects = false,
+				expectPenalties = true,
+			},
+			devaluation = {
+				expectedTotalPenalty = 1,
+				expectedFirstCategoryTotal = 1,
+			},
 		},
 		rejected_with_penalty = {
-			canonicalKey = "rejected_with_penalty",
-			aliasKeys = { "r1" },
-			expectedAccepted = false,
-			expectRejects = true,
-			expectPenalties = true,
-			expectedTotalPenalty = 11,
-			expectedFirstCategoryTotal = 11,
+			keys = {
+				canonical = "rejected_with_penalty",
+				aliases = { "r1" },
+			},
+			mode = {
+				expectedAccepted = false,
+				expectRejects = true,
+				expectPenalties = true,
+			},
+			devaluation = {
+				expectedTotalPenalty = 11,
+				expectedFirstCategoryTotal = 11,
+			},
 		},
 		rejected_no_penalty = {
-			canonicalKey = "rejected_no_penalty",
-			aliasKeys = { "r0" },
-			expectedAccepted = false,
-			expectRejects = true,
-			expectPenalties = false,
-			expectedTotalPenalty = 0,
-			expectedFirstCategoryTotal = 0,
+			keys = {
+				canonical = "rejected_no_penalty",
+				aliases = { "r0" },
+			},
+			mode = {
+				expectedAccepted = false,
+				expectRejects = true,
+				expectPenalties = false,
+			},
+			devaluation = {
+				expectedTotalPenalty = 0,
+				expectedFirstCategoryTotal = 0,
+			},
 		},
 	}
 
@@ -4447,10 +4471,21 @@ local function run()
 
 	-- BLOCK 124: Slice 38 - validation result case metadata covers all named examples.
 	do
-		assertEqual(validationResultCaseMetadata.accepted_no_penalty.canonicalKey, "accepted_no_penalty", "block124 accepted no penalty")
-		assertEqual(validationResultCaseMetadata.accepted_with_penalty.canonicalKey, "accepted_with_penalty", "block124 accepted penalty")
-		assertEqual(validationResultCaseMetadata.rejected_with_penalty.canonicalKey, "rejected_with_penalty", "block124 rejected penalty")
-		assertEqual(validationResultCaseMetadata.rejected_no_penalty.canonicalKey, "rejected_no_penalty", "block124 rejected no penalty")
+		assertEqual(validationResultCaseMetadata.accepted_no_penalty.keys.canonical, "accepted_no_penalty", "block124 accepted no penalty")
+		assertEqual(validationResultCaseMetadata.accepted_with_penalty.keys.canonical, "accepted_with_penalty", "block124 accepted penalty")
+		assertEqual(validationResultCaseMetadata.rejected_with_penalty.keys.canonical, "rejected_with_penalty", "block124 rejected penalty")
+		assertEqual(validationResultCaseMetadata.rejected_no_penalty.keys.canonical, "rejected_no_penalty", "block124 rejected no penalty")
+		for _, canonicalKey in ipairs({
+			"accepted_no_penalty",
+			"accepted_with_penalty",
+			"rejected_with_penalty",
+			"rejected_no_penalty",
+		}) do
+			local metadata = validationResultCaseMetadata[canonicalKey]
+			assertTrue(type(metadata.keys) == "table", "block124 keys " .. canonicalKey)
+			assertTrue(type(metadata.mode) == "table", "block124 mode " .. canonicalKey)
+			assertTrue(type(metadata.devaluation) == "table", "block124 devaluation " .. canonicalKey)
+		end
 	end
 
 	-- BLOCK 125: Slice 38 - alias metadata remains mapped to canonical examples.
@@ -4466,8 +4501,8 @@ local function run()
 			local canonicalKey = pair.canonicalKey
 			local metadata = validationResultCaseMetadata[canonicalKey]
 			assertTrue(type(metadata) == "table", "block125 metadata " .. canonicalKey)
-			assertEqual(metadata.canonicalKey, canonicalKey, "block125 canonical " .. aliasKey)
-			assertEqual(metadata.aliasKeys[1], aliasKey, "block125 alias " .. aliasKey)
+			assertEqual(metadata.keys.canonical, canonicalKey, "block125 canonical " .. aliasKey)
+			assertEqual(metadata.keys.aliases[1], aliasKey, "block125 alias " .. aliasKey)
 		end
 	end
 
@@ -4503,15 +4538,15 @@ local function run()
 			local label = "block127 " .. gridCase.label
 			assertValidationResultContract(
 				result,
-				metadata.expectedAccepted,
-				metadata.expectRejects,
-				metadata.expectPenalties,
+				metadata.mode.expectedAccepted,
+				metadata.mode.expectRejects,
+				metadata.mode.expectPenalties,
 				label
 			)
-			assertEqual(result.devaluation.totalPenalty, metadata.expectedTotalPenalty, label .. " total penalty")
+			assertEqual(result.devaluation.totalPenalty, metadata.devaluation.expectedTotalPenalty, label .. " total penalty")
 			assertEqual(
 				result.devaluation.categoryTotals[1].totalScore,
-				metadata.expectedFirstCategoryTotal,
+				metadata.devaluation.expectedFirstCategoryTotal,
 				label .. " first category total"
 			)
 			assertEqual(i >= 1 and i <= 4, true, "block127 grid index " .. tostring(i))
@@ -4529,16 +4564,16 @@ local function run()
 			local label = "block128 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
-				metadata.expectedAccepted,
-				metadata.expectRejects,
-				metadata.expectPenalties,
+				metadata.mode.expectedAccepted,
+				metadata.mode.expectRejects,
+				metadata.mode.expectPenalties,
 				label .. " A"
 			)
 			assertValidationResultContract(
 				outB,
-				metadata.expectedAccepted,
-				metadata.expectRejects,
-				metadata.expectPenalties,
+				metadata.mode.expectedAccepted,
+				metadata.mode.expectRejects,
+				metadata.mode.expectPenalties,
 				label .. " B"
 			)
 			assertEqual(outA.accepted, outB.accepted, label .. " accepted stable")
