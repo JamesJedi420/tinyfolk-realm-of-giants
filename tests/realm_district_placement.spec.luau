@@ -4250,6 +4250,111 @@ local function run()
 		)
 	end
 
+	-- BLOCK 122: Slice 29 - fixture example: accepted with no penalties.
+	do
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S29AcceptedNoPenalty",
+			proposedOccupiedSpace = {
+				{ tag = "safe", worldCenter = { x = 0, y = 0, z = 80 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertValidationResultShape(result, "block122 shape")
+		assertTrue(result.accepted, "block122 accepted")
+		assertEqual(#result.rejectReasons, 0, "block122 reject count")
+		assertEqual(result.devaluation.totalPenalty, 0, "block122 total penalty")
+		assertEqual(#result.devaluation.groupSummaries, 3, "block122 summary presence")
+		assertTrue(result.validationSnapshot ~= nil, "block122 snapshot presence")
+	end
+
+	-- BLOCK 123: Slice 29 - fixture example: accepted with devaluation.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 60,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S29AcceptedPenalty",
+			proposedOccupiedSpace = {
+				{ tag = "near_spawn", worldCenter = { x = 0, y = 0, z = -60 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result =
+			RealmDistrictPlacementValidator.ValidatePlacement(request, makeCriticalCategoryOutput(), nil, softConfig)
+		assertValidationResultShape(result, "block123 shape")
+		assertTrue(result.accepted, "block123 accepted")
+		assertEqual(#result.rejectReasons, 0, "block123 reject count")
+		assertEqual(result.devaluation.totalPenalty, 1, "block123 total penalty")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 1, "block123 proximity summary")
+		assertTrue(result.validationSnapshot ~= nil, "block123 snapshot presence")
+	end
+
+	-- BLOCK 124: Slice 29 - fixture example: rejected with devaluation.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S29RejectedPenalty",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertValidationResultShape(result, "block124 shape")
+		assertFalse(result.accepted, "block124 rejected")
+		assertTrue(#result.rejectReasons > 0, "block124 reject count")
+		assertEqual(result.devaluation.totalPenalty, 11, "block124 total penalty")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 11, "block124 proximity summary")
+		assertTrue(result.validationSnapshot ~= nil, "block124 snapshot presence")
+	end
+
+	-- BLOCK 125: Slice 29 - fixture example: rejected with no devaluation.
+	do
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S29RejectedNoPenalty",
+			proposedOccupiedSpace = {
+				{ tag = "overlap", worldCenter = { x = 0, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local result = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput)
+		assertValidationResultShape(result, "block125 shape")
+		assertFalse(result.accepted, "block125 rejected")
+		assertTrue(#result.rejectReasons > 0, "block125 reject count")
+		assertEqual(result.devaluation.totalPenalty, 0, "block125 total penalty")
+		assertEqual(result.devaluation.categoryTotals[1].totalScore, 0, "block125 proximity summary")
+		assertTrue(result.validationSnapshot ~= nil, "block125 snapshot presence")
+	end
+
+	-- BLOCK 126: Slice 29 - fixture examples remain stable across repeated runs.
+	do
+		local softConfig: DistrictPlacementSoftConfig = {
+			criticalPointSoftRadius = 40,
+			routeEdgeSoftRadius = 0,
+		}
+		local request: DistrictPlacementRequest = {
+			districtId = "D_S29StableFixture",
+			proposedOccupiedSpace = {
+				{ tag = "body", worldCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 1, y = 1, z = 1 } },
+			},
+		}
+		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
+		assertValidationResultShape(outA, "block126 shape A")
+		assertValidationResultShape(outB, "block126 shape B")
+		assertEqual(outA.accepted, outB.accepted, "block126 accepted stable")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block126 reject count stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block126 total stable")
+		assertEqual(#outA.devaluation.penalties, #outB.devaluation.penalties, "block126 penalty count stable")
+		assertEqual(outA.devaluation.categoryTotals[1].totalScore, outB.devaluation.categoryTotals[1].totalScore, "block126 category stable")
+		assertEqual(
+			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
+			"block126 snapshot stable"
+		)
+	end
+
 	print("realm_district_placement: all checks passed")
 end
 
