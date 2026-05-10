@@ -4619,6 +4619,28 @@ local function run()
 		},
 	}
 
+	-- Contract Layer Map (test-only helper ownership)
+	-- Result shape: assertValidationResultContract, assertValidationResultCaseExampleShapeAgainstMetadata,
+	--   assertValidationResultCaseRegistryExampleShapeContract
+	-- Reject/devalue mode matrix: resultContractRegressionGrid with assertValidationResultContract
+	-- Snapshot matrix: assertSnapshotMatrix
+	-- Summary matrix: assertSummaryMatrix
+	-- Reason matrix: assertReasonMatrix
+	-- Canonical-builder contract: assertValidationResultCaseCanonicalBuilderGuard,
+	--   assertValidationResultCaseRegistryCanonicalBuilderContract
+	-- Alias-builder contract: assertValidationResultCaseAliasBuilderGuard,
+	--   assertValidationResultCaseRegistryAliasBuilderContract
+	-- Roundtrip contract: captureValidationResultCaseRoundtrip, assertValidationResultCaseRoundtrip
+	-- Uniqueness contract: assertValidationResultCaseRegistryUniqueness
+	-- Dead-entry contract: assertValidationResultCaseBuilderCoverage (grid metadata/builder live checks)
+	-- Single-source contract: assertValidationResultCaseSingleSourceContract
+	-- Shape/required-field contract: assertValidationResultCaseMetadataShape,
+	--   assertValidationResultCaseMetadataRequiredFields,
+	--   assertValidationResultCaseRegistryShapeContract,
+	--   assertValidationResultCaseRegistryRequiredFieldDefaultsContract
+
+	-- Registry contract helpers (accessors/enumeration/guards)
+
 	local function resolveValidationResultCaseKey(caseKey: string): string
 		return validationResultExampleAliases[caseKey] or caseKey
 	end
@@ -4704,17 +4726,9 @@ local function run()
 
 	local function assertValidationResultInstanceEquivalent(resultA: any, resultB: any, label: string)
 		assertEqual(resultA.accepted, resultB.accepted, label .. " accepted")
-		assertEqual(
-			#resultA.rejectReasons > 0,
-			#resultB.rejectReasons > 0,
-			label .. " reject presence"
-		)
+		assertEqual(#resultA.rejectReasons > 0, #resultB.rejectReasons > 0, label .. " reject presence")
 		assertEqual(#resultA.rejectReasons, #resultB.rejectReasons, label .. " reject count")
-		assertEqual(
-			resultA.devaluation.totalPenalty,
-			resultB.devaluation.totalPenalty,
-			label .. " total penalty"
-		)
+		assertEqual(resultA.devaluation.totalPenalty, resultB.devaluation.totalPenalty, label .. " total penalty")
 		assertEqual(
 			#resultA.devaluation.penalties > 0,
 			#resultB.devaluation.penalties > 0,
