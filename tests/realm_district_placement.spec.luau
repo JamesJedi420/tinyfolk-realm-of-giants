@@ -4620,8 +4620,8 @@ local function run()
 	}
 
 	-- Contract Layer Map (test-only helper ownership)
-	-- Result shape: assertValidationResultContract, assertValidationResultCaseExampleShapeAgainstMetadata,
-	--   assertValidationResultCaseRegistryExampleShapeContract
+	-- Result shape: assertValidationResultContract, assertValidationResultCaseResultShapeAgainstMetadata,
+	--   assertValidationResultCaseRegistryResultShapeContract
 	-- Reject/devalue mode matrix: resultContractRegressionGrid with assertValidationResultContract
 	-- Snapshot matrix: assertSnapshotMatrix
 	-- Summary matrix: assertSummaryMatrix
@@ -4659,7 +4659,7 @@ local function run()
 		return makeResult
 	end
 
-	local function makeValidationResultExample(caseKey: string)
+	local function captureValidationResultCaseResult(caseKey: string)
 		return getValidationResultCaseBuilder(caseKey)()
 	end
 
@@ -4700,7 +4700,7 @@ local function run()
 		}
 	end
 
-	local function assertValidationResultCaseExampleShapeAgainstMetadata(result: any, metadata: any, label: string)
+	local function assertValidationResultCaseResultShapeAgainstMetadata(result: any, metadata: any, label: string)
 		assertValidationResultContract(
 			result,
 			metadata.mode.expectedAccepted,
@@ -4737,24 +4737,24 @@ local function run()
 		assertEqual(#resultA.devaluation.penalties, #resultB.devaluation.penalties, label .. " penalty count")
 	end
 
-	local function assertValidationResultCaseExampleShapeContract(caseKey: string, label: string): string
+	local function assertValidationResultCaseResultShapeContract(caseKey: string, label: string): string
 		local canonicalKey = resolveValidationResultCaseKey(caseKey)
 		local metadata = getValidationResultCaseMetadata(canonicalKey)
-		local result = makeValidationResultExample(caseKey)
-		assertValidationResultCaseExampleShapeAgainstMetadata(result, metadata, label)
+		local result = captureValidationResultCaseResult(caseKey)
+		assertValidationResultCaseResultShapeAgainstMetadata(result, metadata, label)
 		return canonicalKey
 	end
 
-	local function assertValidationResultCaseRegistryExampleShapeContract(label: string)
+	local function assertValidationResultCaseRegistryResultShapeContract(label: string)
 		for _, canonicalKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
 			local resolvedCanonicalKey =
-				assertValidationResultCaseExampleShapeContract(canonicalKey, label .. " canonical " .. canonicalKey)
+				assertValidationResultCaseResultShapeContract(canonicalKey, label .. " canonical " .. canonicalKey)
 			assertEqual(resolvedCanonicalKey, canonicalKey, label .. " canonical key " .. canonicalKey)
 		end
 
 		for _, aliasKey in ipairs(VALIDATION_RESULT_ALIAS_CASE_ORDER) do
 			local resolvedCanonicalKey =
-				assertValidationResultCaseExampleShapeContract(aliasKey, label .. " alias " .. aliasKey)
+				assertValidationResultCaseResultShapeContract(aliasKey, label .. " alias " .. aliasKey)
 			assertEqual(
 				resolvedCanonicalKey,
 				validationResultExampleAliases[aliasKey],
@@ -4776,12 +4776,12 @@ local function run()
 
 		local aliasResult = aliasBuilder()
 		local canonicalResult = canonicalBuilder()
-		assertValidationResultCaseExampleShapeAgainstMetadata(
+		assertValidationResultCaseResultShapeAgainstMetadata(
 			aliasResult,
 			canonicalMetadata,
 			label .. " alias result " .. aliasKey
 		)
-		assertValidationResultCaseExampleShapeAgainstMetadata(
+		assertValidationResultCaseResultShapeAgainstMetadata(
 			canonicalResult,
 			canonicalMetadata,
 			label .. " canonical result " .. resolvedCanonicalKey
@@ -4816,12 +4816,12 @@ local function run()
 		local resultA = builder()
 		local resultB = builder()
 
-		assertValidationResultCaseExampleShapeAgainstMetadata(
+		assertValidationResultCaseResultShapeAgainstMetadata(
 			resultA,
 			metadata,
 			label .. " canonical result A " .. canonicalKey
 		)
-		assertValidationResultCaseExampleShapeAgainstMetadata(
+		assertValidationResultCaseResultShapeAgainstMetadata(
 			resultB,
 			metadata,
 			label .. " canonical result B " .. canonicalKey
@@ -4885,7 +4885,7 @@ local function run()
 		)
 		assertTrue(type(roundtrip.builder) == "function", label .. " builder type")
 		assertEqual(roundtrip.builder, canonicalBuilder, label .. " builder equivalent")
-		assertValidationResultCaseExampleShapeAgainstMetadata(roundtrip.result, canonicalMetadata, label .. " result")
+		assertValidationResultCaseResultShapeAgainstMetadata(roundtrip.result, canonicalMetadata, label .. " result")
 		assertValidationResultInstanceEquivalent(roundtrip.result, canonicalResult, label .. " result equivalent")
 	end
 
@@ -5395,8 +5395,8 @@ local function run()
 
 	-- BLOCK 136: Slice 51 - builder outputs match canonical metadata contract for canonical and alias keys.
 	do
-		assertValidationResultCaseRegistryExampleShapeContract("block136 A")
-		assertValidationResultCaseRegistryExampleShapeContract("block136 B")
+		assertValidationResultCaseRegistryResultShapeContract("block136 A")
+		assertValidationResultCaseRegistryResultShapeContract("block136 B")
 	end
 
 	-- BLOCK 137: Slice 52 - alias-resolved builders match canonical metadata and canonical-builder outputs.
@@ -5416,7 +5416,7 @@ local function run()
 		assertEqual(#resultContractRegressionGrid, 4, "block139 grid mode count")
 		for i, gridCase in ipairs(resultContractRegressionGrid) do
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
-			local result = makeValidationResultExample(gridCase.key)
+			local result = captureValidationResultCaseResult(gridCase.key)
 			local label = "block139 " .. gridCase.label
 			assertValidationResultContract(
 				result,
@@ -5443,8 +5443,8 @@ local function run()
 	do
 		for _, gridCase in ipairs(resultContractRegressionGrid) do
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
-			local outA = makeValidationResultExample(gridCase.key)
-			local outB = makeValidationResultExample(gridCase.key)
+			local outA = captureValidationResultCaseResult(gridCase.key)
+			local outB = captureValidationResultCaseResult(gridCase.key)
 			local label = "block140 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
