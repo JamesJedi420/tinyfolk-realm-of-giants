@@ -4857,6 +4857,53 @@ local function run()
 		assertEqual(coveredCanonicalCount, #canonicalKeys, label .. " grid canonical coverage count")
 	end
 
+	local function assertValidationResultCaseSingleSourceContract(label: string)
+		local canonicalKeys = enumerateValidationResultCanonicalCaseKeys()
+		local aliasKeys = enumerateValidationResultAliasCaseKeys()
+		local coveredAliasKeys: { [string]: boolean } = {}
+		local coveredCanonicalByGrid: { [string]: boolean } = {}
+
+		assertEqual(#canonicalKeys, #VALIDATION_RESULT_CANONICAL_CASE_ORDER, label .. " canonical order count")
+		assertEqual(#aliasKeys, #VALIDATION_RESULT_ALIAS_CASE_ORDER, label .. " alias order count")
+
+		for index, canonicalKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			assertEqual(canonicalKeys[index], canonicalKey, label .. " canonical source order " .. tostring(index))
+			local metadata = getValidationResultCaseMetadata(canonicalKey)
+			local builder = getValidationResultCaseBuilder(canonicalKey)
+			assertEqual(metadata.keys.canonical, canonicalKey, label .. " canonical metadata " .. canonicalKey)
+			assertTrue(type(builder) == "function", label .. " canonical builder " .. canonicalKey)
+			for _, aliasKey in ipairs(metadata.keys.aliases) do
+				assertEqual(resolveValidationResultCaseKey(aliasKey), canonicalKey, label .. " alias source " .. aliasKey)
+				assertEqual(validationResultExampleAliases[aliasKey], canonicalKey, label .. " alias map " .. aliasKey)
+				coveredAliasKeys[aliasKey] = true
+			end
+		end
+
+		for index, aliasKey in ipairs(VALIDATION_RESULT_ALIAS_CASE_ORDER) do
+			assertEqual(aliasKeys[index], aliasKey, label .. " alias source order " .. tostring(index))
+			assertTrue(coveredAliasKeys[aliasKey] == true, label .. " alias live " .. aliasKey)
+		end
+
+		assertValidationResultCaseBuilderCoverage(label .. " builder coverage")
+
+		for _, gridCase in ipairs(resultContractRegressionGrid) do
+			local canonicalKey = resolveValidationResultCaseKey(gridCase.key)
+			assertTrue(
+				validationResultCaseMetadata[canonicalKey] ~= nil,
+				label .. " grid metadata live " .. gridCase.key
+			)
+			assertTrue(
+				validationResultExampleRegistry[canonicalKey] ~= nil,
+				label .. " grid builder live " .. gridCase.key
+			)
+			coveredCanonicalByGrid[canonicalKey] = true
+		end
+
+		for _, canonicalKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			assertTrue(coveredCanonicalByGrid[canonicalKey] == true, label .. " grid coverage " .. canonicalKey)
+		end
+	end
+
 	local function assertValidationResultCaseRegistryConsistency(label: string)
 		for _, entry in ipairs(enumerateValidationResultCanonicalCaseEntries()) do
 			assertEqual(entry.metadata.keys.canonical, entry.key, label .. " canonical metadata " .. entry.key)
@@ -5128,10 +5175,10 @@ local function run()
 		assertValidationResultCaseRegistryUniqueness("block132 B")
 	end
 
-	-- BLOCK 133: Slice 47 - builder coverage guard covers metadata, builders, and regression grid.
+	-- BLOCK 133: Slice 48 - single-source contract makes canonical order the explicit traversal driver.
 	do
-		assertValidationResultCaseBuilderCoverage("block133 A")
-		assertValidationResultCaseBuilderCoverage("block133 B")
+		assertValidationResultCaseSingleSourceContract("block133 A")
+		assertValidationResultCaseSingleSourceContract("block133 B")
 	end
 
 	-- BLOCK 134: Slice 40 - metadata-backed validation result contract grid covers all major modes.
