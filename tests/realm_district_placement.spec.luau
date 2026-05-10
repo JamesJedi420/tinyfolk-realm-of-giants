@@ -5248,11 +5248,43 @@ local function run()
 		}
 	end
 
-	local function assertValidationResultCommentContainsTokens(commentText: string, requiredTokens: { string }, label: string)
+	local function assertValidationResultCommentContainsTokens(
+		commentText: string,
+		requiredTokens: { string },
+		label: string
+	)
 		for index, token in ipairs(requiredTokens) do
 			assertTrue(
 				string.find(commentText, token, 1, true) ~= nil,
 				label .. " token present " .. tostring(index) .. " " .. token
+			)
+		end
+	end
+
+	local function assertValidationResultContractCommentAnchorTokenConsistency(label: string)
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+		local anchors = captureValidationResultContractCommentAnchors(label)
+
+		assertValidationResultCommentContainsTokens(
+			anchors.layerMapAnchor,
+			requirements.layerMap,
+			label .. " layer map anchor consistency"
+		)
+
+		for index, token in ipairs(requirements.contractIndexFlow) do
+			local foundInIndex = string.find(anchors.contractIndexAnchor, token, 1, true) ~= nil
+			local foundInHeading = false
+			if not foundInIndex then
+				for _, heading in ipairs(anchors.helperSectionAnchors) do
+					if string.find(heading, token, 1, true) ~= nil then
+						foundInHeading = true
+						break
+					end
+				end
+			end
+			assertTrue(
+				foundInIndex or foundInHeading,
+				label .. " contract flow token anchored " .. tostring(index) .. " " .. token
 			)
 		end
 	end
@@ -5267,12 +5299,16 @@ local function run()
 			label .. " layer map"
 		)
 
-		local contractIndexCorpus = contract.contractIndexMarkerPrefix .. " " .. table.concat(contract.helperSectionHeadings, " ")
+		local contractIndexCorpus = contract.contractIndexMarkerPrefix
+			.. " "
+			.. table.concat(contract.helperSectionHeadings, " ")
 		assertValidationResultCommentContainsTokens(
 			contractIndexCorpus,
 			requirements.contractIndexFlow,
 			label .. " contract index"
 		)
+
+		assertValidationResultContractCommentAnchorTokenConsistency(label .. " anchor/token")
 	end
 
 	local function assertValidationResultContractCommentAnchorGuard(label: string)
@@ -5752,6 +5788,12 @@ local function run()
 	do
 		assertValidationResultContractCommentTokenGuard("block146 A")
 		assertValidationResultContractCommentTokenGuard("block146 B")
+	end
+
+	-- BLOCK 147: Slice 65 - anchor-based and token-based documentation guards remain mutually consistent and stable.
+	do
+		assertValidationResultContractCommentAnchorTokenConsistency("block147 A")
+		assertValidationResultContractCommentAnchorTokenConsistency("block147 B")
 	end
 
 	print("realm_district_placement: all checks passed")
