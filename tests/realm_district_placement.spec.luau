@@ -4702,6 +4702,27 @@ local function run()
 		end
 	end
 
+	local function assertValidationResultInstanceEquivalent(resultA: any, resultB: any, label: string)
+		assertEqual(resultA.accepted, resultB.accepted, label .. " accepted")
+		assertEqual(
+			#resultA.rejectReasons > 0,
+			#resultB.rejectReasons > 0,
+			label .. " reject presence"
+		)
+		assertEqual(#resultA.rejectReasons, #resultB.rejectReasons, label .. " reject count")
+		assertEqual(
+			resultA.devaluation.totalPenalty,
+			resultB.devaluation.totalPenalty,
+			label .. " total penalty"
+		)
+		assertEqual(
+			#resultA.devaluation.penalties > 0,
+			#resultB.devaluation.penalties > 0,
+			label .. " penalty presence"
+		)
+		assertEqual(#resultA.devaluation.penalties, #resultB.devaluation.penalties, label .. " penalty count")
+	end
+
 	local function assertValidationResultCaseExampleShapeContract(caseKey: string, label: string): string
 		local canonicalKey = resolveValidationResultCaseKey(caseKey)
 		local metadata = getValidationResultCaseMetadata(canonicalKey)
@@ -4752,28 +4773,7 @@ local function run()
 			label .. " canonical result " .. resolvedCanonicalKey
 		)
 
-		assertEqual(aliasResult.accepted, canonicalResult.accepted, label .. " accepted " .. aliasKey)
-		assertEqual(
-			#aliasResult.rejectReasons > 0,
-			#canonicalResult.rejectReasons > 0,
-			label .. " reject presence " .. aliasKey
-		)
-		assertEqual(#aliasResult.rejectReasons, #canonicalResult.rejectReasons, label .. " reject count " .. aliasKey)
-		assertEqual(
-			aliasResult.devaluation.totalPenalty,
-			canonicalResult.devaluation.totalPenalty,
-			label .. " total penalty " .. aliasKey
-		)
-		assertEqual(
-			#aliasResult.devaluation.penalties > 0,
-			#canonicalResult.devaluation.penalties > 0,
-			label .. " penalty presence " .. aliasKey
-		)
-		assertEqual(
-			#aliasResult.devaluation.penalties,
-			#canonicalResult.devaluation.penalties,
-			label .. " penalty count " .. aliasKey
-		)
+		assertValidationResultInstanceEquivalent(aliasResult, canonicalResult, label .. " equivalence " .. aliasKey)
 
 		return resolvedCanonicalKey
 	end
@@ -4813,28 +4813,7 @@ local function run()
 			label .. " canonical result B " .. canonicalKey
 		)
 
-		assertEqual(resultA.accepted, resultB.accepted, label .. " accepted stable " .. canonicalKey)
-		assertEqual(
-			#resultA.rejectReasons > 0,
-			#resultB.rejectReasons > 0,
-			label .. " reject presence stable " .. canonicalKey
-		)
-		assertEqual(#resultA.rejectReasons, #resultB.rejectReasons, label .. " reject count stable " .. canonicalKey)
-		assertEqual(
-			resultA.devaluation.totalPenalty,
-			resultB.devaluation.totalPenalty,
-			label .. " total penalty stable " .. canonicalKey
-		)
-		assertEqual(
-			#resultA.devaluation.penalties > 0,
-			#resultB.devaluation.penalties > 0,
-			label .. " penalty presence stable " .. canonicalKey
-		)
-		assertEqual(
-			#resultA.devaluation.penalties,
-			#resultB.devaluation.penalties,
-			label .. " penalty count stable " .. canonicalKey
-		)
+		assertValidationResultInstanceEquivalent(resultA, resultB, label .. " stable " .. canonicalKey)
 	end
 
 	local function assertValidationResultCaseRegistryCanonicalBuilderContract(label: string)
@@ -4893,22 +4872,7 @@ local function run()
 		assertTrue(type(roundtrip.builder) == "function", label .. " builder type")
 		assertEqual(roundtrip.builder, canonicalBuilder, label .. " builder equivalent")
 		assertValidationResultCaseExampleShapeAgainstMetadata(roundtrip.result, canonicalMetadata, label .. " result")
-		assertEqual(roundtrip.result.accepted, canonicalResult.accepted, label .. " result accepted equivalent")
-		assertEqual(
-			#roundtrip.result.rejectReasons,
-			#canonicalResult.rejectReasons,
-			label .. " result rejects equivalent"
-		)
-		assertEqual(
-			roundtrip.result.devaluation.totalPenalty,
-			canonicalResult.devaluation.totalPenalty,
-			label .. " result total equivalent"
-		)
-		assertEqual(
-			#roundtrip.result.devaluation.penalties,
-			#canonicalResult.devaluation.penalties,
-			label .. " result penalties equivalent"
-		)
+		assertValidationResultInstanceEquivalent(roundtrip.result, canonicalResult, label .. " result equivalent")
 	end
 
 	local function captureValidationResultCaseMissingKeyFailure(caseKey: string): any
