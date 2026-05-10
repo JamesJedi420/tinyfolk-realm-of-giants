@@ -4836,8 +4836,14 @@ local function run()
 
 		for _, gridCase in ipairs(resultContractRegressionGrid) do
 			local resolvedCanonicalKey = resolveValidationResultCaseKey(gridCase.key)
-			assertTrue(type(validationResultCaseMetadata[resolvedCanonicalKey]) == "table", label .. " grid metadata " .. gridCase.key)
-			assertTrue(type(validationResultExampleRegistry[resolvedCanonicalKey]) == "function", label .. " grid builder " .. gridCase.key)
+			assertTrue(
+				type(validationResultCaseMetadata[resolvedCanonicalKey]) == "table",
+				label .. " grid metadata " .. gridCase.key
+			)
+			assertTrue(
+				type(validationResultExampleRegistry[resolvedCanonicalKey]) == "function",
+				label .. " grid builder " .. gridCase.key
+			)
 			if coveredCanonicalByGrid[resolvedCanonicalKey] ~= true then
 				coveredCanonicalByGrid[resolvedCanonicalKey] = true
 				coveredCanonicalCount += 1
