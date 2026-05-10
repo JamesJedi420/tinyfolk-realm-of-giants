@@ -5360,6 +5360,66 @@ local function run()
 		end
 	end
 
+	local function assertValidationResultContractCommentRedundancyGuard(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+
+		-- Verify helper section headings remain unique
+		local seenHeadings: { [string]: boolean } = {}
+		for index, heading in ipairs(contract.helperSectionHeadings) do
+			assertFalse(
+				seenHeadings[heading] == true,
+				label .. " helper section heading " .. tostring(index) .. " is unique " .. heading
+			)
+			seenHeadings[heading] = true
+		end
+
+		-- Verify section-flow tokens remain unique
+		local seenFlowTokens: { [string]: boolean } = {}
+		for index, token in ipairs(requirements.contractSectionFlow) do
+			assertFalse(
+				seenFlowTokens[token] == true,
+				label .. " flow token " .. tostring(index) .. " is unique " .. token
+			)
+			seenFlowTokens[token] = true
+		end
+
+		-- Verify layer-map and contract-index markers are distinct responsibilities
+		assertTrue(
+			contract.layerMapMarker ~= contract.contractIndexMarkerPrefix,
+			label .. " layer map marker distinct from contract index marker"
+		)
+
+		-- Verify markers are not in flow requirements
+		for _, flowToken in ipairs(requirements.contractSectionFlow) do
+			assertTrue(flowToken ~= contract.layerMapMarker, label .. " flow token not equal to layer map marker")
+			assertTrue(
+				flowToken ~= contract.contractIndexMarkerPrefix,
+				label .. " flow token not equal to contract index marker prefix"
+			)
+		end
+
+		-- Verify layer-map tokens remain unique
+		local seenLayerMapTokens: { [string]: boolean } = {}
+		for index, token in ipairs(requirements.layerMap) do
+			assertFalse(
+				seenLayerMapTokens[token] == true,
+				label .. " layer map token " .. tostring(index) .. " is unique " .. token
+			)
+			seenLayerMapTokens[token] = true
+		end
+
+		-- Verify contract index marker tokens remain unique
+		local seenIndexMarkerTokens: { [string]: boolean } = {}
+		for index, token in ipairs(requirements.contractIndexMarker) do
+			assertFalse(
+				seenIndexMarkerTokens[token] == true,
+				label .. " contract index marker token " .. tostring(index) .. " is unique " .. token
+			)
+			seenIndexMarkerTokens[token] = true
+		end
+	end
+
 	local function assertValidationResultContractCommentAnchorTokenConsistency(label: string)
 		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
 		local anchors = captureValidationResultContractCommentAnchors(label)
@@ -5398,6 +5458,7 @@ local function run()
 
 		assertValidationResultContractCommentSectionTokenAlignment(label .. " section-token")
 		assertValidationResultContractCommentTokenMinimalityGuard(label .. " minimality")
+		assertValidationResultContractCommentRedundancyGuard(label .. " redundancy")
 	end
 
 	local function assertValidationResultContractCommentTokenGuard(label: string)
@@ -5922,6 +5983,12 @@ local function run()
 	do
 		assertValidationResultContractCommentTokenMinimalityGuard("block149 A")
 		assertValidationResultContractCommentTokenMinimalityGuard("block149 B")
+	end
+
+	-- BLOCK 150: Slice 68 - comment layer remains free of redundant headings/tokens and maintains distinct responsibilities.
+	do
+		assertValidationResultContractCommentRedundancyGuard("block150 A")
+		assertValidationResultContractCommentRedundancyGuard("block150 B")
 	end
 
 	print("realm_district_placement: all checks passed")
