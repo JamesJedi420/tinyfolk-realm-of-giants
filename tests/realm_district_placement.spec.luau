@@ -4646,7 +4646,7 @@ local function run()
 	-- Contract Layer Map (test-only helper ownership)
 	-- Result shape: assertValidationResultContract, assertValidationResultCaseResultShapeAgainstMetadata,
 	--   assertValidationResultCaseRegistryResultShapeContract
-	-- Reject/devalue mode matrix: resultContractRegressionGrid with assertValidationResultContract
+	-- Mode matrix: resultContractRegressionGrid with assertValidationResultContract
 	-- Snapshot matrix: assertSnapshotMatrix
 	-- Summary matrix: assertSummaryMatrix
 	-- Reason matrix: assertReasonMatrix
@@ -4656,15 +4656,15 @@ local function run()
 	--   assertValidationResultCaseRegistryAliasBuilderContract
 	-- Roundtrip contract: captureValidationResultCaseRoundtrip, assertValidationResultCaseRoundtrip
 	-- Uniqueness contract: assertValidationResultCaseRegistryUniqueness
-	-- Dead-entry contract: assertValidationResultCaseBuilderCoverage (grid metadata/builder live checks)
+	-- Dead-entry contract: assertValidationResultCaseBuilderCoverage (grid metadata/builder liveness)
 	-- Single-source contract: assertValidationResultCaseSingleSourceContract
-	-- Shape/required-field contract: assertValidationResultCaseMetadataShape,
-	--   assertValidationResultCaseMetadataRequiredFields,
+	-- Shape/required-field contract: assertValidationResultCaseMetadataRequiredFields,
+	--   assertValidationResultCaseMetadataShape,
 	--   assertValidationResultCaseRegistryShapeContract,
 	--   assertValidationResultCaseRegistryRequiredFieldDefaultsContract
-	-- Contract index: order/registry constants -> lookup/accessor helpers (resolve/get) ->
-	--   enumeration helpers (enumerate) -> capture helpers (capture) -> low-level assertion helpers
-	--   (result shape/equivalence) -> contract/guard helpers (registry contracts, roundtrip, uniqueness, coverage)
+	-- Contract index: order/registry constants -> lookup/accessor helpers ->
+	--   enumeration helpers -> capture helpers -> low-level assertions ->
+	--   contract/guard helpers
 
 	-- Registry contract section: lookup/accessor helpers
 
