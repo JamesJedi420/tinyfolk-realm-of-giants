@@ -4547,6 +4547,8 @@ local function run()
 		r0 = "rejected_no_penalty",
 	}
 
+	-- Registry contract section: order/registry constants
+
 	local VALIDATION_RESULT_CANONICAL_CASE_ORDER = {
 		"accepted_no_penalty",
 		"accepted_with_penalty",
@@ -4646,7 +4648,7 @@ local function run()
 	--   assertValidationResultCaseRegistryShapeContract,
 	--   assertValidationResultCaseRegistryRequiredFieldDefaultsContract
 
-	-- Registry contract helpers (accessors/enumeration/guards)
+	-- Registry contract section: lookup/accessor helpers
 
 	local function resolveValidationResultCaseKey(caseKey: string): string
 		return validationResultExampleAliases[caseKey] or caseKey
@@ -4669,6 +4671,8 @@ local function run()
 	local function captureValidationResultCaseResult(caseKey: string)
 		return getValidationResultCaseBuilder(caseKey)()
 	end
+
+	-- Registry contract section: enumeration helpers
 
 	local function enumerateValidationResultCanonicalCaseKeys(): { string }
 		local keys = {}
@@ -4707,6 +4711,8 @@ local function run()
 		}
 	end
 
+	-- Registry contract section: capture helpers
+
 	local function captureValidationResultCaseRoundtrip(caseKey: string): any
 		local canonicalKey = resolveValidationResultCaseKey(caseKey)
 		local metadata = getValidationResultCaseMetadata(caseKey)
@@ -4738,6 +4744,8 @@ local function run()
 			builderResult = builderResult,
 		}
 	end
+
+	-- Registry contract section: low-level assertion helpers
 
 	local function assertValidationResultCaseResultShapeAgainstMetadata(result: any, metadata: any, label: string)
 		assertValidationResultContract(
@@ -4775,6 +4783,8 @@ local function run()
 		)
 		assertEqual(#resultA.devaluation.penalties, #resultB.devaluation.penalties, label .. " penalty count")
 	end
+
+	-- Registry contract section: contract/guard helpers
 
 	local function assertValidationResultCaseResultShapeContract(caseKey: string, label: string): string
 		local canonicalKey = resolveValidationResultCaseKey(caseKey)
@@ -5167,6 +5177,8 @@ local function run()
 			assertValidationResultCaseAliasBuilderGuard(aliasKey, label .. " alias builder")
 		end
 	end
+
+	-- Registry contract section: block execution area
 
 	-- BLOCK 122: Slice 36 - validation result example registry exposes all major named modes.
 	do
