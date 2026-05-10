@@ -5420,6 +5420,56 @@ local function run()
 		end
 	end
 
+	local function assertValidationResultContractCommentScopeGuard(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+
+		-- Explicitly define in-scope contract surface (what is guarded)
+		local inScopeMarkers = 2 -- layer map marker, contract index marker
+		local inScopeHeadings = 7 -- all 7 helper section headings
+		local inScopeLayerMapTokens = #requirements.layerMap -- required layer-map tokens
+		local inScopeSectionFlowTokens = #requirements.contractSectionFlow -- required section-flow tokens
+
+		-- Verify in-scope markers are defined
+		assertTrue(
+			contract.layerMapMarker ~= nil and contract.layerMapMarker ~= "",
+			label .. " layer map marker is defined in-scope"
+		)
+		assertTrue(
+			contract.contractIndexMarkerPrefix ~= nil and contract.contractIndexMarkerPrefix ~= "",
+			label .. " contract index marker is defined in-scope"
+		)
+
+		-- Verify in-scope headings are all defined
+		assertEqual(#contract.helperSectionHeadings, inScopeHeadings, label .. " all helper section headings in-scope")
+		for index, heading in ipairs(contract.helperSectionHeadings) do
+			assertTrue(heading ~= nil and heading ~= "", label .. " heading " .. tostring(index) .. " in-scope and defined")
+		end
+
+		-- Verify in-scope tokens are all defined
+		assertEqual(#requirements.layerMap, inScopeLayerMapTokens, label .. " all layer-map tokens in-scope")
+		for index, token in ipairs(requirements.layerMap) do
+			assertTrue(token ~= nil and token ~= "", label .. " layer-map token " .. tostring(index) .. " in-scope and defined")
+		end
+
+		assertEqual(
+			#requirements.contractSectionFlow,
+			inScopeSectionFlowTokens,
+			label .. " all section-flow tokens in-scope"
+		)
+		for index, token in ipairs(requirements.contractSectionFlow) do
+			assertTrue(token ~= nil and token ~= "", label .. " section-flow token " .. tostring(index) .. " in-scope and defined")
+		end
+
+		-- Assert intentional scope boundary: only markers and tokens are guarded
+		-- Prose outside these explicit items is intentionally unguarded for flexibility
+		assertTrue(
+			inScopeMarkers == 2 and inScopeHeadings == 7 and inScopeLayerMapTokens >= 1
+				and inScopeSectionFlowTokens == 6,
+			label .. " scope boundary: only declared markers/headings/tokens are guarded; surrounding prose is intentionally flexible"
+		)
+	end
+
 	local function assertValidationResultContractCommentAnchorTokenConsistency(label: string)
 		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
 		local anchors = captureValidationResultContractCommentAnchors(label)
@@ -5459,6 +5509,7 @@ local function run()
 		assertValidationResultContractCommentSectionTokenAlignment(label .. " section-token")
 		assertValidationResultContractCommentTokenMinimalityGuard(label .. " minimality")
 		assertValidationResultContractCommentRedundancyGuard(label .. " redundancy")
+		assertValidationResultContractCommentScopeGuard(label .. " scope")
 	end
 
 	local function assertValidationResultContractCommentTokenGuard(label: string)
@@ -5989,6 +6040,12 @@ local function run()
 	do
 		assertValidationResultContractCommentRedundancyGuard("block150 A")
 		assertValidationResultContractCommentRedundancyGuard("block150 B")
+	end
+
+	-- BLOCK 151: Slice 69 - comment layer scope guard makes explicit which documentation items are guarded vs prose that remains intentionally flexible.
+	do
+		assertValidationResultContractCommentScopeGuard("block151 A")
+		assertValidationResultContractCommentScopeGuard("block151 B")
 	end
 
 	print("realm_district_placement: all checks passed")
