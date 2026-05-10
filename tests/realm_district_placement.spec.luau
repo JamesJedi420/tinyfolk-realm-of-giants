@@ -4647,6 +4647,9 @@ local function run()
 	--   assertValidationResultCaseMetadataRequiredFields,
 	--   assertValidationResultCaseRegistryShapeContract,
 	--   assertValidationResultCaseRegistryRequiredFieldDefaultsContract
+	-- Contract index: order/registry constants -> lookup/accessor helpers (resolve/get) ->
+	--   enumeration helpers (enumerate) -> capture helpers (capture) -> low-level assertion helpers
+	--   (result shape/equivalence) -> contract/guard helpers (registry contracts, roundtrip, uniqueness, coverage)
 
 	-- Registry contract section: lookup/accessor helpers
 
