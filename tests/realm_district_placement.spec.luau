@@ -4808,8 +4808,47 @@ local function run()
 		assertEqual(#aliasKeys, 4, label .. " alias key count")
 		assertEqual(table.find(canonicalKeys, "a0") == nil, true, label .. " alias absent from canonical order")
 		assertEqual(table.find(canonicalKeys, "r0") == nil, true, label .. " alias absent from canonical order")
-		assertEqual(table.find(aliasKeys, "accepted_no_penalty") == nil, true, label .. " canonical absent from alias order")
-		assertEqual(table.find(aliasKeys, "rejected_no_penalty") == nil, true, label .. " canonical absent from alias order")
+		assertEqual(
+			table.find(aliasKeys, "accepted_no_penalty") == nil,
+			true,
+			label .. " canonical absent from alias order"
+		)
+		assertEqual(
+			table.find(aliasKeys, "rejected_no_penalty") == nil,
+			true,
+			label .. " canonical absent from alias order"
+		)
+	end
+
+	local resultContractRegressionGrid: { any }
+
+	local function assertValidationResultCaseBuilderCoverage(label: string)
+		local canonicalKeys = enumerateValidationResultCanonicalCaseKeys()
+		local coveredCanonicalByGrid: { [string]: boolean } = {}
+		local coveredCanonicalCount = 0
+
+		for _, canonicalKey in ipairs(canonicalKeys) do
+			local metadata = getValidationResultCaseMetadata(canonicalKey)
+			local builder = getValidationResultCaseBuilder(canonicalKey)
+			assertEqual(metadata.keys.canonical, canonicalKey, label .. " canonical metadata " .. canonicalKey)
+			assertTrue(type(builder) == "function", label .. " canonical builder " .. canonicalKey)
+		end
+
+		for _, gridCase in ipairs(resultContractRegressionGrid) do
+			local resolvedCanonicalKey = resolveValidationResultCaseKey(gridCase.key)
+			assertTrue(type(validationResultCaseMetadata[resolvedCanonicalKey]) == "table", label .. " grid metadata " .. gridCase.key)
+			assertTrue(type(validationResultExampleRegistry[resolvedCanonicalKey]) == "function", label .. " grid builder " .. gridCase.key)
+			if coveredCanonicalByGrid[resolvedCanonicalKey] ~= true then
+				coveredCanonicalByGrid[resolvedCanonicalKey] = true
+				coveredCanonicalCount += 1
+			end
+		end
+
+		for _, canonicalKey in ipairs(canonicalKeys) do
+			assertTrue(coveredCanonicalByGrid[canonicalKey] == true, label .. " grid coverage " .. canonicalKey)
+		end
+
+		assertEqual(coveredCanonicalCount, #canonicalKeys, label .. " grid canonical coverage count")
 	end
 
 	local function assertValidationResultCaseRegistryConsistency(label: string)
@@ -4868,7 +4907,7 @@ local function run()
 		end
 	end
 
-	local resultContractRegressionGrid: { any } = {
+	resultContractRegressionGrid = {
 		{ key = "a0", label = "accepted/no-penalty" },
 		{ key = "a1", label = "accepted/penalty" },
 		{ key = "r1", label = "rejected/penalty" },
@@ -4925,12 +4964,7 @@ local function run()
 			"rejected_no_penalty",
 			"block124 rejected no penalty"
 		)
-		for _, canonicalKey in ipairs({
-			"accepted_no_penalty",
-			"accepted_with_penalty",
-			"rejected_with_penalty",
-			"rejected_no_penalty",
-		}) do
+		for _, canonicalKey in ipairs(enumerateValidationResultCanonicalCaseKeys()) do
 			local metadata = getValidationResultCaseMetadata(canonicalKey)
 			assertTrue(type(metadata.keys) == "table", "block124 keys " .. canonicalKey)
 			assertTrue(type(metadata.mode) == "table", "block124 mode " .. canonicalKey)
@@ -5088,13 +5122,19 @@ local function run()
 		assertValidationResultCaseRegistryUniqueness("block132 B")
 	end
 
-	-- BLOCK 133: Slice 40 - metadata-backed validation result contract grid covers all major modes.
+	-- BLOCK 133: Slice 47 - builder coverage guard covers metadata, builders, and regression grid.
 	do
-		assertEqual(#resultContractRegressionGrid, 4, "block133 grid mode count")
+		assertValidationResultCaseBuilderCoverage("block133 A")
+		assertValidationResultCaseBuilderCoverage("block133 B")
+	end
+
+	-- BLOCK 134: Slice 40 - metadata-backed validation result contract grid covers all major modes.
+	do
+		assertEqual(#resultContractRegressionGrid, 4, "block134 grid mode count")
 		for i, gridCase in ipairs(resultContractRegressionGrid) do
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
 			local result = makeValidationResultExample(gridCase.key)
-			local label = "block133 " .. gridCase.label
+			local label = "block134 " .. gridCase.label
 			assertValidationResultContract(
 				result,
 				metadata.mode.expectedAccepted,
@@ -5112,17 +5152,17 @@ local function run()
 				metadata.devaluation.expectedFirstCategoryTotal,
 				label .. " first category total"
 			)
-			assertEqual(i >= 1 and i <= 4, true, "block133 grid index " .. tostring(i))
+			assertEqual(i >= 1 and i <= 4, true, "block134 grid index " .. tostring(i))
 		end
 	end
 
-	-- BLOCK 134: Slice 40 - metadata-backed validation result contract grid remains stable across repeated runs.
+	-- BLOCK 135: Slice 40 - metadata-backed validation result contract grid remains stable across repeated runs.
 	do
 		for _, gridCase in ipairs(resultContractRegressionGrid) do
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
 			local outA = makeValidationResultExample(gridCase.key)
 			local outB = makeValidationResultExample(gridCase.key)
-			local label = "block134 " .. gridCase.label
+			local label = "block135 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
 				metadata.mode.expectedAccepted,
@@ -5149,7 +5189,7 @@ local function run()
 		end
 	end
 
-	-- BLOCK 135: Slice 31 - snapshot matrix helper remains stable across repeated runs.
+	-- BLOCK 136: Slice 31 - snapshot matrix helper remains stable across repeated runs.
 	do
 		local hardConfig: DistrictPlacementHardConfig = {
 			policy = {
@@ -5170,22 +5210,22 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
-		assertSnapshotMatrix(outA, "block135 snapshot A")
-		assertSnapshotMatrix(outB, "block135 snapshot B")
+		assertSnapshotMatrix(outA, "block136 snapshot A")
+		assertSnapshotMatrix(outB, "block136 snapshot B")
 		assertEqual(
 			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
 			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
-			"block135 hard snapshot stable"
+			"block136 hard snapshot stable"
 		)
 		assertEqual(
 			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
-			"block135 soft snapshot stable"
+			"block136 soft snapshot stable"
 		)
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block135 total stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block136 total stable")
 	end
 
-	-- BLOCK 136: Slice 32 - summary matrix helper remains stable across repeated runs.
+	-- BLOCK 137: Slice 32 - summary matrix helper remains stable across repeated runs.
 	do
 		local softConfig: DistrictPlacementSoftConfig = {
 			criticalPointSoftRadius = 40,
@@ -5199,28 +5239,28 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertSummaryMatrix(outA, true, "block136 summaries A")
-		assertSummaryMatrix(outB, true, "block136 summaries B")
+		assertSummaryMatrix(outA, true, "block137 summaries A")
+		assertSummaryMatrix(outB, true, "block137 summaries B")
 		assertEqual(
 			#outA.devaluation.categoryTotals,
 			#outB.devaluation.categoryTotals,
-		"block136 category count stable"
+			"block137 category count stable"
 		)
-		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block136 group count stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block137 group count stable")
 		assertEqual(
 			#outA.devaluation.factorSummaries,
 			#outB.devaluation.factorSummaries,
-			"block136 factor count stable"
+			"block137 factor count stable"
 		)
 		assertEqual(
 			#outA.devaluation.subjectSummaries,
 			#outB.devaluation.subjectSummaries,
-			"block136 subject count stable"
+			"block137 subject count stable"
 		)
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block136 total stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block137 total stable")
 	end
 
-	-- BLOCK 137: Slice 33 - reason matrix helper remains stable across repeated runs.
+	-- BLOCK 138: Slice 33 - reason matrix helper remains stable across repeated runs.
 	do
 		local hardConfig: DistrictPlacementHardConfig = {
 			criticalExclusion = {
@@ -5245,15 +5285,15 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
-		assertReasonMatrix(outA, true, true, "block137 reasons A")
-		assertReasonMatrix(outB, true, true, "block137 reasons B")
-		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block137 reason count stable")
+		assertReasonMatrix(outA, true, true, "block138 reasons A")
+		assertReasonMatrix(outB, true, true, "block138 reasons B")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block138 reason count stable")
 		for i, reasonA in ipairs(outA.rejectReasons) do
 			local reasonB = outB.rejectReasons[i]
-			assertEqual(reasonA.code, reasonB.code, "block137 reason code stable " .. tostring(i))
-			assertEqual(reasonA.message, reasonB.message, "block137 reason message stable " .. tostring(i))
+			assertEqual(reasonA.code, reasonB.code, "block138 reason code stable " .. tostring(i))
+			assertEqual(reasonA.message, reasonB.message, "block138 reason message stable " .. tostring(i))
 		end
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block137 devaluation stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block138 devaluation stable")
 	end
 
 	print("realm_district_placement: all checks passed")
