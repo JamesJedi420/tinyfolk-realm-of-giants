@@ -4565,10 +4565,10 @@ local function run()
 		{ key = "r0", label = "rejected/no-penalty" },
 	}
 
-	-- SCOPE BOUNDARY: Contract documentation guard protects only explicitly declared markers, headings, and tokens.
-	-- Surrounding prose and commentary remain intentionally unguarded to allow flexibility in wording and explanation.
-	-- This guards the structural skeleton (markers, headings, tokens) while leaving the prose flesh unfit.
-	-- Future edits should preserve declared items below; surrounding descriptions can evolve freely.
+	-- SCOPE/MARKER ALIGNMENT: This scope note is aligned to declared contract structures only.
+	-- Guarded scope = VALIDATION_RESULT_CONTRACT_DOCUMENTATION.layerMapMarker, contractIndexMarkerPrefix,
+	-- and helperSectionHeadings, plus VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS tokens.
+	-- Surrounding prose/commentary remains intentionally unguarded so wording can evolve without breaking contract checks.
 
 	local VALIDATION_RESULT_CONTRACT_DOCUMENTATION = {
 		layerMapMarker = "Contract Layer Map (test-only helper ownership)",
