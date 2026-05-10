@@ -4594,6 +4594,16 @@ local function run()
 		},
 	}
 
+	local VALIDATION_RESULT_CONTRACT_SECTION_TOKEN_ALIGNMENT = {
+		-- Block execution area has no distinct flow token requirement and is intentionally excluded.
+		{ 1, "order/registry constants" },
+		{ 2, "lookup/accessor" },
+		{ 3, "enumeration" },
+		{ 4, "capture" },
+		{ 5, "assertion" },
+		{ 6, "contract/guard" },
+	}
+
 	local validationResultCaseMetadata: { [string]: any } = {
 		accepted_no_penalty = {
 			keys = {
@@ -5261,9 +5271,56 @@ local function run()
 		end
 	end
 
+	local function assertValidationResultContractCommentSectionTokenAlignment(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+		local alignments = VALIDATION_RESULT_CONTRACT_SECTION_TOKEN_ALIGNMENT
+
+		assertEqual(#alignments, 6, label .. " section-token alignment count")
+		assertEqual(
+			contract.helperSectionHeadings[7],
+			"Registry contract section: block execution area",
+			label .. " block execution heading excluded from section-token alignment"
+		)
+
+		local requirementCorpus = table.concat(requirements.contractIndexFlow, " ")
+		local seenHeadingIndices: { [number]: boolean } = {}
+		local seenTokens: { [string]: boolean } = {}
+		for index, alignment in ipairs(alignments) do
+			local headingIndex = alignment[1] :: number
+			local token = alignment[2] :: string
+			local heading = contract.helperSectionHeadings[headingIndex]
+			assertTrue(type(heading) == "string" and #heading > 0, label .. " heading present " .. tostring(index))
+			assertTrue(
+				string.find(heading, token, 1, true) ~= nil,
+				label .. " section token aligned " .. tostring(index) .. " " .. token
+			)
+			assertTrue(
+				string.find(requirementCorpus, token, 1, true) ~= nil,
+				label .. " section token covered by flow contract " .. tostring(index) .. " " .. token
+			)
+			assertFalse(
+				seenHeadingIndices[headingIndex] == true,
+				label .. " duplicate section heading index " .. tostring(headingIndex)
+			)
+			assertFalse(
+				seenTokens[token] == true,
+				label .. " duplicate section token " .. token
+			)
+			seenHeadingIndices[headingIndex] = true
+			seenTokens[token] = true
+		end
+
+		assertTrue(
+			string.find(requirementCorpus, "block execution", 1, true) == nil,
+			label .. " block execution token excluded from flow requirements"
+		)
+	end
+
 	local function assertValidationResultContractCommentAnchorTokenConsistency(label: string)
 		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
 		local anchors = captureValidationResultContractCommentAnchors(label)
+		local alignments = VALIDATION_RESULT_CONTRACT_SECTION_TOKEN_ALIGNMENT
 
 		assertValidationResultCommentContainsTokens(
 			anchors.layerMapAnchor,
@@ -5275,8 +5332,11 @@ local function run()
 			local foundInIndex = string.find(anchors.contractIndexAnchor, token, 1, true) ~= nil
 			local foundInHeading = false
 			if not foundInIndex then
-				for _, heading in ipairs(anchors.helperSectionAnchors) do
-					if string.find(heading, token, 1, true) ~= nil then
+				for _, alignment in ipairs(alignments) do
+					local headingIndex = alignment[1] :: number
+					local sectionToken = alignment[2] :: string
+					local heading = anchors.helperSectionAnchors[headingIndex]
+					if sectionToken == token and string.find(heading, token, 1, true) ~= nil then
 						foundInHeading = true
 						break
 					end
@@ -5287,6 +5347,8 @@ local function run()
 				label .. " contract flow token anchored " .. tostring(index) .. " " .. token
 			)
 		end
+
+		assertValidationResultContractCommentSectionTokenAlignment(label .. " section-token")
 	end
 
 	local function assertValidationResultContractCommentTokenGuard(label: string)
@@ -5794,6 +5856,12 @@ local function run()
 	do
 		assertValidationResultContractCommentAnchorTokenConsistency("block147 A")
 		assertValidationResultContractCommentAnchorTokenConsistency("block147 B")
+	end
+
+	-- BLOCK 148: Slice 66 - normalized helper section headings contribute expected contract-flow tokens.
+	do
+		assertValidationResultContractCommentSectionTokenAlignment("block148 A")
+		assertValidationResultContractCommentSectionTokenAlignment("block148 B")
 	end
 
 	print("realm_district_placement: all checks passed")
