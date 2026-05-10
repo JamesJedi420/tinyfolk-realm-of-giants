@@ -4556,6 +4556,13 @@ local function run()
 
 	local VALIDATION_RESULT_ALIAS_CASE_ORDER = { "a0", "a1", "r1", "r0" }
 
+	local resultContractRegressionGrid: { any } = {
+		{ key = "a0", label = "accepted/no-penalty" },
+		{ key = "a1", label = "accepted/penalty" },
+		{ key = "r1", label = "rejected/penalty" },
+		{ key = "r0", label = "rejected/no-penalty" },
+	}
+
 	local validationResultCaseMetadata: { [string]: any } = {
 		accepted_no_penalty = {
 			keys = {
@@ -4700,6 +4707,38 @@ local function run()
 		}
 	end
 
+	local function captureValidationResultCaseRoundtrip(caseKey: string): any
+		local canonicalKey = resolveValidationResultCaseKey(caseKey)
+		local metadata = getValidationResultCaseMetadata(caseKey)
+		local builder = getValidationResultCaseBuilder(caseKey)
+		local result = builder()
+		return {
+			inputKey = caseKey,
+			canonicalKey = canonicalKey,
+			metadata = metadata,
+			builder = builder,
+			result = result,
+		}
+	end
+
+	local function captureValidationResultCaseMissingKeyFailure(caseKey: string): any
+		local resolvedKey = resolveValidationResultCaseKey(caseKey)
+		local metadataOk, metadataResult = pcall(function()
+			return getValidationResultCaseMetadata(caseKey)
+		end)
+		local builderOk, builderResult = pcall(function()
+			return getValidationResultCaseBuilder(caseKey)
+		end)
+		return {
+			inputKey = caseKey,
+			resolvedKey = resolvedKey,
+			metadataOk = metadataOk,
+			metadataResult = metadataResult,
+			builderOk = builderOk,
+			builderResult = builderResult,
+		}
+	end
+
 	local function assertValidationResultCaseResultShapeAgainstMetadata(result: any, metadata: any, label: string)
 		assertValidationResultContract(
 			result,
@@ -4836,20 +4875,6 @@ local function run()
 		end
 	end
 
-	local function captureValidationResultCaseRoundtrip(caseKey: string): any
-		local canonicalKey = resolveValidationResultCaseKey(caseKey)
-		local metadata = getValidationResultCaseMetadata(caseKey)
-		local builder = getValidationResultCaseBuilder(caseKey)
-		local result = builder()
-		return {
-			inputKey = caseKey,
-			canonicalKey = canonicalKey,
-			metadata = metadata,
-			builder = builder,
-			result = result,
-		}
-	end
-
 	local function assertValidationResultCaseRoundtrip(caseKey: string, label: string)
 		local roundtrip = captureValidationResultCaseRoundtrip(caseKey)
 		local canonicalKey = roundtrip.canonicalKey
@@ -4887,24 +4912,6 @@ local function run()
 		assertEqual(roundtrip.builder, canonicalBuilder, label .. " builder equivalent")
 		assertValidationResultCaseResultShapeAgainstMetadata(roundtrip.result, canonicalMetadata, label .. " result")
 		assertValidationResultInstanceEquivalent(roundtrip.result, canonicalResult, label .. " result equivalent")
-	end
-
-	local function captureValidationResultCaseMissingKeyFailure(caseKey: string): any
-		local resolvedKey = resolveValidationResultCaseKey(caseKey)
-		local metadataOk, metadataResult = pcall(function()
-			return getValidationResultCaseMetadata(caseKey)
-		end)
-		local builderOk, builderResult = pcall(function()
-			return getValidationResultCaseBuilder(caseKey)
-		end)
-		return {
-			inputKey = caseKey,
-			resolvedKey = resolvedKey,
-			metadataOk = metadataOk,
-			metadataResult = metadataResult,
-			builderOk = builderOk,
-			builderResult = builderResult,
-		}
 	end
 
 	local function assertValidationResultCaseMissingKeyFailure(caseKey: string, label: string)
@@ -4956,8 +4963,6 @@ local function run()
 			label .. " canonical absent from alias order"
 		)
 	end
-
-	local resultContractRegressionGrid: { any }
 
 	local function assertValidationResultCaseBuilderCoverage(label: string)
 		local canonicalKeys = enumerateValidationResultCanonicalCaseKeys()
@@ -5162,13 +5167,6 @@ local function run()
 			assertValidationResultCaseAliasBuilderGuard(aliasKey, label .. " alias builder")
 		end
 	end
-
-	resultContractRegressionGrid = {
-		{ key = "a0", label = "accepted/no-penalty" },
-		{ key = "a1", label = "accepted/penalty" },
-		{ key = "r1", label = "rejected/penalty" },
-		{ key = "r0", label = "rejected/no-penalty" },
-	}
 
 	-- BLOCK 122: Slice 36 - validation result example registry exposes all major named modes.
 	do
