@@ -4565,6 +4565,11 @@ local function run()
 		{ key = "r0", label = "rejected/no-penalty" },
 	}
 
+	-- SCOPE BOUNDARY: Contract documentation guard protects only explicitly declared markers, headings, and tokens.
+	-- Surrounding prose and commentary remain intentionally unguarded to allow flexibility in wording and explanation.
+	-- This guards the structural skeleton (markers, headings, tokens) while leaving the prose flesh unfit.
+	-- Future edits should preserve declared items below; surrounding descriptions can evolve freely.
+
 	local VALIDATION_RESULT_CONTRACT_DOCUMENTATION = {
 		layerMapMarker = "Contract Layer Map (test-only helper ownership)",
 		contractIndexMarkerPrefix = "Contract index: order/registry constants ->",
@@ -5443,13 +5448,19 @@ local function run()
 		-- Verify in-scope headings are all defined
 		assertEqual(#contract.helperSectionHeadings, inScopeHeadings, label .. " all helper section headings in-scope")
 		for index, heading in ipairs(contract.helperSectionHeadings) do
-			assertTrue(heading ~= nil and heading ~= "", label .. " heading " .. tostring(index) .. " in-scope and defined")
+			assertTrue(
+				heading ~= nil and heading ~= "",
+				label .. " heading " .. tostring(index) .. " in-scope and defined"
+			)
 		end
 
 		-- Verify in-scope tokens are all defined
 		assertEqual(#requirements.layerMap, inScopeLayerMapTokens, label .. " all layer-map tokens in-scope")
 		for index, token in ipairs(requirements.layerMap) do
-			assertTrue(token ~= nil and token ~= "", label .. " layer-map token " .. tostring(index) .. " in-scope and defined")
+			assertTrue(
+				token ~= nil and token ~= "",
+				label .. " layer-map token " .. tostring(index) .. " in-scope and defined"
+			)
 		end
 
 		assertEqual(
@@ -5458,15 +5469,21 @@ local function run()
 			label .. " all section-flow tokens in-scope"
 		)
 		for index, token in ipairs(requirements.contractSectionFlow) do
-			assertTrue(token ~= nil and token ~= "", label .. " section-flow token " .. tostring(index) .. " in-scope and defined")
+			assertTrue(
+				token ~= nil and token ~= "",
+				label .. " section-flow token " .. tostring(index) .. " in-scope and defined"
+			)
 		end
 
 		-- Assert intentional scope boundary: only markers and tokens are guarded
 		-- Prose outside these explicit items is intentionally unguarded for flexibility
 		assertTrue(
-			inScopeMarkers == 2 and inScopeHeadings == 7 and inScopeLayerMapTokens >= 1
+			inScopeMarkers == 2
+				and inScopeHeadings == 7
+				and inScopeLayerMapTokens >= 1
 				and inScopeSectionFlowTokens == 6,
-			label .. " scope boundary: only declared markers/headings/tokens are guarded; surrounding prose is intentionally flexible"
+			label
+				.. " scope boundary: only declared markers/headings/tokens are guarded; surrounding prose is intentionally flexible"
 		)
 	end
 
