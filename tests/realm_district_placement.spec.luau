@@ -4583,8 +4583,10 @@ local function run()
 		layerMap = {
 			"Contract Layer Map",
 		},
-		contractIndexFlow = {
+		contractIndexMarker = {
 			"Contract index",
+		},
+		contractSectionFlow = {
 			"order/registry constants",
 			"lookup/accessor",
 			"enumeration",
@@ -5283,7 +5285,7 @@ local function run()
 			label .. " block execution heading excluded from section-token alignment"
 		)
 
-		local requirementCorpus = table.concat(requirements.contractIndexFlow, " ")
+		local requirementCorpus = table.concat(requirements.contractSectionFlow, " ")
 		local seenHeadingIndices: { [number]: boolean } = {}
 		local seenTokens: { [string]: boolean } = {}
 		for index, alignment in ipairs(alignments) do
@@ -5303,10 +5305,7 @@ local function run()
 				seenHeadingIndices[headingIndex] == true,
 				label .. " duplicate section heading index " .. tostring(headingIndex)
 			)
-			assertFalse(
-				seenTokens[token] == true,
-				label .. " duplicate section token " .. token
-			)
+			assertFalse(seenTokens[token] == true, label .. " duplicate section token " .. token)
 			seenHeadingIndices[headingIndex] = true
 			seenTokens[token] = true
 		end
@@ -5315,6 +5314,50 @@ local function run()
 			string.find(requirementCorpus, "block execution", 1, true) == nil,
 			label .. " block execution token excluded from flow requirements"
 		)
+	end
+
+	local function assertValidationResultContractCommentTokenMinimalityGuard(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+		local alignments = VALIDATION_RESULT_CONTRACT_SECTION_TOKEN_ALIGNMENT
+
+		assertEqual(#requirements.contractSectionFlow, #alignments, label .. " minimality token/alignment count")
+		assertTrue(
+			string.find(contract.helperSectionHeadings[7], "block execution", 1, true) ~= nil,
+			label .. " block execution heading explicitly excluded"
+		)
+
+		local requiredTokenSet: { [string]: boolean } = {}
+		for index, token in ipairs(requirements.contractSectionFlow) do
+			requiredTokenSet[token] = true
+			assertTrue(
+				string.find(token, "block execution", 1, true) == nil,
+				label .. " block execution does not force flow token " .. tostring(index)
+			)
+		end
+
+		local alignedTokenSet: { [string]: boolean } = {}
+		for _, alignment in ipairs(alignments) do
+			local headingIndex = alignment[1] :: number
+			local alignedToken = alignment[2] :: string
+			local heading = contract.helperSectionHeadings[headingIndex]
+			assertTrue(
+				string.find(heading, alignedToken, 1, true) ~= nil,
+				label .. " aligned section owns token " .. alignedToken
+			)
+			alignedTokenSet[alignedToken] = true
+			assertTrue(
+				requiredTokenSet[alignedToken] == true,
+				label .. " aligned token present in required flow set " .. alignedToken
+			)
+		end
+
+		for _, token in ipairs(requirements.contractSectionFlow) do
+			assertTrue(
+				alignedTokenSet[token] == true,
+				label .. " required flow token justified by aligned section " .. token
+			)
+		end
 	end
 
 	local function assertValidationResultContractCommentAnchorTokenConsistency(label: string)
@@ -5327,8 +5370,13 @@ local function run()
 			requirements.layerMap,
 			label .. " layer map anchor consistency"
 		)
+		assertValidationResultCommentContainsTokens(
+			anchors.contractIndexAnchor,
+			requirements.contractIndexMarker,
+			label .. " contract index anchor consistency"
+		)
 
-		for index, token in ipairs(requirements.contractIndexFlow) do
+		for index, token in ipairs(requirements.contractSectionFlow) do
 			local foundInIndex = string.find(anchors.contractIndexAnchor, token, 1, true) ~= nil
 			local foundInHeading = false
 			if not foundInIndex then
@@ -5349,6 +5397,7 @@ local function run()
 		end
 
 		assertValidationResultContractCommentSectionTokenAlignment(label .. " section-token")
+		assertValidationResultContractCommentTokenMinimalityGuard(label .. " minimality")
 	end
 
 	local function assertValidationResultContractCommentTokenGuard(label: string)
@@ -5360,14 +5409,19 @@ local function run()
 			requirements.layerMap,
 			label .. " layer map"
 		)
+		assertValidationResultCommentContainsTokens(
+			contract.contractIndexMarkerPrefix,
+			requirements.contractIndexMarker,
+			label .. " contract index marker"
+		)
 
 		local contractIndexCorpus = contract.contractIndexMarkerPrefix
 			.. " "
 			.. table.concat(contract.helperSectionHeadings, " ")
 		assertValidationResultCommentContainsTokens(
 			contractIndexCorpus,
-			requirements.contractIndexFlow,
-			label .. " contract index"
+			requirements.contractSectionFlow,
+			label .. " contract section flow"
 		)
 
 		assertValidationResultContractCommentAnchorTokenConsistency(label .. " anchor/token")
@@ -5862,6 +5916,12 @@ local function run()
 	do
 		assertValidationResultContractCommentSectionTokenAlignment("block148 A")
 		assertValidationResultContractCommentSectionTokenAlignment("block148 B")
+	end
+
+	-- BLOCK 149: Slice 67 - required contract flow tokens remain minimal relative to section-token ownership.
+	do
+		assertValidationResultContractCommentTokenMinimalityGuard("block149 A")
+		assertValidationResultContractCommentTokenMinimalityGuard("block149 B")
 	end
 
 	print("realm_district_placement: all checks passed")
