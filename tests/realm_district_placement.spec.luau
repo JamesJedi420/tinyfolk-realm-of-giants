@@ -4758,11 +4758,7 @@ local function run()
 			#canonicalResult.rejectReasons > 0,
 			label .. " reject presence " .. aliasKey
 		)
-		assertEqual(
-			#aliasResult.rejectReasons,
-			#canonicalResult.rejectReasons,
-			label .. " reject count " .. aliasKey
-		)
+		assertEqual(#aliasResult.rejectReasons, #canonicalResult.rejectReasons, label .. " reject count " .. aliasKey)
 		assertEqual(
 			aliasResult.devaluation.totalPenalty,
 			canonicalResult.devaluation.totalPenalty,
@@ -4790,6 +4786,60 @@ local function run()
 				validationResultExampleAliases[aliasKey],
 				label .. " alias canonical key " .. aliasKey
 			)
+		end
+	end
+
+	local function assertValidationResultCaseCanonicalBuilderGuard(canonicalKey: string, label: string)
+		assertTrue(
+			table.find(VALIDATION_RESULT_CANONICAL_CASE_ORDER, canonicalKey) ~= nil,
+			label .. " canonical key present in order"
+		)
+
+		local metadata = getValidationResultCaseMetadata(canonicalKey)
+		local builder = getValidationResultCaseBuilder(canonicalKey)
+		assertTrue(type(builder) == "function", label .. " canonical builder " .. canonicalKey)
+
+		local resultA = builder()
+		local resultB = builder()
+
+		assertValidationResultCaseExampleShapeAgainstMetadata(
+			resultA,
+			metadata,
+			label .. " canonical result A " .. canonicalKey
+		)
+		assertValidationResultCaseExampleShapeAgainstMetadata(
+			resultB,
+			metadata,
+			label .. " canonical result B " .. canonicalKey
+		)
+
+		assertEqual(resultA.accepted, resultB.accepted, label .. " accepted stable " .. canonicalKey)
+		assertEqual(
+			#resultA.rejectReasons > 0,
+			#resultB.rejectReasons > 0,
+			label .. " reject presence stable " .. canonicalKey
+		)
+		assertEqual(#resultA.rejectReasons, #resultB.rejectReasons, label .. " reject count stable " .. canonicalKey)
+		assertEqual(
+			resultA.devaluation.totalPenalty,
+			resultB.devaluation.totalPenalty,
+			label .. " total penalty stable " .. canonicalKey
+		)
+		assertEqual(
+			#resultA.devaluation.penalties > 0,
+			#resultB.devaluation.penalties > 0,
+			label .. " penalty presence stable " .. canonicalKey
+		)
+		assertEqual(
+			#resultA.devaluation.penalties,
+			#resultB.devaluation.penalties,
+			label .. " penalty count stable " .. canonicalKey
+		)
+	end
+
+	local function assertValidationResultCaseRegistryCanonicalBuilderContract(label: string)
+		for _, canonicalKey in ipairs(VALIDATION_RESULT_CANONICAL_CASE_ORDER) do
+			assertValidationResultCaseCanonicalBuilderGuard(canonicalKey, label)
 		end
 	end
 
@@ -5377,13 +5427,19 @@ local function run()
 		assertValidationResultCaseRegistryAliasBuilderContract("block137 B")
 	end
 
-	-- BLOCK 138: Slice 40 - metadata-backed validation result contract grid covers all major modes.
+	-- BLOCK 138: Slice 53 - canonical builders produce output valid under canonical metadata expectations.
 	do
-		assertEqual(#resultContractRegressionGrid, 4, "block138 grid mode count")
+		assertValidationResultCaseRegistryCanonicalBuilderContract("block138 A")
+		assertValidationResultCaseRegistryCanonicalBuilderContract("block138 B")
+	end
+
+	-- BLOCK 139: Slice 40 - metadata-backed validation result contract grid covers all major modes.
+	do
+		assertEqual(#resultContractRegressionGrid, 4, "block139 grid mode count")
 		for i, gridCase in ipairs(resultContractRegressionGrid) do
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
 			local result = makeValidationResultExample(gridCase.key)
-			local label = "block138 " .. gridCase.label
+			local label = "block139 " .. gridCase.label
 			assertValidationResultContract(
 				result,
 				metadata.mode.expectedAccepted,
@@ -5401,7 +5457,7 @@ local function run()
 				metadata.devaluation.expectedFirstCategoryTotal,
 				label .. " first category total"
 			)
-			assertEqual(i >= 1 and i <= 4, true, "block138 grid index " .. tostring(i))
+			assertEqual(i >= 1 and i <= 4, true, "block139 grid index " .. tostring(i))
 		end
 	end
 
@@ -5411,7 +5467,7 @@ local function run()
 			local metadata = getValidationResultCaseMetadata(gridCase.key)
 			local outA = makeValidationResultExample(gridCase.key)
 			local outB = makeValidationResultExample(gridCase.key)
-			local label = "block139 " .. gridCase.label
+			local label = "block140 " .. gridCase.label
 			assertValidationResultContract(
 				outA,
 				metadata.mode.expectedAccepted,
@@ -5459,19 +5515,19 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
-		assertSnapshotMatrix(outA, "block140 snapshot A")
-		assertSnapshotMatrix(outB, "block140 snapshot B")
+		assertSnapshotMatrix(outA, "block141 snapshot A")
+		assertSnapshotMatrix(outB, "block141 snapshot B")
 		assertEqual(
 			outA.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
 			outB.validationSnapshot.hardConfig.policy.allowedEnvironmentClasses[1],
-			"block140 hard snapshot stable"
+			"block141 hard snapshot stable"
 		)
 		assertEqual(
 			outA.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
 			outB.validationSnapshot.softConfig.criticalPointSoftRadii.tinyfolk_spawn,
-			"block140 soft snapshot stable"
+			"block141 soft snapshot stable"
 		)
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block140 total stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block141 total stable")
 	end
 
 	-- BLOCK 141: Slice 32 - summary matrix helper remains stable across repeated runs.
@@ -5488,25 +5544,25 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, nil, softConfig)
-		assertSummaryMatrix(outA, true, "block141 summaries A")
-		assertSummaryMatrix(outB, true, "block141 summaries B")
+		assertSummaryMatrix(outA, true, "block142 summaries A")
+		assertSummaryMatrix(outB, true, "block142 summaries B")
 		assertEqual(
 			#outA.devaluation.categoryTotals,
 			#outB.devaluation.categoryTotals,
-			"block141 category count stable"
+			"block142 category count stable"
 		)
-		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block141 group count stable")
+		assertEqual(#outA.devaluation.groupSummaries, #outB.devaluation.groupSummaries, "block142 group count stable")
 		assertEqual(
 			#outA.devaluation.factorSummaries,
 			#outB.devaluation.factorSummaries,
-			"block141 factor count stable"
+			"block142 factor count stable"
 		)
 		assertEqual(
 			#outA.devaluation.subjectSummaries,
 			#outB.devaluation.subjectSummaries,
-			"block141 subject count stable"
+			"block142 subject count stable"
 		)
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block141 total stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block142 total stable")
 	end
 
 	-- BLOCK 142: Slice 33 - reason matrix helper remains stable across repeated runs.
@@ -5534,15 +5590,15 @@ local function run()
 		}
 		local outA = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
 		local outB = RealmDistrictPlacementValidator.ValidatePlacement(request, protoOutput, hardConfig, softConfig)
-		assertReasonMatrix(outA, true, true, "block142 reasons A")
-		assertReasonMatrix(outB, true, true, "block142 reasons B")
-		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block142 reason count stable")
+		assertReasonMatrix(outA, true, true, "block143 reasons A")
+		assertReasonMatrix(outB, true, true, "block143 reasons B")
+		assertEqual(#outA.rejectReasons, #outB.rejectReasons, "block143 reason count stable")
 		for i, reasonA in ipairs(outA.rejectReasons) do
 			local reasonB = outB.rejectReasons[i]
-			assertEqual(reasonA.code, reasonB.code, "block142 reason code stable " .. tostring(i))
-			assertEqual(reasonA.message, reasonB.message, "block142 reason message stable " .. tostring(i))
+			assertEqual(reasonA.code, reasonB.code, "block143 reason code stable " .. tostring(i))
+			assertEqual(reasonA.message, reasonB.message, "block143 reason message stable " .. tostring(i))
 		end
-		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block142 devaluation stable")
+		assertEqual(outA.devaluation.totalPenalty, outB.devaluation.totalPenalty, "block143 devaluation stable")
 	end
 
 	print("realm_district_placement: all checks passed")
