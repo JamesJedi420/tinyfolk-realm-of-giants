@@ -5197,7 +5197,10 @@ local function run()
 
 	local function assertValidationResultCaseCommentDriftGuard(label: string)
 		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
-		assertTrue(type(contract.layerMapMarker) == "string" and #contract.layerMapMarker > 0, label .. " layer map marker present")
+		assertTrue(
+			type(contract.layerMapMarker) == "string" and #contract.layerMapMarker > 0,
+			label .. " layer map marker present"
+		)
 		assertTrue(
 			type(contract.contractIndexMarkerPrefix) == "string" and #contract.contractIndexMarkerPrefix > 0,
 			label .. " contract index marker present"
@@ -5207,11 +5210,7 @@ local function run()
 			label .. " contract index references order constants"
 		)
 
-		assertEqual(
-			#contract.helperSectionHeadings,
-			7,
-			label .. " helper section heading count"
-		)
+		assertEqual(#contract.helperSectionHeadings, 7, label .. " helper section heading count")
 
 		local seenHeadings: { [string]: boolean } = {}
 		for index, expectedHeading in ipairs(contract.helperSectionHeadings) do
@@ -5222,6 +5221,73 @@ local function run()
 				label .. " duplicate helper section heading " .. actualHeading
 			)
 			seenHeadings[actualHeading] = true
+		end
+	end
+
+	local function captureValidationResultContractCommentAnchors(label: string): { [string]: any }
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		return {
+			layerMapAnchor = contract.layerMapMarker,
+			contractIndexAnchor = contract.contractIndexMarkerPrefix,
+			helperSectionAnchors = contract.helperSectionHeadings,
+		}
+	end
+
+	local function assertValidationResultContractCommentAnchorGuard(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local anchors = captureValidationResultContractCommentAnchors(label)
+
+		-- Contract layer map anchor: verify marker is non-empty string
+		assertTrue(
+			type(anchors.layerMapAnchor) == "string" and #anchors.layerMapAnchor > 0,
+			label .. " contract layer map anchor is valid"
+		)
+		-- Anchor should match the documented marker
+		assertEqual(anchors.layerMapAnchor, contract.layerMapMarker, label .. " layer map anchor matches marker")
+
+		-- Contract index anchor: verify prefix is non-empty string
+		assertTrue(
+			type(anchors.contractIndexAnchor) == "string" and #anchors.contractIndexAnchor > 0,
+			label .. " contract index anchor is valid"
+		)
+		-- Anchor should match the documented prefix
+		assertEqual(
+			anchors.contractIndexAnchor,
+			contract.contractIndexMarkerPrefix,
+			label .. " contract index anchor matches prefix"
+		)
+		-- Anchor should start with "Contract index:"
+		assertTrue(
+			string.find(anchors.contractIndexAnchor, "Contract index:", 1, true) ~= nil,
+			label .. " contract index anchor starts with marker prefix"
+		)
+
+		-- Helper section anchors: verify all are present and match
+		assertEqual(
+			#anchors.helperSectionAnchors,
+			#contract.helperSectionHeadings,
+			label .. " helper section anchor count matches"
+		)
+
+		local seenAnchors: { [string]: boolean } = {}
+		for index, expectedAnchor in ipairs(contract.helperSectionHeadings) do
+			local actualAnchor = anchors.helperSectionAnchors[index]
+			assertEqual(
+				actualAnchor,
+				expectedAnchor,
+				label .. " helper section anchor " .. tostring(index) .. " matches"
+			)
+			-- Verify each anchor is unique
+			assertFalse(
+				seenAnchors[actualAnchor] == true,
+				label .. " helper section anchor " .. tostring(index) .. " is unique"
+			)
+			seenAnchors[actualAnchor] = true
+			-- Verify anchor structure: all should start with "Registry contract section:"
+			assertTrue(
+				string.find(actualAnchor, "Registry contract section:", 1, true) ~= nil,
+				label .. " helper section anchor " .. tostring(index) .. " has correct prefix"
+			)
 		end
 	end
 
@@ -5640,6 +5706,12 @@ local function run()
 	do
 		assertValidationResultCaseCommentDriftGuard("block144 A")
 		assertValidationResultCaseCommentDriftGuard("block144 B")
+	end
+
+	-- BLOCK 145: Slice 63 - contract layer map and contract index comments are explicitly anchored to normalized marker structure.
+	do
+		assertValidationResultContractCommentAnchorGuard("block145 A")
+		assertValidationResultContractCommentAnchorGuard("block145 B")
 	end
 
 	print("realm_district_placement: all checks passed")
