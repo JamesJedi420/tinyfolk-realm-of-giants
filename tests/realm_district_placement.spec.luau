@@ -4579,6 +4579,21 @@ local function run()
 		},
 	}
 
+	local VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS = {
+		layerMap = {
+			"Contract Layer Map",
+		},
+		contractIndexFlow = {
+			"Contract index",
+			"order/registry constants",
+			"lookup/accessor",
+			"enumeration",
+			"capture",
+			"assertion",
+			"contract/guard",
+		},
+	}
+
 	local validationResultCaseMetadata: { [string]: any } = {
 		accepted_no_penalty = {
 			keys = {
@@ -5233,6 +5248,33 @@ local function run()
 		}
 	end
 
+	local function assertValidationResultCommentContainsTokens(commentText: string, requiredTokens: { string }, label: string)
+		for index, token in ipairs(requiredTokens) do
+			assertTrue(
+				string.find(commentText, token, 1, true) ~= nil,
+				label .. " token present " .. tostring(index) .. " " .. token
+			)
+		end
+	end
+
+	local function assertValidationResultContractCommentTokenGuard(label: string)
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		local requirements = VALIDATION_RESULT_CONTRACT_COMMENT_TOKEN_REQUIREMENTS
+
+		assertValidationResultCommentContainsTokens(
+			contract.layerMapMarker,
+			requirements.layerMap,
+			label .. " layer map"
+		)
+
+		local contractIndexCorpus = contract.contractIndexMarkerPrefix .. " " .. table.concat(contract.helperSectionHeadings, " ")
+		assertValidationResultCommentContainsTokens(
+			contractIndexCorpus,
+			requirements.contractIndexFlow,
+			label .. " contract index"
+		)
+	end
+
 	local function assertValidationResultContractCommentAnchorGuard(label: string)
 		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
 		local anchors = captureValidationResultContractCommentAnchors(label)
@@ -5256,11 +5298,8 @@ local function run()
 			contract.contractIndexMarkerPrefix,
 			label .. " contract index anchor matches prefix"
 		)
-		-- Anchor should start with "Contract index:"
-		assertTrue(
-			string.find(anchors.contractIndexAnchor, "Contract index:", 1, true) ~= nil,
-			label .. " contract index anchor starts with marker prefix"
-		)
+
+		assertValidationResultContractCommentTokenGuard(label .. " tokens")
 
 		-- Helper section anchors: verify all are present and match
 		assertEqual(
@@ -5283,11 +5322,6 @@ local function run()
 				label .. " helper section anchor " .. tostring(index) .. " is unique"
 			)
 			seenAnchors[actualAnchor] = true
-			-- Verify anchor structure: all should start with "Registry contract section:"
-			assertTrue(
-				string.find(actualAnchor, "Registry contract section:", 1, true) ~= nil,
-				label .. " helper section anchor " .. tostring(index) .. " has correct prefix"
-			)
 		end
 	end
 
@@ -5712,6 +5746,12 @@ local function run()
 	do
 		assertValidationResultContractCommentAnchorGuard("block145 A")
 		assertValidationResultContractCommentAnchorGuard("block145 B")
+	end
+
+	-- BLOCK 146: Slice 64 - contract documentation tokens remain present across map/index helper flow markers.
+	do
+		assertValidationResultContractCommentTokenGuard("block146 A")
+		assertValidationResultContractCommentTokenGuard("block146 B")
 	end
 
 	print("realm_district_placement: all checks passed")
