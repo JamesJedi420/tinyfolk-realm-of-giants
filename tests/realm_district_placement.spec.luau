@@ -4565,19 +4565,18 @@ local function run()
 		{ key = "r0", label = "rejected/no-penalty" },
 	}
 
-	local VALIDATION_RESULT_DOCUMENTATION_CONTRACT_MARKERS = {
-		layerMap = "Contract Layer Map (test-only helper ownership)",
-		contractIndex = "Contract index: order/registry constants -> lookup/accessor helpers (resolve/get) ->",
-	}
-
-	local VALIDATION_RESULT_HELPER_SECTION_HEADING_ORDER = {
-		"Registry contract section: order/registry constants",
-		"Registry contract section: lookup/accessor helpers",
-		"Registry contract section: enumeration helpers",
-		"Registry contract section: capture helpers",
-		"Registry contract section: low-level assertion helpers",
-		"Registry contract section: contract/guard helpers",
-		"Registry contract section: block execution area",
+	local VALIDATION_RESULT_CONTRACT_DOCUMENTATION = {
+		layerMapMarker = "Contract Layer Map (test-only helper ownership)",
+		contractIndexMarkerPrefix = "Contract index: order/registry constants ->",
+		helperSectionHeadings = {
+			"Registry contract section: order/registry constants",
+			"Registry contract section: lookup/accessor helpers",
+			"Registry contract section: enumeration helpers",
+			"Registry contract section: capture helpers",
+			"Registry contract section: low-level assertion helpers",
+			"Registry contract section: contract/guard helpers",
+			"Registry contract section: block execution area",
+		},
 	}
 
 	local validationResultCaseMetadata: { [string]: any } = {
@@ -5197,37 +5196,31 @@ local function run()
 	end
 
 	local function assertValidationResultCaseCommentDriftGuard(label: string)
-		local markers = VALIDATION_RESULT_DOCUMENTATION_CONTRACT_MARKERS
-		assertTrue(type(markers.layerMap) == "string" and #markers.layerMap > 0, label .. " layer map marker present")
+		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
+		assertTrue(type(contract.layerMapMarker) == "string" and #contract.layerMapMarker > 0, label .. " layer map marker present")
 		assertTrue(
-			type(markers.contractIndex) == "string" and #markers.contractIndex > 0,
+			type(contract.contractIndexMarkerPrefix) == "string" and #contract.contractIndexMarkerPrefix > 0,
 			label .. " contract index marker present"
 		)
 		assertTrue(
-			string.find(markers.contractIndex, "order/registry constants", 1, true) ~= nil,
+			string.find(contract.contractIndexMarkerPrefix, "order/registry constants", 1, true) ~= nil,
 			label .. " contract index references order constants"
 		)
 
-		local expectedHeadingOrder = {
-			"Registry contract section: order/registry constants",
-			"Registry contract section: lookup/accessor helpers",
-			"Registry contract section: enumeration helpers",
-			"Registry contract section: capture helpers",
-			"Registry contract section: low-level assertion helpers",
-			"Registry contract section: contract/guard helpers",
-			"Registry contract section: block execution area",
-		}
 		assertEqual(
-			#VALIDATION_RESULT_HELPER_SECTION_HEADING_ORDER,
-			#expectedHeadingOrder,
+			#contract.helperSectionHeadings,
+			7,
 			label .. " helper section heading count"
 		)
 
 		local seenHeadings: { [string]: boolean } = {}
-		for index, expectedHeading in ipairs(expectedHeadingOrder) do
-			local actualHeading = VALIDATION_RESULT_HELPER_SECTION_HEADING_ORDER[index]
+		for index, expectedHeading in ipairs(contract.helperSectionHeadings) do
+			local actualHeading = contract.helperSectionHeadings[index]
 			assertEqual(actualHeading, expectedHeading, label .. " helper section heading order " .. tostring(index))
-			assertFalse(seenHeadings[actualHeading] == true, label .. " duplicate helper section heading " .. actualHeading)
+			assertFalse(
+				seenHeadings[actualHeading] == true,
+				label .. " duplicate helper section heading " .. actualHeading
+			)
 			seenHeadings[actualHeading] = true
 		end
 	end
