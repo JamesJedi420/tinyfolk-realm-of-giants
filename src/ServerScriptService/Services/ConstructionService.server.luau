@@ -43,6 +43,8 @@ type DistrictBuildState = {
 	isBuilt: boolean,
 	buildCount: number,
 	lastBuiltByUserId: number?,
+	woodCost: number,
+	stoneCost: number,
 }
 
 local siteStateById: { [string]: ConstructionSiteState } = {}
@@ -323,6 +325,8 @@ local function initializeDistrictBuildStateFromPlacementQueryAPI()
 				isBuilt = false,
 				buildCount = 0,
 				lastBuiltByUserId = nil,
+				woodCost = ConstructionConfig.DistrictDefaultCost.wood,
+				stoneCost = ConstructionConfig.DistrictDefaultCost.stone,
 			}
 			discoveredCount += 1
 		end

@@ -1,6 +1,6 @@
 --!strict
 
-local ConstructionConfig = {}
+local ConstructionConfig: any = {}
 
 ConstructionConfig.ConstructionSiteNamePrefix = "ConstructionSite_"
 ConstructionConfig.DefaultConstructionSiteId = "ConstructionSite_A"
@@ -13,6 +13,11 @@ ConstructionConfig.CostBySiteId = {
 		wood = 8,
 		stone = 6,
 	},
+}
+
+ConstructionConfig.DistrictDefaultCost = {
+	wood = 10,
+	stone = 8,
 }
 
 return ConstructionConfig

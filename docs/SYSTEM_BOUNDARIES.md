@@ -84,7 +84,7 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Construction spending from stored totals only
 - Warehouse delivery point
 
-**Current implementation status:** ConstructionService performs startup discovery from `_G._DistrictPlacementService_QueryAPI.GetAllPlacedDistricts` and initializes minimal district build-state entries. DistrictPlacementService remains placement authority and query-only provider. ConstructionService owns build-state initialization only in this slice.
+**Current implementation status:** ConstructionService performs startup discovery from `_G._DistrictPlacementService_QueryAPI.GetAllPlacedDistricts` and initializes minimal district build-state entries. DistrictPlacementService remains placement authority and query-only provider. ConstructionService owns build-state initialization only in this slice. ConstructionConfig is cost authority for district defaults via `DistrictDefaultCost`; `DistrictBuildState` entries carry resolved `woodCost` and `stoneCost` at startup; cost is not derived from placement state.
 
 **Fold into this bucket:** new specialist station couplings, resource state transition rules, additional assignment reasons, new hauling paths.
 

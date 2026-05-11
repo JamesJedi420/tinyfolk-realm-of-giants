@@ -315,6 +315,30 @@ assertEqual(districtA.isBuilt, false, "district A initialized as not built")
 assertEqual(districtA.buildCount, 0, "district A buildCount initialized to zero")
 assertTrue(districtA.lastBuiltByUserId == nil, "district A lastBuiltByUserId initialized nil")
 
+-- TIN-195: cost fields initialized at startup from ConstructionConfig.DistrictDefaultCost
+local ConstructionConfig = require("../src/ReplicatedStorage/Shared/Config/ConstructionConfig")
+assertEqual(
+	districtA.woodCost,
+	ConstructionConfig.DistrictDefaultCost.wood,
+	"district A woodCost initialized from DistrictDefaultCost"
+)
+assertEqual(
+	districtA.stoneCost,
+	ConstructionConfig.DistrictDefaultCost.stone,
+	"district A stoneCost initialized from DistrictDefaultCost"
+)
+local districtB = districtBuildState["District_Startup_B"]
+assertEqual(
+	districtB.woodCost,
+	ConstructionConfig.DistrictDefaultCost.wood,
+	"district B woodCost initialized from DistrictDefaultCost"
+)
+assertEqual(
+	districtB.stoneCost,
+	ConstructionConfig.DistrictDefaultCost.stone,
+	"district B stoneCost initialized from DistrictDefaultCost"
+)
+
 assertEqual(queryApiCallCount.getAll, 1, "query API GetAllPlacedDistricts called exactly once at startup")
 assertEqual(queryApiCallCount.getPlaced, 0, "query API GetPlacedDistrict not called")
 assertEqual(queryApiCallCount.getByPlayer, 0, "query API GetPlacedDistrictsByPlayer not called")
@@ -347,7 +371,11 @@ for i = warnCountBefore + 1, #warns do
 end
 assertTrue(sawDistrictSiteNotFound, "district ids are not routed into site-backed build mutation path in this slice")
 -- Verify district build-state entry is also untouched by the rejected request.
-assertEqual(districtBuildState["District_Startup_A"].isBuilt, false, "district build state not mutated by rejected build request")
+assertEqual(
+	districtBuildState["District_Startup_A"].isBuilt,
+	false,
+	"district build state not mutated by rejected build request"
+)
 
 assertEqual(queryApiCallCount.getAll, 1, "query API startup discovery remains one-time after build requests")
 
