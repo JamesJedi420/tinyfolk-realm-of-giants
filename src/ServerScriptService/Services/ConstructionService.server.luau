@@ -404,8 +404,70 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	local siteId = payload
 	local siteState = siteStateById[siteId]
 	if not siteState then
-		rejectBuild(player, "site_not_found")
-		logBuildOutcome("rejected", player, siteId, "site_not_found")
+		-- TIN-197: check district build-state table before falling to site_not_found.
+		local districtState = districtBuildStateById[siteId]
+		if not districtState then
+			rejectBuild(player, "site_not_found")
+			logBuildOutcome("rejected", player, siteId, "site_not_found")
+			return
+		end
+
+		if districtState.isBuilt then
+			rejectBuild(player, "already_built")
+			logBuildOutcome("rejected", player, siteId, "already_built")
+			return
+		end
+
+		if not isPlayerAlive(player) then
+			rejectBuild(player, "player_not_alive")
+			logBuildOutcome("rejected", player, siteId, "player_not_alive")
+			return
+		end
+
+		-- Range check deferred: DistrictBuildState has no Workspace part reference in this slice.
+
+		local districtSpent, districtFlowSnapshot, districtSpendError =
+			ResourceFlowState.SpendStoredAtomic(districtState.woodCost, districtState.stoneCost, "Construction:" .. siteId)
+		if not districtSpent then
+			local spendReason = districtSpendError or "insufficient_materials"
+			rejectBuild(player, spendReason)
+			logBuildOutcome("rejected", player, siteId, spendReason)
+			return
+		end
+
+		local previousDistrictIsBuilt = districtState.isBuilt
+		local previousDistrictBuildCount = districtState.buildCount
+		local previousDistrictLastBuiltByUserId = districtState.lastBuiltByUserId
+
+		local appliedDistrictBuiltState, districtApplyError = pcall(function()
+			districtState.isBuilt = true
+			districtState.buildCount += 1
+			districtState.lastBuiltByUserId = player.UserId
+		end)
+
+		if not appliedDistrictBuiltState then
+			ResourceFlowState.AddStoredAtomic(districtState.woodCost, districtState.stoneCost, "ConstructionRollback:" .. siteId)
+			districtState.isBuilt = previousDistrictIsBuilt
+			districtState.buildCount = previousDistrictBuildCount
+			districtState.lastBuiltByUserId = previousDistrictLastBuiltByUserId
+			local applyFailureReason = string.format("build_state_apply_failed detail=%s", tostring(districtApplyError))
+			rejectBuild(player, applyFailureReason)
+			logBuildOutcome("rejected", player, siteId, applyFailureReason)
+			return
+		end
+
+		debugLog(
+			string.format(
+				"Accepted district ConstructionBuildRequest userId=%d districtId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+				player.UserId,
+				siteId,
+				districtState.woodCost,
+				districtState.stoneCost,
+				districtFlowSnapshot.Wood.stored,
+				districtFlowSnapshot.Stone.stored
+			)
+		)
+		logBuildOutcome("accepted", player, siteId, nil)
 		return
 	end
 

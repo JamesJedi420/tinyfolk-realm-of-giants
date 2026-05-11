@@ -356,27 +356,45 @@ assertTrue(siteState.isBuilt, "existing site-backed build mutation still works")
 assertEqual(siteState.buildCount, 1, "existing site-backed build count increments")
 assertEqual(siteState.lastBuiltByUserId, 9301, "existing site-backed build tracks builder")
 
--- Use a separate player to avoid triggering the request cooldown gate before site_not_found.
-local districtProbePlayer = makeAlivePlayer(9302, Vector3.new(12, 0, 12))
-local warnCountBefore = #warns
-buildRemote:FireServer(districtProbePlayer, "District_Startup_A")
+-- TIN-197: district build mutation-path assertions.
+-- Use a separate player to avoid cooldown collision with the site builder above.
+local districtBuilder = makeAlivePlayer(9302, Vector3.new(12, 0, 12))
+buildRemote:FireServer(districtBuilder, "District_Startup_A")
 
--- The reject warn only includes reason (not siteId), so check for site_not_found in any new warn line.
-local sawDistrictSiteNotFound = false
-for i = warnCountBefore + 1, #warns do
-	if string.find(warns[i], "site_not_found", 1, true) then
-		sawDistrictSiteNotFound = true
+assertTrue(districtBuildState["District_Startup_A"].isBuilt, "district build request accepted: isBuilt flipped")
+assertEqual(districtBuildState["District_Startup_A"].buildCount, 1, "district build request accepted: buildCount incremented")
+assertEqual(districtBuildState["District_Startup_A"].lastBuiltByUserId, 9302, "district build request accepted: lastBuiltByUserId set")
+
+-- Second request for the same district must be rejected as already_built.
+local districtBuilder2 = makeAlivePlayer(9303, Vector3.new(12, 0, 12))
+local warnsBefore = #warns
+buildRemote:FireServer(districtBuilder2, "District_Startup_A")
+local sawAlreadyBuilt = false
+for i = warnsBefore + 1, #warns do
+	if string.find(warns[i], "already_built", 1, true) then
+		sawAlreadyBuilt = true
 		break
 	end
 end
-assertTrue(sawDistrictSiteNotFound, "district ids are not routed into site-backed build mutation path in this slice")
--- Verify district build-state entry is also untouched by the rejected request.
-assertEqual(
-	districtBuildState["District_Startup_A"].isBuilt,
-	false,
-	"district build state not mutated by rejected build request"
-)
+assertTrue(sawAlreadyBuilt, "district already_built rejection fires on second build request")
+assertEqual(districtBuildState["District_Startup_A"].buildCount, 1, "district buildCount unchanged after already_built rejection")
+
+-- Completely unknown ID must still produce site_not_found.
+local unknownPlayer = makeAlivePlayer(9304, Vector3.new(12, 0, 12))
+local warnsBeforeUnknown = #warns
+buildRemote:FireServer(unknownPlayer, "Unknown_District_XYZ")
+local sawSiteNotFound = false
+for i = warnsBeforeUnknown + 1, #warns do
+	if string.find(warns[i], "site_not_found", 1, true) then
+		sawSiteNotFound = true
+		break
+	end
+end
+assertTrue(sawSiteNotFound, "unknown id still produces site_not_found after district routing")
+
+-- District_Startup_B must still be unbuilt.
+assertEqual(districtBuildState["District_Startup_B"].isBuilt, false, "District_Startup_B unaffected by District_Startup_A build")
 
 assertEqual(queryApiCallCount.getAll, 1, "query API startup discovery remains one-time after build requests")
 
-print("construction_service_runtime_entrypoint: startup district build-state slice checks passed")
+print("construction_service_runtime_entrypoint: district mutation-path slice checks passed")
