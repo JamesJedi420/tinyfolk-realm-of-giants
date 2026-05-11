@@ -739,4 +739,156 @@ do
 	print("PASS [TIN-191 contract: same districtId replaces owned artifact deterministically, count remains one]")
 end
 
+-- TIN-192 Query API: Public read-only interface for downstream systems
+-- Tests GetPlacedDistrict, GetPlacedDistrictsByPlayer, GetAllPlacedDistricts, IsDistrictPlaced
+do
+	local queryAPI = _G._DistrictPlacementService_QueryAPI
+	assertTrue(queryAPI ~= nil, "TIN-192 query API: public API exists")
+
+	if queryAPI ~= nil then
+		-- Create several test placements first
+		local testDistrict1Id = "District_QueryAPI_Test1"
+		local testDistrict2Id = "District_QueryAPI_Test2"
+		local testDistrict3Id = "District_QueryAPI_Test3"
+
+		local player1 = makeAlivePlayer(8001)
+		local player2 = makeAlivePlayer(8002)
+		local player3 = makeAlivePlayer(8003)
+
+		-- Player 1 places District 1
+		local request1 = {
+			districtId = testDistrict1Id,
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 400, y = 0, z = 500 },
+					halfExtents = { x = 20, y = 10, z = 20 },
+				},
+			},
+		}
+		districtRemote:FireServer(player1, request1)
+
+		-- Player 2 places District 2
+		local request2 = {
+			districtId = testDistrict2Id,
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 450, y = 0, z = 520 },
+					halfExtents = { x = 24, y = 12, z = 24 },
+				},
+			},
+		}
+		districtRemote:FireServer(player2, request2)
+
+		-- Player 3 places District 3
+		local request3 = {
+			districtId = testDistrict3Id,
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 500, y = 0, z = 540 },
+					halfExtents = { x = 26, y = 14, z = 26 },
+				},
+			},
+		}
+		districtRemote:FireServer(player3, request3)
+
+		-- Test: GetPlacedDistrict by ID
+		local district1 = queryAPI.GetPlacedDistrict(testDistrict1Id)
+		assertTrue(district1 ~= nil, "TIN-192 query API: GetPlacedDistrict returns placed district")
+		if district1 ~= nil then
+			assertEqual(
+				district1.districtId,
+				testDistrict1Id,
+				"TIN-192 query API: GetPlacedDistrict returns correct districtId"
+			)
+			assertEqual(
+				district1.placedByUserId,
+				player1.UserId,
+				"TIN-192 query API: GetPlacedDistrict returns correct placedByUserId"
+			)
+		end
+
+		-- Test: GetPlacedDistrict for non-existent district
+		local nonExistent = queryAPI.GetPlacedDistrict("District_Does_Not_Exist")
+		assertTrue(nonExistent == nil, "TIN-192 query API: GetPlacedDistrict returns nil for non-existent district")
+
+		-- Test: GetPlacedDistrict with invalid input
+		local invalidInput = queryAPI.GetPlacedDistrict("")
+		assertTrue(invalidInput == nil, "TIN-192 query API: GetPlacedDistrict returns nil for empty districtId")
+
+		-- Test: IsDistrictPlaced
+		assertTrue(
+			queryAPI.IsDistrictPlaced(testDistrict1Id),
+			"TIN-192 query API: IsDistrictPlaced returns true for placed district"
+		)
+		assertTrue(
+			queryAPI.IsDistrictPlaced(testDistrict2Id),
+			"TIN-192 query API: IsDistrictPlaced returns true for second placed district"
+		)
+		assertTrue(
+			queryAPI.IsDistrictPlaced(testDistrict3Id),
+			"TIN-192 query API: IsDistrictPlaced returns true for third placed district"
+		)
+		assertTrue(
+			not queryAPI.IsDistrictPlaced("District_Does_Not_Exist"),
+			"TIN-192 query API: IsDistrictPlaced returns false for non-existent district"
+		)
+
+		-- Test: GetPlacedDistrictsByPlayer for player 1
+		local player1Districts = queryAPI.GetPlacedDistrictsByPlayer(player1.UserId)
+		assertTrue(player1Districts ~= nil, "TIN-192 query API: GetPlacedDistrictsByPlayer returns table")
+		assertTrue(
+			player1Districts[testDistrict1Id] ~= nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer returns player1's district"
+		)
+		assertTrue(
+			player1Districts[testDistrict2Id] == nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer does NOT return other player's district"
+		)
+
+		-- Test: GetPlacedDistrictsByPlayer for player 2
+		local player2Districts = queryAPI.GetPlacedDistrictsByPlayer(player2.UserId)
+		assertTrue(player2Districts ~= nil, "TIN-192 query API: GetPlacedDistrictsByPlayer returns table for player 2")
+		assertTrue(
+			player2Districts[testDistrict2Id] ~= nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer returns player2's district"
+		)
+		assertTrue(
+			player2Districts[testDistrict1Id] == nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer does NOT return other player's district for player 2"
+		)
+
+		-- Test: GetPlacedDistrictsByPlayer for non-existent player
+		local nonExistentPlayerDistricts = queryAPI.GetPlacedDistrictsByPlayer(9999)
+		assertTrue(
+			nonExistentPlayerDistricts ~= nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer returns table for non-existent player"
+		)
+		assertTrue(
+			next(nonExistentPlayerDistricts) == nil,
+			"TIN-192 query API: GetPlacedDistrictsByPlayer returns empty table for player with no placements"
+		)
+
+		-- Test: GetAllPlacedDistricts
+		local allDistricts = queryAPI.GetAllPlacedDistricts()
+		assertTrue(allDistricts ~= nil, "TIN-192 query API: GetAllPlacedDistricts returns table")
+		assertTrue(
+			allDistricts[testDistrict1Id] ~= nil,
+			"TIN-192 query API: GetAllPlacedDistricts includes first placed district"
+		)
+		assertTrue(
+			allDistricts[testDistrict2Id] ~= nil,
+			"TIN-192 query API: GetAllPlacedDistricts includes second placed district"
+		)
+		assertTrue(
+			allDistricts[testDistrict3Id] ~= nil,
+			"TIN-192 query API: GetAllPlacedDistricts includes third placed district"
+		)
+
+		print("PASS [TIN-192 query API: all query functions pass]")
+	end
+end
+
 print("district_placement_workspace_artifact_integration: all TIN-190 checks passed")

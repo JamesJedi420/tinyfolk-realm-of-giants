@@ -63,7 +63,7 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Zone placement rules (control zones, capture zones, spawn zones)
 - Validator-enforceable placement constraints from GAME_SPEC
 
-**Current implementation status:** Runtime validation gate is implemented and test-backed. Accepted placements now materialize explicit world-state payloads on the accepted registry entry and exactly one minimal Workspace artifact under the district container. Rejected placements still create no registry or Workspace artifact mutation, and broader Workspace world-content breadth remains deferred to future work.
+**Current implementation status:** Runtime validation gate is implemented and test-backed. Accepted placements now materialize explicit world-state payloads on the accepted registry entry and exactly one minimal Workspace artifact under the district container. Repeated accepted placements for the same districtId deterministically replace that artifact in place. Rejected placements still create no registry or Workspace artifact mutation. DistrictPlacementService exposes a public read-only query API (GetPlacedDistrict, GetPlacedDistrictsByPlayer, GetAllPlacedDistricts, IsDistrictPlaced) via `_G._DistrictPlacementService_QueryAPI` for downstream systems (construction, debug tools, analytics) to inspect accepted placement state without mutating the registry. Broader Workspace world-content breadth remains deferred to future work.
 
 **Fold into this bucket:** zone separation checks, cluster density caps, total caps, spatial constraint rules derived from GAME_SPEC.
 

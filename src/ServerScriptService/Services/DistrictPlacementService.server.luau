@@ -411,6 +411,53 @@ end)
 
 debugLog("District placement service ready")
 
+-- Public Query API (TIN-192)
+-- Downstream systems (construction, debug tools, analytics) use these to inspect
+-- accepted placement state without mutating registry.
+local function GetPlacedDistrict(districtId: string): PlacedDistrictState?
+	if type(districtId) ~= "string" or districtId == "" then
+		return nil
+	end
+	return placedDistrictById[districtId]
+end
+
+local function GetPlacedDistrictsByPlayer(userId: number): { [string]: PlacedDistrictState }
+	if type(userId) ~= "number" or userId <= 0 then
+		return {}
+	end
+	local result: { [string]: PlacedDistrictState } = {}
+	for districtId, state in pairs(placedDistrictById) do
+		if state.placedByUserId == userId then
+			result[districtId] = state
+		end
+	end
+	return result
+end
+
+local function GetAllPlacedDistricts(): { [string]: PlacedDistrictState }
+	local result: { [string]: PlacedDistrictState } = {}
+	for districtId, state in pairs(placedDistrictById) do
+		result[districtId] = state
+	end
+	return result
+end
+
+local function IsDistrictPlaced(districtId: string): boolean
+	if type(districtId) ~= "string" or districtId == "" then
+		return false
+	end
+	return placedDistrictById[districtId] ~= nil
+end
+
+-- Public query API export (TIN-192)
+-- Downstream systems call these functions to query placement state.
+_G._DistrictPlacementService_QueryAPI = {
+	GetPlacedDistrict = GetPlacedDistrict,
+	GetPlacedDistrictsByPlayer = GetPlacedDistrictsByPlayer,
+	GetAllPlacedDistricts = GetAllPlacedDistricts,
+	IsDistrictPlaced = IsDistrictPlaced,
+}
+
 -- Test-only export for integration testing (TIN-175)
 -- This allows test harnesses to inspect the internal registry state
 -- and verify that mutations occur only on accepted placements.
