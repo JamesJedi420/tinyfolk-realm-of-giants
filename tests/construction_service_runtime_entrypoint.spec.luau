@@ -176,8 +176,9 @@ addChild(remotesFolder, "ConstructionDebugStateRequest", debugRequestRemote)
 addChild(remotesFolder, "ConstructionDebugStateResponse", debugResponseRemote)
 
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
-addChild(configFolder, "ConstructionConfig", "../../ReplicatedStorage/Shared/Config/ConstructionConfig")
-addChild(configFolder, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
+-- String paths stored directly to avoid child.Parent = parent on a string value
+configFolder._Children["ConstructionConfig"] = "../../ReplicatedStorage/Shared/Config/ConstructionConfig"
+configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -260,7 +261,8 @@ _G._DistrictPlacementService_QueryAPI = {
 }
 
 local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
-addChild(scriptParent, "ResourceFlowState", "../../ServerScriptService/Services/ResourceFlowState")
+-- String path stored directly to avoid child.Parent = parent on a string value
+scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
 script = {
 	Parent = scriptParent,
 } :: any
@@ -330,16 +332,22 @@ assertTrue(siteState.isBuilt, "existing site-backed build mutation still works")
 assertEqual(siteState.buildCount, 1, "existing site-backed build count increments")
 assertEqual(siteState.lastBuiltByUserId, 9301, "existing site-backed build tracks builder")
 
-buildRemote:FireServer(builder, "District_Startup_A")
+-- Use a separate player to avoid triggering the request cooldown gate before site_not_found.
+local districtProbePlayer = makeAlivePlayer(9302, Vector3.new(12, 0, 12))
+local warnCountBefore = #warns
+buildRemote:FireServer(districtProbePlayer, "District_Startup_A")
 
+-- The reject warn only includes reason (not siteId), so check for site_not_found in any new warn line.
 local sawDistrictSiteNotFound = false
-for _, line in ipairs(warns) do
-	if string.find(line, "site_not_found", 1, true) and string.find(line, "District_Startup_A", 1, true) then
+for i = warnCountBefore + 1, #warns do
+	if string.find(warns[i], "site_not_found", 1, true) then
 		sawDistrictSiteNotFound = true
 		break
 	end
 end
 assertTrue(sawDistrictSiteNotFound, "district ids are not routed into site-backed build mutation path in this slice")
+-- Verify district build-state entry is also untouched by the rejected request.
+assertEqual(districtBuildState["District_Startup_A"].isBuilt, false, "district build state not mutated by rejected build request")
 
 assertEqual(queryApiCallCount.getAll, 1, "query API startup discovery remains one-time after build requests")
 
