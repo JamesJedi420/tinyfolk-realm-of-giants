@@ -63,6 +63,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Zone placement rules (control zones, capture zones, spawn zones)
 - Validator-enforceable placement constraints from GAME_SPEC
 
+**Current implementation status:** Runtime validation gate is implemented and test-backed. Validator blocks placement before any registry mutation. Workspace world-content creation is deferred to future work.
+
 **Fold into this bucket:** zone separation checks, cluster density caps, total caps, spatial constraint rules derived from GAME_SPEC.
 
 ### Trait and Loadout Framework
@@ -91,6 +93,17 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Specialist assignment clears on role change away from Tinyfolk
 
 **Fold into this bucket:** future role addition work, session state persistence rules, role-gated system checks.
+
+### Developer Workflow and Studio Tooling
+- Studio launch tasks from VS Code
+- Roblox place revision rollback/open workflow
+- Issue-to-Studio script navigation pattern
+
+**Create separate issues for:** VS Code Studio launch tasks, Roblox place revision rollback/open workflow, and issue-to-Studio script navigation.
+
+**Fold into this bucket:** separate hub / Giant place launch tasks, local Studio executable path config, line/range highlight handoff for bug reports, revision-aware publish log.
+
+**Validation boundary:** Studio-open smoke test checklist work belongs in TIN-157, not a separate workflow.
 
 ---
 
