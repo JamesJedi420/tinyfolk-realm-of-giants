@@ -67,6 +67,19 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Fold into this bucket:** zone separation checks, cluster density caps, total caps, spatial constraint rules derived from GAME_SPEC.
 
+### Giant Realm Build Mode Placement Boundary (TIN-56)
+- Dedicated giant structure placement request ingress with a distinct remote contract
+- Server-side payload validation boundary for structure placement requests
+- Deterministic rejection reasons for malformed/out-of-bounds/invalid occupied-space payloads
+- Accepted placement registry as server-owned in-memory state for current session
+- Minimal Workspace artifact materialization for accepted giant structure placements
+
+**Current implementation status:** First slice is implemented and runtime-test-backed for request contract + validation boundary only. `GiantBuildModeService.server.luau` binds `GiantStructurePlacementRequest`, validates `structureId` and `proposedOccupiedSpace` payload shape/ranges, rejects duplicates by `structureId`, and materializes one minimal artifact under `Workspace.Map.GiantStructures`. Query-only `_G._GiantBuildModeService_QueryAPI` exposes `GetPlacedStructure`, `GetAllPlacedStructures`, and `IsStructurePlaced` for downstream read access without mutation.
+
+**Deferred in this slice:** cost spend/economy gating, ownership authorization policy beyond duplicate rejection, district/realm legality validation against assembly topology, and any persistent save/load schema or DataStore I/O.
+
+**Fold into this bucket:** additional structure validation constraints, legal placement topology checks, ownership/cost policy once specified, and persistence integration after schema boundary is defined.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
