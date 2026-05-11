@@ -17,13 +17,21 @@ local REMOTES_FOLDER_NAME = "Remotes"
 -- These are separate systems with separate remotes, separate request shapes, and separate mutation targets.
 -- ConstructionBuildRequest: mutates existing BasePart site state (IsBuilt, visual state).
 -- DistrictPlacementRequest: validates a proposed district placement and records it in the
--- server-owned placement registry. World content creation is a later TIN-175 gate integration slice.
+-- server-owned placement registry. Accepted placements also materialize explicit district world-state content.
+
+type MaterializedDistrictWorldState = {
+	districtId: string,
+	placedByUserId: number,
+	placedAt: number,
+	proposedOccupiedSpace: { any },
+}
 
 type PlacedDistrictState = {
 	districtId: string,
 	placedByUserId: number,
 	placedAt: number,
 	proposedOccupiedSpace: { any },
+	materializedWorldState: MaterializedDistrictWorldState,
 }
 
 local placedDistrictById: { [string]: PlacedDistrictState } = {}
@@ -271,6 +279,12 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		placedByUserId = player.UserId,
 		placedAt = os.clock(),
 		proposedOccupiedSpace = request.proposedOccupiedSpace,
+		materializedWorldState = {
+			districtId = request.districtId,
+			placedByUserId = player.UserId,
+			placedAt = os.clock(),
+			proposedOccupiedSpace = request.proposedOccupiedSpace,
+		},
 	}
 
 	debugLog(

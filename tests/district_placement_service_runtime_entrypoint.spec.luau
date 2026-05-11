@@ -315,10 +315,7 @@ do
 	for _ in pairs(registry) do
 		afterAcceptCount = afterAcceptCount + 1
 	end
-	assertTrue(
-		afterAcceptCount == initialCount + 1,
-		"TIN-175 accepted: registry size increased by exactly one entry"
-	)
+	assertTrue(afterAcceptCount == initialCount + 1, "TIN-175 accepted: registry size increased by exactly one entry")
 
 	print("PASS [TIN-175 accepted: placement passes validator and records in registry]")
 end
@@ -349,37 +346,149 @@ do
 	districtRemote:FireServer(rejectedIntegrationPlayer, rejectedIntegrationRequest)
 
 	local entry = registry[rejectedIntegrationRequest.districtId]
-	assertTrue(
-		entry == nil,
-		"TIN-175 rejected: placement NOT recorded in registry (mutation prevented)"
-	)
+	assertTrue(entry == nil, "TIN-175 rejected: placement NOT recorded in registry (mutation prevented)")
 
 	local afterRejectCount = 0
 	for _ in pairs(registry) do
 		afterRejectCount = afterRejectCount + 1
 	end
-	assertTrue(
-		afterRejectCount == initialCount,
-		"TIN-175 rejected: registry size unchanged (no mutation on reject)"
-	)
+	assertTrue(afterRejectCount == initialCount, "TIN-175 rejected: registry size unchanged (no mutation on reject)")
 
 	-- Verify rejection was logged with deterministic reason
 	local sawRejectionWithCode = false
-	for _, line in ipairs(warns) do
+	for _, line in ipairs(logs) do
 		if
-			string.find(line, "placement_rejected_by_validator", 1, true)
+			type(line) == "string"
+			and string.find(line, "PlacementOutcome status=rejected", 1, true)
+			and string.find(line, "placement_rejected_by_validator", 1, true)
 			and string.find(line, "District_ValidationGate_Rejected_TIN175", 1, true)
 		then
 			sawRejectionWithCode = true
 			break
 		end
 	end
-	assertTrue(
-		sawRejectionWithCode,
-		"TIN-175 rejected: rejection logged with deterministic validation reason"
-	)
+	assertTrue(sawRejectionWithCode, "TIN-175 rejected: rejection logged with deterministic validation reason")
 
 	print("PASS [TIN-175 rejected: placement blocked before mutation with deterministic reason]")
+end
+
+-- TIN-189 Integration Test: Accepted Placement Materializes World State
+-- Validates that an accepted placement creates explicit district world-state content.
+do
+	local registry = getPlacedDistrictRegistry()
+	local registryInitialCount = 0
+	for _ in pairs(registry) do
+		registryInitialCount = registryInitialCount + 1
+	end
+
+	local acceptedIntegrationRequest = {
+		districtId = "District_WorldState_Accepted_TIN189",
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 200, y = 0, z = 500 },
+				halfExtents = { x = 20, y = 10, z = 20 },
+			},
+		},
+	}
+
+	local acceptedIntegrationPlayer = makeAlivePlayer(7301)
+	districtRemote:FireServer(acceptedIntegrationPlayer, acceptedIntegrationRequest)
+
+	local registryEntry = registry[acceptedIntegrationRequest.districtId]
+	assertTrue(registryEntry ~= nil, "TIN-189 accepted: registry still records accepted placement")
+
+	assertTrue(registryEntry.materializedWorldState ~= nil, "TIN-189 accepted: world-state payload created")
+
+	if registryEntry.materializedWorldState then
+		local worldStateEntry = registryEntry.materializedWorldState
+		assertEqual(
+			worldStateEntry.districtId,
+			acceptedIntegrationRequest.districtId,
+			"TIN-189 accepted: world-state districtId matches"
+		)
+		assertEqual(
+			worldStateEntry.placedByUserId,
+			acceptedIntegrationPlayer.UserId,
+			"TIN-189 accepted: world-state placedByUserId matches"
+		)
+		assertTrue(
+			type(worldStateEntry.placedAt) == "number" and worldStateEntry.placedAt > 0,
+			"TIN-189 accepted: world-state placedAt is valid"
+		)
+		assertTrue(
+			type(worldStateEntry.proposedOccupiedSpace) == "table" and #worldStateEntry.proposedOccupiedSpace > 0,
+			"TIN-189 accepted: world-state retains proposedOccupiedSpace"
+		)
+	end
+
+	local registryAfterCount = 0
+	for _ in pairs(registry) do
+		registryAfterCount = registryAfterCount + 1
+	end
+	assertTrue(
+		registryAfterCount == registryInitialCount + 1,
+		"TIN-189 accepted: registry size increased by exactly one entry"
+	)
+
+	print("PASS [TIN-189 accepted: placement materializes explicit world state]")
+end
+
+-- TIN-189 Integration Test: Rejected Placement Does Not Materialize World State
+-- Validates that rejected placements still create no explicit district world state.
+do
+	local registry = getPlacedDistrictRegistry()
+	local registryInitialCount = 0
+	for _ in pairs(registry) do
+		registryInitialCount = registryInitialCount + 1
+	end
+
+	local rejectedIntegrationRequest = {
+		districtId = "District_WorldState_Rejected_TIN189",
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 30, y = 0, z = 0 },
+				halfExtents = { x = 10, y = 4, z = 10 },
+			},
+		},
+	}
+
+	local rejectedIntegrationPlayer = makeAlivePlayer(7302)
+	districtRemote:FireServer(rejectedIntegrationPlayer, rejectedIntegrationRequest)
+
+	assertTrue(
+		registry[rejectedIntegrationRequest.districtId] == nil,
+		"TIN-189 rejected: registry remains unchanged for rejected placement"
+	)
+
+	local registryAfterCount = 0
+	for _ in pairs(registry) do
+		registryAfterCount = registryAfterCount + 1
+	end
+	assertTrue(registryAfterCount == registryInitialCount, "TIN-189 rejected: registry size unchanged")
+
+	assertTrue(
+		registry[rejectedIntegrationRequest.districtId] == nil
+			or registry[rejectedIntegrationRequest.districtId].materializedWorldState == nil,
+		"TIN-189 rejected: no world-state payload created"
+	)
+
+	local sawRejectionWithCode = false
+	for _, line in ipairs(logs) do
+		if
+			type(line) == "string"
+			and string.find(line, "PlacementOutcome status=rejected", 1, true)
+			and string.find(line, "placement_rejected_by_validator", 1, true)
+			and string.find(line, "District_WorldState_Rejected_TIN189", 1, true)
+		then
+			sawRejectionWithCode = true
+			break
+		end
+	end
+	assertTrue(sawRejectionWithCode, "TIN-189 rejected: rejection logged with deterministic validation reason")
+
+	print("PASS [TIN-189 rejected: placement does not materialize world state]")
 end
 
 print("district_placement_validation_gate_integration: all validation gate tests passed")
