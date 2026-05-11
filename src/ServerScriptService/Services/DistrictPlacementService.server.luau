@@ -42,12 +42,14 @@ end
 debugLog("Booting service")
 
 local function requireChildModule(parent: Instance, childName: string): any
-	debugLog(string.format(
-		"Resolving dependency child=%s parent=%s timeout=%ds",
-		childName,
-		parent:GetFullName(),
-		STARTUP_WAIT_TIMEOUT_SECONDS
-	))
+	debugLog(
+		string.format(
+			"Resolving dependency child=%s parent=%s timeout=%ds",
+			childName,
+			parent:GetFullName(),
+			STARTUP_WAIT_TIMEOUT_SECONDS
+		)
+	)
 	local child = parent:WaitForChild(childName, STARTUP_WAIT_TIMEOUT_SECONDS)
 	if not child then
 		error(string.format("startup_dependency_missing child=%s parent=%s", childName, parent:GetFullName()))
@@ -57,11 +59,7 @@ local function requireChildModule(parent: Instance, childName: string): any
 		return require(child)
 	end)
 	if not ok then
-		error(string.format(
-			"startup_dependency_require_failed child=%s error=%s",
-			childName,
-			tostring(moduleOrError)
-		))
+		error(string.format("startup_dependency_require_failed child=%s error=%s", childName, tostring(moduleOrError)))
 	end
 
 	debugLog(string.format("Resolved dependency child=%s", childName))
@@ -92,10 +90,7 @@ end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
 if not dependenciesReady then
-	debugWarn(string.format(
-		"Startup failed during dependency resolution error=%s",
-		tostring(dependencyError)
-	))
+	debugWarn(string.format("Startup failed during dependency resolution error=%s", tostring(dependencyError)))
 	return
 end
 
@@ -105,15 +100,10 @@ debugLog("Dependency resolution complete")
 -- This is a placeholder: the real assembled realm descriptor will be supplied by the
 -- realm assembly pipeline once that runtime path is defined (out of TIN-188 scope).
 local prototypeOutputBuilt, prototypeOutputOrError = pcall(function()
-	return RealmChunkAssemblySchema.BuildAssemblyOutput(
-		RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
-	)
+	return RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 end)
 if not prototypeOutputBuilt then
-	debugWarn(string.format(
-		"Failed to build prototype assembly output error=%s",
-		tostring(prototypeOutputOrError)
-	))
+	debugWarn(string.format("Failed to build prototype assembly output error=%s", tostring(prototypeOutputOrError)))
 	return
 end
 
@@ -169,21 +159,19 @@ local function isPlayerAlive(player: Player): boolean
 end
 
 local function rejectPlacement(player: Player, reason: string)
-	debugWarn(string.format(
-		"Rejected DistrictPlacementRequest userId=%d reason=%s",
-		player.UserId,
-		reason
-	))
+	debugWarn(string.format("Rejected DistrictPlacementRequest userId=%d reason=%s", player.UserId, reason))
 end
 
 local function logPlacementOutcome(status: string, player: Player, districtId: string, reason: string?)
-	debugLog(string.format(
-		"PlacementOutcome status=%s userId=%d districtId=%s reason=%s",
-		status,
-		player.UserId,
-		districtId,
-		tostring(reason)
-	))
+	debugLog(
+		string.format(
+			"PlacementOutcome status=%s userId=%d districtId=%s reason=%s",
+			status,
+			player.UserId,
+			districtId,
+			tostring(reason)
+		)
+	)
 end
 
 local function isVector3Data(value: any): boolean
@@ -237,11 +225,9 @@ local placementRemote = ensureRemoteEvent(remotesFolder, DistrictPlacementConfig
 debugLog(string.format("District placement remote ready name=%s", DistrictPlacementConfig.PlacementRemoteName))
 
 placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	debugLog(string.format(
-		"Received DistrictPlacementRequest userId=%d payloadType=%s",
-		player.UserId,
-		typeof(payload)
-	))
+	debugLog(
+		string.format("Received DistrictPlacementRequest userId=%d payloadType=%s", player.UserId, typeof(payload))
+	)
 
 	if isCoolingDown(player.UserId) then
 		rejectPlacement(player, "request_cooldown")
@@ -287,13 +273,20 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		proposedOccupiedSpace = request.proposedOccupiedSpace,
 	}
 
-	debugLog(string.format(
-		"Accepted DistrictPlacementRequest userId=%d districtId=%s boxCount=%d",
-		player.UserId,
-		request.districtId,
-		#request.proposedOccupiedSpace
-	))
+	debugLog(
+		string.format(
+			"Accepted DistrictPlacementRequest userId=%d districtId=%s boxCount=%d",
+			player.UserId,
+			request.districtId,
+			#request.proposedOccupiedSpace
+		)
+	)
 	logPlacementOutcome("accepted", player, request.districtId, nil)
 end)
 
 debugLog("District placement service ready")
+
+-- Test-only export for integration testing (TIN-175)
+-- This allows test harnesses to inspect the internal registry state
+-- and verify that mutations occur only on accepted placements.
+_G._DistrictPlacementService_Registry = placedDistrictById
