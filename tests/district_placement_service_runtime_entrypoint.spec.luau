@@ -649,4 +649,94 @@ do
 	print("PASS [TIN-190 rejected: no Workspace artifact materialized]")
 end
 
+-- TIN-191 Contract Proof: Deterministic Artifact Lifecycle Ownership
+-- Validates that district artifact ownership is deterministic for repeated accepted placements.
+-- Same districtId reacceptance replaces the owned artifact deterministically (not based on instance identity).
+-- Artifact count remains one per districtId; metadata updates to latest accepted payload.
+do
+	local registry = getPlacedDistrictRegistry()
+	local initialArtifactCount = getDistrictArtifactCount()
+
+	local lifecycleDistrictId = "District_WorkspaceArtifact_Lifecycle_TIN190"
+	local firstAcceptedRequest = {
+		districtId = lifecycleDistrictId,
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 340, y = 0, z = 500 },
+				halfExtents = { x = 20, y = 10, z = 20 },
+			},
+		},
+	}
+	local firstAcceptedPlayer = makeAlivePlayer(7501)
+	districtRemote:FireServer(firstAcceptedPlayer, firstAcceptedRequest)
+
+	local secondAcceptedRequest = {
+		districtId = lifecycleDistrictId,
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 360, y = 0, z = 520 },
+				halfExtents = { x = 24, y = 12, z = 24 },
+			},
+		},
+	}
+	local secondAcceptedPlayer = makeAlivePlayer(7502)
+	districtRemote:FireServer(secondAcceptedPlayer, secondAcceptedRequest)
+
+	local registryEntry = registry[lifecycleDistrictId]
+	assertTrue(registryEntry ~= nil, "TIN-190 lifecycle: registry keeps accepted district state")
+
+	if registryEntry ~= nil then
+		assertEqual(
+			registryEntry.placedByUserId,
+			secondAcceptedPlayer.UserId,
+			"TIN-190 lifecycle: registry entry ownership updates to the latest accepted placement"
+		)
+		assertTrue(
+			registryEntry.materializedWorldState ~= nil,
+			"TIN-190 lifecycle: world-state payload still exists after replacement"
+		)
+		if registryEntry.materializedWorldState then
+			assertEqual(
+				registryEntry.materializedWorldState.placedByUserId,
+				secondAcceptedPlayer.UserId,
+				"TIN-190 lifecycle: world-state placedByUserId updates to latest accepted placement"
+			)
+			assertEqual(
+				registryEntry.materializedWorldState.proposedOccupiedSpace[1].worldCenter.x,
+				secondAcceptedRequest.proposedOccupiedSpace[1].worldCenter.x,
+				"TIN-190 lifecycle: world-state proposedOccupiedSpace updates to latest accepted placement"
+			)
+		end
+	end
+
+	local districtsFolder = getDistrictsFolder()
+	assertTrue(districtsFolder ~= nil, "TIN-190 lifecycle: Workspace.Map.Districts exists")
+	if districtsFolder ~= nil then
+		local artifact = districtsFolder:FindFirstChild(lifecycleDistrictId)
+		assertTrue(artifact ~= nil, "TIN-190 lifecycle: district artifact remains present after replacement")
+		if artifact ~= nil then
+			assertEqual(
+				artifact:GetAttribute("PlacedByUserId"),
+				secondAcceptedPlayer.UserId,
+				"TIN-190 lifecycle: artifact ownership updates to latest accepted placement"
+			)
+			assertEqual(
+				artifact:GetAttribute("OccupiedBoxCount"),
+				#secondAcceptedRequest.proposedOccupiedSpace,
+				"TIN-190 lifecycle: artifact metadata updates to latest accepted placement"
+			)
+		end
+	end
+
+	local afterArtifactCount = getDistrictArtifactCount()
+	assertTrue(
+		afterArtifactCount == initialArtifactCount + 1,
+		"TIN-190 lifecycle: repeated accepted placement keeps exactly one district artifact"
+	)
+
+	print("PASS [TIN-191 contract: same districtId replaces owned artifact deterministically, count remains one]")
+end
+
 print("district_placement_workspace_artifact_integration: all TIN-190 checks passed")
