@@ -362,8 +362,16 @@ local districtBuilder = makeAlivePlayer(9302, Vector3.new(12, 0, 12))
 buildRemote:FireServer(districtBuilder, "District_Startup_A")
 
 assertTrue(districtBuildState["District_Startup_A"].isBuilt, "district build request accepted: isBuilt flipped")
-assertEqual(districtBuildState["District_Startup_A"].buildCount, 1, "district build request accepted: buildCount incremented")
-assertEqual(districtBuildState["District_Startup_A"].lastBuiltByUserId, 9302, "district build request accepted: lastBuiltByUserId set")
+assertEqual(
+	districtBuildState["District_Startup_A"].buildCount,
+	1,
+	"district build request accepted: buildCount incremented"
+)
+assertEqual(
+	districtBuildState["District_Startup_A"].lastBuiltByUserId,
+	9302,
+	"district build request accepted: lastBuiltByUserId set"
+)
 
 -- Second request for the same district must be rejected as already_built.
 local districtBuilder2 = makeAlivePlayer(9303, Vector3.new(12, 0, 12))
@@ -377,7 +385,11 @@ for i = warnsBefore + 1, #warns do
 	end
 end
 assertTrue(sawAlreadyBuilt, "district already_built rejection fires on second build request")
-assertEqual(districtBuildState["District_Startup_A"].buildCount, 1, "district buildCount unchanged after already_built rejection")
+assertEqual(
+	districtBuildState["District_Startup_A"].buildCount,
+	1,
+	"district buildCount unchanged after already_built rejection"
+)
 
 -- Completely unknown ID must still produce site_not_found.
 local unknownPlayer = makeAlivePlayer(9304, Vector3.new(12, 0, 12))
@@ -393,8 +405,61 @@ end
 assertTrue(sawSiteNotFound, "unknown id still produces site_not_found after district routing")
 
 -- District_Startup_B must still be unbuilt.
-assertEqual(districtBuildState["District_Startup_B"].isBuilt, false, "District_Startup_B unaffected by District_Startup_A build")
+assertEqual(
+	districtBuildState["District_Startup_B"].isBuilt,
+	false,
+	"District_Startup_B unaffected by District_Startup_A build"
+)
 
 assertEqual(queryApiCallCount.getAll, 1, "query API startup discovery remains one-time after build requests")
 
 print("construction_service_runtime_entrypoint: district mutation-path slice checks passed")
+
+-- TIN-199: ConstructionDebugStateRequest district debug surface assertions.
+-- Targeted lookup: district ID returns district build-state in debug response.
+-- District_Startup_B is unbuilt (was never built above), so use it for clean state.
+local debugPlayer = makeAlivePlayer(9305, Vector3.new(12, 0, 12))
+debugRequestRemote:FireServer(debugPlayer, "District_Startup_B")
+local debugResponse = debugResponseRemote._ClientPayload
+assertTrue(debugResponse ~= nil, "targeted district debug: response payload populated")
+assertEqual(debugResponse.districtId, "District_Startup_B", "targeted district debug: districtId field present")
+assertEqual(debugResponse.isBuilt, false, "targeted district debug: isBuilt field correct")
+assertEqual(debugResponse.buildCount, 0, "targeted district debug: buildCount field correct")
+assertTrue(debugResponse.lastBuiltByUserId == nil, "targeted district debug: lastBuiltByUserId nil for unbuilt district")
+assertEqual(debugResponse.woodCost, ConstructionConfig.DistrictDefaultCost.wood, "targeted district debug: woodCost field matches config")
+assertEqual(debugResponse.stoneCost, ConstructionConfig.DistrictDefaultCost.stone, "targeted district debug: stoneCost field matches config")
+assertTrue(debugResponse.woodStored ~= nil, "targeted district debug: woodStored flow snapshot field present")
+assertTrue(debugResponse.stoneStored ~= nil, "targeted district debug: stoneStored flow snapshot field present")
+
+-- Targeted lookup: unknown ID still produces site_not_found warn.
+local debugUnknownPlayer = makeAlivePlayer(9306, Vector3.new(12, 0, 12))
+local warnsBeforeDebugUnknown = #warns
+debugRequestRemote:FireServer(debugUnknownPlayer, "Unknown_District_Debug_XYZ")
+local sawDebugSiteNotFound = false
+for i = warnsBeforeDebugUnknown + 1, #warns do
+	if string.find(warns[i], "site_not_found", 1, true) then
+		sawDebugSiteNotFound = true
+		break
+	end
+end
+assertTrue(sawDebugSiteNotFound, "targeted district debug: unknown id produces site_not_found warn")
+
+-- Snapshot-all (nil payload): response must include both site and district entries.
+local debugSnapshotPlayer = makeAlivePlayer(9307, Vector3.new(12, 0, 12))
+debugRequestRemote:FireServer(debugSnapshotPlayer, nil)
+local snapshotPayload = debugResponseRemote._ClientPayload
+assertTrue(type(snapshotPayload) == "table", "snapshot-all debug: response is a table")
+local sawDistrictEntry = false
+local sawSiteEntry = false
+for _, entry in ipairs(snapshotPayload) do
+	if entry.districtId ~= nil then
+		sawDistrictEntry = true
+	end
+	if entry.siteId ~= nil then
+		sawSiteEntry = true
+	end
+end
+assertTrue(sawDistrictEntry, "snapshot-all debug: at least one district entry present")
+assertTrue(sawSiteEntry, "snapshot-all debug: site entry still present in snapshot")
+
+print("construction_service_runtime_entrypoint: district debug-surface slice checks passed")

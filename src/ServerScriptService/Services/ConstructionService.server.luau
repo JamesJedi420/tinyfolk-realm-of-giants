@@ -426,8 +426,11 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 		-- Range check deferred: DistrictBuildState has no Workspace part reference in this slice.
 
-		local districtSpent, districtFlowSnapshot, districtSpendError =
-			ResourceFlowState.SpendStoredAtomic(districtState.woodCost, districtState.stoneCost, "Construction:" .. siteId)
+		local districtSpent, districtFlowSnapshot, districtSpendError = ResourceFlowState.SpendStoredAtomic(
+			districtState.woodCost,
+			districtState.stoneCost,
+			"Construction:" .. siteId
+		)
 		if not districtSpent then
 			local spendReason = districtSpendError or "insufficient_materials"
 			rejectBuild(player, spendReason)
@@ -446,7 +449,11 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		end)
 
 		if not appliedDistrictBuiltState then
-			ResourceFlowState.AddStoredAtomic(districtState.woodCost, districtState.stoneCost, "ConstructionRollback:" .. siteId)
+			ResourceFlowState.AddStoredAtomic(
+				districtState.woodCost,
+				districtState.stoneCost,
+				"ConstructionRollback:" .. siteId
+			)
 			districtState.isBuilt = previousDistrictIsBuilt
 			districtState.buildCount = previousDistrictBuildCount
 			districtState.lastBuiltByUserId = previousDistrictLastBuiltByUserId
@@ -576,7 +583,37 @@ local function handleDebugRequest(player: Player, payload: unknown)
 	if requestedSiteId then
 		local siteState = siteStateById[requestedSiteId]
 		if not siteState then
-			rejectDebug(player, "site_not_found")
+			-- TIN-199: check district build-state table before falling to site_not_found.
+			local districtState = districtBuildStateById[requestedSiteId]
+			if not districtState then
+				rejectDebug(player, "site_not_found")
+				return
+			end
+
+			local flowSnapshot = ResourceFlowState.GetSnapshot()
+			debugResponseRemote:FireClient(player, {
+				districtId = districtState.districtId,
+				isBuilt = districtState.isBuilt,
+				buildCount = districtState.buildCount,
+				lastBuiltByUserId = districtState.lastBuiltByUserId,
+				woodCost = districtState.woodCost,
+				stoneCost = districtState.stoneCost,
+				woodProduced = flowSnapshot.Wood.produced,
+				woodInTransit = flowSnapshot.Wood.inTransit,
+				woodStored = flowSnapshot.Wood.stored,
+				woodUsable = flowSnapshot.Wood.usable,
+				stoneProduced = flowSnapshot.Stone.produced,
+				stoneInTransit = flowSnapshot.Stone.inTransit,
+				stoneStored = flowSnapshot.Stone.stored,
+				stoneUsable = flowSnapshot.Stone.usable,
+			})
+			debugLog(
+				string.format(
+					"Sent district construction debug state userId=%d districtId=%s",
+					player.UserId,
+					districtState.districtId
+				)
+			)
 			return
 		end
 
@@ -624,8 +661,34 @@ local function handleDebugRequest(player: Player, payload: unknown)
 		})
 	end
 
+	-- TIN-199: include district entries in snapshot-all.
+	for districtId, districtState in districtBuildStateById do
+		table.insert(snapshot, {
+			districtId = districtState.districtId,
+			isBuilt = districtState.isBuilt,
+			buildCount = districtState.buildCount,
+			lastBuiltByUserId = districtState.lastBuiltByUserId,
+			woodCost = districtState.woodCost,
+			stoneCost = districtState.stoneCost,
+			woodProduced = flowSnapshot.Wood.produced,
+			woodInTransit = flowSnapshot.Wood.inTransit,
+			woodStored = flowSnapshot.Wood.stored,
+			woodUsable = flowSnapshot.Wood.usable,
+			stoneProduced = flowSnapshot.Stone.produced,
+			stoneInTransit = flowSnapshot.Stone.inTransit,
+			stoneStored = flowSnapshot.Stone.stored,
+			stoneUsable = flowSnapshot.Stone.usable,
+		})
+	end
+
 	debugResponseRemote:FireClient(player, snapshot)
-	debugLog(string.format("Sent construction debug state snapshot userId=%d siteCount=%d", player.UserId, #snapshot))
+	debugLog(
+		string.format(
+			"Sent construction debug state snapshot userId=%d entryCount=%d",
+			player.UserId,
+			#snapshot
+		)
+	)
 end
 
 debugRequestRemote.OnServerEvent:Connect(handleDebugRequest)
