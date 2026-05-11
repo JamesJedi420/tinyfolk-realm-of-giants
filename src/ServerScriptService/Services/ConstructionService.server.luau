@@ -14,7 +14,7 @@ local BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local DEBUG_REQUEST_REMOTE_NAME = "ConstructionDebugStateRequest"
 local DEBUG_RESPONSE_REMOTE_NAME = "ConstructionDebugStateResponse"
 
-local CONSTRUCTION_ROOT_PATH = {"Map"}
+local CONSTRUCTION_ROOT_PATH = { "Map" }
 
 local ATTRIBUTE_IS_BUILT = "IsBuilt"
 local ATTRIBUTE_BUILD_COUNT = "BuildCount"
@@ -36,8 +36,18 @@ type ConstructionSiteState = {
 	lastBuiltByUserId: number?,
 }
 
-local siteStateById: {[string]: ConstructionSiteState} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+type DistrictBuildState = {
+	districtId: string,
+	placedByUserId: number,
+	placedAt: number,
+	isBuilt: boolean,
+	buildCount: number,
+	lastBuiltByUserId: number?,
+}
+
+local siteStateById: { [string]: ConstructionSiteState } = {}
+local districtBuildStateById: { [string]: DistrictBuildState } = {}
+local lastRequestAtByUserId: { [number]: number? } = {}
 
 local function debugLog(message: string)
 	print(string.format("[ConstructionService] %s", message))
@@ -50,7 +60,14 @@ end
 debugLog("Booting service")
 
 local function requireChildModule(parent: Instance, childName: string): any
-	debugLog(string.format("Resolving dependency child=%s parent=%s timeout=%ds", childName, parent:GetFullName(), STARTUP_WAIT_TIMEOUT_SECONDS))
+	debugLog(
+		string.format(
+			"Resolving dependency child=%s parent=%s timeout=%ds",
+			childName,
+			parent:GetFullName(),
+			STARTUP_WAIT_TIMEOUT_SECONDS
+		)
+	)
 	local child = parent:WaitForChild(childName, STARTUP_WAIT_TIMEOUT_SECONDS)
 	if not child then
 		error(string.format("startup_dependency_missing child=%s parent=%s", childName, parent:GetFullName()))
@@ -119,7 +136,7 @@ end
 
 local function isCoolingDown(userId: number): boolean
 	local last = lastRequestAtByUserId[userId]
-	if not last then
+	if last == nil then
 		return false
 	end
 
@@ -132,13 +149,13 @@ end
 
 local function getHumanoidRootPart(player: Player): BasePart?
 	local character = player.Character
-	if not character then
+	if character == nil then
 		return nil
 	end
 
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root
+		return root :: BasePart
 	end
 
 	return nil
@@ -146,16 +163,16 @@ end
 
 local function isPlayerAlive(player: Player): boolean
 	local character = player.Character
-	if not character then
+	if character == nil then
 		return false
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
+	if humanoid == nil then
 		return false
 	end
 
-	return humanoid.Health > 0
+	return (humanoid :: Humanoid).Health > 0
 end
 
 local function findConstructionRoot(): Instance?
@@ -240,12 +257,14 @@ local function registerConstructionPart(part: BasePart)
 	siteStateById[siteId] = state
 	applyBuiltVisualState(state)
 	applyDebugAttributes(state)
-	debugLog(string.format("Registered construction site id=%s woodCost=%.0f stoneCost=%.0f", siteId, woodCost, stoneCost))
+	debugLog(
+		string.format("Registered construction site id=%s woodCost=%.0f stoneCost=%.0f", siteId, woodCost, stoneCost)
+	)
 end
 
 local function registerConstructionSitesFromWorkspace()
 	local root = findConstructionRoot()
-	if not root then
+	if root == nil then
 		debugWarn("No construction root found at Workspace.Map")
 		return
 	end
@@ -261,21 +280,74 @@ local function registerConstructionSitesFromWorkspace()
 	end
 end
 
+local function initializeDistrictBuildStateFromPlacementQueryAPI()
+	local queryApi = _G._DistrictPlacementService_QueryAPI
+	if type(queryApi) ~= "table" then
+		debugWarn("District placement query API unavailable at startup; skipping district build-state discovery")
+		return
+	end
+
+	local getAllPlacedDistricts = queryApi.GetAllPlacedDistricts
+	if type(getAllPlacedDistricts) ~= "function" then
+		debugWarn("District placement query API missing GetAllPlacedDistricts; skipping district build-state discovery")
+		return
+	end
+
+	local ok, placedDistrictsOrError = pcall(getAllPlacedDistricts)
+	if not ok then
+		debugWarn(string.format("District placement discovery failed error=%s", tostring(placedDistrictsOrError)))
+		return
+	end
+
+	if type(placedDistrictsOrError) ~= "table" then
+		debugWarn("District placement discovery returned invalid snapshot; expected table")
+		return
+	end
+
+	local discoveredCount = 0
+	for districtId, placedState in pairs(placedDistrictsOrError) do
+		local placedStateAny = placedState :: any
+		local placedByUserIdAny = placedStateAny.placedByUserId
+		local placedAtAny = placedStateAny.placedAt
+		if
+			type(districtId) == "string"
+			and districtId ~= ""
+			and type(placedStateAny) == "table"
+			and type(placedByUserIdAny) == "number"
+			and type(placedAtAny) == "number"
+		then
+			districtBuildStateById[districtId] = {
+				districtId = districtId,
+				placedByUserId = placedByUserIdAny,
+				placedAt = placedAtAny,
+				isBuilt = false,
+				buildCount = 0,
+				lastBuiltByUserId = nil,
+			}
+			discoveredCount += 1
+		end
+	end
+
+	debugLog(string.format("Initialized district build-state entries=%d", discoveredCount))
+end
+
 local function rejectBuild(player: Player, reason: string)
 	debugWarn(string.format("Rejected ConstructionBuildRequest userId=%d reason=%s", player.UserId, reason))
 end
 
 local function logBuildOutcome(status: string, player: Player, siteId: string, reason: string?)
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
-	debugLog(string.format(
-		"BuildOutcome status=%s userId=%d siteId=%s reason=%s woodStored=%.0f stoneStored=%.0f",
-		status,
-		player.UserId,
-		siteId,
-		tostring(reason),
-		flowSnapshot.Wood.stored,
-		flowSnapshot.Stone.stored
-	))
+	debugLog(
+		string.format(
+			"BuildOutcome status=%s userId=%d siteId=%s reason=%s woodStored=%.0f stoneStored=%.0f",
+			status,
+			player.UserId,
+			siteId,
+			tostring(reason),
+			flowSnapshot.Wood.stored,
+			flowSnapshot.Stone.stored
+		)
+	)
 end
 
 local function rejectDebug(player: Player, reason: string)
@@ -291,16 +363,25 @@ debugLog("Construction remotes ready")
 
 debugLog("Registering construction sites")
 registerConstructionSitesFromWorkspace()
-debugLog(string.format("Construction site count=%d", (function()
-	local count = 0
-	for _ in siteStateById do
-		count += 1
-	end
-	return count
-end)()))
+debugLog(string.format(
+	"Construction site count=%d",
+	(function()
+		local count = 0
+		for _ in siteStateById do
+			count += 1
+		end
+		return count
+	end)()
+))
+
+-- Startup-only district discovery from placement query API (TIN-193).
+-- This initializes minimal district build-state entries without widening build mutation scope.
+initializeDistrictBuildStateFromPlacementQueryAPI()
 
 buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	debugLog(string.format("Received ConstructionBuildRequest userId=%d payloadType=%s", player.UserId, typeof(payload)))
+	debugLog(
+		string.format("Received ConstructionBuildRequest userId=%d payloadType=%s", player.UserId, typeof(payload))
+	)
 
 	if isCoolingDown(player.UserId) then
 		rejectBuild(player, "request_cooldown")
@@ -337,7 +418,7 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	end
 
 	local root = getHumanoidRootPart(player)
-	if not root then
+	if root == nil then
 		rejectBuild(player, "humanoid_root_missing")
 		logBuildOutcome("rejected", player, siteId, "humanoid_root_missing")
 		return
@@ -345,7 +426,8 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	local distance = (siteState.part.Position - root.Position).Magnitude
 	if distance > ConstructionConfig.InteractionRangeStuds then
-		local outOfRangeReason = string.format("out_of_range distance=%.2f max=%.2f", distance, ConstructionConfig.InteractionRangeStuds)
+		local outOfRangeReason =
+			string.format("out_of_range distance=%.2f max=%.2f", distance, ConstructionConfig.InteractionRangeStuds)
 		rejectBuild(player, outOfRangeReason)
 		logBuildOutcome("rejected", player, siteId, outOfRangeReason)
 		return
@@ -358,7 +440,8 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	local spent, flowSnapshot, spendError = ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId)
+	local spent, flowSnapshot, spendError =
+		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId)
 	if not spent then
 		local spendReason = spendError or "insufficient_materials"
 		rejectBuild(player, spendReason)
@@ -399,20 +482,24 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	debugLog(string.format(
-		"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
-		player.UserId,
-		siteId,
-		woodCost,
-		stoneCost,
-		flowSnapshot.Wood.stored,
-		flowSnapshot.Stone.stored
-	))
+	debugLog(
+		string.format(
+			"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+			player.UserId,
+			siteId,
+			woodCost,
+			stoneCost,
+			flowSnapshot.Wood.stored,
+			flowSnapshot.Stone.stored
+		)
+	)
 	logBuildOutcome("accepted", player, siteId, nil)
 end)
 
 local function handleDebugRequest(player: Player, payload: unknown)
-	debugLog(string.format("Received ConstructionDebugStateRequest userId=%d payloadType=%s", player.UserId, typeof(payload)))
+	debugLog(
+		string.format("Received ConstructionDebugStateRequest userId=%d payloadType=%s", player.UserId, typeof(payload))
+	)
 
 	if payload ~= nil and type(payload) ~= "string" then
 		rejectDebug(player, "malformed_payload")
@@ -480,5 +567,9 @@ debugRequestRemote.OnServerEvent:Connect(handleDebugRequest)
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
 end)
+
+-- Test-only exports for runtime proof slices.
+_G._ConstructionService_SiteState = siteStateById
+_G._ConstructionService_DistrictBuildState = districtBuildStateById
 
 debugLog("ConstructionService initialized")
