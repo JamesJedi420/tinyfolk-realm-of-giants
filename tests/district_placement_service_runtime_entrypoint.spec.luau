@@ -48,6 +48,7 @@ local function makeNode(name: string, className: string?, fullName: string?)
 		ClassName = className or "Folder",
 		_FullName = fullName or name,
 		_Children = {},
+		_Attributes = {},
 	}
 
 	function node.IsA(self: any, expectedClass: string): boolean
@@ -64,6 +65,22 @@ local function makeNode(name: string, className: string?, fullName: string?)
 
 	function node.WaitForChild(self: any, childName: string, _timeout: number?): any
 		return self._Children[childName]
+	end
+
+	function node.GetChildren(self: any): { any }
+		local children: { any } = {}
+		for _, child in pairs(self._Children) do
+			table.insert(children, child)
+		end
+		return children
+	end
+
+	function node.SetAttribute(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end
+
+	function node.GetAttribute(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
 	end
 
 	return node
@@ -149,6 +166,10 @@ local playersService = {
 	ClassName = "Players",
 }
 
+local workspaceService = makeNode("Workspace", "Workspace", "Workspace")
+local mapFolder = makeNode("Map", "Folder", "Workspace.Map")
+addChild(workspaceService, "Map", mapFolder)
+
 local fakeGame = {}
 
 function fakeGame:GetService(serviceName: string): any
@@ -157,6 +178,9 @@ function fakeGame:GetService(serviceName: string): any
 	end
 	if serviceName == "ReplicatedStorage" then
 		return replicatedStorage
+	end
+	if serviceName == "Workspace" then
+		return workspaceService
 	end
 	error(string.format("unsupported service: %s", serviceName))
 	return nil
@@ -262,6 +286,22 @@ local function getPlacedDistrictRegistry(): any
 		error("validation gate integration test: registry not exposed by service")
 	end
 	return _G._DistrictPlacementService_Registry
+end
+
+local function getDistrictsFolder(): any
+	local map = workspaceService:FindFirstChild("Map")
+	if map == nil then
+		return nil
+	end
+	return map:FindFirstChild("Districts")
+end
+
+local function getDistrictArtifactCount(): number
+	local districts = getDistrictsFolder()
+	if districts == nil then
+		return 0
+	end
+	return #districts:GetChildren()
 end
 
 -- TIN-175 Integration Test: Accepted Placement
@@ -492,3 +532,121 @@ do
 end
 
 print("district_placement_validation_gate_integration: all validation gate tests passed")
+
+-- TIN-190 Integration Test: Accepted Placement Materializes One Workspace Artifact
+do
+	local registry = getPlacedDistrictRegistry()
+	local initialArtifactCount = getDistrictArtifactCount()
+
+	local acceptedIntegrationRequest = {
+		districtId = "District_WorkspaceArtifact_Accepted_TIN190",
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 300, y = 0, z = 500 },
+				halfExtents = { x = 20, y = 10, z = 20 },
+			},
+		},
+	}
+
+	local acceptedIntegrationPlayer = makeAlivePlayer(7401)
+	districtRemote:FireServer(acceptedIntegrationPlayer, acceptedIntegrationRequest)
+
+	local registryEntry = registry[acceptedIntegrationRequest.districtId]
+	assertTrue(registryEntry ~= nil, "TIN-190 accepted: registry still records accepted placement")
+
+	local districtsFolder = getDistrictsFolder()
+	assertTrue(districtsFolder ~= nil, "TIN-190 accepted: Workspace.Map.Districts exists")
+
+	if districtsFolder ~= nil then
+		local artifact = districtsFolder:FindFirstChild(acceptedIntegrationRequest.districtId)
+		assertTrue(artifact ~= nil, "TIN-190 accepted: exactly one district artifact exists by districtId")
+
+		if artifact ~= nil then
+			assertEqual(
+				artifact:GetAttribute("DistrictId"),
+				acceptedIntegrationRequest.districtId,
+				"TIN-190 accepted: artifact DistrictId attribute matches"
+			)
+			assertEqual(
+				artifact:GetAttribute("PlacedByUserId"),
+				acceptedIntegrationPlayer.UserId,
+				"TIN-190 accepted: artifact PlacedByUserId attribute matches"
+			)
+			assertTrue(
+				type(artifact:GetAttribute("PlacedAt")) == "number" and artifact:GetAttribute("PlacedAt") > 0,
+				"TIN-190 accepted: artifact PlacedAt attribute is valid"
+			)
+			assertEqual(
+				artifact:GetAttribute("OccupiedBoxCount"),
+				#acceptedIntegrationRequest.proposedOccupiedSpace,
+				"TIN-190 accepted: artifact OccupiedBoxCount attribute matches"
+			)
+		end
+	end
+
+	local afterArtifactCount = getDistrictArtifactCount()
+	assertTrue(
+		afterArtifactCount == initialArtifactCount + 1,
+		"TIN-190 accepted: district artifact count increased by exactly one"
+	)
+
+	print("PASS [TIN-190 accepted: one Workspace artifact materialized]")
+end
+
+-- TIN-190 Integration Test: Rejected Placement Materializes No Workspace Artifact
+do
+	local registry = getPlacedDistrictRegistry()
+	local initialArtifactCount = getDistrictArtifactCount()
+
+	local rejectedIntegrationRequest = {
+		districtId = "District_WorkspaceArtifact_Rejected_TIN190",
+		proposedOccupiedSpace = {
+			{
+				tag = "body",
+				worldCenter = { x = 30, y = 0, z = 0 },
+				halfExtents = { x = 10, y = 4, z = 10 },
+			},
+		},
+	}
+
+	local rejectedIntegrationPlayer = makeAlivePlayer(7402)
+	districtRemote:FireServer(rejectedIntegrationPlayer, rejectedIntegrationRequest)
+
+	assertTrue(
+		registry[rejectedIntegrationRequest.districtId] == nil,
+		"TIN-190 rejected: registry remains unchanged for rejected placement"
+	)
+
+	local districtsFolder = getDistrictsFolder()
+	if districtsFolder ~= nil then
+		assertTrue(
+			districtsFolder:FindFirstChild(rejectedIntegrationRequest.districtId) == nil,
+			"TIN-190 rejected: no district artifact exists for rejected placement"
+		)
+	end
+
+	local afterArtifactCount = getDistrictArtifactCount()
+	assertTrue(afterArtifactCount == initialArtifactCount, "TIN-190 rejected: district artifact count unchanged")
+
+	local sawRejectionWithCode = false
+	for _, line in ipairs(logs) do
+		if
+			type(line) == "string"
+			and string.find(line, "PlacementOutcome status=rejected", 1, true)
+			and string.find(line, "placement_rejected_by_validator", 1, true)
+			and string.find(line, "District_WorkspaceArtifact_Rejected_TIN190", 1, true)
+		then
+			sawRejectionWithCode = true
+			break
+		end
+	end
+	assertTrue(
+		sawRejectionWithCode,
+		"TIN-190 rejected: validator rejection logged before any Workspace artifact mutation"
+	)
+
+	print("PASS [TIN-190 rejected: no Workspace artifact materialized]")
+end
+
+print("district_placement_workspace_artifact_integration: all TIN-190 checks passed")

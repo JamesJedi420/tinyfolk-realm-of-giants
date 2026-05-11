@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 
@@ -145,6 +146,111 @@ local function ensureRemoteEvent(parentFolder: Folder, remoteName: string): Remo
 	return remote
 end
 
+local function createMockFolder(name: string, parent: any): any
+	local folder: any = {
+		Name = name,
+		ClassName = "Folder",
+		_Children = {},
+		_Attributes = {},
+	}
+
+	function folder.IsA(self: any, expectedClass: string): boolean
+		return self.ClassName == expectedClass
+	end
+
+	function folder.FindFirstChild(self: any, childName: string): any
+		return self._Children[childName]
+	end
+
+	function folder.GetChildren(self: any): { any }
+		local children: { any } = {}
+		for _, child in pairs(self._Children) do
+			table.insert(children, child)
+		end
+		return children
+	end
+
+	function folder.SetAttribute(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end
+
+	function folder.GetAttribute(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
+	end
+
+	folder.Parent = parent
+	if type(parent._Children) == "table" then
+		parent._Children[name] = folder
+	end
+
+	return folder
+end
+
+local function createFolder(name: string, parent: any): any
+	if type(parent) == "table" and type(parent._Children) == "table" then
+		return createMockFolder(name, parent)
+	end
+
+	local folder = Instance.new("Folder")
+	folder.Name = name
+	folder.Parent = parent
+	return folder
+end
+
+local function ensureChildFolder(parent: any, folderName: string): any
+	local existing = parent:FindFirstChild(folderName)
+	if existing ~= nil and existing:IsA("Folder") then
+		return existing
+	end
+
+	return createFolder(folderName, parent)
+end
+
+local function removeChildFolderByName(parent: any, childName: string)
+	local existing = parent:FindFirstChild(childName)
+	if existing == nil then
+		return
+	end
+
+	if type(existing.Destroy) == "function" then
+		existing:Destroy()
+		return
+	end
+
+	if type(parent) == "table" and type(parent._Children) == "table" then
+		parent._Children[childName] = nil
+	end
+end
+
+local function setArtifactAttribute(instance: any, attributeName: string, value: any)
+	if type(instance.SetAttribute) == "function" then
+		instance:SetAttribute(attributeName, value)
+		return
+	end
+
+	if type(instance) == "table" then
+		if type(instance._Attributes) ~= "table" then
+			instance._Attributes = {}
+		end
+		instance._Attributes[attributeName] = value
+	end
+end
+
+local function materializeAcceptedWorkspaceArtifact(worldState: MaterializedDistrictWorldState)
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local districtsFolder = ensureChildFolder(mapFolder, "Districts")
+
+	removeChildFolderByName(districtsFolder, worldState.districtId)
+
+	local artifact = createFolder(worldState.districtId, districtsFolder)
+	setArtifactAttribute(artifact, "DistrictId", worldState.districtId)
+	setArtifactAttribute(artifact, "PlacedByUserId", worldState.placedByUserId)
+	setArtifactAttribute(artifact, "PlacedAt", worldState.placedAt)
+	setArtifactAttribute(artifact, "OccupiedBoxCount", #worldState.proposedOccupiedSpace)
+
+	debugLog(string.format("Materialized Workspace artifact districtId=%s", worldState.districtId))
+end
+
 local function isCoolingDown(userId: number): boolean
 	local last = lastRequestAtByUserId[userId]
 	if last == nil then
@@ -273,19 +379,24 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	end
 
 	-- Record accepted placement in server-owned in-memory registry.
-	-- Workspace content creation is out of TIN-188 scope; that is TIN-175 gate integration work.
+	-- Then materialize a minimal Workspace-owned district artifact for this accepted placement.
+	local placedAt = os.clock()
+	local materializedWorldState: MaterializedDistrictWorldState = {
+		districtId = request.districtId,
+		placedByUserId = player.UserId,
+		placedAt = placedAt,
+		proposedOccupiedSpace = request.proposedOccupiedSpace,
+	}
+
 	placedDistrictById[request.districtId] = {
 		districtId = request.districtId,
 		placedByUserId = player.UserId,
-		placedAt = os.clock(),
+		placedAt = placedAt,
 		proposedOccupiedSpace = request.proposedOccupiedSpace,
-		materializedWorldState = {
-			districtId = request.districtId,
-			placedByUserId = player.UserId,
-			placedAt = os.clock(),
-			proposedOccupiedSpace = request.proposedOccupiedSpace,
-		},
+		materializedWorldState = materializedWorldState,
 	}
+
+	materializeAcceptedWorkspaceArtifact(materializedWorldState)
 
 	debugLog(
 		string.format(
