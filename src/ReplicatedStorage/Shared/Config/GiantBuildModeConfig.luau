@@ -5,6 +5,7 @@ local GiantBuildModeConfig: any = {}
 -- Remote name for giant structure placement requests.
 -- This remote remains isolated from ConstructionBuildRequest and DistrictPlacementRequest.
 GiantBuildModeConfig.StructurePlacementRemoteName = "GiantStructurePlacementRequest"
+GiantBuildModeConfig.StructureCatalogModuleName = "GiantStructureCatalog"
 
 GiantBuildModeConfig.RequestCooldownSeconds = 0.2
 

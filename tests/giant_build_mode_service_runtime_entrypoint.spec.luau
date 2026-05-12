@@ -1,6 +1,7 @@
 --!strict
 
 local GiantBuildModeConfig = require("../src/ReplicatedStorage/Shared/Config/GiantBuildModeConfig")
+local GiantStructureCatalog = require("../src/ReplicatedStorage/Shared/Config/GiantStructureCatalog")
 
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
@@ -114,6 +115,7 @@ addChild(remotesFolder, "ConstructionBuildRequest", constructionBuildRemote)
 
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared/Config/GiantBuildModeConfig"
+configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -201,6 +203,28 @@ assertEqual(
 	"GiantStructurePlacementRequest",
 	"config remote name matches giant structure placement remote"
 )
+assertEqual(
+	GiantBuildModeConfig.StructureCatalogModuleName,
+	"GiantStructureCatalog",
+	"config structure catalog module name matches giant structure catalog"
+)
+assertTrue(type(GiantStructureCatalog.GiantStructure_Runtime_A) == "table", "catalog exposes runtime structure A")
+assertEqual(
+	GiantStructureCatalog.GiantStructure_Runtime_A.displayName,
+	"Runtime Test Structure A",
+	"catalog runtime structure A stores display name"
+)
+assertEqual(
+	GiantStructureCatalog.GiantStructure_Runtime_A.category,
+	"utility",
+	"catalog runtime structure A stores category"
+)
+assertEqual(GiantStructureCatalog.GiantStructure_Runtime_A.woodCost, 12, "catalog runtime structure A stores wood cost")
+assertEqual(
+	GiantStructureCatalog.GiantStructure_Runtime_A.stoneCost,
+	8,
+	"catalog runtime structure A stores stone cost"
+)
 assertTrue(giantPlacementRemote._Handler ~= nil, "service binds GiantStructurePlacementRequest OnServerEvent")
 assertTrue(constructionBuildRemote._Handler == nil, "service does not bind ConstructionBuildRequest")
 
@@ -225,6 +249,25 @@ for i = warnsBeforeMalformed + 1, #warns do
 	end
 end
 assertTrue(sawMalformedReject, "malformed payload rejection reason is deterministic")
+
+-- Unknown structure ids must reject before registry or world mutation.
+local unknownPlayer = makeAlivePlayer(9405)
+local warnsBeforeUnknown = #warns
+giantPlacementRemote:FireServer(unknownPlayer, makeAcceptedPayload("GiantStructure_Unknown"))
+assertTrue(registry["GiantStructure_Unknown"] == nil, "unknown structure id does not mutate registry")
+
+local mapAfterUnknown = workspaceService:FindFirstChild("Map")
+local giantStructuresAfterUnknown = mapAfterUnknown and mapAfterUnknown:FindFirstChild("GiantStructures")
+assertTrue(giantStructuresAfterUnknown == nil, "unknown structure id does not materialize giant structure artifact")
+
+local sawUnknownReject = false
+for i = warnsBeforeUnknown + 1, #warns do
+	if string.find(warns[i], "structure_not_in_catalog", 1, true) then
+		sawUnknownReject = true
+		break
+	end
+end
+assertTrue(sawUnknownReject, "unknown structure rejection reason is deterministic")
 
 -- Accepted payload creates server-owned registry entry and one workspace artifact.
 local acceptedPlayer = makeAlivePlayer(9402)

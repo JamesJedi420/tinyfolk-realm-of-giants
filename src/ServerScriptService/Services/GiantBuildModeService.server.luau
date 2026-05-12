@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 
 local GiantBuildModeConfig: any
+local GiantStructureCatalog: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
@@ -78,6 +79,11 @@ local function resolveDependencies()
 	end
 
 	GiantBuildModeConfig = requireChildModule(config, "GiantBuildModeConfig")
+	local structureCatalogModuleName = GiantBuildModeConfig.StructureCatalogModuleName
+	if type(structureCatalogModuleName) ~= "string" or structureCatalogModuleName == "" then
+		error("startup_dependency_invalid giant_structure_catalog_module_name")
+	end
+	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -371,6 +377,10 @@ local function logPlacementOutcome(status: string, player: Player, structureId: 
 	)
 end
 
+local function isKnownStructureId(structureId: string): boolean
+	return GiantStructureCatalog[structureId] ~= nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 debugLog("Ensuring giant structure placement remote")
 local placementRemote = ensureRemoteEvent(remotesFolder, GiantBuildModeConfig.StructurePlacementRemoteName)
@@ -406,6 +416,12 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	if not request then
 		rejectPlacement(player, "malformed_payload")
 		logPlacementOutcome("rejected", player, "<unknown>", "malformed_payload")
+		return
+	end
+
+	if not isKnownStructureId(request.structureId) then
+		rejectPlacement(player, "structure_not_in_catalog")
+		logPlacementOutcome("rejected", player, request.structureId, "structure_not_in_catalog")
 		return
 	end
 
