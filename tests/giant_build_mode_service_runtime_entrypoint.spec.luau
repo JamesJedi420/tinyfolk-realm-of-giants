@@ -116,6 +116,7 @@ addChild(remotesFolder, "ConstructionBuildRequest", constructionBuildRemote)
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared/Config/GiantBuildModeConfig"
 configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
+configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -156,9 +157,33 @@ end
 
 game = fakeGame
 
+local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
+-- String path stored directly to avoid child.Parent = parent on a string value
+scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
 script = {
-	Parent = makeNode("Services", "Folder", "ServerScriptService.Services"),
+	Parent = scriptParent,
 } :: any
+
+local ResourceFlowState = require("../src/ServerScriptService/Services/ResourceFlowState")
+
+GiantStructureCatalog.GiantStructure_Runtime_C = {
+	displayName = "Runtime Test Structure C",
+	category = "utility",
+	woodCost = 50,
+	stoneCost = 50,
+}
+GiantStructureCatalog.GiantStructure_Runtime_D = {
+	displayName = "Runtime Test Structure D",
+	category = "utility",
+	woodCost = 60,
+	stoneCost = 60,
+}
+GiantStructureCatalog.GiantStructure_Runtime_E = {
+	displayName = "Runtime Test Structure E",
+	category = "utility",
+	woodCost = 20,
+	stoneCost = 20,
+}
 
 local function makeAlivePlayer(userId: number)
 	local humanoid = {
@@ -189,6 +214,18 @@ local function makeAcceptedPayload(structureId: string): any
 			},
 		},
 	}
+end
+
+local function assertStoredTotals(expectedWood: number, expectedStone: number, label: string)
+	local snapshot = ResourceFlowState.GetSnapshot()
+	assertEqual(snapshot.Wood.stored, expectedWood, label .. " wood stored")
+	assertEqual(snapshot.Stone.stored, expectedStone, label .. " stone stored")
+end
+
+local function assertStoredTotalsUnchanged(beforeSnapshot: any, label: string)
+	local afterSnapshot = ResourceFlowState.GetSnapshot()
+	assertEqual(afterSnapshot.Wood.stored, beforeSnapshot.Wood.stored, label .. " wood unchanged")
+	assertEqual(afterSnapshot.Stone.stored, beforeSnapshot.Stone.stored, label .. " stone unchanged")
 end
 
 local serviceLoaded, serviceError = pcall(function()
@@ -233,9 +270,11 @@ assertTrue(type(registry) == "table", "registry export is available")
 
 -- Rejected malformed payload must not mutate registry or world artifacts.
 local malformedPlayer = makeAlivePlayer(9401)
+local resourcesBeforeMalformed = ResourceFlowState.GetSnapshot()
 local warnsBeforeMalformed = #warns
 giantPlacementRemote:FireServer(malformedPlayer, { structureId = "", proposedOccupiedSpace = {} })
 assertTrue(registry[""] == nil, "malformed payload does not mutate registry")
+assertStoredTotalsUnchanged(resourcesBeforeMalformed, "malformed payload does not debit resources")
 
 local mapAfterMalformed = workspaceService:FindFirstChild("Map")
 local giantStructuresAfterMalformed = mapAfterMalformed and mapAfterMalformed:FindFirstChild("GiantStructures")
@@ -252,9 +291,11 @@ assertTrue(sawMalformedReject, "malformed payload rejection reason is determinis
 
 -- Unknown structure ids must reject before registry or world mutation.
 local unknownPlayer = makeAlivePlayer(9405)
+local resourcesBeforeUnknown = ResourceFlowState.GetSnapshot()
 local warnsBeforeUnknown = #warns
 giantPlacementRemote:FireServer(unknownPlayer, makeAcceptedPayload("GiantStructure_Unknown"))
 assertTrue(registry["GiantStructure_Unknown"] == nil, "unknown structure id does not mutate registry")
+assertStoredTotalsUnchanged(resourcesBeforeUnknown, "unknown structure id does not debit resources")
 
 local mapAfterUnknown = workspaceService:FindFirstChild("Map")
 local giantStructuresAfterUnknown = mapAfterUnknown and mapAfterUnknown:FindFirstChild("GiantStructures")
@@ -272,6 +313,7 @@ assertTrue(sawUnknownReject, "unknown structure rejection reason is deterministi
 -- Accepted payload creates server-owned registry entry and one workspace artifact.
 local acceptedPlayer = makeAlivePlayer(9402)
 local acceptedStructureId = "GiantStructure_Runtime_A"
+local resourcesBeforeAccept = ResourceFlowState.GetSnapshot()
 giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayload(acceptedStructureId))
 
 local acceptedState = registry[acceptedStructureId]
@@ -305,6 +347,12 @@ if artifact then
 	assertTrue(type(artifact:GetAttribute("PlacedAt")) == "number", "artifact exposes PlacedAt attribute")
 end
 
+assertStoredTotals(
+	resourcesBeforeAccept.Wood.stored - GiantStructureCatalog.GiantStructure_Runtime_A.woodCost,
+	resourcesBeforeAccept.Stone.stored - GiantStructureCatalog.GiantStructure_Runtime_A.stoneCost,
+	"accepted placement debits exact structure cost"
+)
+
 local queryApi = _G._GiantBuildModeService_QueryAPI
 assertTrue(type(queryApi) == "table", "query API export is available")
 assertTrue(type(queryApi.GetPlacedStructure) == "function", "query API exposes GetPlacedStructure")
@@ -322,6 +370,7 @@ end
 
 -- Duplicate structure id should reject and preserve prior accepted state.
 local duplicatePlayer = makeAlivePlayer(9403)
+local resourcesBeforeDuplicate = ResourceFlowState.GetSnapshot()
 local warnsBeforeDuplicate = #warns
 giantPlacementRemote:FireServer(duplicatePlayer, makeAcceptedPayload(acceptedStructureId))
 
@@ -343,5 +392,58 @@ if stateAfterDuplicate then
 		"duplicate rejection keeps original placer in accepted state"
 	)
 end
+assertStoredTotalsUnchanged(resourcesBeforeDuplicate, "duplicate placement does not debit resources")
+
+-- Insufficient stored resources should reject without mutating registry or spending partially.
+ResourceFlowState.ResetSession("giant_build_mode_insufficient_resources")
+local drainForInsufficientOk = ResourceFlowState.SpendStoredAtomic(110, 0, "TestDrainBeforeGiantBuildInsufficient")
+assertTrue(drainForInsufficientOk, "test drain before insufficient resource case succeeds")
+assertStoredTotals(10, 120, "test drain leaves insufficient wood for runtime B")
+
+local insufficientStructureId = "GiantStructure_Runtime_B"
+local insufficientPlayer = makeAlivePlayer(9406)
+local resourcesBeforeInsufficient = ResourceFlowState.GetSnapshot()
+local warnsBeforeInsufficient = #warns
+giantPlacementRemote:FireServer(insufficientPlayer, makeAcceptedPayload(insufficientStructureId))
+assertTrue(registry[insufficientStructureId] == nil, "insufficient resources do not mutate registry")
+assertStoredTotalsUnchanged(resourcesBeforeInsufficient, "insufficient resources do not debit resources")
+
+local sawInsufficientResources = false
+for i = warnsBeforeInsufficient + 1, #warns do
+	if string.find(warns[i], "insufficient_resources", 1, true) then
+		sawInsufficientResources = true
+		break
+	end
+end
+assertTrue(sawInsufficientResources, "insufficient resources rejection reason is deterministic")
+
+-- Repeated accepted placements should deplete stored totals until a later known placement rejects.
+ResourceFlowState.ResetSession("giant_build_mode_repeated_depletion")
+local repeatedFirstStructureId = "GiantStructure_Runtime_C"
+local repeatedSecondStructureId = "GiantStructure_Runtime_D"
+local repeatedRejectedStructureId = "GiantStructure_Runtime_E"
+
+giantPlacementRemote:FireServer(makeAlivePlayer(9407), makeAcceptedPayload(repeatedFirstStructureId))
+assertTrue(registry[repeatedFirstStructureId] ~= nil, "first repeated placement accepted")
+assertStoredTotals(70, 70, "first repeated placement debits stored totals")
+
+giantPlacementRemote:FireServer(makeAlivePlayer(9408), makeAcceptedPayload(repeatedSecondStructureId))
+assertTrue(registry[repeatedSecondStructureId] ~= nil, "second repeated placement accepted")
+assertStoredTotals(10, 10, "second repeated placement debits stored totals")
+
+local resourcesBeforeDepletedReject = ResourceFlowState.GetSnapshot()
+local warnsBeforeDepletedReject = #warns
+giantPlacementRemote:FireServer(makeAlivePlayer(9409), makeAcceptedPayload(repeatedRejectedStructureId))
+assertTrue(registry[repeatedRejectedStructureId] == nil, "depleted resources do not mutate registry")
+assertStoredTotalsUnchanged(resourcesBeforeDepletedReject, "depleted resources reject does not debit resources")
+
+local sawDepletedInsufficientResources = false
+for i = warnsBeforeDepletedReject + 1, #warns do
+	if string.find(warns[i], "insufficient_resources", 1, true) then
+		sawDepletedInsufficientResources = true
+		break
+	end
+end
+assertTrue(sawDepletedInsufficientResources, "depleted repeated placement rejection reason is deterministic")
 
 print("giant_build_mode_service_runtime_entrypoint: all checks passed")

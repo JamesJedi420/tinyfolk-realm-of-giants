@@ -8,6 +8,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 
 local GiantBuildModeConfig: any
 local GiantStructureCatalog: any
+local ResourceFlowState: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
@@ -84,6 +85,7 @@ local function resolveDependencies()
 		error("startup_dependency_invalid giant_structure_catalog_module_name")
 	end
 	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
+	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -381,6 +383,46 @@ local function isKnownStructureId(structureId: string): boolean
 	return GiantStructureCatalog[structureId] ~= nil
 end
 
+local function getStructureCost(structureId: string): (number?, number?)
+	local definition = GiantStructureCatalog[structureId]
+	if type(definition) ~= "table" then
+		return nil, nil
+	end
+
+	local woodCost = definition.woodCost
+	local stoneCost = definition.stoneCost
+	if type(woodCost) ~= "number" or type(stoneCost) ~= "number" then
+		return nil, nil
+	end
+	if woodCost < 0 or stoneCost < 0 then
+		return nil, nil
+	end
+
+	return woodCost, stoneCost
+end
+
+local function spendStructureCost(structureId: string): (boolean, any, string?, number, number)
+	local woodCost, stoneCost = getStructureCost(structureId)
+	if woodCost == nil or stoneCost == nil then
+		return false, ResourceFlowState.GetSnapshot(), "insufficient_resources", 0, 0
+	end
+
+	local spent, flowSnapshot, spendError =
+		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "GiantBuildMode:" .. structureId)
+	if not spent then
+		debugWarn(
+			string.format(
+				"Rejected GiantStructurePlacementRequest structureId=%s reason=insufficient_resources detail=%s",
+				structureId,
+				tostring(spendError)
+			)
+		)
+		return false, flowSnapshot, "insufficient_resources", woodCost, stoneCost
+	end
+
+	return true, flowSnapshot, nil, woodCost, stoneCost
+end
+
 local remotesFolder = ensureRemotesFolder()
 debugLog("Ensuring giant structure placement remote")
 local placementRemote = ensureRemoteEvent(remotesFolder, GiantBuildModeConfig.StructurePlacementRemoteName)
@@ -437,6 +479,14 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
+	local spent, flowSnapshot, spendError, woodCost, stoneCost = spendStructureCost(request.structureId)
+	if not spent then
+		local reason = spendError or "insufficient_resources"
+		rejectPlacement(player, reason)
+		logPlacementOutcome("rejected", player, request.structureId, reason)
+		return
+	end
+
 	local placedAt = os.clock()
 	local accepted: AcceptedStructurePlacementState = {
 		structureId = request.structureId,
@@ -445,15 +495,31 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		proposedOccupiedSpace = request.proposedOccupiedSpace,
 	}
 
-	placedStructureById[request.structureId] = accepted
-	materializeAcceptedWorkspaceArtifact(accepted)
+	local previousState = placedStructureById[request.structureId]
+	local appliedPlacement, placementError = pcall(function()
+		placedStructureById[request.structureId] = accepted
+		materializeAcceptedWorkspaceArtifact(accepted)
+	end)
+
+	if not appliedPlacement then
+		placedStructureById[request.structureId] = previousState
+		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+		local applyFailureReason = string.format("placement_apply_failed detail=%s", tostring(placementError))
+		rejectPlacement(player, applyFailureReason)
+		logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
+		return
+	end
 
 	debugLog(
 		string.format(
-			"Accepted GiantStructurePlacementRequest userId=%d structureId=%s boxCount=%d",
+			"Accepted GiantStructurePlacementRequest userId=%d structureId=%s boxCount=%d woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
 			player.UserId,
 			request.structureId,
-			#request.proposedOccupiedSpace
+			#request.proposedOccupiedSpace,
+			woodCost,
+			stoneCost,
+			flowSnapshot.Wood.stored,
+			flowSnapshot.Stone.stored
 		)
 	)
 	logPlacementOutcome("accepted", player, request.structureId, nil)
