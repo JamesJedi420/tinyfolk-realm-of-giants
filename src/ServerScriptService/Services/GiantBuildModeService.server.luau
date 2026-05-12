@@ -423,6 +423,38 @@ local function spendStructureCost(structureId: string): (boolean, any, string?, 
 	return true, flowSnapshot, nil, woodCost, stoneCost
 end
 
+local function boxesOverlap(a: StructureBoxInput, b: StructureBoxInput): boolean
+	return math.abs(a.worldCenter.x - b.worldCenter.x) < (a.halfExtents.x + b.halfExtents.x)
+		and math.abs(a.worldCenter.y - b.worldCenter.y) < (a.halfExtents.y + b.halfExtents.y)
+		and math.abs(a.worldCenter.z - b.worldCenter.z) < (a.halfExtents.z + b.halfExtents.z)
+end
+
+local function getSortedPlacedStructureIds(): { string }
+	local structureIds = {}
+	for structureId in pairs(placedStructureById) do
+		table.insert(structureIds, structureId)
+	end
+	table.sort(structureIds)
+	return structureIds
+end
+
+local function overlapsAcceptedOccupiedSpace(request: StructurePlacementRequest): boolean
+	for _, structureId in ipairs(getSortedPlacedStructureIds()) do
+		local placed = placedStructureById[structureId]
+		if placed then
+			for _, incomingBox in ipairs(request.proposedOccupiedSpace) do
+				for _, acceptedBox in ipairs(placed.proposedOccupiedSpace) do
+					if boxesOverlap(incomingBox, acceptedBox) then
+						return true
+					end
+				end
+			end
+		end
+	end
+
+	return false
+end
+
 local remotesFolder = ensureRemotesFolder()
 debugLog("Ensuring giant structure placement remote")
 local placementRemote = ensureRemoteEvent(remotesFolder, GiantBuildModeConfig.StructurePlacementRemoteName)
@@ -476,6 +508,12 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	if placedStructureById[request.structureId] ~= nil then
 		rejectPlacement(player, "structure_already_placed")
 		logPlacementOutcome("rejected", player, request.structureId, "structure_already_placed")
+		return
+	end
+
+	if overlapsAcceptedOccupiedSpace(request) then
+		rejectPlacement(player, "structure_occupied_space_overlap")
+		logPlacementOutcome("rejected", player, request.structureId, "structure_occupied_space_overlap")
 		return
 	end
 
