@@ -25,6 +25,7 @@ local LAST_ASSIGNMENT_REASON_ATTRIBUTE = "SpecialistLastAssignmentReason"
 local LAST_ASSIGNED_AT_ATTRIBUTE = "SpecialistLastAssignedAt"
 local PROFILE_SPECIALIST_PREFERENCE_KEY = "specialistPreference"
 local PROFILE_SPECIALIST_ROLE_KEY = "specialistRole"
+local PROFILE_ASSIGNED_STATION_ID_KEY = "assignedStationId"
 
 local HAULING_RESERVED_LABELS = {
 	Hauler = true,
@@ -186,7 +187,7 @@ local function clearState(player: Player, reason: string)
 	setState(player, SpecialistConfig.SpecialistRoles.None, nil, reason)
 end
 
-local function readStoredSpecialistRole(player: Player): string?
+local function readStoredSpecialistPreference(player: Player): any?
 	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
 	if not profileResult.ok then
 		debugWarn(
@@ -204,6 +205,14 @@ local function readStoredSpecialistRole(player: Player): string?
 	end
 
 	local specialistPreference = profileResult.data[PROFILE_SPECIALIST_PREFERENCE_KEY]
+	if type(specialistPreference) ~= "table" then
+		return nil
+	end
+
+	return specialistPreference
+end
+
+local function readStoredSpecialistRole(player: Player, specialistPreference: any?): string?
 	if type(specialistPreference) ~= "table" then
 		return nil
 	end
@@ -226,6 +235,43 @@ local function readStoredSpecialistRole(player: Player): string?
 	return nil
 end
 
+local function readStoredAssignedStationId(player: Player, specialistRole: string, specialistPreference: any?): string?
+	if specialistRole == SpecialistConfig.SpecialistRoles.None or type(specialistPreference) ~= "table" then
+		return nil
+	end
+
+	local storedAssignedStationId = specialistPreference[PROFILE_ASSIGNED_STATION_ID_KEY]
+	if storedAssignedStationId == nil then
+		return nil
+	end
+
+	if type(storedAssignedStationId) ~= "string" then
+		debugWarn(
+			string.format(
+				"Specialist assigned station ignored userId=%d reason=invalid_assigned_station_id_type value=%s",
+				player.UserId,
+				tostring(storedAssignedStationId)
+			)
+		)
+		return nil
+	end
+
+	local stationValid, stationError = validateAssignedStationForRole(specialistRole, storedAssignedStationId)
+	if stationValid then
+		return storedAssignedStationId
+	end
+
+	debugWarn(
+		string.format(
+			"Specialist assigned station ignored userId=%d reason=%s stationId=%s",
+			player.UserId,
+			stationError,
+			storedAssignedStationId
+		)
+	)
+	return nil
+end
+
 local function persistSpecialistRole(player: Player, specialistRole: string)
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
 		local nextData = currentData
@@ -241,6 +287,28 @@ local function persistSpecialistRole(player: Player, specialistRole: string)
 		debugWarn(
 			string.format(
 				"Specialist role update failed userId=%d reason=%s",
+				player.UserId,
+				tostring(updateResult.reason)
+			)
+		)
+	end
+end
+
+local function persistAssignedStationId(player: Player, assignedStationId: string?)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local nextData = currentData
+		if type(nextData[PROFILE_SPECIALIST_PREFERENCE_KEY]) ~= "table" then
+			nextData[PROFILE_SPECIALIST_PREFERENCE_KEY] = {}
+		end
+
+		nextData[PROFILE_SPECIALIST_PREFERENCE_KEY][PROFILE_ASSIGNED_STATION_ID_KEY] = assignedStationId
+		return nextData
+	end)
+
+	if not updateResult.ok then
+		debugWarn(
+			string.format(
+				"Specialist assigned station update failed userId=%d reason=%s",
 				player.UserId,
 				tostring(updateResult.reason)
 			)
@@ -336,6 +404,7 @@ assignRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 		setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
 		persistSpecialistRole(player, parsed.specialistRole)
+		persistAssignedStationId(player, parsed.assignedStationId)
 		debugLog(
 			string.format(
 				"Accepted SpecialistAssignRequest reassigned userId=%d fromSpecialistRole=%s fromAssignedStationId=%s toSpecialistRole=%s toAssignedStationId=%s",
@@ -351,6 +420,7 @@ assignRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
 	persistSpecialistRole(player, parsed.specialistRole)
+	persistAssignedStationId(player, parsed.assignedStationId)
 	debugLog(
 		string.format(
 			"Accepted SpecialistAssignRequest userId=%d specialistRole=%s assignedStationId=%s",
@@ -377,6 +447,7 @@ clearRemote.OnServerEvent:Connect(function(player: Player)
 
 	clearState(player, SpecialistConfig.AssignmentReasons.ClearedManual)
 	persistSpecialistRole(player, SpecialistConfig.SpecialistRoles.None)
+	persistAssignedStationId(player, nil)
 	debugLog(string.format("Accepted SpecialistClearRequest userId=%d", player.UserId))
 end)
 
@@ -399,10 +470,19 @@ end)
 
 local function setupPlayer(player: Player)
 	local state = getOrCreateState(player.UserId)
-	local storedSpecialistRole = readStoredSpecialistRole(player)
+	local specialistPreference = readStoredSpecialistPreference(player)
+	local storedSpecialistRole = readStoredSpecialistRole(player, specialistPreference)
 	if storedSpecialistRole ~= nil then
 		state.specialistRole = storedSpecialistRole
 	end
+
+	local storedAssignedStationId = readStoredAssignedStationId(player, state.specialistRole, specialistPreference)
+	if storedAssignedStationId ~= nil then
+		state.assignedStationId = storedAssignedStationId
+	else
+		state.assignedStationId = nil
+	end
+
 	applyPlayerStateAttributes(player, state)
 
 	player:GetAttributeChangedSignal("Role"):Connect(function()

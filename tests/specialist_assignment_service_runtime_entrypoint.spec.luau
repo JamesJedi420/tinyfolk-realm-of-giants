@@ -201,6 +201,8 @@ local restoreValid = makePlayer(3001)
 local missingStored = makePlayer(3002)
 local invalidStored = makePlayer(3003)
 local readFailure = makePlayer(3004)
+local invalidStationType = makePlayer(3005)
+local staleAssignedStation = makePlayer(3006)
 local assignOk = makePlayer(4001)
 local assignUpdateFailure = makePlayer(4002)
 local clearOk = makePlayer(4003)
@@ -213,6 +215,8 @@ local playersList = {
 	missingStored,
 	invalidStored,
 	readFailure,
+	invalidStationType,
+	staleAssignedStation,
 	assignOk,
 	assignUpdateFailure,
 	clearOk,
@@ -263,6 +267,7 @@ local profileDataByUserId: { [number]: any } = {
 		userId = 3001,
 		specialistPreference = {
 			specialistRole = SpecialistConfig.SpecialistRoles.Miner,
+			assignedStationId = "MiningStation_A",
 		},
 		marker = "restore-valid",
 	},
@@ -279,6 +284,24 @@ local profileDataByUserId: { [number]: any } = {
 		},
 		marker = "invalid",
 	},
+	[3005] = {
+		schemaVersion = 1,
+		userId = 3005,
+		specialistPreference = {
+			specialistRole = SpecialistConfig.SpecialistRoles.Woodcutter,
+			assignedStationId = 100,
+		},
+		marker = "invalid-station-type",
+	},
+	[3006] = {
+		schemaVersion = 1,
+		userId = 3006,
+		specialistPreference = {
+			specialistRole = SpecialistConfig.SpecialistRoles.Woodcutter,
+			assignedStationId = "Shrine_A",
+		},
+		marker = "stale-station",
+	},
 	[4001] = {
 		schemaVersion = 1,
 		userId = 4001,
@@ -294,6 +317,7 @@ local profileDataByUserId: { [number]: any } = {
 		userId = 4003,
 		specialistPreference = {
 			specialistRole = SpecialistConfig.SpecialistRoles.Worshipper,
+			assignedStationId = "Shrine_A",
 		},
 		marker = "clear-ok",
 	},
@@ -302,6 +326,7 @@ local profileDataByUserId: { [number]: any } = {
 		userId = 4004,
 		specialistPreference = {
 			specialistRole = SpecialistConfig.SpecialistRoles.Woodcutter,
+			assignedStationId = "WorkStation_A",
 		},
 		marker = "clear-update-failure",
 	},
@@ -414,7 +439,11 @@ assertEqual(
 	SpecialistConfig.SpecialistRoles.Miner,
 	"valid stored specialist role restores SpecialistRole on setup"
 )
-assertEqual(restoreValid:GetAttribute("SpecialistAssignedStationId"), nil, "restore does not set assigned station")
+assertEqual(
+	restoreValid:GetAttribute("SpecialistAssignedStationId"),
+	"MiningStation_A",
+	"valid stored assigned station restores when role-compatible"
+)
 assertEqual(
 	restoreValid:GetAttribute("SpecialistLastAssignmentReason"),
 	SpecialistConfig.AssignmentReasons.Initial,
@@ -426,18 +455,63 @@ assertEqual(
 	SpecialistConfig.SpecialistRoles.None,
 	"missing stored specialist role falls back to default"
 )
+assertEqual(
+	missingStored:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"missing stored assigned station falls back to nil"
+)
 
 assertEqual(
 	invalidStored:GetAttribute("SpecialistRole"),
 	SpecialistConfig.SpecialistRoles.None,
 	"invalid stored specialist role falls back to default"
 )
+assertEqual(
+	invalidStored:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"invalid specialist role keeps assigned station nil"
+)
 assertTrue(sawWarnContaining("reason=invalid_specialist_role"), "invalid stored specialist role warning emitted")
+
+assertEqual(
+	invalidStationType:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Woodcutter,
+	"invalid assigned station type keeps stored specialist role restore behavior"
+)
+assertEqual(
+	invalidStationType:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"invalid assigned station type falls back to nil"
+)
+assertTrue(
+	sawWarnContaining("reason=invalid_assigned_station_id_type"),
+	"invalid assigned station type warning emitted"
+)
+
+assertEqual(
+	staleAssignedStation:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Woodcutter,
+	"stale assigned station keeps stored specialist role restore behavior"
+)
+assertEqual(
+	staleAssignedStation:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"stale or incompatible assigned station falls back to nil"
+)
+assertTrue(
+	sawWarnContaining("Specialist assigned station ignored userId=3006"),
+	"stale assigned station warning emitted"
+)
 
 assertEqual(
 	readFailure:GetAttribute("SpecialistRole"),
 	SpecialistConfig.SpecialistRoles.None,
 	"gateway read failure falls back to default"
+)
+assertEqual(
+	readFailure:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"gateway read failure keeps assigned station nil"
 )
 assertTrue(sawWarnContaining("Specialist role read failed userId=3004"), "gateway read failure warning emitted")
 
@@ -456,11 +530,16 @@ assertEqual(
 	SpecialistConfig.AssignmentReasons.Assigned,
 	"accepted assign sets assignment reason"
 )
-assertEqual(updateCallCountByUserId[4001], 1, "accepted assign updates profile via gateway")
+assertEqual(updateCallCountByUserId[4001], 2, "accepted assign updates role and assigned station via gateway")
 assertEqual(
 	profileDataByUserId[4001].specialistPreference.specialistRole,
 	SpecialistConfig.SpecialistRoles.Woodcutter,
 	"accepted assign persists specialist role"
+)
+assertEqual(
+	profileDataByUserId[4001].specialistPreference.assignedStationId,
+	"WorkStation_A",
+	"accepted assign persists assigned station"
 )
 assertEqual(profileDataByUserId[4001].marker, "assign-ok", "updater touches only specialist preference data")
 
@@ -473,8 +552,17 @@ assertEqual(
 	SpecialistConfig.SpecialistRoles.Miner,
 	"gateway update failure does not break accepted assign"
 )
+assertEqual(
+	assignUpdateFailure:GetAttribute("SpecialistAssignedStationId"),
+	"MiningStation_A",
+	"gateway update failure does not break accepted assign station state"
+)
 assertEqual(updateCallCountByUserId[4002], nil, "failed assign update does not mutate profile snapshot")
 assertTrue(sawWarnContaining("Specialist role update failed userId=4002"), "assign update failure warning emitted")
+assertTrue(
+	sawWarnContaining("Specialist assigned station update failed userId=4002"),
+	"assign station update failure warning emitted"
+)
 
 clearRemote:FireServer(clearOk, nil)
 assertEqual(
@@ -488,11 +576,16 @@ assertEqual(
 	SpecialistConfig.AssignmentReasons.ClearedManual,
 	"accepted clear keeps clear reason behavior"
 )
-assertEqual(updateCallCountByUserId[4003], 1, "accepted clear updates profile via gateway")
+assertEqual(updateCallCountByUserId[4003], 2, "accepted clear updates role and assigned station via gateway")
 assertEqual(
 	profileDataByUserId[4003].specialistPreference.specialistRole,
 	SpecialistConfig.SpecialistRoles.None,
 	"accepted clear persists neutral specialist role"
+)
+assertEqual(
+	profileDataByUserId[4003].specialistPreference.assignedStationId,
+	nil,
+	"accepted clear persists assigned station nil"
 )
 
 clearRemote:FireServer(clearUpdateFailure, nil)
@@ -501,8 +594,17 @@ assertEqual(
 	SpecialistConfig.SpecialistRoles.None,
 	"gateway update failure does not break accepted clear"
 )
+assertEqual(
+	clearUpdateFailure:GetAttribute("SpecialistAssignedStationId"),
+	nil,
+	"gateway update failure does not break accepted clear station state"
+)
 assertEqual(updateCallCountByUserId[4004], nil, "failed clear update does not mutate profile snapshot")
 assertTrue(sawWarnContaining("Specialist role update failed userId=4004"), "clear update failure warning emitted")
+assertTrue(
+	sawWarnContaining("Specialist assigned station update failed userId=4004"),
+	"clear station update failure warning emitted"
+)
 
 assignRemote:FireServer(malformedPlayer, "not-a-table")
 assertEqual(
@@ -521,7 +623,7 @@ assignRemote:FireServer(cooldownPlayer, {
 	specialistRole = SpecialistConfig.SpecialistRoles.Worshipper,
 	assignedStationId = "Shrine_A",
 })
-assertEqual(updateCallCountByUserId[4005], 1, "cooldown preserves single accepted assign update")
+assertEqual(updateCallCountByUserId[4005], 2, "cooldown preserves one accepted assign with two gateway updates")
 assertTrue(sawWarnContaining("reason=request_cooldown"), "cooldown rejection behavior unchanged")
 
 print("specialist_assignment_service_runtime_entrypoint: all checks passed")
