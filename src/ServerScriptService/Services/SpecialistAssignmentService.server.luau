@@ -9,6 +9,9 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+	else require("./ProfilePersistenceGateway")
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ASSIGN_REMOTE_NAME = "SpecialistAssignRequest"
@@ -20,6 +23,8 @@ local SPECIALIST_ROLE_ATTRIBUTE = "SpecialistRole"
 local ASSIGNED_STATION_ID_ATTRIBUTE = "SpecialistAssignedStationId"
 local LAST_ASSIGNMENT_REASON_ATTRIBUTE = "SpecialistLastAssignmentReason"
 local LAST_ASSIGNED_AT_ATTRIBUTE = "SpecialistLastAssignedAt"
+local PROFILE_SPECIALIST_PREFERENCE_KEY = "specialistPreference"
+local PROFILE_SPECIALIST_ROLE_KEY = "specialistRole"
 
 local HAULING_RESERVED_LABELS = {
 	Hauler = true,
@@ -38,10 +43,17 @@ type AssignPayload = {
 	assignedStationId: string?,
 }
 
-local specialistStateByUserId: {[number]: SpecialistState} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+local specialistStateByUserId: { [number]: SpecialistState? } = {}
+local lastRequestAtByUserId: { [number]: number? } = {}
 
-local validSpecialistRoleSet: {[string]: boolean} = {
+local validSpecialistRoleSet: { [string]: boolean } = {
+	[SpecialistConfig.SpecialistRoles.Woodcutter] = true,
+	[SpecialistConfig.SpecialistRoles.Miner] = true,
+	[SpecialistConfig.SpecialistRoles.Worshipper] = true,
+}
+
+local validPersistedSpecialistRoleSet: { [string]: boolean } = {
+	[SpecialistConfig.SpecialistRoles.None] = true,
 	[SpecialistConfig.SpecialistRoles.Woodcutter] = true,
 	[SpecialistConfig.SpecialistRoles.Miner] = true,
 	[SpecialistConfig.SpecialistRoles.Worshipper] = true,
@@ -83,7 +95,7 @@ end
 
 local function isCoolingDown(userId: number): boolean
 	local last = lastRequestAtByUserId[userId]
-	if not last then
+	if last == nil then
 		return false
 	end
 
@@ -115,7 +127,10 @@ local function validateAssignedStationForRole(specialistRole: string, assignedSt
 		return true, ""
 	end
 
-	if specialistRole == SpecialistConfig.SpecialistRoles.Woodcutter or specialistRole == SpecialistConfig.SpecialistRoles.Miner then
+	if
+		specialistRole == SpecialistConfig.SpecialistRoles.Woodcutter
+		or specialistRole == SpecialistConfig.SpecialistRoles.Miner
+	then
 		if type(assignedStationId) ~= "string" then
 			return false, "assigned_station_required_for_material_specialist"
 		end
@@ -169,6 +184,68 @@ end
 
 local function clearState(player: Player, reason: string)
 	setState(player, SpecialistConfig.SpecialistRoles.None, nil, reason)
+end
+
+local function readStoredSpecialistRole(player: Player): string?
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+	if not profileResult.ok then
+		debugWarn(
+			string.format(
+				"Specialist role read failed userId=%d reason=%s",
+				player.UserId,
+				tostring(profileResult.reason)
+			)
+		)
+		return nil
+	end
+
+	if type(profileResult.data) ~= "table" then
+		return nil
+	end
+
+	local specialistPreference = profileResult.data[PROFILE_SPECIALIST_PREFERENCE_KEY]
+	if type(specialistPreference) ~= "table" then
+		return nil
+	end
+
+	local specialistRole = specialistPreference[PROFILE_SPECIALIST_ROLE_KEY]
+	if type(specialistRole) == "string" and validPersistedSpecialistRoleSet[specialistRole] == true then
+		return specialistRole
+	end
+
+	if specialistRole ~= nil then
+		debugWarn(
+			string.format(
+				"Specialist role ignored userId=%d reason=invalid_specialist_role value=%s",
+				player.UserId,
+				tostring(specialistRole)
+			)
+		)
+	end
+
+	return nil
+end
+
+local function persistSpecialistRole(player: Player, specialistRole: string)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local nextData = currentData
+		if type(nextData[PROFILE_SPECIALIST_PREFERENCE_KEY]) ~= "table" then
+			nextData[PROFILE_SPECIALIST_PREFERENCE_KEY] = {}
+		end
+
+		nextData[PROFILE_SPECIALIST_PREFERENCE_KEY][PROFILE_SPECIALIST_ROLE_KEY] = specialistRole
+		return nextData
+	end)
+
+	if not updateResult.ok then
+		debugWarn(
+			string.format(
+				"Specialist role update failed userId=%d reason=%s",
+				player.UserId,
+				tostring(updateResult.reason)
+			)
+		)
+	end
 end
 
 local function snapshotForPlayer(player: Player)
@@ -258,24 +335,30 @@ assignRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		local previousAssignedStationId = state.assignedStationId
 
 		setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
-		debugLog(string.format(
-			"Accepted SpecialistAssignRequest reassigned userId=%d fromSpecialistRole=%s fromAssignedStationId=%s toSpecialistRole=%s toAssignedStationId=%s",
-			player.UserId,
-			previousSpecialistRole,
-			tostring(previousAssignedStationId),
-			parsed.specialistRole,
-			tostring(parsed.assignedStationId)
-		))
+		persistSpecialistRole(player, parsed.specialistRole)
+		debugLog(
+			string.format(
+				"Accepted SpecialistAssignRequest reassigned userId=%d fromSpecialistRole=%s fromAssignedStationId=%s toSpecialistRole=%s toAssignedStationId=%s",
+				player.UserId,
+				previousSpecialistRole,
+				tostring(previousAssignedStationId),
+				parsed.specialistRole,
+				tostring(parsed.assignedStationId)
+			)
+		)
 		return
 	end
 
 	setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
-	debugLog(string.format(
-		"Accepted SpecialistAssignRequest userId=%d specialistRole=%s assignedStationId=%s",
-		player.UserId,
-		parsed.specialistRole,
-		tostring(parsed.assignedStationId)
-	))
+	persistSpecialistRole(player, parsed.specialistRole)
+	debugLog(
+		string.format(
+			"Accepted SpecialistAssignRequest userId=%d specialistRole=%s assignedStationId=%s",
+			player.UserId,
+			parsed.specialistRole,
+			tostring(parsed.assignedStationId)
+		)
+	)
 end)
 
 clearRemote.OnServerEvent:Connect(function(player: Player)
@@ -293,6 +376,7 @@ clearRemote.OnServerEvent:Connect(function(player: Player)
 	end
 
 	clearState(player, SpecialistConfig.AssignmentReasons.ClearedManual)
+	persistSpecialistRole(player, SpecialistConfig.SpecialistRoles.None)
 	debugLog(string.format("Accepted SpecialistClearRequest userId=%d", player.UserId))
 end)
 
@@ -304,11 +388,21 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 
 	local snapshot = snapshotForPlayer(player)
 	debugResponseRemote:FireClient(player, snapshot)
-	debugLog(string.format("Sent specialist debug state userId=%d specialistRole=%s", player.UserId, tostring(snapshot.specialistRole)))
+	debugLog(
+		string.format(
+			"Sent specialist debug state userId=%d specialistRole=%s",
+			player.UserId,
+			tostring(snapshot.specialistRole)
+		)
+	)
 end)
 
 local function setupPlayer(player: Player)
 	local state = getOrCreateState(player.UserId)
+	local storedSpecialistRole = readStoredSpecialistRole(player)
+	if storedSpecialistRole ~= nil then
+		state.specialistRole = storedSpecialistRole
+	end
 	applyPlayerStateAttributes(player, state)
 
 	player:GetAttributeChangedSignal("Role"):Connect(function()
