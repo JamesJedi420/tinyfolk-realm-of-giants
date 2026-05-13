@@ -83,6 +83,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Persistence schema status:** Giant realm persistence now has an initial pure-Luau save schema plus deterministic serialization/validation helpers for accepted Giant structure records. A read-only live snapshot assembly surface now builds and validates a schema-valid save root from accepted Giant build-mode structures, and a bounded apply surface now replaces live accepted Giant build-mode state from a schema-valid save root. DataStore reads/writes, load orchestration, and migration upgrades remain deferred.
 
+**Durable persistence ownership decision:** Durable Giant realm and player profile persistence is owned by a profile-locking persistence layer, reached through a thin server-only Tinyfolk compatibility gateway. Gameplay systems must not write directly to raw `DataStoreService`. Giant build mode remains the live-state owner and exposes snapshot/apply surfaces; it does not own durable profile sessions, autosave, load orchestration, or session locks.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
