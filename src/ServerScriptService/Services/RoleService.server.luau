@@ -7,6 +7,9 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+	else require("./ProfilePersistenceGateway")
 
 local ROLE_ATTRIBUTE = "Role"
 local SELECTED_ROLE_ATTRIBUTE = "SelectedRole"
@@ -20,8 +23,10 @@ local SPAWN_MAP_ROOT_NAME = "Map"
 local SPAWN_CONTAINER_NAME = "Spawns"
 local TINYFOLK_SPAWN_NAME = "TinyfolkSpawn"
 local GIANT_SPAWN_NAME = "GiantSpawn"
+local PROFILE_ROLE_PREFERENCE_KEY = "rolePreference"
+local PROFILE_PREFERRED_ROLE_KEY = "preferredRole"
 
-local lastRoleChangeAtByUserId: {[number]: number} = {}
+local lastRoleChangeAtByUserId: { [number]: number? } = {}
 
 Players.CharacterAutoLoads = false
 
@@ -124,7 +129,7 @@ local function applyScaleToCharacter(player: Player, character: Model)
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
-	if not humanoid then
+	if humanoid == nil then
 		debugWarn(string.format("Could not scale %s: Humanoid not found", player.Name))
 		return
 	end
@@ -182,8 +187,10 @@ end
 local function placeCharacterAtRoleSpawn(player: Player, character: Model)
 	local roleName = getRoleOrDefault(player)
 	local spawnLocation = findSpawnForRole(roleName)
-	if not spawnLocation then
-		debugLog(string.format("Missing role spawn for role=%s userId=%d; using default spawn", roleName, player.UserId))
+	if spawnLocation == nil then
+		debugLog(
+			string.format("Missing role spawn for role=%s userId=%d; using default spawn", roleName, player.UserId)
+		)
 		return
 	end
 
@@ -215,20 +222,20 @@ local function requestRespawnForLockedPlayer(player: Player, reason: string)
 		local character = player.Character
 		if character then
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then
+			if humanoid ~= nil and (humanoid :: Humanoid).Health > 0 then
 				return
 			end
 		end
 
 		debugLog(string.format("Respawning locked player userId=%d reason=%s", player.UserId, reason))
-		player:LoadCharacter()
+		player:LoadCharacterAsync()
 	end)
 end
 
 local function isCoolingDown(userId: number): boolean
 	local now = os.clock()
 	local last = lastRoleChangeAtByUserId[userId]
-	if not last then
+	if last == nil then
 		return false
 	end
 
@@ -237,6 +244,68 @@ end
 
 local function markRoleChange(userId: number)
 	lastRoleChangeAtByUserId[userId] = os.clock()
+end
+
+local function readStoredPreferredRole(player: Player): string?
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+	if not profileResult.ok then
+		debugWarn(
+			string.format(
+				"Role preference read failed userId=%d reason=%s",
+				player.UserId,
+				tostring(profileResult.reason)
+			)
+		)
+		return nil
+	end
+
+	if type(profileResult.data) ~= "table" then
+		return nil
+	end
+
+	local rolePreference = profileResult.data[PROFILE_ROLE_PREFERENCE_KEY]
+	if type(rolePreference) ~= "table" then
+		return nil
+	end
+
+	local preferredRole = rolePreference[PROFILE_PREFERRED_ROLE_KEY]
+	if isValidRole(preferredRole) then
+		return preferredRole :: string
+	end
+
+	if preferredRole ~= nil then
+		debugWarn(
+			string.format(
+				"Role preference ignored userId=%d reason=invalid_preferred_role value=%s",
+				player.UserId,
+				tostring(preferredRole)
+			)
+		)
+	end
+
+	return nil
+end
+
+local function persistPreferredRole(player: Player, roleName: string)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local nextData = currentData
+		if type(nextData[PROFILE_ROLE_PREFERENCE_KEY]) ~= "table" then
+			nextData[PROFILE_ROLE_PREFERENCE_KEY] = {}
+		end
+
+		nextData[PROFILE_ROLE_PREFERENCE_KEY][PROFILE_PREFERRED_ROLE_KEY] = roleName
+		return nextData
+	end)
+
+	if not updateResult.ok then
+		debugWarn(
+			string.format(
+				"Role preference update failed userId=%d reason=%s",
+				player.UserId,
+				tostring(updateResult.reason)
+			)
+		)
+	end
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -259,6 +328,21 @@ local function initializePlayerRoleSelection(player: Player)
 		return
 	end
 
+	local preferredRole = readStoredPreferredRole(player)
+	if preferredRole ~= nil then
+		player:SetAttribute(SELECTED_ROLE_ATTRIBUTE, preferredRole)
+		player:SetAttribute(ROLE_LOCKED_ATTRIBUTE, false)
+		player:SetAttribute(ROLE_ATTRIBUTE, nil)
+		debugLog(
+			string.format(
+				"Initialized pre-spawn role selection for %s with stored preference=%s",
+				player.Name,
+				preferredRole
+			)
+		)
+		return
+	end
+
 	player:SetAttribute(SELECTED_ROLE_ATTRIBUTE, nil)
 	player:SetAttribute(ROLE_LOCKED_ATTRIBUTE, false)
 	player:SetAttribute(ROLE_ATTRIBUTE, nil)
@@ -274,7 +358,7 @@ local function setupPlayer(player: Player)
 		placeCharacterAtRoleSpawn(player, character)
 
 		local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
-		if not humanoid then
+		if humanoid == nil then
 			debugWarn(string.format("Could not bind respawn handler for %s: Humanoid not found", player.Name))
 			return
 		end
@@ -318,6 +402,7 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 	player:SetAttribute(SELECTED_ROLE_ATTRIBUTE, roleName)
 	player:SetAttribute(ROLE_LOCKED_ATTRIBUTE, true)
 	setPlayerRole(player, roleName)
+	persistPreferredRole(player, roleName)
 	debugLog(string.format("Accepted role select for %s -> %s (locked)", player.Name, roleName))
 	player:LoadCharacter()
 end)
@@ -330,13 +415,15 @@ roleDebugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: u
 
 	local snapshot = snapshotForPlayer(player)
 	roleDebugResponseRemote:FireClient(player, snapshot)
-	debugLog(string.format(
-		"Sent role debug state userId=%d role=%s selectedRole=%s roleLocked=%s",
-		player.UserId,
-		tostring(snapshot.role),
-		tostring(snapshot.selectedRole),
-		tostring(snapshot.roleLocked)
-	))
+	debugLog(
+		string.format(
+			"Sent role debug state userId=%d role=%s selectedRole=%s roleLocked=%s",
+			player.UserId,
+			tostring(snapshot.role),
+			tostring(snapshot.selectedRole),
+			tostring(snapshot.roleLocked)
+		)
+	)
 end)
 
 debugLog("RoleService initialized")
