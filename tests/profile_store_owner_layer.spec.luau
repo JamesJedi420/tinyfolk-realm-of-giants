@@ -1,0 +1,216 @@
+--!strict
+
+local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
+local ProfileStoreOwnerLayer = require("../src/ServerScriptService/Services/ProfileStoreOwnerLayer")
+
+local function assertTrue(value: boolean, label: string)
+	if not value then
+		error("assertTrue failed [" .. label .. "]")
+	end
+end
+
+local function assertEqual(actual: any, expected: any, label: string)
+	if actual ~= expected then
+		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+	end
+end
+
+local function assertFailure(result: any, operation: string, reason: string, label: string)
+	assertEqual(result.ok, false, label .. " ok")
+	assertEqual(result.operation, operation, label .. " operation")
+	assertEqual(result.reason, reason, label .. " reason")
+end
+
+local function assertSuccess(result: any, operation: string, profileKey: string, label: string)
+	assertEqual(result.ok, true, label .. " ok")
+	assertEqual(result.operation, operation, label .. " operation")
+	assertEqual(result.profileKey, profileKey, label .. " profileKey")
+end
+
+local function assertCreateError(config: any, expectedMessage: string, label: string)
+	local ok, err = pcall(function()
+		ProfileStoreOwnerLayer.Create(config)
+	end)
+	assertEqual(ok, false, label .. " pcall")
+	assertTrue(string.find(tostring(err), expectedMessage, 1, true) ~= nil, label .. " error")
+end
+
+local function makePlayer(userId: number): any
+	return {
+		UserId = userId,
+	}
+end
+
+local function makeFakeProfileStoreModule(startSessionImpl: ((string, any) -> any)?): any
+	local calls: { any } = {}
+	local profilesByKey: { [string]: any } = {}
+
+	local playerStore = {}
+	function playerStore:StartSessionAsync(profileKey: string, params: any): any
+		table.insert(calls, {
+			method = "StartSessionAsync",
+			profileKey = profileKey,
+			params = params,
+		})
+		if startSessionImpl ~= nil then
+			return startSessionImpl(profileKey, params)
+		end
+
+		local profile = {
+			Data = {
+				userId = 0,
+				coins = 0,
+			},
+			endSessionCount = 0,
+		}
+		function profile:EndSession()
+			self.endSessionCount += 1
+		end
+
+		profilesByKey[profileKey] = profile
+		return profile
+	end
+
+	local module = {
+		newCalls = {},
+		calls = calls,
+		profilesByKey = profilesByKey,
+		playerStore = playerStore,
+	}
+
+	function module.New(storeName: string, template: any): any
+		table.insert(module.newCalls, {
+			storeName = storeName,
+			template = template,
+		})
+		return playerStore
+	end
+
+	return module
+end
+
+local requiredMethods = {
+	LoadPlayerProfile = true,
+	SavePlayerProfile = true,
+	ReleasePlayerProfile = true,
+	LoadGiantRealmProfile = true,
+	SaveGiantRealmProfile = true,
+}
+
+ProfileStoreOwnerLayer.ResetForTests()
+
+assertTrue(type(ProfileStoreOwnerLayer.Create) == "function", "module exposes Create")
+assertTrue(type(ProfileStoreOwnerLayer.ResetForTests) == "function", "module exposes ResetForTests")
+
+assertCreateError(nil, "config_missing", "missing config")
+assertCreateError({}, "profile_store_module_missing", "missing profile store module")
+assertCreateError({ profileStoreModule = {} }, "profile_store_new_missing", "missing New")
+assertCreateError({
+	profileStoreModule = { New = function() end },
+	playerStoreName = "",
+	playerProfileTemplate = {},
+}, "player_store_name_invalid", "invalid store name")
+assertCreateError({
+	profileStoreModule = { New = function() end },
+	playerStoreName = "PlayerProfiles",
+}, "player_profile_template_invalid", "invalid template")
+
+local fakeProfileStore = makeFakeProfileStoreModule(nil)
+local ownerLayer = ProfileStoreOwnerLayer.Create({
+	profileStoreModule = fakeProfileStore,
+	playerStoreName = "TinyfolkPlayerProfiles",
+	playerProfileTemplate = {
+		schemaVersion = 1,
+		coins = 0,
+	},
+})
+
+for methodName in pairs(requiredMethods) do
+	assertTrue(type(ownerLayer[methodName]) == "function", "owner layer exposes " .. methodName)
+end
+assertEqual(#fakeProfileStore.newCalls, 1, "ProfileStore.New called once")
+assertEqual(fakeProfileStore.newCalls[1].storeName, "TinyfolkPlayerProfiles", "store name")
+assertEqual(fakeProfileStore.newCalls[1].template.schemaVersion, 1, "template schema")
+
+local loadResult = ownerLayer.LoadPlayerProfile("PlayerProfile:9402", 9402)
+assertSuccess(loadResult, "LoadPlayerProfile", "PlayerProfile:9402", "load profile")
+assertEqual(#fakeProfileStore.calls, 1, "start session call count")
+assertEqual(fakeProfileStore.calls[1].method, "StartSessionAsync", "start session method")
+assertEqual(fakeProfileStore.calls[1].profileKey, "PlayerProfile:9402", "start session key")
+assertTrue(type(fakeProfileStore.calls[1].params) == "table", "start session params")
+
+local activeProfile = fakeProfileStore.profilesByKey["PlayerProfile:9402"]
+assertTrue(activeProfile ~= nil, "active profile stored in fake")
+assertTrue(loadResult.data == activeProfile.Data, "load returns profile data")
+
+local saveData = {
+	userId = 9402,
+	coins = 45,
+	nested = {
+		level = 3,
+	},
+}
+local saveResult = ownerLayer.SavePlayerProfile("PlayerProfile:9402", 9402, saveData)
+assertSuccess(saveResult, "SavePlayerProfile", "PlayerProfile:9402", "save profile")
+assertEqual(activeProfile.Data.userId, 9402, "saved user id")
+assertEqual(activeProfile.Data.coins, 45, "saved coins")
+assertEqual(activeProfile.Data.nested.level, 3, "saved nested")
+assertTrue(activeProfile.Data ~= saveData, "save clones data")
+
+local duplicateLoad = ownerLayer.LoadPlayerProfile("PlayerProfile:9402", 9402)
+assertFailure(duplicateLoad, "LoadPlayerProfile", "profile_session_already_active", "duplicate load")
+assertEqual(#fakeProfileStore.calls, 1, "duplicate load does not start session")
+
+local releaseResult = ownerLayer.ReleasePlayerProfile("PlayerProfile:9402", 9402)
+assertSuccess(releaseResult, "ReleasePlayerProfile", "PlayerProfile:9402", "release profile")
+assertEqual(activeProfile.endSessionCount, 1, "release ends session")
+
+local saveAfterRelease = ownerLayer.SavePlayerProfile("PlayerProfile:9402", 9402, saveData)
+assertFailure(saveAfterRelease, "SavePlayerProfile", "profile_session_not_active", "save after release")
+
+local reloadResult = ownerLayer.LoadPlayerProfile("PlayerProfile:9402", 9402)
+assertSuccess(reloadResult, "LoadPlayerProfile", "PlayerProfile:9402", "reload after release")
+assertEqual(#fakeProfileStore.calls, 2, "reload starts second session")
+
+local failingOwnerLayer = ProfileStoreOwnerLayer.Create({
+	profileStoreModule = makeFakeProfileStoreModule(function(_profileKey: string, _params: any): any
+		return nil
+	end),
+	playerStoreName = "TinyfolkPlayerProfiles",
+	playerProfileTemplate = {},
+})
+local failedLoad = failingOwnerLayer.LoadPlayerProfile("PlayerProfile:1001", 1001)
+assertFailure(failedLoad, "LoadPlayerProfile", "profile_session_start_failed", "failed start session")
+assertEqual(failedLoad.retryable, true, "failed start session retryable")
+
+local giantLoad = ownerLayer.LoadGiantRealmProfile("GiantRealmProfile:9402", 9402)
+assertFailure(
+	giantLoad,
+	"LoadGiantRealmProfile",
+	"giant_realm_profiles_not_supported_in_this_slice",
+	"giant load unsupported"
+)
+local giantSave = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, {})
+assertFailure(
+	giantSave,
+	"SaveGiantRealmProfile",
+	"giant_realm_profiles_not_supported_in_this_slice",
+	"giant save unsupported"
+)
+
+ProfilePersistenceGateway.ResetForTests()
+ProfilePersistenceGateway.ConfigureOwnerLayer(ProfileStoreOwnerLayer.Create({
+	profileStoreModule = makeFakeProfileStoreModule(nil),
+	playerStoreName = "TinyfolkPlayerProfiles",
+	playerProfileTemplate = {},
+}))
+local gatewayLoad = ProfilePersistenceGateway.LoadPlayerProfile(makePlayer(7777))
+assertSuccess(gatewayLoad, "LoadPlayerProfile", "PlayerProfile:7777", "gateway load")
+assertTrue(type(gatewayLoad.data) == "table", "gateway load data")
+local gatewaySave = ProfilePersistenceGateway.SavePlayerProfile(makePlayer(7777))
+assertSuccess(gatewaySave, "SavePlayerProfile", "PlayerProfile:7777", "gateway save")
+local gatewayRelease = ProfilePersistenceGateway.ReleasePlayerProfile(makePlayer(7777))
+assertSuccess(gatewayRelease, "ReleasePlayerProfile", "PlayerProfile:7777", "gateway release")
+ProfilePersistenceGateway.ResetForTests()
+
+print("profile_store_owner_layer: all checks passed")

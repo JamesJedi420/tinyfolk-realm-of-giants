@@ -87,6 +87,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Profile persistence gateway status:** A server-only `ProfilePersistenceGateway` skeleton now defines the Tinyfolk compatibility gateway boundary, typed success/failure result shape, and injected profile-locking owner-layer seam. The gateway is mock-backed only in this slice: it does not import or call real ProfileStore/ProfileService/raw DataStore persistence, and no gameplay service is wired to it yet. Giant realm save/load handoff is limited to the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` query API surface.
 
+**Profile owner-layer adapter status:** A server-only `ProfileStoreOwnerLayer` adapter now defines the first real profile-locking owner-layer implementation behind `ProfilePersistenceGateway` for player profiles only, using an injected ProfileStore-shaped dependency. This slice does not vendor third-party source, does not wire gameplay services, does not call raw `DataStoreService`, and returns deterministic unsupported failures for Giant realm profile methods until a later realm-profile slice.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
