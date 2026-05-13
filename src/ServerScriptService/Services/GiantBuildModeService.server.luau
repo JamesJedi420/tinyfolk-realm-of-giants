@@ -8,6 +8,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 
 local GiantBuildModeConfig: any
 local GiantStructureCatalog: any
+local GiantRealmSaveSchema: any
 local ResourceFlowState: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -79,6 +80,10 @@ local function resolveDependencies()
 	if not config then
 		error("startup_dependency_missing child=Config parent=ReplicatedStorage.Shared")
 	end
+	local giantRealm = shared:WaitForChild("GiantRealm", STARTUP_WAIT_TIMEOUT_SECONDS)
+	if not giantRealm then
+		error("startup_dependency_missing child=GiantRealm parent=ReplicatedStorage.Shared")
+	end
 
 	GiantBuildModeConfig = requireChildModule(config, "GiantBuildModeConfig")
 	local structureCatalogModuleName = GiantBuildModeConfig.StructureCatalogModuleName
@@ -86,6 +91,7 @@ local function resolveDependencies()
 		error("startup_dependency_invalid giant_structure_catalog_module_name")
 	end
 	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
+	GiantRealmSaveSchema = requireChildModule(giantRealm, "GiantRealmSaveSchema")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
 
@@ -602,10 +608,33 @@ local function IsStructurePlaced(structureId: string): boolean
 	return placedStructureById[structureId] ~= nil
 end
 
+local function isValidOwnerUserId(ownerUserId: any): boolean
+	return type(ownerUserId) == "number"
+		and ownerUserId == ownerUserId
+		and ownerUserId ~= math.huge
+		and ownerUserId ~= -math.huge
+		and ownerUserId > 0
+end
+
+local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
+	if not isValidOwnerUserId(ownerUserId) then
+		return nil, "save_snapshot_owner_user_id_invalid"
+	end
+
+	local root = GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, GetAllPlacedStructures())
+	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
+	if not valid then
+		return nil, reason or "save_snapshot_invalid"
+	end
+
+	return root, nil
+end
+
 _G._GiantBuildModeService_QueryAPI = {
 	GetPlacedStructure = GetPlacedStructure,
 	GetAllPlacedStructures = GetAllPlacedStructures,
 	IsStructurePlaced = IsStructurePlaced,
+	BuildSaveSnapshot = BuildSaveSnapshot,
 }
 
 _G._GiantBuildModeService_Registry = placedStructureById

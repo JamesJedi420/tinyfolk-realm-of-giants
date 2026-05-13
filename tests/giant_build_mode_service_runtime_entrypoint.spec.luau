@@ -2,6 +2,7 @@
 
 local GiantBuildModeConfig = require("../src/ReplicatedStorage/Shared/Config/GiantBuildModeConfig")
 local GiantStructureCatalog = require("../src/ReplicatedStorage/Shared/Config/GiantStructureCatalog")
+local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
 
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
@@ -118,8 +119,12 @@ configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared
 configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 
+local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
+giantRealmFolder._Children["GiantRealmSaveSchema"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema"
+
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
 addChild(replicatedStorage, "Shared", sharedFolder)
@@ -381,6 +386,7 @@ assertTrue(type(queryApi) == "table", "query API export is available")
 assertTrue(type(queryApi.GetPlacedStructure) == "function", "query API exposes GetPlacedStructure")
 assertTrue(type(queryApi.GetAllPlacedStructures) == "function", "query API exposes GetAllPlacedStructures")
 assertTrue(type(queryApi.IsStructurePlaced) == "function", "query API exposes IsStructurePlaced")
+assertTrue(type(queryApi.BuildSaveSnapshot) == "function", "query API exposes BuildSaveSnapshot")
 
 assertTrue(queryApi.IsStructurePlaced(acceptedStructureId), "query API reports placed structure")
 assertTrue(not queryApi.IsStructurePlaced("Unknown_Giant_Structure"), "query API reports unknown structure not placed")
@@ -411,6 +417,33 @@ assertStoredTotals(
 	resourcesBeforeNonOverlap.Stone.stored - GiantStructureCatalog.GiantStructure_Runtime_F.stoneCost,
 	"non-overlapping accept debits exact structure cost"
 )
+
+local saveRoot, saveRootReason = queryApi.BuildSaveSnapshot(acceptedPlayer.UserId)
+assertTrue(saveRoot ~= nil, "save snapshot returns root for valid owner")
+assertEqual(saveRootReason, nil, "save snapshot valid owner has no failure reason")
+if saveRoot then
+	assertEqual(
+		saveRoot.schemaVersion,
+		GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+		"save snapshot schema version matches initial schema version"
+	)
+	assertEqual(saveRoot.ownerUserId, acceptedPlayer.UserId, "save snapshot preserves owner user id")
+
+	local saveRootValid, saveRootValidationReason = GiantRealmSaveSchema.ValidateSaveRoot(saveRoot)
+	assertTrue(saveRootValid, "save snapshot validates against GiantRealmSaveSchema")
+	assertEqual(saveRootValidationReason, nil, "save snapshot validation has no reason")
+	assertEqual(#saveRoot.placedStructures, 2, "save snapshot includes accepted structure count")
+	assertEqual(
+		saveRoot.placedStructures[1].structureId,
+		acceptedStructureId,
+		"save snapshot structures are ordered deterministically first"
+	)
+	assertEqual(
+		saveRoot.placedStructures[2].structureId,
+		nonOverlappingStructureId,
+		"save snapshot structures are ordered deterministically second"
+	)
+end
 
 -- Different players should reject before affordability debit or placement mutation.
 local ownerMismatchStructureId = "GiantStructure_Runtime_G"
@@ -515,6 +548,52 @@ for i = warnsBeforeInsufficient + 1, #warns do
 	end
 end
 assertTrue(sawInsufficientResources, "insufficient resources rejection reason is deterministic")
+
+local saveRootAfterRejects, saveRootAfterRejectsReason = queryApi.BuildSaveSnapshot(acceptedPlayer.UserId)
+assertTrue(saveRootAfterRejects ~= nil, "save snapshot still returns root after rejected placements")
+assertEqual(saveRootAfterRejectsReason, nil, "save snapshot after rejected placements has no failure reason")
+if saveRootAfterRejects then
+	local sawAcceptedStructure = false
+	local sawNonOverlappingStructure = false
+	local sawOwnerMismatchStructure = false
+	local sawOverlappingStructure = false
+	local sawInsufficientStructure = false
+	for _, record in ipairs(saveRootAfterRejects.placedStructures) do
+		if record.structureId == acceptedStructureId then
+			sawAcceptedStructure = true
+		end
+		if record.structureId == nonOverlappingStructureId then
+			sawNonOverlappingStructure = true
+		end
+		if record.structureId == ownerMismatchStructureId then
+			sawOwnerMismatchStructure = true
+		end
+		if record.structureId == overlappingStructureId then
+			sawOverlappingStructure = true
+		end
+		if record.structureId == insufficientStructureId then
+			sawInsufficientStructure = true
+		end
+	end
+
+	assertTrue(sawAcceptedStructure, "save snapshot keeps first accepted structure")
+	assertTrue(sawNonOverlappingStructure, "save snapshot keeps non-overlapping accepted structure")
+	assertTrue(not sawOwnerMismatchStructure, "save snapshot excludes owner mismatch rejected structure")
+	assertTrue(not sawOverlappingStructure, "save snapshot excludes overlap rejected structure")
+	assertTrue(not sawInsufficientStructure, "save snapshot excludes insufficient resource rejected structure")
+end
+
+local nilOwnerRoot, nilOwnerReason = queryApi.BuildSaveSnapshot(nil)
+assertEqual(nilOwnerRoot, nil, "save snapshot nil owner returns nil root")
+assertEqual(nilOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapshot nil owner reason")
+
+local zeroOwnerRoot, zeroOwnerReason = queryApi.BuildSaveSnapshot(0)
+assertEqual(zeroOwnerRoot, nil, "save snapshot zero owner returns nil root")
+assertEqual(zeroOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapshot zero owner reason")
+
+local stringOwnerRoot, stringOwnerReason = queryApi.BuildSaveSnapshot("9402")
+assertEqual(stringOwnerRoot, nil, "save snapshot string owner returns nil root")
+assertEqual(stringOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapshot string owner reason")
 
 -- Repeated accepted placements should deplete stored totals until a later known placement rejects.
 ResourceFlowState.ResetSession("giant_build_mode_repeated_depletion")
