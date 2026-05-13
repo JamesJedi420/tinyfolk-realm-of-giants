@@ -387,6 +387,7 @@ assertTrue(type(queryApi.GetPlacedStructure) == "function", "query API exposes G
 assertTrue(type(queryApi.GetAllPlacedStructures) == "function", "query API exposes GetAllPlacedStructures")
 assertTrue(type(queryApi.IsStructurePlaced) == "function", "query API exposes IsStructurePlaced")
 assertTrue(type(queryApi.BuildSaveSnapshot) == "function", "query API exposes BuildSaveSnapshot")
+assertTrue(type(queryApi.ApplySaveSnapshot) == "function", "query API exposes ApplySaveSnapshot")
 
 assertTrue(queryApi.IsStructurePlaced(acceptedStructureId), "query API reports placed structure")
 assertTrue(not queryApi.IsStructurePlaced("Unknown_Giant_Structure"), "query API reports unknown structure not placed")
@@ -594,6 +595,141 @@ assertEqual(zeroOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapsh
 local stringOwnerRoot, stringOwnerReason = queryApi.BuildSaveSnapshot("9402")
 assertEqual(stringOwnerRoot, nil, "save snapshot string owner returns nil root")
 assertEqual(stringOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapshot string owner reason")
+
+local registryBeforeApply = _G._GiantBuildModeService_Registry
+assertTrue(registryBeforeApply == registry, "apply setup registry reference starts stable")
+
+local appliedStructureA = "GiantStructure_Applied_A"
+local appliedStructureB = "GiantStructure_Applied_B"
+local applyRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = acceptedPlayer.UserId,
+	placedStructures = {
+		{
+			structureId = appliedStructureB,
+			placedByUserId = acceptedPlayer.UserId,
+			placedAt = 808.25,
+			proposedOccupiedSpace = {
+				{
+					tag = "body",
+					worldCenter = { x = 700, y = 0, z = 300 },
+					halfExtents = { x = 12, y = 6, z = 12 },
+				},
+			},
+		},
+		{
+			structureId = appliedStructureA,
+			placedByUserId = acceptedPlayer.UserId,
+			placedAt = 707.5,
+			proposedOccupiedSpace = {
+				{
+					tag = "core",
+					worldCenter = { x = 640, y = 0, z = 300 },
+					halfExtents = { x = 10, y = 5, z = 10 },
+				},
+			},
+		},
+	},
+}
+
+local applyRootValid, applyRootReason = GiantRealmSaveSchema.ValidateSaveRoot(applyRoot)
+assertTrue(applyRootValid, "apply test root validates before apply")
+assertEqual(applyRootReason, nil, "apply test root has no validation reason")
+
+local applyOk, applyReason = queryApi.ApplySaveSnapshot(applyRoot)
+assertTrue(applyOk, "valid save snapshot applies successfully")
+assertEqual(applyReason, nil, "valid save snapshot apply has no failure reason")
+assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
+assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")
+assertTrue(queryApi.GetPlacedStructure(nonOverlappingStructureId) == nil, "apply removes stale non-overlap structure state")
+assertTrue(not queryApi.IsStructurePlaced(acceptedStructureId), "apply removes stale accepted query visibility")
+assertTrue(not queryApi.IsStructurePlaced(nonOverlappingStructureId), "apply removes stale non-overlap query visibility")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "apply exposes applied structure A via query")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "apply exposes applied structure B via query")
+
+local appliedStateA = queryApi.GetPlacedStructure(appliedStructureA)
+local appliedStateB = queryApi.GetPlacedStructure(appliedStructureB)
+assertTrue(appliedStateA ~= nil, "apply returns applied structure A state")
+assertTrue(appliedStateB ~= nil, "apply returns applied structure B state")
+if appliedStateA then
+	assertEqual(appliedStateA.placedByUserId, acceptedPlayer.UserId, "apply structure A owner")
+	assertEqual(appliedStateA.placedAt, 707.5, "apply structure A placedAt")
+	assertEqual(#appliedStateA.proposedOccupiedSpace, 1, "apply structure A occupied count")
+end
+if appliedStateB then
+	assertEqual(appliedStateB.placedByUserId, acceptedPlayer.UserId, "apply structure B owner")
+	assertEqual(appliedStateB.placedAt, 808.25, "apply structure B placedAt")
+	assertEqual(#appliedStateB.proposedOccupiedSpace, 1, "apply structure B occupied count")
+end
+
+local allAppliedStructures = queryApi.GetAllPlacedStructures()
+local allAppliedCount = 0
+for _ in pairs(allAppliedStructures) do
+	allAppliedCount += 1
+end
+assertEqual(allAppliedCount, 2, "apply replaces live registry with exact applied count")
+
+local giantStructuresAfterApply = mapFolderAfterAccept and mapFolderAfterAccept:FindFirstChild("GiantStructures")
+assertTrue(giantStructuresAfterApply ~= nil, "apply keeps GiantStructures artifact folder")
+local staleAcceptedArtifact = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
+local staleNonOverlapArtifact = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(nonOverlappingStructureId)
+assertTrue(staleAcceptedArtifact == nil, "apply removes stale accepted artifact")
+assertTrue(staleNonOverlapArtifact == nil, "apply removes stale non-overlap artifact")
+
+local appliedArtifactA = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(appliedStructureA)
+local appliedArtifactB = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(appliedStructureB)
+assertTrue(appliedArtifactA ~= nil, "apply materializes artifact A")
+assertTrue(appliedArtifactB ~= nil, "apply materializes artifact B")
+if appliedArtifactA then
+	assertEqual(appliedArtifactA:GetAttribute("StructureId"), appliedStructureA, "apply artifact A structure id")
+	assertEqual(appliedArtifactA:GetAttribute("PlacedByUserId"), acceptedPlayer.UserId, "apply artifact A owner")
+	assertEqual(appliedArtifactA:GetAttribute("PlacedAt"), 707.5, "apply artifact A placedAt")
+	assertEqual(appliedArtifactA:GetAttribute("OccupiedBoxCount"), 1, "apply artifact A occupied count")
+end
+if appliedArtifactB then
+	assertEqual(appliedArtifactB:GetAttribute("StructureId"), appliedStructureB, "apply artifact B structure id")
+	assertEqual(appliedArtifactB:GetAttribute("PlacedByUserId"), acceptedPlayer.UserId, "apply artifact B owner")
+	assertEqual(appliedArtifactB:GetAttribute("PlacedAt"), 808.25, "apply artifact B placedAt")
+	assertEqual(appliedArtifactB:GetAttribute("OccupiedBoxCount"), 1, "apply artifact B occupied count")
+end
+
+local snapshotAfterApply, snapshotAfterApplyReason = queryApi.BuildSaveSnapshot(applyRoot.ownerUserId)
+assertTrue(snapshotAfterApply ~= nil, "post-apply save snapshot returns root")
+assertEqual(snapshotAfterApplyReason, nil, "post-apply save snapshot has no reason")
+if snapshotAfterApply then
+	local snapshotAfterApplyValid, snapshotAfterApplyValidationReason =
+		GiantRealmSaveSchema.ValidateSaveRoot(snapshotAfterApply)
+	assertTrue(snapshotAfterApplyValid, "post-apply save snapshot validates")
+	assertEqual(snapshotAfterApplyValidationReason, nil, "post-apply save snapshot validation reason")
+	assertEqual(#snapshotAfterApply.placedStructures, 2, "post-apply save snapshot count")
+	assertEqual(
+		snapshotAfterApply.placedStructures[1].structureId,
+		appliedStructureA,
+		"post-apply save snapshot deterministic first"
+	)
+	assertEqual(
+		snapshotAfterApply.placedStructures[2].structureId,
+		appliedStructureB,
+		"post-apply save snapshot deterministic second"
+	)
+end
+
+local invalidApplyRoot = {
+	schemaVersion = 999,
+	ownerUserId = applyRoot.ownerUserId,
+	placedStructures = applyRoot.placedStructures,
+}
+local invalidApplyOk, invalidApplyReason = queryApi.ApplySaveSnapshot(invalidApplyRoot)
+assertTrue(not invalidApplyOk, "invalid save snapshot apply rejects")
+assertEqual(invalidApplyReason, "save_root_schema_version_invalid", "invalid save snapshot apply reason")
+assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "invalid apply preserves registry reference")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "invalid apply preserves applied structure A")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "invalid apply preserves applied structure B")
+assertTrue(not queryApi.IsStructurePlaced(acceptedStructureId), "invalid apply does not restore stale accepted structure")
+local appliedArtifactAAfterInvalid = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(appliedStructureA)
+local staleArtifactAfterInvalid = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
+assertTrue(appliedArtifactAAfterInvalid ~= nil, "invalid apply preserves applied artifact")
+assertTrue(staleArtifactAfterInvalid == nil, "invalid apply keeps stale artifact absent")
 
 -- Repeated accepted placements should deplete stored totals until a later known placement rejects.
 ResourceFlowState.ResetSession("giant_build_mode_repeated_depletion")

@@ -240,6 +240,15 @@ local function materializeAcceptedWorkspaceArtifact(state: AcceptedStructurePlac
 	debugLog(string.format("Materialized giant structure artifact structureId=%s", state.structureId))
 end
 
+local function clearGiantStructureArtifacts()
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
+	local children = giantStructuresFolder:GetChildren()
+	for _, child in ipairs(children) do
+		removeChildFolderByName(giantStructuresFolder, child.Name)
+	end
+end
+
 local function isCoolingDown(userId: number): boolean
 	local last = lastRequestAtByUserId[userId]
 	if last == nil then
@@ -630,11 +639,34 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	return root, nil
 end
 
+local function ApplySaveSnapshot(root: any): (boolean, string?)
+	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
+	if not valid then
+		return false, reason or "save_root_invalid"
+	end
+
+	for structureId in pairs(placedStructureById) do
+		placedStructureById[structureId] = nil
+	end
+	clearGiantStructureArtifacts()
+
+	for _, record in ipairs(root.placedStructures) do
+		local state: AcceptedStructurePlacementState = GiantRealmSaveSchema.SerializePlacedStructureRecord(record)
+		placedStructureById[state.structureId] = state
+		materializeAcceptedWorkspaceArtifact(state)
+	end
+
+	realmOwnerUserId = root.ownerUserId
+
+	return true, nil
+end
+
 _G._GiantBuildModeService_QueryAPI = {
 	GetPlacedStructure = GetPlacedStructure,
 	GetAllPlacedStructures = GetAllPlacedStructures,
 	IsStructurePlaced = IsStructurePlaced,
 	BuildSaveSnapshot = BuildSaveSnapshot,
+	ApplySaveSnapshot = ApplySaveSnapshot,
 }
 
 _G._GiantBuildModeService_Registry = placedStructureById
