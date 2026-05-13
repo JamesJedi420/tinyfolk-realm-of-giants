@@ -32,6 +32,7 @@ type AcceptedStructurePlacementState = {
 
 local placedStructureById: { [string]: AcceptedStructurePlacementState } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
+local realmOwnerUserId: number? = nil
 
 local function debugLog(message: string)
 	print(string.format("[GiantBuildModeService] %s", message))
@@ -423,6 +424,10 @@ local function spendStructureCost(structureId: string): (boolean, any, string?, 
 	return true, flowSnapshot, nil, woodCost, stoneCost
 end
 
+local function isAuthorizedRealmOwner(player: Player): boolean
+	return realmOwnerUserId == nil or realmOwnerUserId == player.UserId
+end
+
 local function boxesOverlap(a: StructureBoxInput, b: StructureBoxInput): boolean
 	return math.abs(a.worldCenter.x - b.worldCenter.x) < (a.halfExtents.x + b.halfExtents.x)
 		and math.abs(a.worldCenter.y - b.worldCenter.y) < (a.halfExtents.y + b.halfExtents.y)
@@ -511,6 +516,12 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
+	if not isAuthorizedRealmOwner(player) then
+		rejectPlacement(player, "giant_realm_owner_mismatch")
+		logPlacementOutcome("rejected", player, request.structureId, "giant_realm_owner_mismatch")
+		return
+	end
+
 	if overlapsAcceptedOccupiedSpace(request) then
 		rejectPlacement(player, "structure_occupied_space_overlap")
 		logPlacementOutcome("rejected", player, request.structureId, "structure_occupied_space_overlap")
@@ -546,6 +557,10 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		rejectPlacement(player, applyFailureReason)
 		logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
 		return
+	end
+
+	if realmOwnerUserId == nil then
+		realmOwnerUserId = player.UserId
 	end
 
 	debugLog(

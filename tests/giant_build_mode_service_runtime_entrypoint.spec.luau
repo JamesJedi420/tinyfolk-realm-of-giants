@@ -140,6 +140,12 @@ local playersService: any = {
 	},
 }
 
+local function clearRequestCooldownFor(player: any)
+	for _, callback in ipairs(playerRemovingConnections) do
+		callback(player)
+	end
+end
+
 local fakeGame = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "Players" then
@@ -337,6 +343,7 @@ assertTrue(acceptedState ~= nil, "accepted payload records structure placement s
 if acceptedState then
 	assertEqual(acceptedState.structureId, acceptedStructureId, "accepted state stores structure id")
 	assertEqual(acceptedState.placedByUserId, acceptedPlayer.UserId, "accepted state stores placer user id")
+	assertEqual(acceptedState.placedByUserId, acceptedPlayer.UserId, "first accepted placement establishes session owner")
 	assertTrue(
 		type(acceptedState.placedAt) == "number" and acceptedState.placedAt > 0,
 		"accepted state stores placedAt"
@@ -386,15 +393,15 @@ end
 
 -- Non-overlapping occupied space should accept a second known structure.
 local nonOverlappingStructureId = "GiantStructure_Runtime_F"
-local nonOverlappingPlayer = makeAlivePlayer(9410)
 local resourcesBeforeNonOverlap = ResourceFlowState.GetSnapshot()
-giantPlacementRemote:FireServer(nonOverlappingPlayer, makeAcceptedPayloadAt(nonOverlappingStructureId, 200, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(nonOverlappingStructureId, 200, 0, 300))
 
 local nonOverlappingState = registry[nonOverlappingStructureId]
-assertTrue(nonOverlappingState ~= nil, "non-overlapping second structure accepts")
+assertTrue(nonOverlappingState ~= nil, "same owner can place non-overlapping second structure")
 if nonOverlappingState then
 	assertEqual(nonOverlappingState.structureId, nonOverlappingStructureId, "non-overlap state stores structure id")
-	assertEqual(nonOverlappingState.placedByUserId, nonOverlappingPlayer.UserId, "non-overlap state stores placer user id")
+	assertEqual(nonOverlappingState.placedByUserId, acceptedPlayer.UserId, "non-overlap state stores owner user id")
 end
 
 local nonOverlappingArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(nonOverlappingStructureId)
@@ -405,12 +412,33 @@ assertStoredTotals(
 	"non-overlapping accept debits exact structure cost"
 )
 
+-- Different players should reject before affordability debit or placement mutation.
+local ownerMismatchStructureId = "GiantStructure_Runtime_G"
+local ownerMismatchPlayer = makeAlivePlayer(9411)
+local resourcesBeforeOwnerMismatch = ResourceFlowState.GetSnapshot()
+local warnsBeforeOwnerMismatch = #warns
+giantPlacementRemote:FireServer(ownerMismatchPlayer, makeAcceptedPayloadAt(ownerMismatchStructureId, 280, 0, 300))
+assertTrue(registry[ownerMismatchStructureId] == nil, "owner mismatch rejection does not mutate registry")
+
+local ownerMismatchArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(ownerMismatchStructureId)
+assertTrue(ownerMismatchArtifact == nil, "owner mismatch rejection does not materialize structure artifact")
+assertStoredTotalsUnchanged(resourcesBeforeOwnerMismatch, "owner mismatch rejection does not debit resources")
+
+local sawOwnerMismatchReject = false
+for i = warnsBeforeOwnerMismatch + 1, #warns do
+	if string.find(warns[i], "giant_realm_owner_mismatch", 1, true) then
+		sawOwnerMismatchReject = true
+		break
+	end
+end
+assertTrue(sawOwnerMismatchReject, "owner mismatch rejection reason is deterministic")
+
 -- Overlapping occupied space should reject before affordability debit or placement mutation.
 local overlappingStructureId = "GiantStructure_Runtime_G"
-local overlappingPlayer = makeAlivePlayer(9411)
 local resourcesBeforeOverlap = ResourceFlowState.GetSnapshot()
 local warnsBeforeOverlap = #warns
-giantPlacementRemote:FireServer(overlappingPlayer, makeAcceptedPayloadAt(overlappingStructureId, 130, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(overlappingStructureId, 130, 0, 300))
 assertTrue(registry[overlappingStructureId] == nil, "overlap rejection does not mutate registry")
 
 local overlappingArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(overlappingStructureId)
@@ -472,10 +500,10 @@ assertTrue(drainForInsufficientOk, "test drain before insufficient resource case
 assertStoredTotals(10, 120, "test drain leaves insufficient wood for runtime B")
 
 local insufficientStructureId = "GiantStructure_Runtime_B"
-local insufficientPlayer = makeAlivePlayer(9406)
 local resourcesBeforeInsufficient = ResourceFlowState.GetSnapshot()
 local warnsBeforeInsufficient = #warns
-giantPlacementRemote:FireServer(insufficientPlayer, makeAcceptedPayloadAt(insufficientStructureId, 280, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(insufficientStructureId, 280, 0, 300))
 assertTrue(registry[insufficientStructureId] == nil, "insufficient resources do not mutate registry")
 assertStoredTotalsUnchanged(resourcesBeforeInsufficient, "insufficient resources do not debit resources")
 
@@ -494,17 +522,20 @@ local repeatedFirstStructureId = "GiantStructure_Runtime_C"
 local repeatedSecondStructureId = "GiantStructure_Runtime_D"
 local repeatedRejectedStructureId = "GiantStructure_Runtime_E"
 
-giantPlacementRemote:FireServer(makeAlivePlayer(9407), makeAcceptedPayloadAt(repeatedFirstStructureId, 360, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(repeatedFirstStructureId, 360, 0, 300))
 assertTrue(registry[repeatedFirstStructureId] ~= nil, "first repeated placement accepted")
 assertStoredTotals(70, 70, "first repeated placement debits stored totals")
 
-giantPlacementRemote:FireServer(makeAlivePlayer(9408), makeAcceptedPayloadAt(repeatedSecondStructureId, 440, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(repeatedSecondStructureId, 440, 0, 300))
 assertTrue(registry[repeatedSecondStructureId] ~= nil, "second repeated placement accepted")
 assertStoredTotals(10, 10, "second repeated placement debits stored totals")
 
 local resourcesBeforeDepletedReject = ResourceFlowState.GetSnapshot()
 local warnsBeforeDepletedReject = #warns
-giantPlacementRemote:FireServer(makeAlivePlayer(9409), makeAcceptedPayloadAt(repeatedRejectedStructureId, 520, 0, 300))
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(repeatedRejectedStructureId, 520, 0, 300))
 assertTrue(registry[repeatedRejectedStructureId] == nil, "depleted resources do not mutate registry")
 assertStoredTotalsUnchanged(resourcesBeforeDepletedReject, "depleted resources reject does not debit resources")
 
