@@ -199,4 +199,19 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 	return ownerLayer :: ProfileOwnerLayer
 end
 
+function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): ProfileOwnerLayer
+	local resolvedProfileStoreModule = profileStoreModule
+	if resolvedProfileStoreModule == nil then
+		resolvedProfileStoreModule = require(script.Parent.ThirdParty.ProfileStore)
+	end
+
+	return ProfileStoreOwnerLayer.Create({
+		profileStoreModule = resolvedProfileStoreModule,
+		playerStoreName = "TinyfolkPlayerProfiles",
+		playerProfileTemplate = {
+			schemaVersion = 1,
+		},
+	})
+end
+
 return ProfileStoreOwnerLayer
