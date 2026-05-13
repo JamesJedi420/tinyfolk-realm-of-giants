@@ -91,6 +91,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **ProfileStore dependency intake status:** ProfileStore is now vendored as pinned third-party server-only source under `ServerScriptService.Services.ThirdParty`, with source, license, pinned commit, retrieval date, and gameplay-access restriction recorded in `docs/THIRD_PARTY.md`. `ProfileStoreOwnerLayer.CreateDefault` constructs the player-profile owner adapter through the existing `Create` path using bounded default intake config only. Gameplay services remain unwired, and Giant realm profile persistence remains deferred.
 
+**Profile lifecycle wiring status:** A server-only `ProfilePersistenceLifecycle` bootstrap now configures `ProfileStoreOwnerLayer.CreateDefault()` behind `ProfilePersistenceGateway` and owns player join, leave, and shutdown save/release calls through the gateway only. Gameplay services still do not depend on raw persistence details. Giant realm real profile lifecycle remains deferred.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
