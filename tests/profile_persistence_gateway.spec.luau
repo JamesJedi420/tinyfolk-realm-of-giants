@@ -48,6 +48,8 @@ end
 local expectedApi = {
 	ConfigureOwnerLayer = true,
 	ResetForTests = true,
+	GetLoadedPlayerProfileData = true,
+	UpdateLoadedPlayerProfileData = true,
 	LoadPlayerProfile = true,
 	LoadDefaultPlayerProfile = true,
 	SavePlayerProfile = true,
@@ -97,6 +99,21 @@ assertFailure(missingOwner, "LoadPlayerProfile", "owner_layer_not_configured", "
 assertEqual(missingOwner.profileKey, "PlayerProfile:9402", "missing owner profile key")
 assertEqual(missingOwner.retryable, true, "missing owner retryable")
 
+assertFailure(
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(makePlayer(9402)),
+	"GetLoadedPlayerProfileData",
+	"player_profile_not_loaded",
+	"get before load"
+)
+assertFailure(
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(makePlayer(9402), function(data: any): any
+		return data
+	end),
+	"UpdateLoadedPlayerProfileData",
+	"player_profile_not_loaded",
+	"update before load"
+)
+
 local defaultA = ProfilePersistenceGateway.LoadDefaultPlayerProfile(9402)
 local defaultB = ProfilePersistenceGateway.LoadDefaultPlayerProfile(9402)
 assertSuccess(defaultA, "LoadDefaultPlayerProfile", "PlayerProfile:9402", "default A")
@@ -110,7 +127,13 @@ local ownerLayer: any = {}
 
 function ownerLayer.LoadPlayerProfile(profileKey: string, userId: number): any
 	table.insert(calls, { method = "LoadPlayerProfile", profileKey = profileKey, userId = userId })
-	return makeOwnerResult("LoadPlayerProfile", profileKey, { userId = userId, loaded = true })
+	return makeOwnerResult("LoadPlayerProfile", profileKey, {
+		userId = userId,
+		loaded = true,
+		counters = {
+			coins = 10,
+		},
+	})
 end
 
 function ownerLayer.SavePlayerProfile(profileKey: string, userId: number, data: any): any
@@ -150,16 +173,84 @@ assertEqual(calls[1].method, "LoadPlayerProfile", "load owner method")
 assertEqual(calls[1].profileKey, "PlayerProfile:9402", "load owner key")
 assertEqual(calls[1].userId, 9402, "load owner id")
 
+local loadedProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+assertSuccess(loadedProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9402", "get loaded")
+assertEqual(loadedProfile.data.userId, 9402, "get loaded user id")
+assertEqual(loadedProfile.data.counters.coins, 10, "get loaded nested data")
+
+loadedProfile.data.loaded = false
+loadedProfile.data.counters.coins = 999
+local loadedProfileAgain = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+assertEqual(loadedProfileAgain.data.loaded, true, "get clone does not mutate active boolean")
+assertEqual(loadedProfileAgain.data.counters.coins, 10, "get clone does not mutate active nested")
+
+local updaterReceivedData: any = nil
+local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+	updaterReceivedData = currentData
+	currentData.counters.coins = 25
+	return currentData
+end)
+assertSuccess(updateResult, "UpdateLoadedPlayerProfileData", "PlayerProfile:9402", "update loaded")
+assertEqual(updateResult.data.counters.coins, 25, "update result data")
+updaterReceivedData.counters.coins = 333
+local afterUpdaterMutation = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+assertEqual(afterUpdaterMutation.data.counters.coins, 25, "updater receives clone")
+
+local failedUpdate = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(_currentData: any): any
+	return nil, "refused_by_test"
+end)
+assertFailure(failedUpdate, "UpdateLoadedPlayerProfileData", "refused_by_test", "update failure")
+local afterFailedUpdate = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+assertEqual(afterFailedUpdate.data.counters.coins, 25, "update failure does not mutate active")
+
+assertFailure(
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, "not a function"),
+	"UpdateLoadedPlayerProfileData",
+	"profile_update_updater_invalid",
+	"invalid updater"
+)
+assertFailure(
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(_currentData: any): any
+		return "not profile data"
+	end),
+	"UpdateLoadedPlayerProfileData",
+	"profile_update_data_invalid",
+	"invalid returned data"
+)
+assertFailure(
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(_currentData: any): any
+		error("boom")
+	end),
+	"UpdateLoadedPlayerProfileData",
+	"profile_update_failed",
+	"updater error"
+)
+
 assertSuccess(ProfilePersistenceGateway.SavePlayerProfile(player), "SavePlayerProfile", "PlayerProfile:9402", "save player")
 assertEqual(calls[2].method, "SavePlayerProfile", "save owner method")
 assertEqual(calls[2].profileKey, "PlayerProfile:9402", "save owner key")
 assertEqual(calls[2].userId, 9402, "save owner id")
 assertEqual(calls[2].data.loaded, true, "save owner uses loaded data")
+assertEqual(calls[2].data.counters.coins, 25, "save owner uses updated active data")
 
 assertSuccess(ProfilePersistenceGateway.ReleasePlayerProfile(player), "ReleasePlayerProfile", "PlayerProfile:9402", "release player")
 assertEqual(calls[3].method, "ReleasePlayerProfile", "release owner method")
 assertEqual(calls[3].profileKey, "PlayerProfile:9402", "release owner key")
 assertEqual(calls[3].userId, 9402, "release owner id")
+assertFailure(
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(player),
+	"GetLoadedPlayerProfileData",
+	"player_profile_not_loaded",
+	"get after release"
+)
+assertFailure(
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(data: any): any
+		return data
+	end),
+	"UpdateLoadedPlayerProfileData",
+	"player_profile_not_loaded",
+	"update after release"
+)
 
 assertFailure(
 	ProfilePersistenceGateway.SaveGiantRealmProfile(9402),

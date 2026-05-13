@@ -93,6 +93,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Profile lifecycle wiring status:** A server-only `ProfilePersistenceLifecycle` bootstrap now configures `ProfileStoreOwnerLayer.CreateDefault()` behind `ProfilePersistenceGateway` and owns player join, leave, and shutdown save/release calls through the gateway only. Gameplay services still do not depend on raw persistence details. Giant realm real profile lifecycle remains deferred.
 
+**Profile data consumption status:** `ProfilePersistenceGateway` now exposes gameplay-safe loaded player profile data access and update entrypoints. Callers can read cloned snapshots and commit mutations only through the gateway update function; they cannot receive ProfileStore profile/session objects or mutate active profile data by reference. No specific gameplay service is wired to profile data yet.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions

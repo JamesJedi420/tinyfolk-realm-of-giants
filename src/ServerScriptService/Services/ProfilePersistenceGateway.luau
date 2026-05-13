@@ -85,6 +85,18 @@ local function copyDefaultPlayerProfileData(data: any): any
 	}
 end
 
+local function cloneTable(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+
+	local result = {}
+	for key, child in pairs(value) do
+		result[key] = cloneTable(child)
+	end
+	return result
+end
+
 local function getConfiguredOwnerLayer(operation: string, profileKey: string): ProfileOwnerLayer?
 	if ownerLayer == nil then
 		return nil
@@ -136,6 +148,53 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 		activePlayerProfileDataByUserId[userId] = result.data
 	end
 	return result
+end
+
+function ProfilePersistenceGateway.GetLoadedPlayerProfileData(player: any): GatewayResult
+	local userId = getPlayerUserId(player)
+	if userId == nil then
+		return makeFailure("GetLoadedPlayerProfileData", "invalid_player_user_id", nil, false)
+	end
+
+	local key = playerProfileKey(userId)
+	local data = activePlayerProfileDataByUserId[userId]
+	if type(data) ~= "table" then
+		return makeFailure("GetLoadedPlayerProfileData", "player_profile_not_loaded", key, false)
+	end
+
+	return makeSuccess("GetLoadedPlayerProfileData", key, cloneTable(data))
+end
+
+function ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player: any, updater: any): GatewayResult
+	local userId = getPlayerUserId(player)
+	if userId == nil then
+		return makeFailure("UpdateLoadedPlayerProfileData", "invalid_player_user_id", nil, false)
+	end
+
+	local key = playerProfileKey(userId)
+	local data = activePlayerProfileDataByUserId[userId]
+	if type(data) ~= "table" then
+		return makeFailure("UpdateLoadedPlayerProfileData", "player_profile_not_loaded", key, false)
+	end
+	if type(updater) ~= "function" then
+		return makeFailure("UpdateLoadedPlayerProfileData", "profile_update_updater_invalid", key, false)
+	end
+
+	local updateOk, newData, updateReason = pcall(updater, cloneTable(data))
+	if not updateOk then
+		return makeFailure("UpdateLoadedPlayerProfileData", "profile_update_failed", key, false)
+	end
+	if type(newData) ~= "table" then
+		return makeFailure(
+			"UpdateLoadedPlayerProfileData",
+			if type(updateReason) == "string" and updateReason ~= "" then updateReason else "profile_update_data_invalid",
+			key,
+			false
+		)
+	end
+
+	activePlayerProfileDataByUserId[userId] = cloneTable(newData)
+	return makeSuccess("UpdateLoadedPlayerProfileData", key, cloneTable(activePlayerProfileDataByUserId[userId]))
 end
 
 function ProfilePersistenceGateway.SavePlayerProfile(player: any): GatewayResult
