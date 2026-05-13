@@ -85,6 +85,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Durable persistence ownership decision:** Durable Giant realm and player profile persistence is owned by a profile-locking persistence layer, reached through a thin server-only Tinyfolk compatibility gateway. Gameplay systems must not write directly to raw `DataStoreService`. Giant build mode remains the live-state owner and exposes snapshot/apply surfaces; it does not own durable profile sessions, autosave, load orchestration, or session locks.
 
+**Profile persistence gateway status:** A server-only `ProfilePersistenceGateway` skeleton now defines the Tinyfolk compatibility gateway boundary, typed success/failure result shape, and injected profile-locking owner-layer seam. The gateway is mock-backed only in this slice: it does not import or call real ProfileStore/ProfileService/raw DataStore persistence, and no gameplay service is wired to it yet. Giant realm save/load handoff is limited to the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` query API surface.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
