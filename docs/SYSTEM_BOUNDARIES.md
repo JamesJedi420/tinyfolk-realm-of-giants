@@ -81,6 +81,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 
 **Fold into this bucket:** additional structure validation constraints, legal placement topology checks, ownership/cost policy once specified, and persistence integration after schema boundary is defined.
 
+**Persistence schema status:** Giant realm persistence now has an initial pure-Luau save schema plus deterministic serialization/validation helpers for accepted Giant structure records. DataStore reads/writes and load/apply back into `GiantBuildModeService.server.luau` remain deferred.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
