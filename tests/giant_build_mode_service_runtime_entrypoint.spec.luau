@@ -348,7 +348,11 @@ assertTrue(acceptedState ~= nil, "accepted payload records structure placement s
 if acceptedState then
 	assertEqual(acceptedState.structureId, acceptedStructureId, "accepted state stores structure id")
 	assertEqual(acceptedState.placedByUserId, acceptedPlayer.UserId, "accepted state stores placer user id")
-	assertEqual(acceptedState.placedByUserId, acceptedPlayer.UserId, "first accepted placement establishes session owner")
+	assertEqual(
+		acceptedState.placedByUserId,
+		acceptedPlayer.UserId,
+		"first accepted placement establishes session owner"
+	)
 	assertTrue(
 		type(acceptedState.placedAt) == "number" and acceptedState.placedAt > 0,
 		"accepted state stores placedAt"
@@ -641,9 +645,15 @@ assertTrue(applyOk, "valid save snapshot applies successfully")
 assertEqual(applyReason, nil, "valid save snapshot apply has no failure reason")
 assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
 assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")
-assertTrue(queryApi.GetPlacedStructure(nonOverlappingStructureId) == nil, "apply removes stale non-overlap structure state")
+assertTrue(
+	queryApi.GetPlacedStructure(nonOverlappingStructureId) == nil,
+	"apply removes stale non-overlap structure state"
+)
 assertTrue(not queryApi.IsStructurePlaced(acceptedStructureId), "apply removes stale accepted query visibility")
-assertTrue(not queryApi.IsStructurePlaced(nonOverlappingStructureId), "apply removes stale non-overlap query visibility")
+assertTrue(
+	not queryApi.IsStructurePlaced(nonOverlappingStructureId),
+	"apply removes stale non-overlap query visibility"
+)
 assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "apply exposes applied structure A via query")
 assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "apply exposes applied structure B via query")
 
@@ -671,8 +681,10 @@ assertEqual(allAppliedCount, 2, "apply replaces live registry with exact applied
 
 local giantStructuresAfterApply = mapFolderAfterAccept and mapFolderAfterAccept:FindFirstChild("GiantStructures")
 assertTrue(giantStructuresAfterApply ~= nil, "apply keeps GiantStructures artifact folder")
-local staleAcceptedArtifact = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
-local staleNonOverlapArtifact = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(nonOverlappingStructureId)
+local staleAcceptedArtifact = giantStructuresAfterApply
+	and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
+local staleNonOverlapArtifact = giantStructuresAfterApply
+	and giantStructuresAfterApply:FindFirstChild(nonOverlappingStructureId)
 assertTrue(staleAcceptedArtifact == nil, "apply removes stale accepted artifact")
 assertTrue(staleNonOverlapArtifact == nil, "apply removes stale non-overlap artifact")
 
@@ -725,9 +737,14 @@ assertEqual(invalidApplyReason, "save_root_schema_version_invalid", "invalid sav
 assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "invalid apply preserves registry reference")
 assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "invalid apply preserves applied structure A")
 assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "invalid apply preserves applied structure B")
-assertTrue(not queryApi.IsStructurePlaced(acceptedStructureId), "invalid apply does not restore stale accepted structure")
-local appliedArtifactAAfterInvalid = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(appliedStructureA)
-local staleArtifactAfterInvalid = giantStructuresAfterApply and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
+assertTrue(
+	not queryApi.IsStructurePlaced(acceptedStructureId),
+	"invalid apply does not restore stale accepted structure"
+)
+local appliedArtifactAAfterInvalid = giantStructuresAfterApply
+	and giantStructuresAfterApply:FindFirstChild(appliedStructureA)
+local staleArtifactAfterInvalid = giantStructuresAfterApply
+	and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
 assertTrue(appliedArtifactAAfterInvalid ~= nil, "invalid apply preserves applied artifact")
 assertTrue(staleArtifactAfterInvalid == nil, "invalid apply keeps stale artifact absent")
 
@@ -762,5 +779,87 @@ for i = warnsBeforeDepletedReject + 1, #warns do
 	end
 end
 assertTrue(sawDepletedInsufficientResources, "depleted repeated placement rejection reason is deterministic")
+
+-- TIN-56: Deterministic rejection-path coverage (smallest next slice)
+do
+	-- request_cooldown
+	local cooldownPlayer = makeAlivePlayer(9501)
+	local warnsBeforeCooldown = #warns
+	-- First request to mark cooldown
+	giantPlacementRemote:FireServer(cooldownPlayer, makeAcceptedPayload("GiantStructure_Runtime_A"))
+	-- Immediate second request should trigger cooldown rejection
+	giantPlacementRemote:FireServer(cooldownPlayer, makeAcceptedPayload("GiantStructure_Runtime_F"))
+	local sawCooldownReject = false
+	for i = warnsBeforeCooldown + 1, #warns do
+		if string.find(warns[i], "request_cooldown", 1, true) then
+			sawCooldownReject = true
+			break
+		end
+	end
+	assertTrue(sawCooldownReject, "request_cooldown rejection reason is deterministic")
+
+	-- player_not_alive
+	local deadPlayer = makeAlivePlayer(9502)
+	deadPlayer.Character.FindFirstChildOfClass = function(self, className)
+		if className == "Humanoid" then
+			return { Health = 0 }
+		end
+		return nil
+	end
+	local warnsBeforeDead = #warns
+	giantPlacementRemote:FireServer(deadPlayer, makeAcceptedPayload("GiantStructure_Runtime_B"))
+	local sawDeadReject = false
+	for i = warnsBeforeDead + 1, #warns do
+		if string.find(warns[i], "player_not_alive", 1, true) then
+			sawDeadReject = true
+			break
+		end
+	end
+	assertTrue(sawDeadReject, "player_not_alive rejection reason is deterministic")
+
+	-- payload_box_world_center_out_of_bounds
+	local outOfBoundsPayload = makeAcceptedPayloadAt("GiantStructure_Runtime_C", 99999, 0, 0)
+	local warnsBeforeBounds = #warns
+	clearRequestCooldownFor(cooldownPlayer)
+	giantPlacementRemote:FireServer(cooldownPlayer, outOfBoundsPayload)
+	local sawBoundsReject = false
+	for i = warnsBeforeBounds + 1, #warns do
+		if string.find(warns[i], "payload_box_world_center_out_of_bounds", 1, true) then
+			sawBoundsReject = true
+			break
+		end
+	end
+	assertTrue(sawBoundsReject, "payload_box_world_center_out_of_bounds rejection reason is deterministic")
+
+	-- payload_box_half_extents_invalid
+	local invalidHalfExtentsPayload = makeAcceptedPayload("GiantStructure_Runtime_D")
+	invalidHalfExtentsPayload.proposedOccupiedSpace[1].halfExtents = { x = -1, y = 2, z = 2 }
+	local warnsBeforeHalfExtents = #warns
+	clearRequestCooldownFor(cooldownPlayer)
+	giantPlacementRemote:FireServer(cooldownPlayer, invalidHalfExtentsPayload)
+	local sawHalfExtentsReject = false
+	for i = warnsBeforeHalfExtents + 1, #warns do
+		if string.find(warns[i], "payload_box_half_extents_invalid", 1, true) then
+			sawHalfExtentsReject = true
+			break
+		end
+	end
+	assertTrue(sawHalfExtentsReject, "payload_box_half_extents_invalid rejection reason is deterministic")
+
+	-- malformed_payload_box_fields (non-string tag)
+	local malformedBoxPayload = makeAcceptedPayload("GiantStructure_Runtime_E")
+	malformedBoxPayload.proposedOccupiedSpace[1].tag = 12345
+	local warnsBeforeMalformedBox = #warns
+	clearRequestCooldownFor(cooldownPlayer)
+	giantPlacementRemote:FireServer(cooldownPlayer, malformedBoxPayload)
+	local sawMalformedBoxReject = false
+	for i = warnsBeforeMalformedBox + 1, #warns do
+		if string.find(warns[i], "malformed_payload_box_fields", 1, true) then
+			sawMalformedBoxReject = true
+			break
+		end
+	end
+	assertTrue(sawMalformedBoxReject, "malformed_payload_box_fields rejection reason is deterministic")
+end
 
 print("giant_build_mode_service_runtime_entrypoint: all checks passed")
