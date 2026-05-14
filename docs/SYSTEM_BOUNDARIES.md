@@ -104,6 +104,8 @@ See `docs/PROFILE_OWNERSHIP_DECISION.md` for the full ownership decision record.
 - Tier tuning: bounded value adjustment, not core rule override
 - Shared registry/schema for traits, cooldowns, tokens, active abilities, anti-abuse rules
 
+**Current implementation status:** TIN-187 adds a narrow post-crossing Tinyfolk movement trait slice, not a full trait/loadout framework. A server-owned `TinyfolkMovementTraitService` consumes accepted route-crossing hooks and applies a bounded, cooldown-gated speed burst only when `TinyfolkTrait_PostCrossingBurst` is enabled. The first valid crossing hook is the accepted `EscapeService` route crossing path. The slice exposes debug/trace attributes for readability; full trail rendering, animation/audio, rescue/adjacent burst systems, and traversal-gap runtime remain deferred.
+
 **Fold into this bucket:** trait effect definitions, cooldown schema, token schemas, ability registry entries.
 
 ### Economy and Labor System

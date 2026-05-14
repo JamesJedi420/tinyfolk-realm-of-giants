@@ -8,6 +8,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
+local TinyfolkMovementTraitService = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("TinyfolkMovementTraitService"))
+	else require("./TinyfolkMovementTraitService")
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
@@ -271,6 +274,7 @@ escapeAttemptRemote.OnServerEvent:Connect(function(player: Player, payload: unkn
 	routePart:SetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE, successfulEscapes + 1)
 
 	movePlayerToReturnPoint(player, routePart)
+	TinyfolkMovementTraitService.OnValidRouteCrossing(player, routeId)
 
 	debugLog(string.format("Accepted EscapeAttemptRequest userId=%d routeId=%s distance=%.2f", player.UserId, routeId, distance))
 end)
