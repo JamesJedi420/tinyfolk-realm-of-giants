@@ -145,6 +145,75 @@ See `docs/PROFILE_OWNERSHIP_DECISION.md` for the full ownership decision record.
 
 ---
 
+## VHS Mechanics Analysis and Translation Framework
+
+To identify design patterns and establish boundaries for future mechanics, we surveyed core systems from *Video Horror Society* (VHS) and mapped them to Tinyfolk candidates. This section documents the framework for future backlog reconciliation.
+
+### VHS Mechanics Categories
+
+VHS provides nine core mechanic categories with distinct triggers, actors, constraints, and failure modes:
+
+| VHS Mechanic | Description | Tinyfolk Candidate | Bucket(s) | Classification | Priority |
+|---|---|---|---|---|---|
+| **Maneuvers** | Movement actions (walk, run, sprint, crouch, vault, climb) | Bounded Sprint/Stamina | Escape/Movement (TIN-81) | FOLD_INTO_EXISTING | High |
+| **Actions** | Interactive object usage (doors, phones, items, traps) | Contextual Tasks | Objectives (TIN-153/154) | FOLD_INTO_EXISTING | High |
+| **Skill Checks** | Timed mini-games (QTEs, single-tap, rapid-press, timing-bar) | Timed Task QTE | Objectives (TIN-154) | FOLD_INTO_EXISTING | Medium |
+| **Status Effects** | Conditions altering state (Fear, Panic, Bleed, Stun, Flux) | Timed Condition States | Status/HUD (TIN-165/164) | FOLD_INTO_EXISTING | High |
+| **Stigmas** | Monster health/immunities (weapon-type based damage layers) | Banishment Meter | (Not directly applicable) | ALREADY_REPRESENTED | Low |
+| **Perks** | Player buffs (pre-match stat bonuses, ability loadouts, multi-level) | Role Perk Loadouts | Loadout (TIN-171) | ALREADY_REPRESENTED | Low |
+| **Teleport/Shift** | Monster mobility (short-range dash, terrain traversal) | Dash Maneuver | Block/Movement (TIN-185) | FOLD_INTO_EXISTING | Medium |
+| **Traps/Snares** | Monster deployable hazards (immobilization, instant defeat) | Temporary Snare Traps | Snare System (TIN-216) | ALREADY_REPRESENTED | Medium |
+| **Communication** | Reinforcement call (radio spawn ally, one-time use) | Emergency Reinforcement | Rescue Contracts (TIN-72) | NEW_ISSUE_CANDIDATE | High |
+
+### Fold-Into-Existing Mechanics (6 candidates)
+
+These mechanics extend existing Tinyfolk buckets without introducing new system boundaries:
+
+1. **Bounded Sprint/Stamina (TIN-81):** VHS stamina depletion on sprint and noise from running translate directly to Tinyfolk movement rules. Fold in by adding a stamina gauge that depletes on sprint, exhaustion causes a "breathless" state, and UI cue (radial stamina bar above hotbar, red when low).
+
+2. **Contextual Tasks (TIN-153/154):** VHS object interactions (press key, progress meter, interrupt resets progress) map to Tinyfolk objective framework. Reuse objective nodes for door-opening, item pickups; add progress bars, noise-on-failure alerts, and allow cancellation.
+
+3. **Timed Task QTE (TIN-154):** VHS skill checks (single-tap, rapid-press, timing-bar windows) extend TIN-154 as optional layers on interactive actions. Offer bonus speed on success, noise penalty on failure. Visual: moving target bar with success zone; failed attempt shakes screen edge.
+
+4. **Timed Condition States (TIN-165/164):** VHS conditions (Fear rising near monster, Bleed from weapons, Stun from traps) fold into Tinyfolk status effects. Add "Exposure meter" for proximity feedback, panic triggers (e.g. scream attract allies), effect icons (heart for bleed, face for fear). Example UI: pulsating overlay or vignette when fear is high.
+
+5. **Dash Maneuver (TIN-185):** VHS monster dash/teleport maps to Giant phase mobility as a grounded shockwave-landing move with clear travel-time arc. Use gap-block state for temporary traversal denial. Visual: ghost trajectory line or flashing footprints during dash.
+
+6. **Temporary Snare Traps (TIN-216):** VHS trap mechanics (place → trigger → immobilize → rescue/timeout) already exist in Tinyfolk. Reuse trap states and emphasize anti-camp validation (no placement on active quest items or near exits). UI: glowing footprint or red warning circle when armed.
+
+### Already-Represented Mechanics (2 candidates)
+
+These mechanics are already covered by existing Tinyfolk systems and require no new issues:
+
+1. **Banishment Meter (Stigmas):** VHS stigma removal (weapon-type layers depleting monster health) applies only if Tinyfolk had boss-fight mechanics. Given Tinyfolk's escape-focused design, stigmas are not directly needed. If a future monster-escort win condition emerges, reuse multi-charge health system concepts.
+
+2. **Role Perk Loadouts (Perks):** VHS perk slots (pre-match stat bonuses, multi-level, point budget) map exactly to Tinyfolk TIN-171 loadout framework. Role-specific ability traits (Vault Expert, Sprint Specialist) already exist. No changes to core system needed.
+
+### New Issue Candidate (1 candidate)
+
+1. **Emergency Reinforcement (Communication):** VHS Tommy Jarvis radio call spawns a powerful ally mid-match under player control. Tinyfolk candidate: a one-time summoned Tinyfolk hero (Private or Army ally with defined loadout) enters mid-match if team is reduced. Classification: **NEW_ISSUE_CANDIDATE**, scope requires: (a) deterministic spawn logic, (b) cooldown on use (valid only if <X Tinyfolk remain), (c) summoned ally initialization with role/traits, (d) "call center" objective token trigger, (e) HUD radio icon and countdown. Acceptance: fairness tuning for team-size reduction thresholds, anti-snowball safeguards. Ties to TIN-72 (Rescue Contracts) if rescue-contract allies are merged with reinforcement-call allies. **Priority: High novelty** (adds strategy depth) but implement with clear fairness boundaries.
+
+### Fold-In Implementation Guidance
+
+When folding mechanics into existing issues:
+
+1. **Do not expand scope:** A fold-in is a parameter tweak, UI detail, or example for an existing system—not a new module or test file.
+2. **Validate bucket boundaries:** Ensure the candidate does not cross a clear implementation boundary (e.g., Skill Checks are UI-layer QTE details on Objectives, not a separate system).
+3. **Reference the VHS pattern:** Use VHS triggers, constraints, and failure modes as concrete examples to clarify acceptance criteria.
+4. **Test surface remains unchanged:** Fold-in candidates should not require new test files; they extend existing test suites with additional cases.
+
+### When to Create a New Issue
+
+Create a new issue only for Emergency Reinforcement or future mechanics that:
+
+1. Introduce a new durable implementation surface (new module, schema, or persistent state).
+2. Cross a clear system boundary that cannot merge without scope expansion.
+3. Require test files or query API surfaces not already present in existing buckets.
+
+For all other candidates, default to folding in.
+
+---
+
 ## Cross-System Rules
 
 | Rule | Bucket |
