@@ -93,6 +93,16 @@ local replicatedStorageService: any = {
 									CrossingPhaseAttribute = "CrossingPhase",
 									RequiredCrossingPhase = "MidCrossing",
 									SafeZoneAttribute = "InSafeZone",
+									SafeZoneTypeAttribute = "SafeZoneType",
+									SafeZoneProtectionEndsAtAttribute = "SafeZoneProtectionEndsAt",
+									SafeZoneTypes = {
+										SharedHub = "SharedHub",
+										RealmEntry = "RealmEntry",
+										RealmExit = "RealmExit",
+									},
+									SafeZoneAbuseWindowSeconds = 2,
+									SafeZoneAbuseThreshold = 3,
+									SafeZoneAbuseLockoutSeconds = 1,
 									TraversalGapBlockStartupSeconds = 1,
 									TraversalGapBlockActiveSeconds = 4,
 									TraversalGapBlockRequestCooldownSeconds = 0.25,
@@ -149,6 +159,8 @@ local function resetRouteDefaults()
 	routeAttributes.ThroughGapReachAllowed = true
 	routeAttributes.RouteType = "TraversalGap"
 	routeAttributes.InSafeZone = false
+	routeAttributes.SafeZoneType = nil
+	routeAttributes.SafeZoneProtectionEndsAt = nil
 	routeAttributes.TraversalGapBlockExempt = false
 	routeAttributes.TraversalGapBlockState = "Idle"
 	routeAttributes.TraversalGapBlockStartupEndsAt = nil
@@ -257,6 +269,49 @@ do
 
 	local result = EscapeService.validateThroughGapReach(player, target, makeRequest())
 	assertEqual(result, false, "safe-zone target rejects")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
+	local player = MockPlayer.new(1, "GiantPlayer")
+	local target = MockPlayer.new(2, "TinyfolkPlayer", { crossingPhase = "MidCrossing" })
+	playersByUserId[2] = target
+
+	local result = EscapeService.validateThroughGapReach(player, target, makeRequest())
+	assertEqual(result, false, "safe-zone route rejects through-gap")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer")
+	local target = MockPlayer.new(2, "TinyfolkPlayer", {
+		inSafeZone = true,
+		safeZoneType = "RealmEntry",
+		safeZoneProtectionEndsAt = 101,
+	})
+	playersByUserId[2] = target
+
+	local activeProtectionResult = EscapeService.validateThroughGapReach(player, target, makeRequest())
+	assertEqual(activeProtectionResult, false, "realm-entry target active protection rejects through-gap")
+
+	currentTime = 102
+	local expiredProtectionResult = EscapeService.validateThroughGapReach(player, target, makeRequest())
+	assertEqual(expiredProtectionResult, true, "realm-entry target expired protection allows through-gap")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer")
+	local target = MockPlayer.new(2, "TinyfolkPlayer", {
+		inSafeZone = true,
+		safeZoneType = "InvalidSafeZoneType",
+	})
+	playersByUserId[2] = target
+
+	local result = EscapeService.validateThroughGapReach(player, target, makeRequest())
+	assertEqual(result, false, "unknown safe-zone type on target rejects through-gap")
 end
 
 do
@@ -386,11 +441,74 @@ end
 do
 	resetRouteDefaults()
 	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
 	local player = MockPlayer.new(1, "GiantPlayer")
 
 	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
 	assertEqual(result.accepted, false, "safe-zone route block rejects")
-	assertEqual(result.reason, "route_in_safe_zone", "safe-zone route block reason")
+	assertEqual(result.reason, "shared_hub_no_capture", "safe-zone route block reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "RealmExit"
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "realm-exit route block rejects")
+	assertEqual(result.reason, "realm_exit_protected", "realm-exit route block reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "RealmEntry"
+	routeAttributes.SafeZoneProtectionEndsAt = 101
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local activeProtectionResult = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(activeProtectionResult.accepted, false, "realm-entry active protection rejects block")
+	assertEqual(activeProtectionResult.reason, "realm_entry_protected", "realm-entry active reason")
+
+	currentTime = 102
+	local expiredProtectionResult = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(expiredProtectionResult.accepted, true, "realm-entry expired protection allows block")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "UnknownZoneType"
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "unknown safe-zone type rejects")
+	assertEqual(result.reason, "safe_zone_type_unknown", "unknown safe-zone reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local first = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	local second = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	local third = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+
+	routeAttributes.InSafeZone = false
+	routeAttributes.SafeZoneType = nil
+	local locked = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(first.accepted, false, "safe-zone abuse first rejection")
+	assertEqual(second.accepted, false, "safe-zone abuse second rejection")
+	assertEqual(third.accepted, false, "safe-zone abuse third rejection")
+	assertEqual(locked.accepted, false, "safe-zone abuse lockout rejects immediately")
+	assertEqual(locked.reason, "safe_zone_abuse_rate_limited", "safe-zone abuse lockout reason")
+
+	currentTime = 101.1
+	local unlocked = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(unlocked.accepted, true, "safe-zone abuse lockout expires deterministically")
 end
 
 do

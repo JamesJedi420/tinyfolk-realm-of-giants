@@ -72,6 +72,8 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 		Role = if type(opts.role) == "string" then opts.role else getRoleByName(name),
 		CrossingPhase = if type(opts.crossingPhase) == "string" then opts.crossingPhase else "MidCrossing",
 		InSafeZone = opts.inSafeZone == true,
+		SafeZoneType = opts.safeZoneType,
+		SafeZoneProtectionEndsAt = opts.safeZoneProtectionEndsAt,
 	}
 
 	local self: any = setmetatable({

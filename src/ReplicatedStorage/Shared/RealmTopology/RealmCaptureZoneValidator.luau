@@ -1,9 +1,46 @@
 --!strict
 
-local RealmTopologyValidator = require("./RealmTopologyValidator")
+-- RealmCaptureZoneValidator: Enforces all capture zone placement, safe zone, and no-capture rules for TIN-76
+-- All rules are tag-driven (only GiantCapture zones are subject to capture/no-capture constraints)
+-- Geometric checks (3D distance, overlap, perimeter, cluster, total cap) are robust and test-backed
+-- Used by placement validators, runtime entrypoints, and integration tests
 
-export type RealmDescriptor = RealmTopologyValidator.RealmDescriptor
-export type Vector3Data = RealmTopologyValidator.Vector3Data
+local EscapeConfig = require("../Config/EscapeConfig")
+local SafeZonePolicy = require("../GiantRealm/SafeZonePolicy")
+
+export type Vector3Data = {
+	x: number,
+	y: number,
+	z: number,
+}
+
+export type NamedPart = {
+	name: string,
+	position: Vector3Data,
+}
+
+export type NamedZone = {
+	name: string,
+	position: Vector3Data,
+	radius: number,
+	tag: string,
+}
+
+export type RealmDescriptor = {
+	spawns: { NamedPart },
+	escapeRoutes: { NamedPart },
+	returnPoints: { NamedPart },
+	stations: { NamedPart },
+	constructionSites: { NamedPart },
+	upgradeBoards: { NamedPart },
+	controlZones: { NamedZone },
+	captureZones: { NamedZone },
+	props: { any },
+	routeGraph: {
+		nodes: { any },
+		edges: { any },
+	},
+}
 
 export type CheckResult = {
 	id: string,
@@ -20,8 +57,10 @@ export type CaptureZoneConfig = {
 	captureZoneClusterRadiusStuds: number,
 	maximumCaptureZoneNeighborsInClusterRadius: number,
 	maximumCaptureZonesPerRealm: number,
+	safeZoneNowSeconds: number?,
 }
 
+-- 3D Euclidean distance for all geometric checks
 local function distance(pos1: Vector3Data, pos2: Vector3Data): number
 	local dx = pos1.x - pos2.x
 	local dy = pos1.y - pos2.y
@@ -277,7 +316,7 @@ end
 -- Vacuous pass when fewer than two GiantCapture zones exist.
 local function captureZoneOverlap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
 	-- Collect only GiantCapture zones so pair indices are stable and deterministic.
-	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	local giantZones: { NamedZone } = {}
 	for _, zone in ipairs(descriptor.captureZones) do
 		if zone.tag == "GiantCapture" then
 			table.insert(giantZones, zone)
@@ -324,7 +363,7 @@ end
 -- Non-GiantCapture zones are ignored.
 -- Vacuous pass when fewer than two GiantCapture zones exist.
 local function captureZoneMinimumSpacing(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
-	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	local giantZones: { NamedZone } = {}
 	for _, zone in ipairs(descriptor.captureZones) do
 		if zone.tag == "GiantCapture" then
 			table.insert(giantZones, zone)
@@ -378,7 +417,7 @@ end
 -- Non-GiantCapture zones are ignored.
 -- Vacuous pass when fewer than two GiantCapture zones exist.
 local function captureZoneClusterDensityCap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
-	local giantZones: { RealmTopologyValidator.NamedZone } = {}
+	local giantZones: { NamedZone } = {}
 	for _, zone in ipairs(descriptor.captureZones) do
 		if zone.tag == "GiantCapture" then
 			table.insert(giantZones, zone)
@@ -461,6 +500,88 @@ local function captureZoneTotalCap(descriptor: RealmDescriptor, config: CaptureZ
 	}
 end
 
+local function captureZoneProtectedZoneClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_protected_zone_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	if #descriptor.controlZones == 0 then
+		return {
+			id = "capture_zone_protected_zone_clearance",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	local currentTime = if type(config.safeZoneNowSeconds) == "number" then config.safeZoneNowSeconds else 0
+
+	for _, protectedZone in ipairs(descriptor.controlZones) do
+		if protectedZone.tag ~= "SafeZone" then
+			continue
+		end
+
+		local protectedZoneAny = protectedZone :: any
+		local decision = SafeZonePolicy.EvaluateProtection(EscapeConfig, {
+			safeZoneState = true,
+			safeZoneType = protectedZoneAny.zoneType,
+			safeZoneProtectionEndsAt = protectedZoneAny.protectionEndsAt,
+			now = currentTime,
+		})
+
+		if decision.protected ~= true then
+			continue
+		end
+
+		if decision.reason == "safe_zone_type_missing" or decision.reason == "safe_zone_type_unknown" then
+			return {
+				id = "capture_zone_protected_zone_clearance",
+				passed = false,
+				reason = "SafeZone '"
+					.. protectedZone.name
+					.. "' has unsupported zone type metadata; rejecting capture placement for safe fallback",
+			}
+		end
+
+		for _, captureZone in ipairs(descriptor.captureZones) do
+			if captureZone.tag ~= "GiantCapture" then
+				continue
+			end
+
+			local d = distance(captureZone.position, protectedZone.position)
+			local minimumClearance = captureZone.radius + protectedZone.radius
+			if d < minimumClearance then
+				return {
+					id = "capture_zone_protected_zone_clearance",
+					passed = false,
+					reason = "Capture zone '"
+						.. captureZone.name
+						.. "' overlaps protected SafeZone '"
+						.. protectedZone.name
+						.. "' (type="
+						.. tostring(protectedZoneAny.zoneType)
+						.. ", reason="
+						.. tostring(decision.reason)
+						.. ", dist="
+						.. string.format("%.2f", d)
+						.. ", required="
+						.. tostring(minimumClearance)
+						.. ")",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_protected_zone_clearance",
+		passed = true,
+		reason = nil,
+	}
+end
+
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
@@ -471,4 +592,5 @@ return {
 	captureZoneMinimumSpacing = captureZoneMinimumSpacing,
 	captureZoneClusterDensityCap = captureZoneClusterDensityCap,
 	captureZoneTotalCap = captureZoneTotalCap,
+	captureZoneProtectedZoneClearance = captureZoneProtectedZoneClearance,
 }

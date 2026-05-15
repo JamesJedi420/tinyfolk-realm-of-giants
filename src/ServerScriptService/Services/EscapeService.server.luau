@@ -1,5 +1,9 @@
 --!strict
 
+-- EscapeService: Orchestrates escape, block, and through-gap validation for TIN-76
+-- Enforces all safe zone and no-capture rules (routes with InSafeZone=true are rejected for escape/block)
+-- All logic is attribute-driven and server-authoritative; integrates with EscapeConfig and validator modules
+
 local REMOTES_FOLDER_NAME = "Remotes"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local ESCAPE_DEBUG_REQUEST_REMOTE_NAME = "EscapeDebugStateRequest"
@@ -89,6 +93,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"ThroughGapValidation",
 		"../../ReplicatedStorage/Shared/GiantRealm/ThroughGapValidation"
 	)
+	local SafeZonePolicy = resolveDependency(
+		GiantRealm,
+		"SafeZonePolicy",
+		"../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy"
+	)
 	local TraversalGapBlockState = resolveDependency(
 		GiantRealm,
 		"TraversalGapBlockState",
@@ -116,6 +125,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local lastRequestAtByUserId: { [number]: number? } = {}
 	local traversalGapBlockByRouteId: { [string]: any? } = {}
 	local lastBlockRequestAtByUserId: { [number]: number? } = {}
+	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
 	local function ensureRemotesFolder(): Folder?
 		if ReplicatedStorage == nil or type(ReplicatedStorage.FindFirstChild) ~= "function" then
@@ -191,6 +201,64 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		lastBlockRequestAtByUserId[userId] = now()
 	end
 
+	local function isSafeZoneAbuseLocked(userId: number, currentTime: number): boolean
+		local state = safeZoneAbuseStateByUserId[userId]
+		if state == nil then
+			return false
+		end
+		if type(state.lockoutEndsAt) ~= "number" then
+			return false
+		end
+		return currentTime <= state.lockoutEndsAt
+	end
+
+	local function noteSafeZoneAbuse(userId: number, currentTime: number)
+		local windowSeconds = EscapeConfig.SafeZoneAbuseWindowSeconds
+		local threshold = EscapeConfig.SafeZoneAbuseThreshold
+		local lockoutSeconds = EscapeConfig.SafeZoneAbuseLockoutSeconds
+
+		if
+			type(windowSeconds) ~= "number"
+			or type(threshold) ~= "number"
+			or type(lockoutSeconds) ~= "number"
+		then
+			return
+		end
+
+		local state = safeZoneAbuseStateByUserId[userId]
+		if state == nil or type(state.windowStartedAt) ~= "number" then
+			safeZoneAbuseStateByUserId[userId] = {
+				count = 1,
+				windowStartedAt = currentTime,
+				lockoutEndsAt = nil,
+			}
+			return
+		end
+
+		if currentTime - state.windowStartedAt > windowSeconds then
+			state.count = 1
+			state.windowStartedAt = currentTime
+			state.lockoutEndsAt = nil
+		else
+			state.count += 1
+		end
+
+		if state.count >= threshold then
+			state.lockoutEndsAt = currentTime + lockoutSeconds
+			state.count = 0
+			state.windowStartedAt = currentTime
+		end
+	end
+
+	local function evaluateSafeZoneProtection(safeZoneState: boolean, safeZoneType: any, protectionEndsAt: any): any
+		return SafeZonePolicy.EvaluateProtection(EscapeConfig, {
+			safeZoneState = safeZoneState,
+			safeZoneType = safeZoneType,
+			safeZoneProtectionEndsAt = protectionEndsAt,
+			now = now(),
+		})
+	end
+
 	local function resolveDistance(a: any, b: any): number?
 		if a == nil or b == nil then
 			return nil
@@ -206,9 +274,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			and type(b.y) == "number"
 			and type(b.z) == "number"
 		then
-			local dx = a.x - b.x
-			local dy = a.y - b.y
-			local dz = a.z - b.z
+			local aVector = a :: any
+			local bVector = b :: any
+			local dx = aVector.x - bVector.x
+			local dy = aVector.y - bVector.y
+			local dz = aVector.z - bVector.z
 			return math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
 		end
 
@@ -471,6 +541,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "route_id_invalid" }
 		end
 
+		local callerUserId = if player ~= nil and type(player.UserId) == "number" then player.UserId else nil
+		if callerUserId ~= nil and isSafeZoneAbuseLocked(callerUserId, now()) then
+			return { accepted = false, reason = "safe_zone_abuse_rate_limited" }
+		end
+
 		local routePart = resolveRoutePart(routeId)
 		if routePart == nil then
 			return { accepted = false, reason = "route_not_found" }
@@ -501,8 +576,16 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "route_type_unsupported" }
 		end
 
-		if routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true then
-			return { accepted = false, reason = "route_in_safe_zone" }
+		local routeSafeZoneDecision = evaluateSafeZoneProtection(
+			routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
+			routePart:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+			routePart:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+		)
+		if routeSafeZoneDecision.protected == true then
+			if callerUserId ~= nil then
+				noteSafeZoneAbuse(callerUserId, now())
+			end
+			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
 		end
 
 		local distance = resolveDistance((routePart :: any).Position, (callerRoot :: any).Position)
@@ -626,6 +709,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	function service.ResetTraversalGapBlocksForTests()
 		traversalGapBlockByRouteId = {}
 		lastBlockRequestAtByUserId = {}
+		safeZoneAbuseStateByUserId = {}
 		for routeId, routePart in escapeRouteById do
 			applyBlockAttributes(routePart, TraversalGapBlockState.Snapshot(nil, now()))
 		end
@@ -633,6 +717,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	function service.validateThroughGapReach(player: any, target: any, request: any?): boolean
 		if player == nil or target == nil then
+			return false
+		end
+
+		if type(player.UserId) == "number" and isSafeZoneAbuseLocked(player.UserId, now()) then
 			return false
 		end
 
@@ -674,15 +762,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local routeTypeValue = routePart:GetAttribute(EscapeConfig.RouteTypeAttribute)
 		local routeType = if type(routeTypeValue) == "string" then routeTypeValue else nil
 
+		local routeSafeZoneDecision = evaluateSafeZoneProtection(
+			routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
+			routePart:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+			routePart:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+		)
+		if routeSafeZoneDecision.protected == true then
+			noteSafeZoneAbuse(player.UserId, now())
+			return false
+		end
+
 		local crossingPhaseValid = false
 		if type(target.GetAttribute) == "function" then
 			crossingPhaseValid = target:GetAttribute(EscapeConfig.CrossingPhaseAttribute)
 				== EscapeConfig.RequiredCrossingPhase
 		end
 
-		local safeZoneState = false
+		local targetSafeZoneState = false
+		local targetSafeZoneType = nil
+		local targetSafeZoneProtectionEndsAt = nil
 		if type(target.GetAttribute) == "function" then
-			safeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
+			targetSafeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
+			targetSafeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
+			targetSafeZoneProtectionEndsAt = target:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+		end
+		local targetSafeZoneDecision = evaluateSafeZoneProtection(
+			targetSafeZoneState,
+			targetSafeZoneType,
+			targetSafeZoneProtectionEndsAt
+		)
+		if targetSafeZoneDecision.protected == true then
+			noteSafeZoneAbuse(player.UserId, now())
+			return false
 		end
 
 		local lineOfSightCheck = resolveLineOfSightCheck(requestTable)
@@ -716,7 +827,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			distanceThreshold = EscapeConfig.TriggerRadiusStuds,
 			angleThreshold = nil,
 			lineOfSightCheck = lineOfSightCheck,
-			safeZoneState = safeZoneState,
+			safeZoneState = targetSafeZoneDecision.protected,
 			crossingPhaseValid = crossingPhaseValid,
 		})
 
@@ -813,6 +924,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			Players.PlayerRemoving:Connect(function(player: Player)
 				lastRequestAtByUserId[player.UserId] = nil
 				lastBlockRequestAtByUserId[player.UserId] = nil
+				safeZoneAbuseStateByUserId[player.UserId] = nil
 				escapedTinyfolkByUserId[player.UserId] = nil
 			end)
 		end

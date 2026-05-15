@@ -1,6 +1,8 @@
 --!strict
 
--- ThroughGapValidation: Validates Giant through-gap reach attempts.
+-- ThroughGapValidation: Validates Giant through-gap reach attempts for TIN-76
+-- Enforces safe zone and no-capture rules (safeZoneState=true always rejects)
+-- All logic is attribute-driven and test-backed; integrates with EscapeConfig and RoleConfig
 
 local ThroughGapValidation = {}
 

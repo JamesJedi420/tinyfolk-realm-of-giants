@@ -3,6 +3,9 @@
 local RealmCaptureZoneValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmCaptureZoneValidator")
 local RealmTopologyValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmTopologyValidator")
 
+type RealmDescriptor = any
+type CaptureZoneConfig = any
+
 local function makeDescriptor(captureZones, spawns)
 	return {
 		spawns = spawns,
@@ -17,10 +20,10 @@ local function makeDescriptor(captureZones, spawns)
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 100 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 end
 
-local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
+local config: CaptureZoneConfig = {
 	minimumSpawnSeparationStuds = 70,
 	minimumEscapeSeparationStuds = 80,
 	minimumCaptureRadiusStuds = 8,
@@ -29,6 +32,7 @@ local config: RealmCaptureZoneValidator.CaptureZoneConfig = {
 	captureZoneClusterRadiusStuds = 40,
 	maximumCaptureZoneNeighborsInClusterRadius = 2,
 	maximumCaptureZonesPerRealm = 4,
+	safeZoneNowSeconds = 100,
 }
 
 -- Block 1: Vacuous pass (empty captureZones)
@@ -157,7 +161,7 @@ do
 			},
 			edges = {},
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneEscapeSeparation(d2, config)
 	assert(result.passed == true, "Block 10: Should vacuously pass with empty escapeRoutes")
 	assert(result.reason == nil, "Block 10: Reason should be nil")
@@ -246,7 +250,7 @@ do
 				{ from = "TinyfolkSpawn", to = "EscapeRoute_B", distance = 60 },
 			},
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	-- Zone_A at (20,0,0): 180 studs from EscapeRoute_A (pass), 40 studs from EscapeRoute_B (fail)
 	local result = RealmCaptureZoneValidator.captureZoneEscapeSeparation(d3, config)
 	assert(result.passed == false, "Block 15: Should fail when zone is too close to any escape route")
@@ -377,7 +381,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 500 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(d4, config)
 	assert(result.passed == true, "Block 24: Non-GiantCapture tagged zones are not validated by this rule")
 	assert(result.reason == nil, "Block 24: Reason should be nil")
@@ -509,7 +513,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 500 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(d5, config)
 	assert(result.passed == true, "Block 33: Non-GiantCapture zone is skipped by this rule")
 end
@@ -544,7 +548,7 @@ do
 			nodes = { { name = "TinyfolkSpawn", nodeType = "spawn", position = { x = 0, y = 0, z = 0 } } },
 			edges = {},
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d6, config)
 	assert(result.passed == true, "Block 35: Should vacuously pass with empty escapeRoutes")
 	assert(result.reason == nil, "Block 35: Reason should be nil")
@@ -580,7 +584,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 10 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	-- dist=10, radius=15 → dist-radius=-5 ≤ 0 → fail
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d7, config)
 	assert(result.passed == false, "Block 37: Escape route inside capture zone perimeter should fail")
@@ -606,7 +610,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 15 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	-- dist=15, radius=15 → dist-radius=0 ≤ 0 → fail
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d8, config)
 	assert(result.passed == false, "Block 38: Escape route exactly on perimeter should fail (dist - radius = 0)")
@@ -630,7 +634,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 100 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	-- Zone_A at (0,0,0) radius 15: dist to escape = 100 → 100-15=85 > 0 → pass
 	-- Zone_B at (100,0,0) radius 20: dist to escape = 0 → 0-20=-20 ≤ 0 → fail
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d9, config)
@@ -659,7 +663,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 12 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d10, config)
 	assert(result.passed == false, "Block 40: 3D Y-axis escape inside perimeter (dist=12 < radius=15) should fail")
 end
@@ -682,7 +686,7 @@ do
 			},
 			edges = { { from = "TinyfolkSpawn", to = "EscapeRoute_A", distance = 5 } },
 		},
-	} :: RealmTopologyValidator.RealmDescriptor
+	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d11, config)
 	assert(result.passed == true, "Block 41: Non-GiantCapture zone is skipped by this rule")
 end
@@ -1226,3 +1230,155 @@ do
 end
 
 print("✓ realm_capture_zone.spec.luau: all 76 blocks passed")
+
+-- ── Slice 23: capture_zone_protected_zone_clearance ─────────────────────────
+
+-- Block 77: Vacuous pass (no capture zones)
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{ name = "SharedHubSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "SharedHub" },
+		},
+		captureZones = {},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == true, "Block 77: no capture zones should vacuously pass")
+end
+
+-- Block 78: Shared hub is always no-capture
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{ name = "SharedHubSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "SharedHub" },
+		},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == false, "Block 78: overlap with SharedHub safe zone must fail")
+	assert(string.find(result.reason, "SharedHub") ~= nil, "Block 78: reason should include SharedHub type")
+end
+
+-- Block 79: Realm entry protection active rejects overlap
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{
+				name = "RealmEntrySafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "RealmEntry",
+				protectionEndsAt = 120,
+			},
+		},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == false, "Block 79: active RealmEntry protection must fail")
+	assert(string.find(result.reason, "realm_entry_protected") ~= nil, "Block 79: reason should include entry-protected reason")
+end
+
+-- Block 80: Realm entry protection expired allows placement
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{
+				name = "RealmEntrySafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "RealmEntry",
+				protectionEndsAt = 50,
+			},
+		},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == true, "Block 80: expired RealmEntry protection should allow placement")
+end
+
+-- Block 81: Realm exit is protected
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{ name = "RealmExitSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "RealmExit" },
+		},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+		},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == false, "Block 81: overlap with RealmExit safe zone must fail")
+	assert(string.find(result.reason, "realm_exit_protected") ~= nil, "Block 81: reason should include realm-exit protection")
+end
+
+-- Block 82: Unknown safe-zone type rejects safely
+do
+	local descriptor = {
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
+		constructionSites = {},
+		upgradeBoards = {},
+		controlZones = {
+			{ name = "UnknownSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "AlienZone" },
+		},
+		captureZones = {
+			{ name = "GiantCaptureZone_A", position = { x = 40, y = 0, z = 0 }, radius = 5, tag = "GiantCapture" },
+		},
+		props = {},
+		routeGraph = { nodes = {}, edges = {} },
+	} :: RealmDescriptor
+	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
+	assert(result.passed == false, "Block 82: unknown safe-zone type should reject deterministically")
+	assert(string.find(result.reason, "unsupported zone type") ~= nil, "Block 82: reason should mention unsupported type")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 82 blocks passed")
