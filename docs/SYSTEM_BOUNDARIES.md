@@ -10,6 +10,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Final exit phase state machine (Dormant → Powered → Opening → Open → Blocked → Resolved)
 - Safe-zone rules at exits and spawn points
 
+**Current implementation status:** TIN-186 implements a bounded server-owned through-gap reach validation slice on `EscapeService.validateThroughGapReach`. Reach attempts now require an explicit route identifier and route metadata (`ThroughGapReachAllowed=true`) plus a supported route type (`TraversalGap`) before validation can pass. Validation also requires caller/target root data, Tinyfolk crossing-phase truth (`CrossingPhase=MidCrossing`), safe-zone rejection (`InSafeZone=true` rejects), and a non-bypassed line-of-sight callback (runtime raycast or injected check). Generic world-position-only requests and non-gap routes are rejected by design. TIN-185 traversal-gap block-state behavior remains out of scope.
+
 **Fold into this bucket:** escape node tier rules, route blocking checks, fallback cue behavior, final exit interruption logic, exit camp prevention rules.
 
 ### Capture and Containment System
