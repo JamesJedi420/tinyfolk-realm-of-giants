@@ -93,6 +93,15 @@ local replicatedStorageService: any = {
 									CrossingPhaseAttribute = "CrossingPhase",
 									RequiredCrossingPhase = "MidCrossing",
 									SafeZoneAttribute = "InSafeZone",
+									TraversalGapBlockStartupSeconds = 1,
+									TraversalGapBlockActiveSeconds = 4,
+									TraversalGapBlockRequestCooldownSeconds = 0.25,
+									TraversalGapBlockStateAttribute = "TraversalGapBlockState",
+									TraversalGapBlockStartupEndsAtAttribute = "TraversalGapBlockStartupEndsAt",
+									TraversalGapBlockActiveEndsAtAttribute = "TraversalGapBlockActiveEndsAt",
+									TraversalGapBlockExpiresAtAttribute = "TraversalGapBlockExpiresAt",
+									TraversalGapBlockedByUserIdAttribute = "TraversalGapBlockedByUserId",
+									TraversalGapBlockExemptAttribute = "TraversalGapBlockExempt",
 									SupportedThroughGapRouteTypes = { TraversalGap = true },
 								}
 							end
@@ -121,13 +130,34 @@ MockGame.GetService = function(serviceName: string)
 end
 
 _G.game = MockGame
+local currentTime = 100
+local crossingHooks: { string } = {}
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
 	autoInitialize = true,
+	clock = function()
+		return currentTime
+	end,
+	disableBlockExpirationSchedule = true,
+	tinyfolkMovementTraitService = {
+		OnValidRouteCrossing = function(_player: any, routeId: string)
+			table.insert(crossingHooks, routeId)
+		end,
+	},
 })
 
 local function resetRouteDefaults()
 	routeAttributes.ThroughGapReachAllowed = true
 	routeAttributes.RouteType = "TraversalGap"
+	routeAttributes.InSafeZone = false
+	routeAttributes.TraversalGapBlockExempt = false
+	routeAttributes.TraversalGapBlockState = "Idle"
+	routeAttributes.TraversalGapBlockStartupEndsAt = nil
+	routeAttributes.TraversalGapBlockActiveEndsAt = nil
+	routeAttributes.TraversalGapBlockExpiresAt = nil
+	routeAttributes.TraversalGapBlockedByUserId = nil
+	currentTime = 100
+	crossingHooks = {}
+	EscapeService.ResetTraversalGapBlocksForTests()
 end
 
 local function makeRequest(overrides: any?): any
@@ -255,11 +285,15 @@ do
 	local target = MockPlayer.new(2, "TinyfolkPlayer")
 	playersByUserId[2] = target
 
-	local result = EscapeService.validateThroughGapReach(player, target, makeRequest({
-		lineOfSightCheck = function()
-			return false
-		end,
-	}))
+	local result = EscapeService.validateThroughGapReach(
+		player,
+		target,
+		makeRequest({
+			lineOfSightCheck = function()
+				return false
+			end,
+		})
+	)
 	assertEqual(result, false, "blocked LOS/collision callback rejects")
 end
 
@@ -285,5 +319,187 @@ do
 	playersByUserId[2] = target
 
 	local result = EscapeService.validateThroughGapReach(player, target, makeRequest())
-	assertEqual(result, true, "TIN-185 block state is not required or implemented")
+	assertEqual(result, true, "no block preserves TIN-186 reach behavior")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, true, "Giant can block valid TraversalGap")
+	assertEqual(result.reason, "accepted", "valid block reason")
+	assertEqual(routeAttributes.TraversalGapBlockState, "Startup", "valid block exposes Startup attribute")
+	assertEqual(routeAttributes.TraversalGapBlockStartupEndsAt, 101, "valid block exposes startup end")
+	assertEqual(routeAttributes.TraversalGapBlockActiveEndsAt, 105, "valid block exposes active end")
+	assertEqual(routeAttributes.TraversalGapBlockExpiresAt, 105, "valid block exposes expiration")
+	assertEqual(routeAttributes.TraversalGapBlockedByUserId, 1, "valid block exposes blocker user id")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "non-Giant block caller rejects")
+	assertEqual(result.reason, "caller_not_giant", "non-Giant block rejection reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.ThroughGapReachAllowed = nil
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "missing block metadata rejects")
+	assertEqual(result.reason, "route_disallows_through_gap_reach", "missing block metadata reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.RouteType = "OpenField"
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "unsupported block route type rejects")
+	assertEqual(result.reason, "route_type_unsupported", "unsupported block route type reason")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer", { role = "Giant", hasRoot = false })
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "missing block caller root rejects")
+	assertEqual(result.reason, "missing_character_root", "missing block caller root reason")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer", { role = "Giant", positionZ = 40 })
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "out-of-range block caller rejects")
+	assertEqual(result.reason, "caller_out_of_range", "out-of-range block caller reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	local player = MockPlayer.new(1, "GiantPlayer")
+
+	local result = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "safe-zone route block rejects")
+	assertEqual(result.reason, "route_in_safe_zone", "safe-zone route block reason")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer")
+	local first = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	local repeatedStartup = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	currentTime = 101
+	local repeatedActive = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+
+	assertEqual(first.accepted, true, "repeated block setup accepted")
+	assertEqual(repeatedStartup.accepted, false, "repeated Startup block rejects")
+	assertEqual(repeatedStartup.reason, "block_startup", "repeated Startup service reason")
+	assertEqual(repeatedActive.accepted, false, "repeated Active block rejects")
+	assertEqual(repeatedActive.reason, "block_active", "repeated Active service reason")
+	assertEqual(routeAttributes.TraversalGapBlockStartupEndsAt, 101, "repeated block does not refresh startup end")
+	assertEqual(routeAttributes.TraversalGapBlockActiveEndsAt, 105, "repeated block does not refresh active end")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "GiantPlayer")
+	local first = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+	currentTime = 106
+	local second = EscapeService.requestTraversalGapBlock(player, "EscapeRoute_A")
+
+	assertEqual(first.accepted, true, "expired block setup accepted")
+	assertEqual(second.accepted, true, "expired block allows new block")
+	assertEqual(routeAttributes.TraversalGapBlockStartupEndsAt, 107, "new block after expiration refreshes timing")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local tinyfolk = MockPlayer.new(20, "TinyfolkPlayer", { role = "Tinyfolk" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 100.5
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "Startup escape setup block accepted")
+	assertEqual(escape.accepted, true, "Startup block allows Tinyfolk escape timing counterplay")
+	assertEqual(escape.reason, "accepted", "Startup escape accepted reason")
+	assertEqual(crossingHooks[1], "EscapeRoute_A", "Startup escape preserves route-crossing hook")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local tinyfolk = MockPlayer.new(21, "TinyfolkPlayer", { role = "Tinyfolk" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 101
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "Active escape rejection setup block accepted")
+	assertEqual(escape.accepted, false, "Active block rejects Tinyfolk escape attempt")
+	assertEqual(escape.reason, "traversal_gap_block_active", "Active escape rejection reason")
+	assertEqual(#crossingHooks, 0, "Active block does not fire route-crossing hook")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.TraversalGapBlockExempt = true
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local tinyfolk = MockPlayer.new(23, "TinyfolkPlayer", { role = "Tinyfolk" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 101
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "exempt route setup block accepted")
+	assertEqual(escape.accepted, true, "explicit route exemption allows Active block traversal")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local target = MockPlayer.new(2, "TinyfolkPlayer", { crossingPhase = "MidCrossing" })
+	playersByUserId[2] = target
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 101
+
+	local result = EscapeService.validateThroughGapReach(giant, target, makeRequest())
+	assertEqual(block.accepted, true, "Active through-gap rejection setup block accepted")
+	assertEqual(result, false, "Active block rejects through-gap reach")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	local debugState = EscapeService.getDebugState(giant, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "debug block setup accepted")
+	assertEqual(debugState.routeId, "EscapeRoute_A", "debug includes route id")
+	assertEqual(debugState.blockState, "Startup", "debug includes block state")
+	assertEqual(debugState.blockStartupEndsAt, 101, "debug includes startup end")
+	assertEqual(debugState.blockActiveEndsAt, 105, "debug includes active end")
+	assertEqual(debugState.blockExpiresAt, 105, "debug includes expiration")
+	assertEqual(debugState.blockedByUserId, 1, "debug includes blocker user id")
+	assertEqual(debugState.blockExempt, false, "debug includes exemption flag")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local tinyfolk = MockPlayer.new(22, "TinyfolkPlayer", { role = "Tinyfolk" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 106
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "expired escape setup block accepted")
+	assertEqual(escape.accepted, true, "expired block allows Tinyfolk escape attempt")
 end
