@@ -201,6 +201,8 @@ local playerInvalidStored = makePlayer(1003)
 local playerReadFailure = makePlayer(1004)
 local playerUpdateOk = makePlayer(2001)
 local playerUpdateFail = makePlayer(2002)
+local playerRealmLoadFail = makePlayer(2003)
+local playerRealmSaveFail = makePlayer(2004)
 
 local playersList = {
 	playerStoredGiant,
@@ -209,6 +211,8 @@ local playersList = {
 	playerReadFailure,
 	playerUpdateOk,
 	playerUpdateFail,
+	playerRealmLoadFail,
+	playerRealmSaveFail,
 }
 
 local playerAdded = makeSignal()
@@ -237,6 +241,7 @@ function playersService:FindFirstChild(name: string): Player?
 end
 
 local fakeGame: any = {}
+local bindToCloseCallbacks: { () -> () } = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "Players" then
 		return playersService
@@ -249,6 +254,10 @@ function fakeGame:GetService(serviceName: string): any
 	end
 	error(string.format("unsupported service: %s", serviceName))
 	return nil
+end
+
+function fakeGame:BindToClose(callback: () -> ())
+	table.insert(bindToCloseCallbacks, callback)
 end
 
 game = fakeGame
@@ -283,6 +292,14 @@ local profileDataByUserId: { [number]: any } = {
 		schemaVersion = 1,
 		userId = 2002,
 	},
+	[2003] = {
+		schemaVersion = 1,
+		userId = 2003,
+	},
+	[2004] = {
+		schemaVersion = 1,
+		userId = 2004,
+	},
 }
 
 local readFailureByUserId: { [number]: boolean } = {
@@ -294,6 +311,15 @@ local updateFailureByUserId: { [number]: boolean } = {
 }
 
 local updateCallCountByUserId: { [number]: number } = {}
+local realmLoadFailureByUserId: { [number]: boolean } = {
+	[2003] = true,
+}
+local realmSaveFailureByUserId: { [number]: boolean } = {
+	[2004] = true,
+}
+local realmLoadCallCountByUserId: { [number]: number } = {}
+local realmSaveCallCountByUserId: { [number]: number } = {}
+local realmReleaseCallCountByUserId: { [number]: number } = {}
 
 ProfilePersistenceGateway.ResetForTests()
 ProfilePersistenceGateway.GetLoadedPlayerProfileData = function(player: any): any
@@ -374,9 +400,60 @@ ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, 
 	}
 end
 
+ProfilePersistenceGateway.LoadGiantRealmProfile = function(ownerUserId: number): any
+	realmLoadCallCountByUserId[ownerUserId] = (realmLoadCallCountByUserId[ownerUserId] or 0) + 1
+	if realmLoadFailureByUserId[ownerUserId] == true then
+		return {
+			ok = false,
+			operation = "LoadGiantRealmProfile",
+			reason = "realm_load_failed_for_test",
+			profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		}
+	end
+
+	return {
+		ok = true,
+		operation = "LoadGiantRealmProfile",
+		profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		data = {
+			schemaVersion = 1,
+			ownerUserId = ownerUserId,
+			placedStructures = {},
+		},
+	}
+end
+
+ProfilePersistenceGateway.SaveGiantRealmProfile = function(ownerUserId: number): any
+	realmSaveCallCountByUserId[ownerUserId] = (realmSaveCallCountByUserId[ownerUserId] or 0) + 1
+	if realmSaveFailureByUserId[ownerUserId] == true then
+		return {
+			ok = false,
+			operation = "SaveGiantRealmProfile",
+			reason = "realm_save_failed_for_test",
+			profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		}
+	end
+
+	return {
+		ok = true,
+		operation = "SaveGiantRealmProfile",
+		profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+	}
+end
+
+ProfilePersistenceGateway.ReleaseGiantRealmProfile = function(ownerUserId: number): any
+	realmReleaseCallCountByUserId[ownerUserId] = (realmReleaseCallCountByUserId[ownerUserId] or 0) + 1
+	return {
+		ok = true,
+		operation = "ReleaseGiantRealmProfile",
+		profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+	}
+end
+
 require("../src/ServerScriptService/Services/RoleService.server")
 
 assertEqual(playersService.CharacterAutoLoads, false, "RoleService sets Players.CharacterAutoLoads false")
+assertEqual(#bindToCloseCallbacks, 1, "RoleService binds shutdown cleanup")
 
 assertEqual(
 	playerStoredGiant:GetAttribute("SelectedRole"),
@@ -404,6 +481,7 @@ assertEqual(playerUpdateOk:GetAttribute("RoleLocked"), true, "accepted role keep
 assertEqual(playerUpdateOk:GetAttribute("Role"), RoleConfig.Roles.Giant, "accepted role sets active role")
 assertEqual(playerUpdateOk.loadCharacterCount, 1, "accepted role respawns player")
 assertEqual(updateCallCountByUserId[2001], 1, "accepted role updates profile via gateway")
+assertEqual(realmLoadCallCountByUserId[2001], 1, "accepted Giant role loads realm profile")
 assertEqual(
 	profileDataByUserId[2001].rolePreference.preferredRole,
 	RoleConfig.Roles.Giant,
@@ -420,6 +498,61 @@ assertEqual(playerUpdateFail:GetAttribute("RoleLocked"), true, "update failure k
 assertEqual(playerUpdateFail:GetAttribute("Role"), RoleConfig.Roles.Tinyfolk, "update failure still sets active role")
 assertEqual(playerUpdateFail.loadCharacterCount, 1, "update failure still respawns player")
 assertEqual(updateCallCountByUserId[2002], nil, "failed update does not mutate profile snapshot")
+assertEqual(realmLoadCallCountByUserId[2002], nil, "accepted Tinyfolk role does not load realm profile")
 assertTrue(sawWarnContaining("Role preference update failed userId=2002"), "update failure warning emitted")
 
+roleChangeRemote:FireServer(playerRealmLoadFail, RoleConfig.Roles.Giant)
+assertEqual(
+	playerRealmLoadFail:GetAttribute("Role"),
+	RoleConfig.Roles.Giant,
+	"realm load failure still sets Giant role"
+)
+assertEqual(playerRealmLoadFail.loadCharacterCount, 1, "realm load failure still respawns player")
+assertEqual(realmLoadCallCountByUserId[2003], 1, "realm load failure attempted once")
+assertTrue(sawWarnContaining("Giant realm load failed userId=2003"), "realm load failure warning emitted")
+
+roleChangeRemote:FireServer(playerRealmSaveFail, RoleConfig.Roles.Giant)
+assertEqual(
+	playerRealmSaveFail:GetAttribute("Role"),
+	RoleConfig.Roles.Giant,
+	"realm save failure setup sets Giant role"
+)
+assertEqual(realmLoadCallCountByUserId[2004], 1, "realm save failure setup loads realm")
+
+playerRemoving:Fire(playerUpdateOk)
+assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
+assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
+
+playerRemoving:Fire(playerRealmLoadFail)
+assertEqual(realmSaveCallCountByUserId[2003], nil, "removing failed-load Giant does not save realm")
+assertEqual(realmReleaseCallCountByUserId[2003], nil, "removing failed-load Giant does not release realm")
+
+playerRemoving:Fire(playerRealmSaveFail)
+assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
+assertEqual(realmReleaseCallCountByUserId[2004], 1, "save failure Giant still releases realm")
+assertTrue(sawWarnContaining("Giant realm save failed userId=2004"), "realm save failure warning emitted")
+
+bindToCloseCallbacks[1]()
+assertEqual(realmSaveCallCountByUserId[2001], 1, "shutdown does not resave removed Giant")
+assertEqual(realmReleaseCallCountByUserId[2001], 1, "shutdown does not rerelease removed Giant")
+assertEqual(realmSaveCallCountByUserId[2004], 1, "shutdown does not resave save-failure removed Giant")
+assertEqual(realmReleaseCallCountByUserId[2004], 1, "shutdown does not rerelease save-failure removed Giant")
+
 print("role_service_runtime_entrypoint: all checks passed")
+
+local MatchSimulation: any = require("../tests/harness/MatchSimulation")
+
+do
+	local sim = MatchSimulation.new({ clock = os.clock })
+	sim:addPlayer(1, "PlayerOne", { role = "Tinyfolk" })
+
+	sim:queueAction(1, "assignRole", {
+		userId = 1,
+		role = "Giant",
+	})
+
+	sim:advanceTick()
+
+	local log = sim:getLog()
+	assertEqual(log[2], "[Tick 1] Assigned role Giant to player PlayerOne", "Role assignment succeeds")
+end

@@ -2,6 +2,7 @@
 
 local TraversalGapBlockState = require("../src/ReplicatedStorage/Shared/GiantRealm/TraversalGapBlockState")
 local EscapeConfig = require("../src/ReplicatedStorage/Shared/Config/EscapeConfig")
+local MatchSimulation: any = require("../tests/harness/MatchSimulation")
 
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
@@ -48,9 +49,15 @@ end
 
 do
 	local result = create(20, nil)
-	assertFalse(TraversalGapBlockState.ShouldRejectTraversal(result.record, 20.5, false), "Startup does not reject traversal")
+	assertFalse(
+		TraversalGapBlockState.ShouldRejectTraversal(result.record, 20.5, false),
+		"Startup does not reject traversal"
+	)
 	assertTrue(TraversalGapBlockState.ShouldRejectTraversal(result.record, 21, false), "Active rejects traversal")
-	assertFalse(TraversalGapBlockState.ShouldRejectTraversal(result.record, 25, false), "Expired does not reject traversal")
+	assertFalse(
+		TraversalGapBlockState.ShouldRejectTraversal(result.record, 25, false),
+		"Expired does not reject traversal"
+	)
 end
 
 do
@@ -80,6 +87,25 @@ do
 
 	assertTrue(afterExpired.accepted, "expired block allows new block")
 	assertEqual(afterExpired.record.startupStartedAt, 55, "new block uses fresh start time")
+end
+
+do
+	local sim = MatchSimulation.new({ clock = os.clock })
+	sim:addPlayer(1, "GiantPlayer", { role = "Giant" })
+
+	sim:queueAction(1, "blockTraversalGap", {
+		userId = 1,
+		routeId = "EscapeRoute_A",
+		config = {
+			TraversalGapBlockStartupSeconds = 1,
+			TraversalGapBlockActiveSeconds = 4,
+		},
+	})
+
+	sim:advanceTick()
+
+	local log = sim:getLog()
+	assertEqual(log[2], "[Tick 1] Traversal gap block by GiantPlayer: Accepted", "Traversal-gap block succeeds")
 end
 
 print("traversal_gap_block_state: all checks passed")

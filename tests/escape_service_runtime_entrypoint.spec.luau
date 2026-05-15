@@ -1,6 +1,7 @@
 --!strict
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
+local MatchSimulation: any = require("../tests/harness/MatchSimulation")
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -620,4 +621,24 @@ do
 
 	assertEqual(block.accepted, true, "expired escape setup block accepted")
 	assertEqual(escape.accepted, true, "expired block allows Tinyfolk escape attempt")
+end
+
+do
+	local sim = MatchSimulation.new({ clock = os.clock })
+	sim:addPlayer(1, "GiantPlayer", { role = "Giant" })
+	sim:addPlayer(2, "TinyfolkPlayer", { role = "Tinyfolk", inSafeZone = true })
+
+	sim:queueAction(1, "attemptEscape", {
+		userId = 2,
+		target = sim.players[1],
+		worldPosition = { x = 0, y = 0, z = 5 },
+		lineOfSightCheck = function()
+			return true
+		end,
+	})
+
+	sim:advanceTick()
+
+	local log = sim:getLog()
+	assertEqual(log[3], "[Tick 1] Escape attempt by TinyfolkPlayer: Failure", "Safe-zone escape attempt fails")
 end

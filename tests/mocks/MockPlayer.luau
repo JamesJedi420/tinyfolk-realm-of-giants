@@ -93,4 +93,22 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 	return self
 end
 
+-- Extend MockPlayer for simulation harness
+function MockPlayer:attemptEscape(target, params)
+	-- Simulate an escape attempt
+	return {
+		success = not self:GetAttribute("InSafeZone"),
+		reason = self:GetAttribute("InSafeZone") and "safe_zone" or "success",
+	}
+end
+
+function MockPlayer:blockTraversalGap(routeId, config)
+	-- Simulate a traversal-gap block request
+	return {
+		accepted = true,
+		reason = "accepted",
+		routeId = routeId,
+	}
+end
+
 return MockPlayer
