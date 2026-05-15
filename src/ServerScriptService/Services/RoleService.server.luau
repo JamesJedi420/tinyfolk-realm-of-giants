@@ -7,9 +7,35 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local function resolveDependency(parent: any, childName: string, fallbackRequirePath: string): any
+	if parent ~= nil and type(parent.WaitForChild) == "function" then
+		local child = parent:WaitForChild(childName)
+		if child ~= nil then
+			local ok, requiredOrError = pcall(function()
+				return require(child)
+			end)
+			if ok then
+				return requiredOrError
+			end
+		end
+	end
+
+	return require(fallbackRequirePath)
+end
+
+local GiantRealm = if Shared ~= nil and type((Shared :: any).WaitForChild) == "function"
+	then (Shared :: any):WaitForChild("GiantRealm")
+	else nil
+local EscapeConfig = resolveDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
+local SafeZonePolicy =
+	resolveDependency(GiantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
+local DownedState =
+	resolveDependency(GiantRealm, "DownedState", "../../ReplicatedStorage/Shared/GiantRealm/DownedState")
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else require("./ProfilePersistenceGateway")
+
+local RoleService: any = {}
 
 local ROLE_ATTRIBUTE = "Role"
 local SELECTED_ROLE_ATTRIBUTE = "SelectedRole"
@@ -27,6 +53,9 @@ local PROFILE_ROLE_PREFERENCE_KEY = "rolePreference"
 local PROFILE_PREFERRED_ROLE_KEY = "preferredRole"
 
 local lastRoleChangeAtByUserId: { [number]: number? } = {}
+local loadedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
+local cleanedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
+local downedStates: { [number]: any } = {}
 
 Players.CharacterAutoLoads = false
 
@@ -116,8 +145,108 @@ local function getSelectedRole(player: Player): string?
 	return nil
 end
 
+local function getPlayerByUserId(userId: number): Player?
+	if type((Players :: any).GetPlayerByUserId) == "function" then
+		local colonOk, colonResult = pcall(function()
+			return (Players :: any):GetPlayerByUserId(userId)
+		end)
+		if colonOk then
+			return colonResult
+		end
+
+		local dotOk, dotResult = pcall(function()
+			return (Players :: any).GetPlayerByUserId(userId)
+		end)
+		if dotOk then
+			return dotResult
+		end
+	end
+
+	if type((Players :: any).GetPlayers) == "function" then
+		local playersList: any = nil
+		local colonOk, colonResult = pcall(function()
+			return (Players :: any):GetPlayers()
+		end)
+		if colonOk then
+			playersList = colonResult
+		else
+			local dotOk, dotResult = pcall(function()
+				return (Players :: any).GetPlayers()
+			end)
+			if dotOk then
+				playersList = dotResult
+			end
+		end
+
+		if type(playersList) == "table" then
+			for _, player in ipairs(playersList) do
+				if player ~= nil and type(player.UserId) == "number" and player.UserId == userId then
+					return player
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
 local function isRoleLocked(player: Player): boolean
 	return player:GetAttribute(ROLE_LOCKED_ATTRIBUTE) == true
+end
+
+local function downedNow(): number
+	return os.clock()
+end
+
+local function clampDurationSeconds(duration: any): number
+	local downedConfig = RoleConfig.DownedState
+	local defaultDuration = downedConfig.DefaultDurationSeconds
+	local maxDuration = downedConfig.MaxDurationSeconds
+	if type(duration) ~= "number" or duration ~= duration or duration == math.huge or duration == -math.huge then
+		return defaultDuration
+	end
+	if duration < 0 then
+		return 0
+	end
+	if duration > maxDuration then
+		return maxDuration
+	end
+	return duration
+end
+
+local function evaluateTargetSafeZone(player: Player, nowSeconds: number): any
+	local safeZoneState = player:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
+	local safeZoneType = player:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
+	local safeZoneProtectionEndsAt = player:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+	return SafeZonePolicy.EvaluateProtection(EscapeConfig, {
+		safeZoneState = safeZoneState,
+		safeZoneType = safeZoneType,
+		safeZoneProtectionEndsAt = safeZoneProtectionEndsAt,
+		now = nowSeconds,
+	})
+end
+
+local function setDownedAttributes(player: Player, snapshot: any)
+	player:SetAttribute("DownedState", snapshot.status)
+	player:SetAttribute("DownedSource", snapshot.source)
+	player:SetAttribute("DownedReason", snapshot.reason)
+	player:SetAttribute("DownedAt", snapshot.downedAt)
+	player:SetAttribute("DownedExpiresAt", snapshot.expiresAt)
+	player:SetAttribute("DownedSelfRecoveryProgress", snapshot.selfRecoveryProgress)
+	player:SetAttribute("DownedSelfRecoveryCap", snapshot.selfRecoveryCap)
+	player:SetAttribute("DownedMovementMultiplier", snapshot.movementMultiplier)
+	player:SetAttribute("DownedIsDowned", snapshot.isDowned)
+	player:SetAttribute("DownedCarryEligibleMarker", snapshot.carryEligibleMarker)
+end
+
+local function getOrCreateDownedState(userId: number): any
+	local existing = downedStates[userId]
+	if existing ~= nil then
+		return existing
+	end
+	local created = DownedState.New(downedNow())
+	downedStates[userId] = created
+	return created
 end
 
 local function applyScaleToCharacter(player: Player, character: Model)
@@ -308,6 +437,57 @@ local function persistPreferredRole(player: Player, roleName: string)
 	end
 end
 
+local function loadGiantRealmForPlayer(player: Player)
+	if loadedGiantRealmOwnerUserIds[player.UserId] then
+		return
+	end
+
+	local loadResult = ProfilePersistenceGateway.LoadGiantRealmProfile(player.UserId)
+	if not loadResult.ok then
+		debugWarn(
+			string.format("Giant realm load failed userId=%d reason=%s", player.UserId, tostring(loadResult.reason))
+		)
+		return
+	end
+
+	loadedGiantRealmOwnerUserIds[player.UserId] = true
+	cleanedGiantRealmOwnerUserIds[player.UserId] = nil
+	debugLog(string.format("Loaded Giant realm profile userId=%d", player.UserId))
+end
+
+local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
+	if not loadedGiantRealmOwnerUserIds[player.UserId] or cleanedGiantRealmOwnerUserIds[player.UserId] then
+		return
+	end
+
+	local saveResult = ProfilePersistenceGateway.SaveGiantRealmProfile(player.UserId)
+	if not saveResult.ok then
+		debugWarn(
+			string.format(
+				"Giant realm save failed userId=%d reason=%s cleanupReason=%s",
+				player.UserId,
+				tostring(saveResult.reason),
+				reason
+			)
+		)
+	end
+
+	local releaseResult = ProfilePersistenceGateway.ReleaseGiantRealmProfile(player.UserId)
+	if not releaseResult.ok then
+		debugWarn(
+			string.format(
+				"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
+				player.UserId,
+				tostring(releaseResult.reason),
+				reason
+			)
+		)
+	end
+
+	loadedGiantRealmOwnerUserIds[player.UserId] = nil
+	cleanedGiantRealmOwnerUserIds[player.UserId] = true
+end
+
 local remotesFolder = ensureRemotesFolder()
 local roleChangeRemote = ensureRoleChangeRemote(remotesFolder)
 local roleDebugRequestRemote = ensureRoleDebugRequestRemote(remotesFolder)
@@ -351,6 +531,7 @@ end
 
 local function setupPlayer(player: Player)
 	initializePlayerRoleSelection(player)
+	setDownedAttributes(player, DownedState.Snapshot(DownedState.New(downedNow())))
 
 	player.CharacterAdded:Connect(function(character)
 		ensureRoleForLockedPlayer(player)
@@ -379,7 +560,17 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	lastRoleChangeAtByUserId[player.UserId] = nil
+	downedStates[player.UserId] = nil
+	saveAndReleaseGiantRealmForPlayer(player, "player_removing")
 end)
+
+if game ~= nil and type((game :: any).BindToClose) == "function" then
+	(game :: any):BindToClose(function()
+		for _, player in Players:GetPlayers() do
+			saveAndReleaseGiantRealmForPlayer(player, "bind_to_close")
+		end
+	end)
+end
 
 roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 	if isRoleLocked(player) then
@@ -403,6 +594,9 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 	player:SetAttribute(ROLE_LOCKED_ATTRIBUTE, true)
 	setPlayerRole(player, roleName)
 	persistPreferredRole(player, roleName)
+	if roleName == RoleConfig.Roles.Giant then
+		loadGiantRealmForPlayer(player)
+	end
 	debugLog(string.format("Accepted role select for %s -> %s (locked)", player.Name, roleName))
 	player:LoadCharacter()
 end)
@@ -425,5 +619,99 @@ roleDebugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: u
 		)
 	)
 end)
+
+function RoleService.setDowned(userId: number, duration: number, reason: string): boolean
+	local player = getPlayerByUserId(userId)
+	if not player then
+		return false
+	end
+
+	local nowSeconds = downedNow()
+	local safeZoneDecision = evaluateTargetSafeZone(player, nowSeconds)
+	local state = getOrCreateDownedState(userId)
+	local result = DownedState.Enter(state, {
+		now = nowSeconds,
+		durationSeconds = clampDurationSeconds(duration),
+		role = getRoleOrDefault(player),
+		source = "server_test",
+		reason = reason,
+		selfRecoveryCap = RoleConfig.DownedState.SelfRecoveryCap,
+		movementMultiplier = RoleConfig.DownedState.MovementMultiplier,
+		interactionMask = RoleConfig.DownedState.InteractionMask,
+		safeZoneProtected = safeZoneDecision.protected == true,
+		validSources = RoleConfig.DownedState.ValidSources,
+	})
+	setDownedAttributes(player, result.snapshot)
+	return result.accepted == true
+end
+
+function RoleService.updateDownedStates(nowOverride: number?)
+	local nowSeconds = if type(nowOverride) == "number" then nowOverride else downedNow()
+	for userId, state in pairs(downedStates) do
+		local result = DownedState.Tick(state, nowSeconds)
+		local player = getPlayerByUserId(userId)
+		if player then
+			setDownedAttributes(player, result.snapshot)
+		end
+	end
+end
+
+function RoleService.selfRecoverDowned(userId: number, progressDelta: number, nowOverride: number?): boolean
+	local player = getPlayerByUserId(userId)
+	if not player then
+		return false
+	end
+
+	local state = getOrCreateDownedState(userId)
+	local nowSeconds = if type(nowOverride) == "number" then nowOverride else downedNow()
+	local result = DownedState.SelfRecover(state, nowSeconds, progressDelta)
+	setDownedAttributes(player, result.snapshot)
+	return result.accepted == true
+end
+
+function RoleService.isDowned(userId: number): boolean
+	local state = downedStates[userId]
+	if state == nil then
+		return false
+	end
+	return DownedState.IsDowned(state)
+end
+
+function RoleService.canPerformInteraction(userId: number, interactionName: string): boolean
+	local state = downedStates[userId]
+	if state == nil then
+		return true
+	end
+	return DownedState.CanPerformInteraction(state, interactionName)
+end
+
+function RoleService.getDownedSnapshot(userId: number): any
+	local state = downedStates[userId]
+	if state == nil then
+		return DownedState.Snapshot(DownedState.New(downedNow()))
+	end
+	return DownedState.Snapshot(state)
+end
+
+_G._RoleService_QueryAPI = {
+	SetDowned = function(userId: number, duration: number, reason: string): boolean
+		return RoleService.setDowned(userId, duration, reason)
+	end,
+	SelfRecoverDowned = function(userId: number, progressDelta: number, nowOverride: number?): boolean
+		return RoleService.selfRecoverDowned(userId, progressDelta, nowOverride)
+	end,
+	TickDownedStates = function(nowOverride: number?)
+		RoleService.updateDownedStates(nowOverride)
+	end,
+	IsPlayerDowned = function(userId: number): boolean
+		return RoleService.isDowned(userId)
+	end,
+	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
+		return RoleService.canPerformInteraction(userId, interactionName)
+	end,
+	GetDownedSnapshot = function(userId: number): any
+		return RoleService.getDownedSnapshot(userId)
+	end,
+}
 
 debugLog("RoleService initialized")

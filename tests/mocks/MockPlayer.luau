@@ -74,6 +74,8 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 		InSafeZone = opts.inSafeZone == true,
 		SafeZoneType = opts.safeZoneType,
 		SafeZoneProtectionEndsAt = opts.safeZoneProtectionEndsAt,
+		DownedState = "Normal",
+		DownedIsDowned = false,
 	}
 
 	local self: any = setmetatable({
@@ -94,7 +96,7 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 end
 
 -- Extend MockPlayer for simulation harness
-function MockPlayer:attemptEscape(target, params)
+function MockPlayer.attemptEscape(self: any, _target: any, _params: any)
 	-- Simulate an escape attempt
 	return {
 		success = not self:GetAttribute("InSafeZone"),
@@ -102,7 +104,7 @@ function MockPlayer:attemptEscape(target, params)
 	}
 end
 
-function MockPlayer:blockTraversalGap(routeId, config)
+function MockPlayer.blockTraversalGap(_self: any, routeId: any, _config: any)
 	-- Simulate a traversal-gap block request
 	return {
 		accepted = true,

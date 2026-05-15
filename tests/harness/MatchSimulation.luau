@@ -94,6 +94,18 @@ local function assignRole(self: Simulation, player: any, roleName: string)
 	end
 end
 
+local function getRoleServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._RoleService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
 function MatchSimulation.new(config: SimulationConfig?): Simulation
 	local configAny: any = config
 	local seed = normalizeSeed(if configAny ~= nil then configAny.seed else nil)
@@ -139,6 +151,10 @@ function MatchSimulation.advanceTick(self: Simulation, stepCount: number?)
 	local iterations = if type(stepCount) == "number" and stepCount > 0 then math.floor(stepCount) else 1
 	for _ = 1, iterations do
 		self.tick += 1
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.TickDownedStates) == "function" then
+			roleServiceQueryApi.TickDownedStates(self.tick)
+		end
 		if self.actions[self.tick] then
 			for _, action in ipairs(self.actions[self.tick]) do
 				self:executeAction(action.action, action.params)
@@ -159,7 +175,83 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 	if action == "assignRole" then
 		assignRole(self, player, payload.role)
 		appendResult(self, action, player, { accepted = true, role = payload.role })
-		appendMessage(self, string.format("[Tick %d] Assigned role %s to player %s", self.tick, payload.role, player.Name))
+		appendMessage(
+			self,
+			string.format("[Tick %d] Assigned role %s to player %s", self.tick, payload.role, player.Name)
+		)
+	elseif action == "downTinyfolk" then
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		local accepted = false
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.SetDowned) == "function" then
+			accepted = roleServiceQueryApi.SetDowned(
+				player.UserId,
+				if type(payload.durationSeconds) == "number" then payload.durationSeconds else 30,
+				if type(payload.reason) == "string" then payload.reason else "simulation_downed"
+			)
+		end
+		appendResult(
+			self,
+			action,
+			player,
+			{ accepted = accepted, reason = if accepted then "accepted" else "rejected" }
+		)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] Downed request for %s: %s",
+				self.tick,
+				player.Name,
+				if accepted then "Accepted" else "Rejected"
+			)
+		)
+	elseif action == "selfRecoverDowned" then
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		local accepted = false
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.SelfRecoverDowned) == "function" then
+			accepted = roleServiceQueryApi.SelfRecoverDowned(
+				player.UserId,
+				if type(payload.progressDelta) == "number" then payload.progressDelta else 0
+			)
+		end
+		appendResult(
+			self,
+			action,
+			player,
+			{ accepted = accepted, reason = if accepted then "accepted" else "rejected" }
+		)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] Self-recover downed by %s: %s",
+				self.tick,
+				player.Name,
+				if accepted then "Accepted" else "Rejected"
+			)
+		)
+	elseif action == "tickDowned" then
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.TickDownedStates) == "function" then
+			roleServiceQueryApi.TickDownedStates(if type(payload.now) == "number" then payload.now else self.tick)
+		end
+		appendResult(self, action, player, { accepted = true, reason = "accepted" })
+		appendMessage(self, string.format("[Tick %d] Downed state tick by %s: Applied", self.tick, player.Name))
+	elseif action == "attemptEscapeWhileDowned" then
+		local result: any
+		if self.escapeService ~= nil and type(self.escapeService.requestEscapeAttempt) == "function" then
+			result = self.escapeService.requestEscapeAttempt(player, payload.routeId)
+		else
+			result = { accepted = false, reason = "escape_service_unavailable" }
+		end
+		appendResult(self, action, player, result)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] Escape while downed by %s: %s",
+				self.tick,
+				player.Name,
+				if result.accepted == true then "Success" else "Failure"
+			)
+		)
 	elseif action == "throughGapReach" then
 		local target = payload.target or self.players[payload.targetUserId]
 		local result: any
@@ -168,10 +260,20 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 		else
 			result = player:attemptEscape(target, payload.request or payload).success == true
 		end
-		appendResult(self, action, player, { accepted = result == true, reason = if result then "accepted" else "rejected" })
+		appendResult(
+			self,
+			action,
+			player,
+			{ accepted = result == true, reason = if result then "accepted" else "rejected" }
+		)
 		appendMessage(
 			self,
-			string.format("[Tick %d] Through-gap reach by %s: %s", self.tick, player.Name, if result then "Success" else "Failure")
+			string.format(
+				"[Tick %d] Through-gap reach by %s: %s",
+				self.tick,
+				player.Name,
+				if result then "Success" else "Failure"
+			)
 		)
 	elseif action == "attemptEscape" then
 		local result: any
@@ -179,7 +281,11 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 			result = self.escapeService.requestEscapeAttempt(player, payload.routeId)
 		elseif self.escapeService ~= nil and type(self.escapeService.validateThroughGapReach) == "function" then
 			result = {
-				accepted = self.escapeService.validateThroughGapReach(player, payload.target, payload.request or payload) == true,
+				accepted = self.escapeService.validateThroughGapReach(
+					player,
+					payload.target,
+					payload.request or payload
+				) == true,
 				reason = "validate_through_gap_reach",
 			}
 		else
@@ -213,6 +319,14 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 			)
 		)
 	elseif action == "captureAttempt" or action == "rescueAttempt" or action == "scoreEvent" then
+		local result = {
+			accepted = false,
+			reason = "not_implemented",
+			system = action,
+		}
+		appendResult(self, action, player, result)
+		appendMessage(self, string.format("[Tick %d] %s by %s: NotImplemented", self.tick, action, player.Name))
+	elseif action == "allyRecoverDowned" or action == "carryDowned" or action == "rescueDowned" then
 		local result = {
 			accepted = false,
 			reason = "not_implemented",

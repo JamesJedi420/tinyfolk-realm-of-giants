@@ -93,11 +93,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"ThroughGapValidation",
 		"../../ReplicatedStorage/Shared/GiantRealm/ThroughGapValidation"
 	)
-	local SafeZonePolicy = resolveDependency(
-		GiantRealm,
-		"SafeZonePolicy",
-		"../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy"
-	)
+	local SafeZonePolicy =
+		resolveDependency(GiantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 	local TraversalGapBlockState = resolveDependency(
 		GiantRealm,
 		"TraversalGapBlockState",
@@ -217,11 +214,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local threshold = EscapeConfig.SafeZoneAbuseThreshold
 		local lockoutSeconds = EscapeConfig.SafeZoneAbuseLockoutSeconds
 
-		if
-			type(windowSeconds) ~= "number"
-			or type(threshold) ~= "number"
-			or type(lockoutSeconds) ~= "number"
-		then
+		if type(windowSeconds) ~= "number" or type(threshold) ~= "number" or type(lockoutSeconds) ~= "number" then
 			return
 		end
 
@@ -413,6 +406,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return
 		end
 		TinyfolkMovementTraitService.OnValidRouteCrossing(player, routeId)
+	end
+
+	local function getRoleServiceQueryApi(): any?
+		local globalValue: any = _G
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._RoleService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
 	end
 
 	local function getPlayerByUserId(userId: number): any?
@@ -645,6 +650,20 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if not isTinyfolk(player) then
 			return { accepted = false, reason = "requester_not_tinyfolk" }
 		end
+
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.IsPlayerDowned) == "function" then
+			if roleServiceQueryApi.IsPlayerDowned(player.UserId) == true then
+				return { accepted = false, reason = "actor_downed" }
+			end
+		end
+
+		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.CanPlayerPerformInteraction) == "function" then
+			if roleServiceQueryApi.CanPlayerPerformInteraction(player.UserId, "escapeAttempt") ~= true then
+				return { accepted = false, reason = "actor_interaction_restricted" }
+			end
+		end
+
 		if escapedTinyfolkByUserId[player.UserId] then
 			return { accepted = false, reason = "already_escaped" }
 		end
@@ -786,11 +805,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			targetSafeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
 			targetSafeZoneProtectionEndsAt = target:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
 		end
-		local targetSafeZoneDecision = evaluateSafeZoneProtection(
-			targetSafeZoneState,
-			targetSafeZoneType,
-			targetSafeZoneProtectionEndsAt
-		)
+		local targetSafeZoneDecision =
+			evaluateSafeZoneProtection(targetSafeZoneState, targetSafeZoneType, targetSafeZoneProtectionEndsAt)
 		if targetSafeZoneDecision.protected == true then
 			noteSafeZoneAbuse(player.UserId, now())
 			return false

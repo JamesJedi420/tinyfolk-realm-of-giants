@@ -143,6 +143,18 @@ end
 _G.game = MockGame
 local currentTime = 100
 local crossingHooks: { string } = {}
+local downedByUserId: { [number]: boolean } = {}
+_G._RoleService_QueryAPI = {
+	IsPlayerDowned = function(userId: number): boolean
+		return downedByUserId[userId] == true
+	end,
+	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
+		if downedByUserId[userId] == true and interactionName == "escapeAttempt" then
+			return false
+		end
+		return true
+	end,
+}
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
 	autoInitialize = true,
 	clock = function()
@@ -170,6 +182,7 @@ local function resetRouteDefaults()
 	routeAttributes.TraversalGapBlockedByUserId = nil
 	currentTime = 100
 	crossingHooks = {}
+	downedByUserId = {}
 	EscapeService.ResetTraversalGapBlocksForTests()
 end
 
@@ -567,6 +580,16 @@ do
 	assertEqual(escape.accepted, false, "Active block rejects Tinyfolk escape attempt")
 	assertEqual(escape.reason, "traversal_gap_block_active", "Active escape rejection reason")
 	assertEqual(#crossingHooks, 0, "Active block does not fire route-crossing hook")
+end
+
+do
+	resetRouteDefaults()
+	local tinyfolk = MockPlayer.new(24, "TinyfolkPlayer", { role = "Tinyfolk" })
+	downedByUserId[24] = true
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(escape.accepted, false, "downed Tinyfolk cannot escape")
+	assertEqual(escape.reason, "actor_downed", "downed Tinyfolk rejection reason")
 end
 
 do

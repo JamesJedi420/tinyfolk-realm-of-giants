@@ -1,6 +1,6 @@
 --!strict
 
-local RoleConfig = {}
+local RoleConfig: any = {}
 
 RoleConfig.Roles = {
 	Giant = "Giant",
@@ -26,5 +26,25 @@ RoleConfig.HumanoidBaseByRole = {
 }
 
 RoleConfig.RoleChangeCooldownSeconds = 0.75
+
+RoleConfig.DownedState = {
+	DefaultDurationSeconds = 30,
+	MaxDurationSeconds = 60,
+	SelfRecoveryCap = 0.5,
+	MovementMultiplier = 0.35,
+	ValidSources = {
+		giant_pressure = true,
+		server_test = true,
+	},
+	InteractionMask = {
+		escapeAttempt = false,
+		objectiveInteraction = false,
+		toolUse = false,
+		routeTraversal = false,
+		throughGapReach = false,
+		rescueAction = false,
+		debugInspect = true,
+	},
+}
 
 return RoleConfig

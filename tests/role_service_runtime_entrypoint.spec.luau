@@ -14,7 +14,8 @@ local function assertEqual(actual: any, expected: any, label: string)
 	print(string.format("PASS [%s]", label))
 end
 
-local function cloneTable(value: any): any
+local cloneTable: (any) -> any
+cloneTable = function(value: any): any
 	if type(value) ~= "table" then
 		return value
 	end
@@ -31,7 +32,7 @@ local originalWarn = warn
 warn = function(...: any)
 	local packed = table.pack(...)
 	local parts: { string } = {}
-	for i = 1, packed.n :: number do
+	for i = 1, select("#", ...) do
 		table.insert(parts, tostring(packed[i]))
 	end
 	local line = table.concat(parts, " ")
@@ -103,7 +104,8 @@ end
 local function addChild(parent: any, childName: string, child: any)
 	parent._Children[childName] = child
 	if type(child) == "table" then
-		child.Parent = parent
+		local childAny = child :: any
+		childAny.Parent = parent
 	end
 end
 
@@ -452,6 +454,9 @@ end
 
 require("../src/ServerScriptService/Services/RoleService.server")
 
+local roleServiceQueryApi: any = _G._RoleService_QueryAPI
+assertTrue(type(roleServiceQueryApi) == "table", "RoleService exposes query API")
+
 assertEqual(playersService.CharacterAutoLoads, false, "RoleService sets Players.CharacterAutoLoads false")
 assertEqual(#bindToCloseCallbacks, 1, "RoleService binds shutdown cleanup")
 
@@ -537,6 +542,30 @@ assertEqual(realmSaveCallCountByUserId[2001], 1, "shutdown does not resave remov
 assertEqual(realmReleaseCallCountByUserId[2001], 1, "shutdown does not rerelease removed Giant")
 assertEqual(realmSaveCallCountByUserId[2004], 1, "shutdown does not resave save-failure removed Giant")
 assertEqual(realmReleaseCallCountByUserId[2004], 1, "shutdown does not rerelease save-failure removed Giant")
+
+playerNoStored:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+local downAccepted = roleServiceQueryApi.SetDowned(playerNoStored.UserId, 30, "runtime_test_downed")
+assertEqual(downAccepted, true, "Tinyfolk can enter downed state via query API")
+assertEqual(playerNoStored:GetAttribute("DownedState"), "Downed", "downed attribute set")
+assertEqual(playerNoStored:GetAttribute("DownedIsDowned"), true, "downed marker set")
+assertEqual(
+	roleServiceQueryApi.CanPlayerPerformInteraction(playerNoStored.UserId, "escapeAttempt"),
+	false,
+	"escape interaction restricted while downed"
+)
+
+local selfRecoverAccepted = roleServiceQueryApi.SelfRecoverDowned(playerNoStored.UserId, 0.7)
+assertEqual(selfRecoverAccepted, true, "self recovery request accepted")
+assertEqual(playerNoStored:GetAttribute("DownedState"), "SelfRecoveryCapped", "self recovery clamps at cap")
+
+local downedSnapshot = roleServiceQueryApi.GetDownedSnapshot(playerNoStored.UserId)
+roleServiceQueryApi.TickDownedStates((downedSnapshot.expiresAt or 0) + 1)
+assertEqual(playerNoStored:GetAttribute("DownedState"), "SafeResolved", "downed state expires safely")
+assertEqual(playerNoStored:GetAttribute("DownedIsDowned"), false, "expired downed marker clears")
+
+playerStoredGiant:SetAttribute("Role", RoleConfig.Roles.Giant)
+local giantDownRejected = roleServiceQueryApi.SetDowned(playerStoredGiant.UserId, 30, "runtime_test_invalid_role")
+assertEqual(giantDownRejected, false, "non-Tinyfolk cannot enter downed state")
 
 print("role_service_runtime_entrypoint: all checks passed")
 

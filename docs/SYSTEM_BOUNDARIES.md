@@ -22,6 +22,8 @@ This document defines canonical system buckets, fold-in vs new-issue guidance, a
 - Post-rescue protection state
 - Maximum no-agency duration enforcement
 
+**Current implementation status:** TIN-184 now includes a bounded server-authoritative nonlethal downed-state slice owned by `RoleService` and pure deterministic shared logic in `Shared/GiantRealm/DownedState`. Tinyfolk-only downed entry is source-validated, safe-zone aware, duration-bounded, and exposes readable debug/teammate attributes (`DownedState`, `DownedIsDowned`, self-recovery progress/cap, timing, source/reason). Self recovery is capped and cannot fully restore normal play in this slice. `EscapeService` rejects downed Tinyfolk escape attempts through a narrow query-API compatibility check. Expiration resolves to a safe nonlethal state, preventing indefinite helplessness. Full combat, carry/custody conversion, containment delivery, rescue contracts, HUD/VFX/audio polish, and persistence coupling remain explicitly out of scope for this slice.
+
 **Fold into this bucket:** custody transfer rules, contained-player agency requirements, rescue acceleration, protection cancellation conditions.
 
 ### Warning, Tracking, and Stealth System

@@ -226,7 +226,11 @@ do
 	assertEqual(p1:GetAttribute("Role"), "Giant", "assignRole sets Giant")
 	assertEqual(p2:GetAttribute("Role"), "Tinyfolk", "assignRole sets Tinyfolk")
 	assertEqual(sim:getLog()[3], "[Tick 1] Assigned role Giant to player RoleAlpha", "log preserves queued order first")
-	assertEqual(sim:getLog()[4], "[Tick 1] Assigned role Tinyfolk to player RoleBeta", "log preserves queued order second")
+	assertEqual(
+		sim:getLog()[4],
+		"[Tick 1] Assigned role Tinyfolk to player RoleBeta",
+		"log preserves queued order second"
+	)
 end
 
 do
@@ -239,7 +243,11 @@ do
 	assertEqual(sim:getLog()[2], nil, "no action executed before scheduled tick")
 	sim:advanceTick()
 	assertEqual(sim.tick, 2, "advanceTick increments deterministically")
-	assertEqual(sim:getLog()[2], "[Tick 2] Assigned role Giant to player TickUser", "scheduled action runs at target tick")
+	assertEqual(
+		sim:getLog()[2],
+		"[Tick 2] Assigned role Giant to player TickUser",
+		"scheduled action runs at target tick"
+	)
 end
 
 do
@@ -308,7 +316,11 @@ do
 
 	local results = sim:getResults()
 	assertEqual(results[3].result.accepted, false, "safe-zone rejects through-gap reach")
-	assertEqual(results[4].result.accepted, true, "safe-zone route does not reject direct escape attempt in current service")
+	assertEqual(
+		results[4].result.accepted,
+		true,
+		"safe-zone route does not reject direct escape attempt in current service"
+	)
 	assertEqual(results[4].result.reason, "accepted", "escape attempt reason is accepted on current service path")
 	assertEqual(giant:GetAttribute("Role"), "Giant", "safe-zone flow does not mutate role")
 end
@@ -325,6 +337,133 @@ do
 	assertEqual(results[2].result.reason, "not_implemented", "capture unsupported explicit")
 	assertEqual(results[3].result.reason, "not_implemented", "rescue unsupported explicit")
 	assertEqual(results[4].result.reason, "not_implemented", "scoring unsupported explicit")
+end
+
+do
+	local fixture = createEscapeServiceFixture()
+	local downedByUserId: { [number]: any } = {}
+	_G._RoleService_QueryAPI = {
+		SetDowned = function(userId: number, durationSeconds: number, _reason: string): boolean
+			local player = fixture.playersByUserId[userId]
+			if player == nil then
+				return false
+			end
+			if player:GetAttribute("Role") ~= "Tinyfolk" then
+				return false
+			end
+			downedByUserId[userId] = {
+				expiresAt = 100 + durationSeconds,
+				selfRecoveryProgress = 0,
+				selfRecoveryCap = 0.5,
+				status = "Downed",
+			}
+			player:SetAttribute("DownedState", "Downed")
+			player:SetAttribute("DownedIsDowned", true)
+			player:SetAttribute("DownedSelfRecoveryProgress", 0)
+			return true
+		end,
+		SelfRecoverDowned = function(userId: number, progressDelta: number): boolean
+			local state = downedByUserId[userId]
+			local player = fixture.playersByUserId[userId]
+			if state == nil or player == nil then
+				return false
+			end
+			state.selfRecoveryProgress = math.min(state.selfRecoveryProgress + progressDelta, state.selfRecoveryCap)
+			if state.selfRecoveryProgress >= state.selfRecoveryCap then
+				state.status = "SelfRecoveryCapped"
+				player:SetAttribute("DownedState", "SelfRecoveryCapped")
+			end
+			player:SetAttribute("DownedSelfRecoveryProgress", state.selfRecoveryProgress)
+			return true
+		end,
+		TickDownedStates = function(nowSeconds: number)
+			for userId, state in pairs(downedByUserId) do
+				local player = fixture.playersByUserId[userId]
+				if player ~= nil and nowSeconds >= state.expiresAt then
+					state.status = "SafeResolved"
+					player:SetAttribute("DownedState", "SafeResolved")
+					player:SetAttribute("DownedIsDowned", false)
+				end
+			end
+		end,
+		IsPlayerDowned = function(userId: number): boolean
+			local state = downedByUserId[userId]
+			if state == nil then
+				return false
+			end
+			return state.status == "Downed" or state.status == "SelfRecoveryCapped"
+		end,
+		CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
+			if interactionName ~= "escapeAttempt" then
+				return true
+			end
+			local state = downedByUserId[userId]
+			if state == nil then
+				return true
+			end
+			local status = tostring(state.status)
+			if status == "Downed" or status == "SelfRecoveryCapped" then
+				return false
+			end
+			return true
+		end,
+	}
+
+	local simulation = MatchSimulation.new({ seed = 12345, escapeService = fixture.escapeService })
+	local tinyfolk = simulation:addPlayer(501, "DownedTinyfolk", { role = "Tinyfolk" })
+	local giant = simulation:addPlayer(502, "DownedGiant", { role = "Giant" })
+	fixture.playersByUserId[tinyfolk.UserId] = tinyfolk
+	fixture.playersByUserId[giant.UserId] = giant
+
+	simulation:queueAction(1, "downTinyfolk", {
+		userId = tinyfolk.UserId,
+		durationSeconds = 5,
+		reason = "headless_downed",
+	})
+	simulation:queueAction(1, "attemptEscapeWhileDowned", {
+		userId = tinyfolk.UserId,
+		routeId = "EscapeRoute_A",
+	})
+	simulation:queueAction(1, "selfRecoverDowned", {
+		userId = tinyfolk.UserId,
+		progressDelta = 0.7,
+	})
+	simulation:queueAction(1, "allyRecoverDowned", {
+		userId = giant.UserId,
+		targetUserId = tinyfolk.UserId,
+	})
+	simulation:advanceTick()
+
+	assertEqual(
+		tinyfolk:GetAttribute("DownedState"),
+		"SelfRecoveryCapped",
+		"self recovery reaches cap but not full recovery"
+	)
+	local results = simulation:getResults()
+	assertEqual(results[3].result.accepted, true, "downTinyfolk accepted for Tinyfolk")
+	assertEqual(results[4].result.accepted, false, "attemptEscapeWhileDowned rejected")
+	assertEqual(results[4].result.reason, "actor_downed", "attemptEscapeWhileDowned rejection reason")
+	assertEqual(results[6].result.reason, "not_implemented", "unsupported ally recovery explicit not_implemented")
+
+	simulation:queueAction(2, "tickDowned", {
+		userId = tinyfolk.UserId,
+		now = 106,
+	})
+	simulation:advanceTick()
+	assertEqual(
+		tinyfolk:GetAttribute("DownedState"),
+		"SafeResolved",
+		"downed state expiration resolves in headless flow"
+	)
+
+	simulation:queueAction(3, "downTinyfolk", {
+		userId = giant.UserId,
+		durationSeconds = 5,
+		reason = "headless_invalid_role",
+	})
+	simulation:advanceTick()
+	local finalResults = simulation:getResults()
+	assertEqual(finalResults[#finalResults].result.accepted, false, "non-Tinyfolk cannot enter downed state")
 end
 
 print("headless_match_simulation: all checks passed")
