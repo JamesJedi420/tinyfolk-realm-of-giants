@@ -1,7 +1,12 @@
 --!strict
 
-local CaptureConfig = require("../src/ReplicatedStorage/Shared/Config/CaptureConfig")
-local CaptureState = require("../src/ReplicatedStorage/Shared/GiantRealm/CaptureState")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = Shared:WaitForChild("Config")
+local GiantRealm = Shared:WaitForChild("GiantRealm")
+
+local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
+local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 
 local function assert(condition: boolean, message: string)
 	if not condition then
@@ -420,74 +425,6 @@ test("RemovePlayer clears target captures", function()
 	local cleaned = CaptureState.RemovePlayer(acceptResult.state, 2)
 	local captures = CaptureState.GetAllCaptures(cleaned)
 	assert(#captures == 0, "should have no captures after target removal")
-end)
-
-test("ResolveRequest rejects invalid_custodian_user_id", function()
-	local state = resetState()
-	local result = CaptureState.ResolveRequest(state, {
-		now = 1,
-		custodianUserId = -1,
-		targetUserId = 2,
-		custodianRole = "Giant",
-		targetRole = "Tinyfolk",
-		custodianAlive = true,
-		targetDowned = true,
-		inRange = true,
-		custodyWindowSeconds = 8,
-	})
-	assert(result.accepted == false, "should reject negative custodian user id")
-	assert(result.reason == "invalid_custodian_user_id", "reason should be invalid_custodian_user_id")
-end)
-
-test("ResolveRequest rejects invalid_target_user_id", function()
-	local state = resetState()
-	local result = CaptureState.ResolveRequest(state, {
-		now = 1,
-		custodianUserId = 1,
-		targetUserId = 0,
-		custodianRole = "Giant",
-		targetRole = "Tinyfolk",
-		custodianAlive = true,
-		targetDowned = true,
-		inRange = true,
-		custodyWindowSeconds = 8,
-	})
-	assert(result.accepted == false, "should reject zero target user id")
-	assert(result.reason == "invalid_target_user_id", "reason should be invalid_target_user_id")
-end)
-
-test("ResolveRequest rejects self_capture_not_allowed", function()
-	local state = resetState()
-	local result = CaptureState.ResolveRequest(state, {
-		now = 1,
-		custodianUserId = 1,
-		targetUserId = 1,
-		custodianRole = "Giant",
-		targetRole = "Tinyfolk",
-		custodianAlive = true,
-		targetDowned = true,
-		inRange = true,
-		custodyWindowSeconds = 8,
-	})
-	assert(result.accepted == false, "should reject self-capture")
-	assert(result.reason == "self_capture_not_allowed", "reason should be self_capture_not_allowed")
-end)
-
-test("ResolveRequest rejects custody_window_invalid", function()
-	local state = resetState()
-	local result = CaptureState.ResolveRequest(state, {
-		now = 1,
-		custodianUserId = 1,
-		targetUserId = 2,
-		custodianRole = "Giant",
-		targetRole = "Tinyfolk",
-		custodianAlive = true,
-		targetDowned = true,
-		inRange = true,
-		custodyWindowSeconds = 100,
-	})
-	assert(result.accepted == false, "should reject excessive custody window")
-	assert(result.reason == "custody_window_invalid", "reason should be custody_window_invalid")
 end)
 
 print("\n" .. testsPassed .. " passed, " .. testsFailed .. " failed")

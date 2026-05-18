@@ -1,0 +1,32 @@
+Γ£ô NewState returns empty state
+Γ£ô ResolveRequest rejects invalid_now
+Γ£ô ResolveRequest rejects custodian_not_giant
+Γ£ô ResolveRequest rejects target_not_tinyfolk
+Γ£ô ResolveRequest rejects custodian_not_alive
+Γ£ô ResolveRequest rejects target_not_downed
+Γ£ô ResolveRequest rejects target_out_of_range
+Γ£ô ResolveRequest accepts valid capture
+Γ£ô ResolveRequest rejects target_already_captured
+Γ£ù ResolveRequest rejects custodian_already_holding
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should reject custodian already holding
+Γ£ô PruneExpired removes expired captures
+Γ£ô PruneExpired keeps non-expired captures
+Γ£ô ResolveRelease removes active capture
+Γ£ô ResolveRelease rejects capture_missing
+Γ£ô GetTargetCapture returns active capture
+Γ£ô GetCustodianCapture returns active capture
+Γ£ô GetAllCaptures returns all captures sorted
+Γ£ô RemovePlayer clears custodian captures
+Γ£ô RemovePlayer clears target captures
+Γ£ô ResolveRequest rejects invalid_custodian_user_id
+Γ£ô ResolveRequest rejects invalid_target_user_id
+Γ£ô ResolveRequest rejects self_capture_not_allowed
+Γ£ô ResolveRequest rejects custody_window_invalid
+
+22 passed, 1 failed
+C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:495: 1 tests failed
+[Stack Begin]
+    Script '[C]' - function 'error'
+    Script 'C'
+[Stack End]
+

@@ -1,0 +1,38 @@
+Γ£ô NewState returns empty state
+Γ£ô ResolveRequest rejects invalid_now
+Γ£ô ResolveRequest rejects custodian_not_giant
+Γ£ô ResolveRequest rejects target_not_tinyfolk
+Γ£ô ResolveRequest rejects custodian_not_alive
+Γ£ô ResolveRequest rejects target_not_downed
+Γ£ô ResolveRequest rejects target_out_of_range
+Γ£ô ResolveRequest accepts valid capture
+Γ£ù ResolveRequest rejects target_already_captured
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should reject duplicate capture
+Γ£ù ResolveRequest rejects custodian_already_holding
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should reject custodian already holding
+Γ£ô PruneExpired removes expired captures
+Γ£ù PruneExpired keeps non-expired captures
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should still have 1 capture
+Γ£ù ResolveRelease removes active capture
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should accept release
+Γ£ô ResolveRelease rejects capture_missing
+Γ£ù GetTargetCapture returns active capture
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should have record for target
+Γ£ù GetCustodianCapture returns active capture
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should have record for custodian
+Γ£ù GetAllCaptures returns all captures sorted
+   C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:8: should have 2 captures
+Γ£ô RemovePlayer clears custodian captures
+Γ£ô RemovePlayer clears target captures
+Γ£ô ResolveRequest rejects invalid_custodian_user_id
+Γ£ô ResolveRequest rejects invalid_target_user_id
+Γ£ô ResolveRequest rejects self_capture_not_allowed
+Γ£ô ResolveRequest rejects custody_window_invalid
+
+16 passed, 7 failed
+C:\Projects\Tinyfolk Realm of Giants\tests/capture_state.spec:495: 7 tests failed
+[Stack Begin]
+    Script '[C]' - function 'error'
+    Script 'C'
+[Stack End]
+
