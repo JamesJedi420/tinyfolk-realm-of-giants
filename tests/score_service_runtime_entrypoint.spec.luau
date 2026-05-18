@@ -187,6 +187,7 @@ do
 	local missing = scoreApi.RequestScoreEvent(999999, "escape_success", 1, nil)
 	assertFalse(missing.accepted, "missing actor rejected")
 	assertEqual(missing.reason, "actor_not_found", "missing actor reason")
+	assertTrue(missing.record == nil, "missing actor has no record")
 end
 
 do

@@ -308,5 +308,90 @@ do
 	assertEqual(teamplayTotal, 160, "both events contributed to teamplay total")
 end
 
+do
+	local state = newState()
+
+	local transition1 = ScoreState.ResolveScoreEvent(state, {
+		now = 100,
+		userId = 5000,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+	})
+
+	state = transition1.state
+
+	local transition2 = ScoreState.ResolveScoreEvent(state, {
+		now = 100 + 60,
+		userId = 5000,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+	})
+
+	state = transition2.state
+	local record2 = transition2.record
+
+	assertTrue(record2 ~= nil, "event at exactly decay window boundary accepted")
+	assertEqual(record2.awardedPoints, 50, "decay applied at window boundary")
+end
+do
+	local state = newState()
+
+	local largeMetadata = {}
+	for i = 1, 1000 do
+		largeMetadata["key" .. i] = "value" .. i
+	end
+
+	local transition = ScoreState.ResolveScoreEvent(state, {
+		now = 100,
+		userId = 6000,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+		metadata = largeMetadata,
+	})
+
+	state = transition.state
+	assertTrue(transition.accepted, "large metadata object accepted")
+	assertEqual(transition.record.metadata, largeMetadata, "large metadata preserved")
+end
+do
+	local state = newState()
+
+	for i = 1, 100 do
+		local userId = 3000 + (i % 10)
+		local transition = ScoreState.ResolveScoreEvent(state, {
+			now = i,
+			userId = userId,
+			eventId = "capture_release",
+			actorRole = "Giant",
+		})
+		state = transition.state
+	end
+
+	local totals = ScoreState.GetCategoryTotals(state)
+	local recent = ScoreState.GetRecentEvents(state)
+	
+	assertTrue((totals.control or 0) > 0, "rapid events accumulate points")
+	assertTrue(#recent <= 50, "recent events buffer bounded during rapid fire")
+end
+do
+	local state = newState()
+
+	for i = 1, 15 do
+		local transition = ScoreState.ResolveScoreEvent(state, {
+			now = i * 100,
+			userId = 7000,
+			eventId = "capture_success",
+			actorRole = "Giant",
+		})
+		state = transition.state
+		if not transition.accepted then
+			break
+		end
+	end
+
+	local snap = ScoreState.GetPlayerSnapshot(state, 7000)
+	assertTrue((snap.total or 0) > 0, "minMultiplier prevents points from going to zero")
+	assertTrue((snap.categories.control or 0) >= 90 * 0.3, "minMultiplier respected (90 base * 0.3 min)")
+end
 
 print("score_state: all checks passed")
