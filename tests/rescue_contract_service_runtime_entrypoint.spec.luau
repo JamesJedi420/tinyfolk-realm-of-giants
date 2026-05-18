@@ -225,6 +225,8 @@ local function resetState()
 	setHumanoidHealth(targetTwo, 100)
 	setHumanoidHealth(rescuerTwo, 100)
 	setHumanoidHealth(targetThree, 100)
+	rescuer:SetAttribute("DownedIsDowned", false)
+	rescuerTwo:SetAttribute("DownedIsDowned", false)
 	target:SetAttribute("DownedIsDowned", true)
 	targetTwo:SetAttribute("DownedIsDowned", true)
 	targetThree:SetAttribute("DownedIsDowned", true)
@@ -258,6 +260,17 @@ do
 	local throttled = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 200.1)
 	assertFalse(throttled.accepted, "rapid repeat request throttled")
 	assertEqual(throttled.reason, "request_cooldown", "repeat request cooldown reason")
+end
+
+do
+	resetState()
+	local invalidTargetId = rescueApi.RequestRescueContract(rescuer.UserId, "bad", 250)
+	assertFalse(invalidTargetId.accepted, "invalid target id rejects")
+	assertEqual(invalidTargetId.reason, "target_user_id_invalid", "invalid target id reason")
+
+	local missingTarget = rescueApi.RequestRescueContract(rescuer.UserId, 999999, 250)
+	assertFalse(missingTarget.accepted, "missing target rejects")
+	assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
 end
 
 do
@@ -333,6 +346,30 @@ end
 
 do
 	resetState()
+	local first = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 650)
+	assertTrue(first.accepted, "accepted before participant overlap checks")
+	target:SetAttribute("DownedIsDowned", false)
+
+	local targetStartsAnother = rescueApi.RequestRescueContract(target.UserId, targetTwo.UserId, 651)
+	assertFalse(targetStartsAnother.accepted, "targeted participant cannot start another contract")
+	assertEqual(
+		targetStartsAnother.reason,
+		"participant_contract_active",
+		"targeted participant start rejection reason"
+	)
+
+	rescuer:SetAttribute("DownedIsDowned", true)
+	local rescuerBecomesTarget = rescueApi.RequestRescueContract(rescuerTwo.UserId, rescuer.UserId, 651)
+	assertFalse(rescuerBecomesTarget.accepted, "active rescuer cannot become target")
+	assertEqual(
+		rescuerBecomesTarget.reason,
+		"participant_contract_active",
+		"active rescuer target rejection reason"
+	)
+end
+
+do
+	resetState()
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 700)
 	assertTrue(accepted.accepted, "accepted before rescuer leave cleanup")
 
@@ -372,6 +409,17 @@ do
 	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, rescuer.UserId, 500)
 	assertFalse(rejected.accepted, "self rescue rejected")
 	assertEqual(rejected.reason, "self_rescue_not_allowed", "self rescue rejection reason")
+end
+
+do
+	resetState()
+	local missingRescuerRequest = rescueApi.RequestRescueContract(999999, target.UserId, 950)
+	assertFalse(missingRescuerRequest.accepted, "query request rejects missing rescuer")
+	assertEqual(missingRescuerRequest.reason, "rescuer_not_found", "query request missing rescuer reason")
+
+	local missingRescuerComplete = rescueApi.CompleteRescueContract(999999, target.UserId, 950)
+	assertFalse(missingRescuerComplete.accepted, "query complete rejects missing rescuer")
+	assertEqual(missingRescuerComplete.reason, "rescuer_not_found", "query complete missing rescuer reason")
 end
 
 print("rescue_contract_service_runtime_entrypoint: all checks passed")

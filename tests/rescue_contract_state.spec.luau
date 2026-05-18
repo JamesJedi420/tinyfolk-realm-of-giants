@@ -65,6 +65,17 @@ end
 
 do
 	local state = RescueContractState.NewState()
+	local targetRoleRejected = RescueContractState.ResolveRequest(state, makeRequestInput({ targetRole = "Giant" }))
+	assertFalse(targetRoleRejected.accepted, "target role gate rejects non-tinyfolk")
+	assertEqual(targetRoleRejected.reason, "target_not_tinyfolk", "target role rejection reason")
+
+	local rescuerAliveRejected = RescueContractState.ResolveRequest(state, makeRequestInput({ rescuerAlive = false }))
+	assertFalse(rescuerAliveRejected.accepted, "rescuer must be alive")
+	assertEqual(rescuerAliveRejected.reason, "rescuer_not_alive", "rescuer alive rejection reason")
+end
+
+do
+	local state = RescueContractState.NewState()
 	local carried = RescueContractState.ResolveRequest(state, makeRequestInput({ targetCarried = true }))
 	assertFalse(carried.accepted, "carried target rejected")
 	assertEqual(carried.reason, "target_carried", "carried rejection reason")
