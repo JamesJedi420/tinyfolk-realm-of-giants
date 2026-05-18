@@ -21,11 +21,16 @@ local ROLE_ATTRIBUTE = "Role"
 
 local state = RescueContractState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
+local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
 
 local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.PostRescueProtected
 	or "PostRescueProtected"
 local postRescueProtectionExpiresAtAttributeName = RescueContractConfig.StateAttributes.PostRescueProtectionExpiresAt
 	or "PostRescueProtectionExpiresAt"
+local rescueAccelerationActiveAttributeName = RescueContractConfig.StateAttributes.RescueAccelerationActive
+	or "RescueAccelerationActive"
+local rescueAccelerationExpiresAtAttributeName = RescueContractConfig.StateAttributes.RescueAccelerationExpiresAt
+	or "RescueAccelerationExpiresAt"
 
 local function now(): number
 	return os.clock()
@@ -38,6 +43,66 @@ local function clearPostRescueProtection(player: Player?)
 
 	player:SetAttribute(postRescueProtectedAttributeName, false)
 	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, nil)
+end
+
+local function clearRescueAcceleration(player: Player?)
+	if player == nil then
+		return
+	end
+
+	rescueAccelerationExpiresAtByUserId[player.UserId] = nil
+	player:SetAttribute(rescueAccelerationActiveAttributeName, false)
+	player:SetAttribute(rescueAccelerationExpiresAtAttributeName, nil)
+end
+
+local function grantRescueAcceleration(player: Player?, at: number)
+	if player == nil then
+		return
+	end
+
+	local durationSeconds = RescueContractConfig.RescueAccelerationDurationSeconds
+	if type(durationSeconds) ~= "number" or durationSeconds <= 0 then
+		clearRescueAcceleration(player)
+		return
+	end
+
+	local expiresAt = at + durationSeconds
+	rescueAccelerationExpiresAtByUserId[player.UserId] = expiresAt
+	player:SetAttribute(rescueAccelerationActiveAttributeName, true)
+	player:SetAttribute(rescueAccelerationExpiresAtAttributeName, expiresAt)
+end
+
+local function pruneExpiredRescueAcceleration(at: number)
+	for _, player in Players:GetPlayers() do
+		local expiresAt = rescueAccelerationExpiresAtByUserId[player.UserId]
+		if type(expiresAt) == "number" then
+			if expiresAt <= at then
+				clearRescueAcceleration(player)
+			else
+				player:SetAttribute(rescueAccelerationActiveAttributeName, true)
+				player:SetAttribute(rescueAccelerationExpiresAtAttributeName, expiresAt)
+			end
+		elseif player:GetAttribute(rescueAccelerationActiveAttributeName) == true then
+			clearRescueAcceleration(player)
+		end
+	end
+end
+
+local function isRescueAccelerationActive(player: Player, at: number): boolean
+	local expiresAt = rescueAccelerationExpiresAtByUserId[player.UserId]
+	if type(expiresAt) ~= "number" then
+		clearRescueAcceleration(player)
+		return false
+	end
+
+	if expiresAt <= at then
+		clearRescueAcceleration(player)
+		return false
+	end
+
+	player:SetAttribute(rescueAccelerationActiveAttributeName, true)
+	player:SetAttribute(rescueAccelerationExpiresAtAttributeName, expiresAt)
+	return true
 end
 
 local function grantPostRescueProtection(player: Player?, at: number)
@@ -318,6 +383,7 @@ end
 
 local function requestRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredRescueAcceleration(resolvedNow)
 	pruneExpiredPostRescueProtection(resolvedNow)
 	pruneExpiredContracts(resolvedNow)
 
@@ -338,6 +404,7 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		return { accepted = false, reason = "rescuer_interaction_restricted" }
 	end
 
+	local accelerationActive = isRescueAccelerationActive(rescuer, resolvedNow)
 	local transition = RescueContractState.ResolveRequest(state, {
 		now = resolvedNow,
 		rescuerUserId = rescuer.UserId,
@@ -350,12 +417,17 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		targetProtected = evaluateTargetSafeZoneProtection(target, resolvedNow),
 		inRange = isInRange(rescuer, target),
 		rescueWindowSeconds = RescueContractConfig.RescueWindowSeconds,
+		accelerationActive = accelerationActive,
+		accelerationWindowBonusSeconds = RescueContractConfig.RescueAccelerationWindowBonusSeconds,
 	})
 
 	state = transition.state
 	setRescueLastReason(rescuer, transition.reason)
 	setRescueLastReason(target, transition.reason)
 	if transition.accepted then
+		if accelerationActive then
+			clearRescueAcceleration(rescuer)
+		end
 		markRequest(rescuer.UserId, resolvedNow)
 	end
 	applyContractAttributesFromState()
@@ -369,6 +441,7 @@ end
 
 local function completeRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredRescueAcceleration(resolvedNow)
 	pruneExpiredPostRescueProtection(resolvedNow)
 	pruneExpiredContracts(resolvedNow)
 
@@ -389,6 +462,7 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 
 	if transition.accepted then
 		grantPostRescueProtection(target, resolvedNow)
+		grantRescueAcceleration(rescuer, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
 			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, { targetUserId = targetUserId })
@@ -435,6 +509,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	clearRescueAcceleration(player)
 	clearPostRescueProtection(player)
 	state = RescueContractState.RemovePlayer(state, player.UserId)
 	applyContractAttributesFromState()
@@ -457,6 +532,7 @@ _G._RescueContractService_QueryAPI = {
 	end,
 	GetRescuerContract = function(rescuerUserId: number, at: number?): any
 		if type(at) == "number" then
+			pruneExpiredRescueAcceleration(at)
 			pruneExpiredPostRescueProtection(at)
 			pruneExpiredContracts(at)
 		end
@@ -464,6 +540,7 @@ _G._RescueContractService_QueryAPI = {
 	end,
 	GetAllContracts = function(at: number?): { any }
 		if type(at) == "number" then
+			pruneExpiredRescueAcceleration(at)
 			pruneExpiredPostRescueProtection(at)
 			pruneExpiredContracts(at)
 		end
@@ -472,7 +549,9 @@ _G._RescueContractService_QueryAPI = {
 	ResetForTests = function()
 		state = RescueContractState.NewState()
 		lastRequestAtByUserId = {}
+		rescueAccelerationExpiresAtByUserId = {}
 		for _, player in Players:GetPlayers() do
+			clearRescueAcceleration(player)
 			clearPostRescueProtection(player)
 		end
 		applyContractAttributesFromState()

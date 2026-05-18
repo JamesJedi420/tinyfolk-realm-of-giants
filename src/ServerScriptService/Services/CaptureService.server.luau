@@ -13,9 +13,11 @@ local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
 local POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE = "PostRescueProtectionExpiresAt"
+local ANTI_GUARDING_REPEAT_TARGET_COOLDOWN_SECONDS = 12
 
 local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
+local lastCaptureAtByCustodianTargetKey: { [string]: number? } = {}
 local applyCaptureAttributesFromState: () -> ()
 
 local function now(): number
@@ -176,6 +178,25 @@ local function markRequest(userId: number, at: number)
 	lastRequestAtByUserId[userId] = at
 end
 
+local function getCustodianTargetKey(custodianUserId: number, targetUserId: number): string
+	return string.format("%d|%d", custodianUserId, targetUserId)
+end
+
+local function clearAntiGuardingHistoryForUser(userId: number)
+	for key, _ in pairs(lastCaptureAtByCustodianTargetKey) do
+		local separatorIndex = string.find(key, "|", 1, true)
+		if separatorIndex ~= nil then
+			local custodianPart = string.sub(key, 1, separatorIndex - 1)
+			local targetPart = string.sub(key, separatorIndex + 1)
+			local custodianId = tonumber(custodianPart)
+			local targetId = tonumber(targetPart)
+			if custodianId == userId or targetId == userId then
+				lastCaptureAtByCustodianTargetKey[key] = nil
+			end
+		end
+	end
+end
+
 local function pruneExpiredCaptures(at: number)
 	state = CaptureState.PruneExpired(state, at)
 	applyCaptureAttributesFromState()
@@ -217,7 +238,10 @@ local function setCaptureLastReason(player: Player?, reason: string)
 end
 
 local function requestCapture(custodian: Player, targetUserId: any, at: number?): any
-	local resolvedNow = if type(at) == "number" then at else now()
+	local resolvedNow = now()
+	if type(at) == "number" then
+		resolvedNow = at
+	end
 	pruneExpiredCaptures(resolvedNow)
 
 	if isCoolingDown(custodian.UserId, resolvedNow) then
@@ -239,6 +263,20 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		return { accepted = false, reason = "target_post_rescue_protected" }
 	end
 
+	local activeTargetCapture = CaptureState.GetTargetCapture(state, targetUserId)
+	if activeTargetCapture == nil then
+		local antiGuardingKey = getCustodianTargetKey(custodian.UserId, target.UserId)
+		local lastAt = lastCaptureAtByCustodianTargetKey[antiGuardingKey]
+		if type(lastAt) == "number" then
+			local elapsedSeconds = resolvedNow - (lastAt :: number)
+			if elapsedSeconds < ANTI_GUARDING_REPEAT_TARGET_COOLDOWN_SECONDS then
+				setCaptureLastReason(custodian, "anti_guarding_repeat_target_cooldown")
+				setCaptureLastReason(target, "anti_guarding_repeat_target_cooldown")
+				return { accepted = false, reason = "anti_guarding_repeat_target_cooldown" }
+			end
+		end
+	end
+
 	local transition = CaptureState.ResolveRequest(state, {
 		now = resolvedNow,
 		custodianUserId = custodian.UserId,
@@ -255,6 +293,8 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	setCaptureLastReason(custodian, transition.reason)
 	setCaptureLastReason(target, transition.reason)
 	if transition.accepted then
+		local antiGuardingKey = getCustodianTargetKey(custodian.UserId, target.UserId)
+		lastCaptureAtByCustodianTargetKey[antiGuardingKey] = resolvedNow
 		markRequest(custodian.UserId, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
@@ -277,6 +317,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	clearAntiGuardingHistoryForUser(player.UserId)
 	state = CaptureState.RemovePlayer(state, player.UserId)
 	applyCaptureAttributesFromState()
 end)
@@ -310,6 +351,7 @@ _G._CaptureService_QueryAPI = {
 	ResetForTests = function()
 		state = CaptureState.NewState()
 		lastRequestAtByUserId = {}
+		lastCaptureAtByCustodianTargetKey = {}
 		applyCaptureAttributesFromState()
 	end,
 }

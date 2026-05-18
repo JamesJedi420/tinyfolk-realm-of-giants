@@ -296,6 +296,11 @@ do
 		type(target:GetAttribute("PostRescueProtectionExpiresAt")) == "number",
 		"completion sets post-rescue protection expiry"
 	)
+	assertTrue(rescuer:GetAttribute("RescueAccelerationActive") == true, "completion grants rescuer acceleration")
+	assertTrue(
+		type(rescuer:GetAttribute("RescueAccelerationExpiresAt")) == "number",
+		"completion sets rescuer acceleration expiry"
+	)
 end
 
 do
@@ -311,6 +316,34 @@ do
 	assertTrue(
 		target:GetAttribute("PostRescueProtectionExpiresAt") == nil,
 		"post-rescue protection expiry attribute clears after expiry"
+	)
+	rescueApi.GetAllContracts(452)
+	assertTrue(rescuer:GetAttribute("RescueAccelerationActive") == false, "rescuer acceleration clears after expiry")
+	assertTrue(
+		rescuer:GetAttribute("RescueAccelerationExpiresAt") == nil,
+		"rescuer acceleration expiry attribute clears after expiry"
+	)
+end
+
+do
+	resetState()
+	local firstAccepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 500)
+	assertTrue(firstAccepted.accepted, "baseline accepted before acceleration consumption")
+	local firstCompleted = rescueApi.CompleteRescueContract(rescuer.UserId, target.UserId, 501)
+	assertTrue(firstCompleted.accepted, "baseline completed before acceleration consumption")
+
+	target:SetAttribute("DownedIsDowned", true)
+	local acceleratedRequest = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 502)
+	assertTrue(acceleratedRequest.accepted, "next request accepted with acceleration")
+	assertTrue(acceleratedRequest.contract.isAccelerated == true, "next request contract is accelerated")
+	assertEqual(acceleratedRequest.contract.expiresAt, 517, "accelerated runtime window bonus applied")
+	assertTrue(
+		rescuer:GetAttribute("RescueAccelerationActive") == false,
+		"acceleration consumed after accepted rescue request"
+	)
+	assertTrue(
+		rescuer:GetAttribute("RescueAccelerationExpiresAt") == nil,
+		"acceleration expiry cleared after consumption"
 	)
 end
 

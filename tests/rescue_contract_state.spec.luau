@@ -140,6 +140,23 @@ end
 
 do
 	local state = RescueContractState.NewState()
+	local accelerated = RescueContractState.ResolveRequest(
+		state,
+		makeRequestInput({
+			now = 20,
+			rescueWindowSeconds = 12,
+			accelerationActive = true,
+			accelerationWindowBonusSeconds = 3,
+		})
+	)
+
+	assertTrue(accelerated.accepted, "accelerated request accepted")
+	assertTrue(accelerated.contract.isAccelerated == true, "accelerated contract flagged")
+	assertEqual(accelerated.contract.expiresAt, 35, "accelerated request extends rescue window")
+end
+
+do
+	local state = RescueContractState.NewState()
 	local first = RescueContractState.ResolveRequest(state, makeRequestInput({ rescuerUserId = 1, targetUserId = 2 }))
 	assertTrue(first.accepted, "first participant contract accepted")
 

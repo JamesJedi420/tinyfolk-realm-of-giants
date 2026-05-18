@@ -245,4 +245,21 @@ assertTrue(
 	"downed cancellation clears protection expiry attribute"
 )
 
+resetState()
+local antiGuardingFirst = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(antiGuardingFirst.accepted == true, "anti-guarding baseline first capture accepted")
+local antiGuardingSecond = captureApi.RequestCapture(2101, 2102, 10.0)
+assertFalse(antiGuardingSecond.accepted, "anti-guarding rejects repeated same pair within cooldown")
+assertEqual(
+	antiGuardingSecond.reason,
+	"anti_guarding_repeat_target_cooldown",
+	"anti-guarding repeat target rejection reason"
+)
+
+resetState()
+local antiGuardingExpiredFirst = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(antiGuardingExpiredFirst.accepted == true, "anti-guarding expiry baseline accepted")
+local antiGuardingAfterExpiry = captureApi.RequestCapture(2101, 2102, 13.0)
+assertTrue(antiGuardingAfterExpiry.accepted == true, "anti-guarding allows repeat target after cooldown")
+
 print("capture_service_runtime_entrypoint: all checks passed")

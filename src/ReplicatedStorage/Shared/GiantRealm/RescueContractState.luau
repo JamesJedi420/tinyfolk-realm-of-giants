@@ -7,6 +7,7 @@ export type RescueContract = {
 	targetUserId: number,
 	startedAt: number,
 	expiresAt: number,
+	isAccelerated: boolean,
 }
 
 export type State = {
@@ -27,6 +28,8 @@ export type RequestInput = {
 	targetProtected: boolean,
 	inRange: boolean,
 	rescueWindowSeconds: number,
+	accelerationActive: boolean?,
+	accelerationWindowBonusSeconds: number?,
 }
 
 export type CompleteInput = {
@@ -71,6 +74,7 @@ local function cloneState(state: State): State
 				targetUserId = contract.targetUserId,
 				startedAt = contract.startedAt,
 				expiresAt = contract.expiresAt,
+				isAccelerated = contract.isAccelerated,
 			}
 		end
 	end
@@ -195,15 +199,29 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		return { accepted = false, reason = "participant_contract_active", state = nextState, contract = nil }
 	end
 
-	local rescueWindowSeconds = if validNumber(input.rescueWindowSeconds) and input.rescueWindowSeconds > 0
+	local rescueWindowSeconds: number = if validNumber(input.rescueWindowSeconds) and input.rescueWindowSeconds > 0
 		then input.rescueWindowSeconds
 		else 0
+	local accelerationBonusSeconds = 0
+	local bonusInput = input.accelerationWindowBonusSeconds
+	if type(bonusInput) == "number" and validNumber(bonusInput) and bonusInput > 0 then
+		accelerationBonusSeconds = bonusInput
+	end
+
+	local isAccelerated = false
+	if input.accelerationActive == true and accelerationBonusSeconds > 0 then
+		isAccelerated = true
+	end
+	if isAccelerated then
+		rescueWindowSeconds = rescueWindowSeconds + accelerationBonusSeconds
+	end
 
 	local contract: RescueContract = {
 		rescuerUserId = input.rescuerUserId,
 		targetUserId = input.targetUserId,
 		startedAt = input.now,
 		expiresAt = input.now + rescueWindowSeconds,
+		isAccelerated = isAccelerated,
 	}
 
 	nextState.contractsByRescuer[input.rescuerUserId] = contract
@@ -264,6 +282,7 @@ function RescueContractState.GetContracts(state: State): { RescueContract }
 				targetUserId = contract.targetUserId,
 				startedAt = contract.startedAt,
 				expiresAt = contract.expiresAt,
+				isAccelerated = contract.isAccelerated,
 			})
 		end
 	end
