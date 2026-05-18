@@ -14,6 +14,7 @@ local ROLE_ATTRIBUTE = "Role"
 
 local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
+local applyCaptureAttributesFromState: () -> ()
 
 local function now(): number
 	return os.clock()
@@ -133,10 +134,10 @@ end
 
 local function pruneExpiredCaptures(at: number)
 	state = CaptureState.PruneExpired(state, at)
-	applyCapturAttributesFromState()
+	applyCaptureAttributesFromState()
 end
 
-local function applyCapturAttributesFromState()
+applyCaptureAttributesFromState = function()
 	local attrs = CaptureConfig.StateAttributes
 
 	for _, player in Players:GetPlayers() do
@@ -206,7 +207,7 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	if transition.accepted then
 		markRequest(custodian.UserId, resolvedNow)
 	end
-	applyCapturAttributesFromState()
+	applyCaptureAttributesFromState()
 
 	return {
 		accepted = transition.accepted,
@@ -218,7 +219,7 @@ end
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
 	state = CaptureState.RemovePlayer(state, player.UserId)
-	applyCapturAttributesFromState()
+	applyCaptureAttributesFromState()
 end)
 
 _G._CaptureService_QueryAPI = {
@@ -250,6 +251,6 @@ _G._CaptureService_QueryAPI = {
 	ResetForTests = function()
 		state = CaptureState.NewState()
 		lastRequestAtByUserId = {}
-		applyCapturAttributesFromState()
+		applyCaptureAttributesFromState()
 	end,
 }

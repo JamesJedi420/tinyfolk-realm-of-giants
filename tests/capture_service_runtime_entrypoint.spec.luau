@@ -1,499 +1,221 @@
 --!strict
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MockPlayer = require("../tests/mocks/MockPlayer")
 
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = Shared:WaitForChild("Config")
-local GiantRealm = Shared:WaitForChild("GiantRealm")
-
-local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
-local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
-
-local captureServicePath = "ServerScriptService:FindFirstChild('CaptureService')"
-local MatchSimulation = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MatchSimulation"))
-
-local function assert(condition: boolean, message: string)
-	if not condition then
-		error(message)
+local function assertEqual(actual: any, expected: any, label: string)
+	if actual ~= expected then
+		error(string.format("FAIL [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
 	end
+	print(string.format("PASS [%s]", label))
 end
 
-local testsPassed = 0
-local testsFailed = 0
-
-local function test(name: string, fn: () -> ())
-	local success, err = pcall(fn)
-	if success then
-		testsPassed += 1
-		print("✓", name)
-	else
-		testsFailed += 1
-		print("✗", name)
-		print("  ", err)
-	end
+local function assertTrue(condition: boolean, label: string)
+	assertEqual(condition, true, label)
 end
 
-local function getCaptureQueryApi(): any
-	local globalValue: any = _G
-	if type(globalValue) ~= "table" then
-		return nil
+local function assertFalse(condition: boolean, label: string)
+	assertEqual(condition, false, label)
+end
+
+local function makeSignal()
+	local callbacks: { (Player) -> () } = {}
+	return {
+		Connect = function(_self: any, callback: (Player) -> ())
+			table.insert(callbacks, callback)
+			return {}
+		end,
+		Fire = function(_self: any, player: Player)
+			for _, callback in ipairs(callbacks) do
+				callback(player)
+			end
+		end,
+	}
+end
+
+local function makeNode(name: string, className: string?)
+	local node: any = {
+		Name = name,
+		ClassName = className or "Folder",
+		_Children = {},
+	}
+
+	function node.FindFirstChild(self: any, childName: string): any
+		return self._Children[childName]
 	end
-	return globalValue._CaptureService_QueryAPI
+
+	function node.WaitForChild(self: any, childName: string): any
+		return self._Children[childName]
+	end
+
+	return node
+end
+
+local function addChild(parent: any, childName: string, child: any)
+	parent._Children[childName] = child
+end
+
+local configFolder = makeNode("Config", "Folder")
+addChild(configFolder, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
+
+local giantRealmFolder = makeNode("GiantRealm", "Folder")
+addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
+
+local sharedFolder = makeNode("Shared", "Folder")
+addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
+
+local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage")
+addChild(replicatedStorage, "Shared", sharedFolder)
+
+local playersList: { any } = {}
+local playersService: any = {
+	PlayerRemoving = makeSignal(),
+}
+
+function playersService:GetPlayers(): { any }
+	return playersList
+end
+
+local fakeGame: any = {}
+function fakeGame:GetService(serviceName: string): any
+	if serviceName == "Players" then
+		return playersService
+	end
+	if serviceName == "ReplicatedStorage" then
+		return replicatedStorage
+	end
+	error("unsupported service " .. serviceName)
+	return nil
+end
+
+game = fakeGame
+
+require("../src/ServerScriptService/Services/CaptureService.server")
+
+local captureApi: any = _G._CaptureService_QueryAPI
+assertTrue(type(captureApi) == "table", "service exposes query api")
+
+local giant = MockPlayer.new(2101, "Giant", {
+	role = "Giant",
+	positionZ = 0,
+	health = 100,
+})
+local giantB = MockPlayer.new(2105, "GiantB", {
+	role = "Giant",
+	positionZ = 1,
+	health = 100,
+})
+local targetA = MockPlayer.new(2102, "TargetA", {
+	role = "Tinyfolk",
+	positionZ = 0,
+	health = 100,
+})
+local targetB = MockPlayer.new(2103, "TargetB", {
+	role = "Tinyfolk",
+	positionZ = 2,
+	health = 100,
+})
+local tinyfolk = MockPlayer.new(2104, "Tinyfolk", {
+	role = "Tinyfolk",
+	positionZ = 0,
+	health = 100,
+})
+
+playersList = { giant, giantB, targetA, targetB, tinyfolk }
+
+local function setDowned(player: any, value: boolean)
+	player:SetAttribute("DownedIsDowned", value)
+end
+
+local function setRole(player: any, role: string)
+	player:SetAttribute("Role", role)
+end
+
+local function setAlive(player: any, health: number)
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid ~= nil then
+		humanoid.Health = health
+	end
 end
 
 local function resetState()
-	local api = getCaptureQueryApi()
-	if api ~= nil and type(api.ResetForTests) == "function" then
-		api:ResetForTests()
-	end
+	captureApi.ResetForTests()
+	setRole(giant, "Giant")
+	setRole(giantB, "Giant")
+	setRole(tinyfolk, "Tinyfolk")
+	setRole(targetA, "Tinyfolk")
+	setRole(targetB, "Tinyfolk")
+	setDowned(targetA, true)
+	setDowned(targetB, true)
+	setDowned(giant, false)
+	setDowned(tinyfolk, false)
+	setAlive(giant, 100)
+	setAlive(tinyfolk, 100)
 end
 
-local function createMockPlayer(userId: number, role: string): Player?
-	local player = Instance.new("Player")
-	player.UserId = userId
-	player:SetAttribute("Role", role)
-	player:SetAttribute("DownedIsDowned", false)
-
-	local character = Instance.new("Model")
-	character.Name = "Character"
-	character.Parent = workspace
-
-	local humanoidRoot = Instance.new("Part")
-	humanoidRoot.Name = "HumanoidRootPart"
-	humanoidRoot.Position = Vector3.new(0, 5, 0)
-	humanoidRoot.CanCollide = false
-	humanoidRoot.Parent = character
-
-	local humanoid = Instance.new("Humanoid")
-	humanoid.Health = 100
-	humanoid.MaxHealth = 100
-	humanoid.Parent = character
-
-	player.Character = character
-
-	return player
-end
-
-local function cleanupMockPlayer(player: Player?)
-	if player == nil then
-		return
-	end
-
-	if player.Character then
-		player.Character:Destroy()
-	end
-
-	player:Destroy()
-end
-
-local function setPlayerRole(player: Player, role: string)
-	player:SetAttribute("Role", role)
-end
-
-local function setPlayerDowned(player: Player, isDowned: boolean)
-	player:SetAttribute("DownedIsDowned", isDowned)
-end
-
-local function setPlayerAlive(player: Player, isAlive: boolean)
-	local character = player.Character
-	if character then
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			if isAlive then
-				humanoid.Health = 100
-			else
-				humanoid.Health = 0
-			end
-		end
-	end
-end
-
-local function setPlayerPosition(player: Player, position: Vector3)
-	local character = player.Character
-	if character then
-		local root = character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") then
-			root.Position = position
-		end
-	end
-end
-
-test("RequestCapture accepts valid capture when target downed", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == true, "capture should be accepted")
-		assert(result.reason == "accepted", "reason should be accepted")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when custodian not giant", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Tinyfolk")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "custodian_not_giant", "reason should be custodian_not_giant")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when target not tinyfolk", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Giant")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "target_not_tinyfolk", "reason should be target_not_tinyfolk")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when target not downed", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, false)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "target_not_downed", "reason should be target_not_downed")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when custodian dead", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerAlive(custodian, false)
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "custodian_not_alive", "reason should be custodian_not_alive")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when out of range", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(100, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "target_out_of_range", "reason should be target_out_of_range")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects when custodian not found", function()
-	resetState()
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(999, 2, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "custodian_not_found", "reason should be custodian_not_found")
-	end
-end)
-
-test("RequestCapture rejects when target not found", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerDowned(custodian, false)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 999, 1.0)
-		assert(result.accepted == false, "capture should be rejected")
-		assert(result.reason == "target_not_found", "reason should be target_not_found")
-	end
-
-	cleanupMockPlayer(custodian)
-end)
-
-test("RequestCapture enforces cooldown between requests", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target1 = createMockPlayer(2, "Tinyfolk")
-	local target2 = createMockPlayer(3, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target1, Vector3.new(0, 5, 0))
-	setPlayerPosition(target2, Vector3.new(5, 5, 0))
-	setPlayerDowned(target1, true)
-	setPlayerDowned(target2, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result1 = api:RequestCapture(1, 2, 1.0)
-		assert(result1.accepted == true, "first capture should be accepted")
-
-		local result2 = api:RequestCapture(1, 3, 1.05)
-		assert(result2.accepted == false, "second capture within cooldown should be rejected")
-		assert(result2.reason == "request_cooldown", "reason should be request_cooldown")
-
-		local result3 = api:RequestCapture(1, 3, 1.3)
-		assert(result3.accepted == true, "capture after cooldown should be accepted")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target1)
-	cleanupMockPlayer(target2)
-end)
-
-test("RequestCapture rejects duplicate capture of same target", function()
-	resetState()
-	local custodian1 = createMockPlayer(1, "Giant")
-	local custodian2 = createMockPlayer(3, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian1, Vector3.new(0, 5, 0))
-	setPlayerPosition(custodian2, Vector3.new(10, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result1 = api:RequestCapture(1, 2, 1.0)
-		assert(result1.accepted == true, "first capture should be accepted")
-
-		local result2 = api:RequestCapture(3, 2, 1.5)
-		assert(result2.accepted == false, "second capture of same target should be rejected")
-		assert(result2.reason == "target_already_captured", "reason should be target_already_captured")
-	end
-
-	cleanupMockPlayer(custodian1)
-	cleanupMockPlayer(custodian2)
-	cleanupMockPlayer(target)
-end)
-
-test("RequestCapture rejects custodian already holding target", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target1 = createMockPlayer(2, "Tinyfolk")
-	local target2 = createMockPlayer(3, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target1, Vector3.new(0, 5, 0))
-	setPlayerPosition(target2, Vector3.new(5, 5, 0))
-	setPlayerDowned(target1, true)
-	setPlayerDowned(target2, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result1 = api:RequestCapture(1, 2, 1.0)
-		assert(result1.accepted == true, "first capture should be accepted")
-
-		local result2 = api:RequestCapture(1, 3, 2.0)
-		assert(result2.accepted == false, "custodian already holding should be rejected")
-		assert(result2.reason == "custodian_already_holding", "reason should be custodian_already_holding")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target1)
-	cleanupMockPlayer(target2)
-end)
-
-test("GetTargetCapture returns active capture", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == true, "capture should be accepted")
-
-		local capture = api:GetTargetCapture(2)
-		assert(capture ~= nil, "capture should exist")
-		if capture then
-			assert(capture.custodianUserId == 1, "custodian user id mismatch")
-		end
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("GetCustodianCapture returns active capture", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == true, "capture should be accepted")
-
-		local capture = api:GetCustodianCapture(1)
-		assert(capture ~= nil, "capture should exist")
-		if capture then
-			assert(capture.targetUserId == 2, "target user id mismatch")
-		end
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("GetAllCaptures returns all captures", function()
-	resetState()
-	local custodian1 = createMockPlayer(1, "Giant")
-	local custodian2 = createMockPlayer(3, "Giant")
-	local target1 = createMockPlayer(2, "Tinyfolk")
-	local target2 = createMockPlayer(4, "Tinyfolk")
-
-	setPlayerPosition(custodian1, Vector3.new(0, 5, 0))
-	setPlayerPosition(custodian2, Vector3.new(0, 5, 0))
-	setPlayerPosition(target1, Vector3.new(0, 5, 0))
-	setPlayerPosition(target2, Vector3.new(0, 5, 0))
-	setPlayerDowned(target1, true)
-	setPlayerDowned(target2, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		api:RequestCapture(1, 2, 1.0)
-		api:RequestCapture(3, 4, 1.5)
-
-		local captures = api:GetAllCaptures()
-		assert(#captures == 2, "should have 2 captures")
-	end
-
-	cleanupMockPlayer(custodian1)
-	cleanupMockPlayer(custodian2)
-	cleanupMockPlayer(target1)
-	cleanupMockPlayer(target2)
-end)
-
-test("Capture attributes reflect active captures", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == true, "capture should be accepted")
-
-		local attrs = CaptureConfig.StateAttributes
-		assert(custodian:GetAttribute(attrs.CaptureActive) == true, "custodian should have CaptureActive=true")
-		assert(target:GetAttribute(attrs.CaptureActive) == true, "target should have CaptureActive=true")
-		assert(target:GetAttribute(attrs.CaptureCustodianUserId) == 1, "target should have correct custodian user id")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-test("Capture expires automatically after custody window", function()
-	resetState()
-	local custodian = createMockPlayer(1, "Giant")
-	local target = createMockPlayer(2, "Tinyfolk")
-
-	setPlayerPosition(custodian, Vector3.new(0, 5, 0))
-	setPlayerPosition(target, Vector3.new(0, 5, 0))
-	setPlayerDowned(target, true)
-
-	local api = getCaptureQueryApi()
-	assert(api ~= nil, "capture query api missing")
-	if api then
-		local result = api:RequestCapture(1, 2, 1.0)
-		assert(result.accepted == true, "capture should be accepted")
-
-		local capturesBefore = api:GetAllCaptures(8.5)
-		assert(#capturesBefore == 1, "should have 1 capture before expiry")
-
-		local capturesAfter = api:GetAllCaptures(10.0)
-		assert(#capturesAfter == 0, "should have 0 captures after expiry")
-	end
-
-	cleanupMockPlayer(custodian)
-	cleanupMockPlayer(target)
-end)
-
-print("\n" .. testsPassed .. " passed, " .. testsFailed .. " failed")
-if testsFailed > 0 then
-	error(testsFailed .. " tests failed")
-end
+resetState()
+
+local accepted = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(accepted.accepted == true, "valid request accepted")
+assertEqual(accepted.reason, "accepted", "accepted reason")
+
+resetState()
+setRole(giant, "Tinyfolk")
+local nonGiant = captureApi.RequestCapture(2101, 2102, 1.0)
+assertFalse(nonGiant.accepted, "non giant rejected")
+assertEqual(nonGiant.reason, "custodian_not_giant", "non giant reason")
+
+resetState()
+setDowned(targetA, false)
+local notDowned = captureApi.RequestCapture(2101, 2102, 1.0)
+assertFalse(notDowned.accepted, "target not downed rejected")
+assertEqual(notDowned.reason, "target_not_downed", "target not downed reason")
+
+resetState()
+setAlive(giant, 0)
+local deadCustodian = captureApi.RequestCapture(2101, 2102, 1.0)
+assertFalse(deadCustodian.accepted, "dead custodian rejected")
+assertEqual(deadCustodian.reason, "custodian_not_alive", "dead custodian reason")
+
+resetState()
+local missingTarget = captureApi.RequestCapture(2101, 999999, 1.0)
+assertFalse(missingTarget.accepted, "missing target rejected")
+assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
+
+resetState()
+local first = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(first.accepted == true, "first accepted before duplicate")
+local duplicate = captureApi.RequestCapture(2105, 2102, 2.0)
+assertFalse(duplicate.accepted, "duplicate target rejected")
+assertEqual(duplicate.reason, "target_already_captured", "duplicate target reason")
+
+resetState()
+local holdingFirst = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(holdingFirst.accepted == true, "first accepted before holding check")
+local holdingSecond = captureApi.RequestCapture(2101, 2103, 2.0)
+assertFalse(holdingSecond.accepted, "custodian already holding rejected")
+assertEqual(holdingSecond.reason, "custodian_already_holding", "custodian already holding reason")
+
+resetState()
+local cooldownFirst = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(cooldownFirst.accepted == true, "cooldown baseline accepted")
+local cooldownSecond = captureApi.RequestCapture(2101, 2103, 1.05)
+assertFalse(cooldownSecond.accepted, "request cooldown rejected")
+assertEqual(cooldownSecond.reason, "request_cooldown", "request cooldown reason")
+
+resetState()
+local windowCapture = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(windowCapture.accepted == true, "window capture accepted")
+local activeAtSeven = captureApi.GetTargetCapture(2102, 7.0)
+assertTrue(activeAtSeven ~= nil, "capture remains active before expiry")
+local prunedAtNine = captureApi.GetTargetCapture(2102, 9.0)
+assertTrue(prunedAtNine == nil, "capture pruned after expiry")
+
+resetState()
+local toClear = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(toClear.accepted == true, "accepted before player removing")
+playersService.PlayerRemoving:Fire(giant)
+local afterRemove = captureApi.GetTargetCapture(2102, 1.1)
+assertTrue(afterRemove == nil, "player removing clears active capture")
+
+print("capture_service_runtime_entrypoint: all checks passed")

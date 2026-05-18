@@ -12,6 +12,8 @@ $testFiles = @(
     'tests\upgrade_progression_logic.spec.luau',
     'tests\emergency_reinforcement_state.spec.luau',
     'tests\emergency_reinforcement_service_runtime_entrypoint.spec.luau',
+    'tests\capture_state.spec.luau',
+    'tests\capture_service_runtime_entrypoint.spec.luau',
     'tests\rescue_contract_state.spec.luau',
     'tests\rescue_contract_service_runtime_entrypoint.spec.luau',
     'tests\headless_match_simulation.spec.luau'

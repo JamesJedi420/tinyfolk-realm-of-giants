@@ -24,7 +24,7 @@ local function test(name: string, fn: () -> ())
 	end
 end
 
-local function resetState(): CaptureState.State
+local function resetState()
 	return CaptureState.NewState()
 end
 
@@ -39,7 +39,7 @@ end)
 test("ResolveRequest rejects invalid_now", function()
 	local state = resetState()
 	local result = CaptureState.ResolveRequest(state, {
-		now = math.nan,
+		now = 0 / 0,
 		custodianUserId = 1,
 		targetUserId = 2,
 		custodianRole = "Giant",

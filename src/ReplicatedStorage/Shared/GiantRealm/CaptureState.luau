@@ -34,6 +34,17 @@ export type TransitionResult = {
 	record: CaptureRecord?,
 }
 
+local MAX_CUSTODY_DURATION_SECONDS = 12
+do
+	local ok, captureConfig = pcall(require, "../Config/CaptureConfig")
+	if ok and type(captureConfig) == "table" then
+		local maxWindow = (captureConfig :: any).MaxCustodyDurationSeconds
+		if type(maxWindow) == "number" and maxWindow == maxWindow and maxWindow > 0 and maxWindow < math.huge then
+			MAX_CUSTODY_DURATION_SECONDS = maxWindow
+		end
+	end
+end
+
 local function validNumber(value: any): boolean
 	if type(value) ~= "number" then
 		return false
@@ -52,6 +63,26 @@ local function validNow(now: any): boolean
 		return false
 	end
 	return now >= 0
+end
+
+local function validUserId(userId: any): boolean
+	if not validNumber(userId) then
+		return false
+	end
+	if userId <= 0 then
+		return false
+	end
+	return userId == math.floor(userId)
+end
+
+local function validCustodyWindow(seconds: any): boolean
+	if not validNumber(seconds) then
+		return false
+	end
+	if seconds <= 0 then
+		return false
+	end
+	return seconds <= MAX_CUSTODY_DURATION_SECONDS
 end
 
 local function cloneState(state: State): State
@@ -125,6 +156,26 @@ function CaptureState.ResolveRequest(state: State, input: RequestInput): Transit
 		return { accepted = false, reason = "invalid_now", state = nextState, record = nil }
 	end
 
+	if not validUserId(input.custodianUserId) then
+		nextState.lastReason = "invalid_custodian_user_id"
+		return { accepted = false, reason = "invalid_custodian_user_id", state = nextState, record = nil }
+	end
+
+	if not validUserId(input.targetUserId) then
+		nextState.lastReason = "invalid_target_user_id"
+		return { accepted = false, reason = "invalid_target_user_id", state = nextState, record = nil }
+	end
+
+	if input.custodianUserId == input.targetUserId then
+		nextState.lastReason = "self_capture_not_allowed"
+		return { accepted = false, reason = "self_capture_not_allowed", state = nextState, record = nil }
+	end
+
+	if not validCustodyWindow(input.custodyWindowSeconds) then
+		nextState.lastReason = "custody_window_invalid"
+		return { accepted = false, reason = "custody_window_invalid", state = nextState, record = nil }
+	end
+
 	pruneExpiredInPlace(nextState, input.now)
 
 	if input.custodianRole ~= "Giant" then
@@ -157,14 +208,16 @@ function CaptureState.ResolveRequest(state: State, input: RequestInput): Transit
 		return { accepted = false, reason = "target_already_captured", state = nextState, record = nil }
 	end
 
-	if nextState.custodianByTarget[input.custodianUserId] ~= nil then
-		nextState.lastReason = "custodian_already_holding"
-		return { accepted = false, reason = "custodian_already_holding", state = nextState, record = nil }
+	for _, existingRecord in pairs(nextState.captureByTarget) do
+		if existingRecord ~= nil then
+			if existingRecord.custodianUserId == input.custodianUserId then
+				nextState.lastReason = "custodian_already_holding"
+				return { accepted = false, reason = "custodian_already_holding", state = nextState, record = nil }
+			end
+		end
 	end
 
-	local custodyWindowSeconds = if validNumber(input.custodyWindowSeconds) and input.custodyWindowSeconds > 0
-		then input.custodyWindowSeconds
-		else 0
+	local custodyWindowSeconds = input.custodyWindowSeconds
 
 	local record: CaptureRecord = {
 		custodianUserId = input.custodianUserId,
@@ -191,6 +244,11 @@ function CaptureState.ResolveRelease(state: State, input: { now: number, targetU
 	if not validNow(input.now) then
 		nextState.lastReason = "invalid_now"
 		return { accepted = false, reason = "invalid_now", state = nextState, record = nil }
+	end
+
+	if not validUserId(input.targetUserId) then
+		nextState.lastReason = "invalid_target_user_id"
+		return { accepted = false, reason = "invalid_target_user_id", state = nextState, record = nil }
 	end
 
 	pruneExpiredInPlace(nextState, input.now)
