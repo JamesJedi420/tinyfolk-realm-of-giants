@@ -274,35 +274,34 @@ do
 		})
 		state = transition.state
 	end
-	
+
 	local recent = ScoreState.GetRecentEvents(state)
 	assertTrue(#recent <= 50, "recent events buffer never exceeds max")
 	assertTrue(#recent > 0, "recent events buffer has entries")
 end
 
-
 do
 	local state = newState()
-	
+
 	local transition = ScoreState.ResolveScoreEvent(state, {
 		now = 100,
 		userId = 3001,
 		eventId = "rescue_complete",
 		actorRole = "Tinyfolk",
 	})
-	
+
 	assertTrue(transition.accepted, "rescue_complete event accepted with Tinyfolk role")
-	
+
 	local transition2 = ScoreState.ResolveScoreEvent(transition.state, {
 		now = 200,
 		userId = 3002,
 		eventId = "rescue_complete",
 		actorRole = "Tinyfolk",
 	})
-	
+
 	state = transition2.state
 	assertTrue(transition2.accepted, "second player rescue_complete accepted: " .. transition2.reason)
-	
+
 	local totals = ScoreState.GetCategoryTotals(state)
 	local teamplayTotal = totals.teamplay or 0
 	assertEqual(teamplayTotal, 160, "both events contributed to teamplay total")
@@ -351,7 +350,25 @@ do
 
 	state = transition.state
 	assertTrue(transition.accepted, "large metadata object accepted")
-	assertEqual(transition.record.metadata, largeMetadata, "large metadata preserved")
+	assertTrue(transition.record.metadata ~= largeMetadata, "metadata cloned instead of aliased")
+	assertEqual(transition.record.metadata.key1000, "value1000", "cloned metadata value preserved")
+	largeMetadata["key1000"] = "mutated"
+	assertEqual(transition.record.metadata.key1000, "value1000", "record metadata immune to caller mutation")
+end
+
+do
+	local state = newState()
+	local transition = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 6100,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+	})
+
+	local recentZero = ScoreState.GetRecentEvents(transition.state, 0)
+	local recentNegative = ScoreState.GetRecentEvents(transition.state, -3)
+	assertEqual(#recentZero, 0, "recent events with zero limit returns empty")
+	assertEqual(#recentNegative, 0, "recent events with negative limit returns empty")
 end
 do
 	local state = newState()
@@ -369,7 +386,7 @@ do
 
 	local totals = ScoreState.GetCategoryTotals(state)
 	local recent = ScoreState.GetRecentEvents(state)
-	
+
 	assertTrue((totals.control or 0) > 0, "rapid events accumulate points")
 	assertTrue(#recent <= 50, "recent events buffer bounded during rapid fire")
 end
@@ -396,7 +413,7 @@ end
 do
 	local state = ScoreState.NewState()
 	state.playerScores[8000] = { total = -100, categories = { objective = -50, teamplay = -50 } }
-	
+
 	local snap = ScoreState.GetPlayerSnapshot(state, 8000)
 	assertEqual(snap.total, -100, "corrupted total preserved in snapshot")
 	assertEqual(snap.categories.objective, -50, "corrupted category preserved")

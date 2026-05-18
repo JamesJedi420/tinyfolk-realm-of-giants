@@ -48,6 +48,8 @@ export type TransitionResult = {
 	record: EventRecord?,
 }
 
+local cloneMetadataValue: (value: any, seen: { [any]: any }?) -> any
+
 local function validNumber(value: any): boolean
 	if type(value) ~= "number" then
 		return false
@@ -126,7 +128,7 @@ local function cloneState(state: State): State
 			category = record.category,
 			awardedPoints = record.awardedPoints,
 			now = record.now,
-			metadata = record.metadata,
+			metadata = cloneMetadataValue(record.metadata),
 		})
 	end
 
@@ -162,6 +164,29 @@ end
 
 local function getRepeatKey(userId: number, eventId: string): string
 	return string.format("%d|%s", userId, eventId)
+end
+
+cloneMetadataValue = function(value: any, seen: { [any]: any }?): any
+	if type(value) ~= "table" then
+		return value
+	end
+
+	local activeSeen = seen
+	if activeSeen == nil then
+		activeSeen = {}
+	end
+
+	if activeSeen[value] ~= nil then
+		return activeSeen[value]
+	end
+
+	local copy = {}
+	activeSeen[value] = copy
+	for key, nestedValue in pairs(value) do
+		copy[cloneMetadataValue(key, activeSeen)] = cloneMetadataValue(nestedValue, activeSeen)
+	end
+
+	return copy
 end
 
 function ScoreState.NewState(): State
@@ -254,7 +279,7 @@ function ScoreState.ResolveScoreEvent(state: State, input: ResolveInput): Transi
 		category = categoryName,
 		awardedPoints = globalAwardedPoints,
 		now = input.now,
-		metadata = input.metadata,
+		metadata = cloneMetadataValue(input.metadata),
 	}
 	table.insert(nextState.recentEvents, record)
 
@@ -285,7 +310,13 @@ end
 
 function ScoreState.GetRecentEvents(state: State, limit: number?): { EventRecord }
 	local size = #state.recentEvents
-	local maxItems = if type(limit) == "number" and limit > 0 then math.floor(limit) else size
+	local maxItems = size
+	if type(limit) == "number" then
+		maxItems = math.floor(limit)
+		if maxItems <= 0 then
+			return {}
+		end
+	end
 	if maxItems > size then
 		maxItems = size
 	end
@@ -301,7 +332,7 @@ function ScoreState.GetRecentEvents(state: State, limit: number?): { EventRecord
 			category = record.category,
 			awardedPoints = record.awardedPoints,
 			now = record.now,
-			metadata = record.metadata,
+			metadata = cloneMetadataValue(record.metadata),
 		})
 	end
 	return output

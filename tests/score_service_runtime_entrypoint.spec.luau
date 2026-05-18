@@ -232,6 +232,13 @@ end
 
 do
 	resetState()
+	scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, nil)
+	local recent = scoreApi.GetRecentScoreEvents(0)
+	assertEqual(#recent, 0, "recent returns empty for zero limit")
+end
+
+do
+	resetState()
 
 	for i = 1, 3 do
 		scoreApi.RequestScoreEvent(giant.UserId, "capture_success", i, nil)
