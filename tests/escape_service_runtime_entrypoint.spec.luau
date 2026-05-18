@@ -144,6 +144,7 @@ _G.game = MockGame
 local currentTime = 100
 local crossingHooks: { string } = {}
 local downedByUserId: { [number]: boolean } = {}
+local carriedByUserId: { [number]: boolean } = {}
 _G._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		return downedByUserId[userId] == true
@@ -153,6 +154,11 @@ _G._RoleService_QueryAPI = {
 			return false
 		end
 		return true
+	end,
+}
+_G._GrabService_QueryAPI = {
+	IsPlayerCarried = function(userId: number): boolean
+		return carriedByUserId[userId] == true
 	end,
 }
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
@@ -183,6 +189,7 @@ local function resetRouteDefaults()
 	currentTime = 100
 	crossingHooks = {}
 	downedByUserId = {}
+	carriedByUserId = {}
 	EscapeService.ResetTraversalGapBlocksForTests()
 end
 
@@ -594,6 +601,26 @@ end
 
 do
 	resetRouteDefaults()
+	local tinyfolk = MockPlayer.new(25, "TinyfolkPlayer", { role = "Tinyfolk" })
+	carriedByUserId[25] = true
+	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(escape.accepted, false, "carried Tinyfolk cannot escape")
+	assertEqual(escape.reason, "actor_carried", "carried Tinyfolk rejection reason")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(26, "GiantPlayer", { role = "Giant" })
+	carriedByUserId[26] = true
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+
+	assertEqual(block.accepted, false, "carried Giant cannot block traversal")
+	assertEqual(block.reason, "actor_carried", "carried Giant block reason")
+end
+
+do
+	resetRouteDefaults()
 	routeAttributes.TraversalGapBlockExempt = true
 	local giant = MockPlayer.new(1, "GiantPlayer")
 	local tinyfolk = MockPlayer.new(23, "TinyfolkPlayer", { role = "Tinyfolk" })
@@ -616,6 +643,17 @@ do
 	local result = EscapeService.validateThroughGapReach(giant, target, makeRequest())
 	assertEqual(block.accepted, true, "Active through-gap rejection setup block accepted")
 	assertEqual(result, false, "Active block rejects through-gap reach")
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(1, "GiantPlayer")
+	local target = MockPlayer.new(27, "TinyfolkPlayer", { crossingPhase = "MidCrossing" })
+	playersByUserId[27] = target
+	carriedByUserId[27] = true
+
+	local result = EscapeService.validateThroughGapReach(giant, target, makeRequest())
+	assertEqual(result, false, "carried target rejects through-gap reach")
 end
 
 do

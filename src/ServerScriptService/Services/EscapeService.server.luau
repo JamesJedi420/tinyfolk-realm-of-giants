@@ -420,6 +420,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return queryApi
 	end
 
+	local function getGrabServiceQueryApi(): any?
+		local globalValue: any = _G
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._GrabService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
 	local function getPlayerByUserId(userId: number): any?
 		if Players == nil or type(Players.GetPlayerByUserId) ~= "function" then
 			return nil
@@ -564,6 +576,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "caller_not_giant" }
 		end
 
+		local grabServiceQueryApi = getGrabServiceQueryApi()
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
+			if grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
+				return { accepted = false, reason = "actor_carried" }
+			end
+		end
+
 		local callerRoot = getHumanoidRootPart(player)
 		if callerRoot == nil then
 			return { accepted = false, reason = "missing_character_root" }
@@ -658,6 +677,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			end
 		end
 
+		local grabServiceQueryApi = getGrabServiceQueryApi()
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
+			if grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
+				return { accepted = false, reason = "actor_carried" }
+			end
+		end
+
 		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.CanPlayerPerformInteraction) == "function" then
 			if roleServiceQueryApi.CanPlayerPerformInteraction(player.UserId, "escapeAttempt") ~= true then
 				return { accepted = false, reason = "actor_interaction_restricted" }
@@ -737,6 +763,16 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	function service.validateThroughGapReach(player: any, target: any, request: any?): boolean
 		if player == nil or target == nil then
 			return false
+		end
+
+		local grabServiceQueryApi = getGrabServiceQueryApi()
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
+			if type(player.UserId) == "number" and grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
+				return false
+			end
+			if type(target.UserId) == "number" and grabServiceQueryApi.IsPlayerCarried(target.UserId) == true then
+				return false
+			end
 		end
 
 		if type(player.UserId) == "number" and isSafeZoneAbuseLocked(player.UserId, now()) then

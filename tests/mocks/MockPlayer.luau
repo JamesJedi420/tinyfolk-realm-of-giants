@@ -35,8 +35,9 @@ local function makeRootPart(position: any)
 	return root
 end
 
-local function makeCharacter(position: any, hasRoot: boolean)
+local function makeCharacter(position: any, hasRoot: boolean, options: any?)
 	local root = if hasRoot then makeRootPart(position) else nil
+	local opts = options or {}
 	local character: any = {}
 
 	function character:FindFirstChild(childName: string): any
@@ -48,9 +49,16 @@ local function makeCharacter(position: any, hasRoot: boolean)
 
 	function character:FindFirstChildOfClass(className: string): any
 		if className == "Humanoid" then
-			return { Health = 100 }
+			if opts.missingHumanoid == true then
+				return nil
+			end
+			return { Health = if type(opts.health) == "number" then opts.health else 100, AutoRotate = true }
 		end
 		return nil
+	end
+
+	function character:PivotTo(_cframe: any)
+		return
 	end
 
 	return character
@@ -81,7 +89,7 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 	local self: any = setmetatable({
 		UserId = userId,
 		Name = name,
-		Character = if opts.missingCharacter == true then nil else makeCharacter(position, hasRoot),
+		Character = if opts.missingCharacter == true then nil else makeCharacter(position, hasRoot, opts),
 	}, MockPlayer)
 
 	function self:GetAttribute(attributeName: string): any

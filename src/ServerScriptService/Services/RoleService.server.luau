@@ -190,6 +190,18 @@ local function getPlayerByUserId(userId: number): Player?
 	return nil
 end
 
+local function getGrabServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._GrabService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
 local function isRoleLocked(player: Player): boolean
 	return player:GetAttribute(ROLE_LOCKED_ATTRIBUTE) == true
 end
@@ -660,6 +672,13 @@ function RoleService.selfRecoverDowned(userId: number, progressDelta: number, no
 	local player = getPlayerByUserId(userId)
 	if not player then
 		return false
+	end
+
+	local grabServiceQueryApi = getGrabServiceQueryApi()
+	if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
+		if grabServiceQueryApi.IsPlayerCarried(userId) == true then
+			return false
+		end
 	end
 
 	local state = getOrCreateDownedState(userId)

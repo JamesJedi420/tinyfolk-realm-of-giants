@@ -466,4 +466,88 @@ do
 	assertEqual(finalResults[#finalResults].result.accepted, false, "non-Tinyfolk cannot enter downed state")
 end
 
+do
+	local carriedByUserId: { [number]: number } = {}
+	local counterplayProgressByUserId: { [number]: number } = {}
+	local fakeGrabService = {
+		RequestGrab = function(giantUserId: number, targetUserId: number, _now: number): any
+			if carriedByUserId[targetUserId] ~= nil then
+				return { accepted = false, reason = "target_already_carried" }
+			end
+			carriedByUserId[targetUserId] = giantUserId
+			counterplayProgressByUserId[targetUserId] = 0
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					state = "Carried",
+					carriedByUserId = giantUserId,
+					targetUserId = targetUserId,
+					counterplayProgress = 0,
+					counterplayRequired = 2,
+					isCarried = true,
+				},
+			}
+		end,
+		RequestCounterplay = function(targetUserId: number, _now: number): any
+			if carriedByUserId[targetUserId] == nil then
+				return { accepted = false, reason = "not_carried" }
+			end
+			local progress = (counterplayProgressByUserId[targetUserId] or 0) + 1
+			counterplayProgressByUserId[targetUserId] = progress
+			if progress >= 2 then
+				carriedByUserId[targetUserId] = nil
+				return {
+					accepted = true,
+					reason = "accepted",
+					snapshot = {
+						state = "Released",
+						counterplayProgress = progress,
+						counterplayRequired = 2,
+						releaseReason = "counterplay_completed",
+						isCarried = false,
+					},
+				}
+			end
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					state = "Counterplay",
+					counterplayProgress = progress,
+					counterplayRequired = 2,
+					isCarried = true,
+				},
+			}
+		end,
+	}
+
+	local sim = MatchSimulation.new({ seed = 404, grabService = fakeGrabService })
+	local giant = sim:addPlayer(601, "HarnessGiant", { role = "Giant" })
+	local tinyfolk = sim:addPlayer(602, "HarnessTinyfolk", { role = "Tinyfolk" })
+
+	sim:queueAction(1, "grabTinyfolk", {
+		userId = giant.UserId,
+		targetUserId = tinyfolk.UserId,
+	})
+	sim:queueAction(2, "carriedCounterplay", {
+		userId = tinyfolk.UserId,
+	})
+	sim:queueAction(3, "carriedCounterplay", {
+		userId = tinyfolk.UserId,
+	})
+	sim:advanceTick(3)
+
+	local results = sim:getResults()
+	assertEqual(results[3].action, "grabTinyfolk", "grab action recorded")
+	assertEqual(results[3].result.accepted, true, "headless grab accepted")
+	assertEqual(results[4].result.snapshot.state, "Counterplay", "headless counterplay state exposed")
+	assertEqual(results[5].result.snapshot.state, "Released", "headless counterplay release exposed")
+	assertEqual(
+		results[5].result.snapshot.releaseReason,
+		"counterplay_completed",
+		"headless release reason exposed"
+	)
+end
+
 print("headless_match_simulation: all checks passed")

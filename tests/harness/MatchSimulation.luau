@@ -9,6 +9,7 @@ export type SimulationConfig = {
 	seed: number?,
 	clock: (() -> number)?,
 	escapeService: any?,
+	grabService: any?,
 	applyRole: ((any, string) -> ())?,
 }
 
@@ -24,6 +25,7 @@ export type Simulation = {
 	nextGeneratedUserId: number,
 	usedUserIds: { [number]: boolean },
 	escapeService: any?,
+	grabService: any?,
 	applyRole: ((any, string) -> ())?,
 	addPlayer: (self: Simulation, userId: number?, name: string?, options: any?) -> any,
 	createFakePlayer: (self: Simulation, options: any?) -> any,
@@ -121,6 +123,7 @@ function MatchSimulation.new(config: SimulationConfig?): Simulation
 	self.nextGeneratedUserId = 100000 + (seed % 900000)
 	self.usedUserIds = {}
 	self.escapeService = if configAny ~= nil then configAny.escapeService else nil
+	self.grabService = if configAny ~= nil then configAny.grabService else nil
 	self.applyRole = if configAny ~= nil then configAny.applyRole else nil
 	return self
 end
@@ -318,6 +321,51 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 				if result.accepted == true then "Accepted" else "Rejected"
 			)
 		)
+	elseif action == "grabTinyfolk" or action == "carryDowned" then
+		local result: any
+		local targetUserId = payload.targetUserId
+		if self.grabService ~= nil and type(self.grabService.RequestGrab) == "function" then
+			result = self.grabService.RequestGrab(player.UserId, targetUserId, self.tick)
+		else
+			local grabServiceQueryApi: any = if type(_G) == "table" then _G._GrabService_QueryAPI else nil
+			if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestGrab) == "function" then
+				result = grabServiceQueryApi.RequestGrab(player.UserId, targetUserId, self.tick)
+			else
+				result = { accepted = false, reason = "grab_service_unavailable" }
+			end
+		end
+		appendResult(self, action, player, result)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] Grab by %s: %s",
+				self.tick,
+				player.Name,
+				if result.accepted == true then "Accepted" else "Rejected"
+			)
+		)
+	elseif action == "carriedCounterplay" then
+		local result: any
+		if self.grabService ~= nil and type(self.grabService.RequestCounterplay) == "function" then
+			result = self.grabService.RequestCounterplay(player.UserId, self.tick)
+		else
+			local grabServiceQueryApi: any = if type(_G) == "table" then _G._GrabService_QueryAPI else nil
+			if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestCounterplay) == "function" then
+				result = grabServiceQueryApi.RequestCounterplay(player.UserId, self.tick)
+			else
+				result = { accepted = false, reason = "grab_service_unavailable" }
+			end
+		end
+		appendResult(self, action, player, result)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] Carried counterplay by %s: %s",
+				self.tick,
+				player.Name,
+				if result.accepted == true then "Accepted" else "Rejected"
+			)
+		)
 	elseif action == "captureAttempt" or action == "rescueAttempt" or action == "scoreEvent" then
 		local result = {
 			accepted = false,
@@ -326,7 +374,7 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 		}
 		appendResult(self, action, player, result)
 		appendMessage(self, string.format("[Tick %d] %s by %s: NotImplemented", self.tick, action, player.Name))
-	elseif action == "allyRecoverDowned" or action == "carryDowned" or action == "rescueDowned" then
+	elseif action == "allyRecoverDowned" or action == "rescueDowned" then
 		local result = {
 			accepted = false,
 			reason = "not_implemented",

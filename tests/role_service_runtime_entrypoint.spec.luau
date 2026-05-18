@@ -263,6 +263,12 @@ function fakeGame:BindToClose(callback: () -> ())
 end
 
 game = fakeGame
+local carriedByUserId: { [number]: boolean } = {}
+_G._GrabService_QueryAPI = {
+	IsPlayerCarried = function(userId: number): boolean
+		return carriedByUserId[userId] == true
+	end,
+}
 
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
@@ -553,6 +559,12 @@ assertEqual(
 	false,
 	"escape interaction restricted while downed"
 )
+
+carriedByUserId[playerNoStored.UserId] = true
+local carriedSelfRecoverRejected = roleServiceQueryApi.SelfRecoverDowned(playerNoStored.UserId, 0.2)
+assertEqual(carriedSelfRecoverRejected, false, "self recovery while carried rejected")
+assertEqual(playerNoStored:GetAttribute("DownedSelfRecoveryProgress"), 0, "carried self recovery does not progress")
+carriedByUserId[playerNoStored.UserId] = nil
 
 local selfRecoverAccepted = roleServiceQueryApi.SelfRecoverDowned(playerNoStored.UserId, 0.7)
 assertEqual(selfRecoverAccepted, true, "self recovery request accepted")

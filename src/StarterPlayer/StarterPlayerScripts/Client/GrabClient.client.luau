@@ -14,9 +14,11 @@ local GrabConfig = require(Config:WaitForChild("GrabConfig"))
 local REMOTES_FOLDER_NAME = "Remotes"
 local GRAB_REMOTE_NAME = "GrabRequest"
 local PLACE_REMOTE_NAME = "PlaceRequest"
+local COUNTERPLAY_REMOTE_NAME = "CarriedCounterplayRequest"
 
 local GRAB_KEY = Enum.KeyCode.G
 local PLACE_KEY = Enum.KeyCode.H
+local COUNTERPLAY_KEY = Enum.KeyCode.F
 
 local function debugLog(message: string)
 	print(string.format("[GrabClient] %s", message))
@@ -29,6 +31,7 @@ end
 local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
 local grabRemote = remotesFolder:WaitForChild(GRAB_REMOTE_NAME) :: RemoteEvent
 local placeRemote = remotesFolder:WaitForChild(PLACE_REMOTE_NAME) :: RemoteEvent
+local counterplayRemote = remotesFolder:WaitForChild(COUNTERPLAY_REMOTE_NAME) :: RemoteEvent
 
 local function getRootPart(character: Model?): BasePart?
 	if not character then
@@ -49,6 +52,10 @@ end
 
 local function isLocalPlayerGiant(): boolean
 	return localPlayer:GetAttribute("Role") == RoleConfig.Roles.Giant
+end
+
+local function isLocalPlayerTinyfolk(): boolean
+	return localPlayer:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
 end
 
 local function getNearestTinyfolkTarget(): Player?
@@ -110,6 +117,18 @@ local function requestPlace()
 	debugLog(string.format("Sent PlaceRequest desiredPosition=(%.1f, %.1f, %.1f)", desiredPosition.X, desiredPosition.Y, desiredPosition.Z))
 end
 
+local function requestCounterplay()
+	if not isLocalPlayerTinyfolk() then
+		return
+	end
+	if localPlayer:GetAttribute("CarriedState") ~= "Carried" and localPlayer:GetAttribute("CarriedState") ~= "Counterplay" then
+		return
+	end
+
+	counterplayRemote:FireServer()
+	debugLog("Sent CarriedCounterplayRequest")
+end
+
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
 	if gameProcessedEvent then
 		return
@@ -119,6 +138,8 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEv
 		requestGrab()
 	elseif input.KeyCode == PLACE_KEY then
 		requestPlace()
+	elseif input.KeyCode == COUNTERPLAY_KEY then
+		requestCounterplay()
 	end
 end)
 
