@@ -181,6 +181,34 @@ resetState()
 local missingTarget = captureApi.RequestCapture(2101, 999999, 1.0)
 assertFalse(missingTarget.accepted, "missing target rejected")
 assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
+assertEqual(
+	giant:GetAttribute("CaptureLastReason"),
+	"target_not_found",
+	"missing target projects custodian last reason"
+)
+
+resetState()
+local invalidTarget = captureApi.RequestCapture(2101, "bad", 1.0)
+assertFalse(invalidTarget.accepted, "invalid target id rejected")
+assertEqual(invalidTarget.reason, "target_user_id_invalid", "invalid target id reason")
+assertEqual(
+	giant:GetAttribute("CaptureLastReason"),
+	"target_user_id_invalid",
+	"invalid target id projects custodian last reason"
+)
+
+local throttledInvalid = captureApi.RequestCapture(2101, "bad", 1.01)
+assertFalse(throttledInvalid.accepted, "rapid repeated invalid capture request is throttled")
+assertEqual(throttledInvalid.reason, "request_cooldown", "rapid repeated invalid capture request cooldown reason")
+assertEqual(
+	giant:GetAttribute("CaptureLastReason"),
+	"request_cooldown",
+	"reject cooldown projects custodian last reason"
+)
+
+local validAfterRejectCooldown = captureApi.RequestCapture(2101, 2102, 1.06)
+assertTrue(validAfterRejectCooldown.accepted == true, "invalid request does not consume accepted capture cooldown")
+assertEqual(validAfterRejectCooldown.reason, "accepted", "valid follow-up accepted after reject cooldown window")
 
 resetState()
 local first = captureApi.RequestCapture(2101, 2102, 1.0)

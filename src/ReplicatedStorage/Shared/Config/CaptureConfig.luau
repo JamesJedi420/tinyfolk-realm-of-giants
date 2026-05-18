@@ -1,9 +1,10 @@
 --!strict
 
-local CaptureConfig = {}
+local CaptureConfig: any = {}
 
 -- Request validation
 CaptureConfig.RequestCooldownSeconds = 0.2
+CaptureConfig.RejectRequestCooldownSeconds = 0.05
 CaptureConfig.TriggerRadiusStuds = 14
 
 -- Custody window: how long target remains in captured state before auto-release

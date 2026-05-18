@@ -17,6 +17,7 @@ local ANTI_GUARDING_REPEAT_TARGET_COOLDOWN_SECONDS = 12
 
 local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
+local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local lastCaptureAtByCustodianTargetKey: { [string]: number? } = {}
 local applyCaptureAttributesFromState: () -> ()
 
@@ -178,6 +179,24 @@ local function markRequest(userId: number, at: number)
 	lastRequestAtByUserId[userId] = at
 end
 
+local function isRejectCoolingDown(userId: number, at: number): boolean
+	local rejectCooldown = CaptureConfig.RejectRequestCooldownSeconds
+	if type(rejectCooldown) ~= "number" or rejectCooldown <= 0 then
+		return false
+	end
+
+	local last = lastRejectedRequestAtByUserId[userId]
+	if last == nil then
+		return false
+	end
+
+	return (at - last) < rejectCooldown
+end
+
+local function markRejectedRequest(userId: number, at: number)
+	lastRejectedRequestAtByUserId[userId] = at
+end
+
 local function getCustodianTargetKey(custodianUserId: number, targetUserId: number): string
 	return string.format("%d|%d", custodianUserId, targetUserId)
 end
@@ -245,15 +264,25 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	pruneExpiredCaptures(resolvedNow)
 
 	if isCoolingDown(custodian.UserId, resolvedNow) then
+		setCaptureLastReason(custodian, "request_cooldown")
+		return { accepted = false, reason = "request_cooldown" }
+	end
+
+	if isRejectCoolingDown(custodian.UserId, resolvedNow) then
+		setCaptureLastReason(custodian, "request_cooldown")
 		return { accepted = false, reason = "request_cooldown" }
 	end
 
 	if type(targetUserId) ~= "number" then
+		markRejectedRequest(custodian.UserId, resolvedNow)
+		setCaptureLastReason(custodian, "target_user_id_invalid")
 		return { accepted = false, reason = "target_user_id_invalid" }
 	end
 
 	local target = getPlayerByUserId(targetUserId)
 	if target == nil then
+		markRejectedRequest(custodian.UserId, resolvedNow)
+		setCaptureLastReason(custodian, "target_not_found")
 		return { accepted = false, reason = "target_not_found" }
 	end
 
@@ -305,6 +334,8 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 				{ targetUserId = target.UserId }
 			)
 		end
+	else
+		markRejectedRequest(custodian.UserId, resolvedNow)
 	end
 	applyCaptureAttributesFromState()
 
@@ -317,6 +348,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	lastRejectedRequestAtByUserId[player.UserId] = nil
 	clearAntiGuardingHistoryForUser(player.UserId)
 	state = CaptureState.RemovePlayer(state, player.UserId)
 	applyCaptureAttributesFromState()
@@ -351,6 +383,7 @@ _G._CaptureService_QueryAPI = {
 	ResetForTests = function()
 		state = CaptureState.NewState()
 		lastRequestAtByUserId = {}
+		lastRejectedRequestAtByUserId = {}
 		lastCaptureAtByCustodianTargetKey = {}
 		applyCaptureAttributesFromState()
 	end,
