@@ -136,6 +136,18 @@ local function getRescueServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getCaptureServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._CaptureService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
 local function attachCarrierLoadSnapshot(self: Simulation, result: any, giantUserId: number?)
 	if type(result) ~= "table" or type(giantUserId) ~= "number" then
 		return
@@ -428,7 +440,30 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 				if result.accepted == true then "Accepted" else "Rejected"
 			)
 		)
-	elseif action == "captureAttempt" or action == "scoreEvent" then
+	elseif action == "captureAttempt" then
+		local captureServiceQueryApi = getCaptureServiceQueryApi()
+		local result: any
+		if captureServiceQueryApi ~= nil and type(captureServiceQueryApi.RequestCapture) == "function" then
+			result = captureServiceQueryApi.RequestCapture(player.UserId, payload.targetUserId, self.tick)
+		else
+			result = {
+				accepted = false,
+				reason = "not_implemented",
+				system = action,
+			}
+		end
+		appendResult(self, action, player, result)
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] %s by %s: %s",
+				self.tick,
+				action,
+				player.Name,
+				if result.accepted == true then "Accepted" else "Rejected"
+			)
+		)
+	elseif action == "scoreEvent" then
 		local result = {
 			accepted = false,
 			reason = "not_implemented",

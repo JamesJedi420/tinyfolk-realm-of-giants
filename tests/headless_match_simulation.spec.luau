@@ -326,17 +326,36 @@ do
 end
 
 do
+	local captureRequests: { any } = {}
+	_G._CaptureService_QueryAPI = {
+		RequestCapture = function(custodianUserId: number, targetUserId: number, at: number): any
+			table.insert(captureRequests, {
+				custodianUserId = custodianUserId,
+				targetUserId = targetUserId,
+				at = at,
+			})
+			-- Default: reject because target is not downed
+			return {
+				accepted = false,
+				reason = "target_not_downed",
+			}
+		end,
+	}
+
 	local sim = MatchSimulation.new({ seed = 303 })
+	sim:addPlayer(1, "TestGiant", { role = "Giant" })
 	sim:addPlayer(11, "UnsupportedUser", { role = "Tinyfolk" })
-	sim:queueAction(1, "captureAttempt", { userId = 11 })
+	sim:queueAction(1, "captureAttempt", { userId = 1, targetUserId = 11 })
 	sim:queueAction(1, "rescueAttempt", { userId = 11, targetUserId = 12 })
 	sim:queueAction(1, "scoreEvent", { userId = 11 })
 	sim:advanceTick()
 
 	local results = sim:getResults()
-	assertEqual(results[2].result.reason, "not_implemented", "capture unsupported explicit")
-	assertEqual(results[3].result.reason, "not_implemented", "rescue unsupported without service")
-	assertEqual(results[4].result.reason, "not_implemented", "scoring unsupported explicit")
+	assertEqual(results[3].result.reason, "target_not_downed", "capture rejects when target not downed")
+	assertEqual(results[4].result.reason, "not_implemented", "rescue unsupported without service")
+	assertEqual(results[5].result.reason, "not_implemented", "scoring unsupported explicit")
+
+	_G._CaptureService_QueryAPI = nil
 end
 
 do

@@ -361,11 +361,7 @@ do
 	rescuer:SetAttribute("DownedIsDowned", true)
 	local rescuerBecomesTarget = rescueApi.RequestRescueContract(rescuerTwo.UserId, rescuer.UserId, 651)
 	assertFalse(rescuerBecomesTarget.accepted, "active rescuer cannot become target")
-	assertEqual(
-		rescuerBecomesTarget.reason,
-		"participant_contract_active",
-		"active rescuer target rejection reason"
-	)
+	assertEqual(rescuerBecomesTarget.reason, "participant_contract_active", "active rescuer target rejection reason")
 end
 
 do
