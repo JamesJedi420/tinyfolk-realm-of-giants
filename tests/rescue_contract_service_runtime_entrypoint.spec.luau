@@ -267,10 +267,16 @@ do
 	local invalidTargetId = rescueApi.RequestRescueContract(rescuer.UserId, "bad", 250)
 	assertFalse(invalidTargetId.accepted, "invalid target id rejects")
 	assertEqual(invalidTargetId.reason, "target_user_id_invalid", "invalid target id reason")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractLastReason"),
+		"target_user_id_invalid",
+		"invalid target id projects rescuer last reason"
+	)
 
 	local missingTarget = rescueApi.RequestRescueContract(rescuer.UserId, 999999, 250.1)
 	assertFalse(missingTarget.accepted, "missing target rejects")
 	assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
+	assertEqual(rescuer:GetAttribute("RescueContractLastReason"), "target_not_found", "missing target projects rescuer last reason")
 end
 
 do
@@ -408,6 +414,16 @@ do
 	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 470)
 	assertFalse(rejected.accepted, "restricted rescuer cannot request")
 	assertEqual(rejected.reason, "rescuer_interaction_restricted", "restricted rescuer rejection reason")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractLastReason"),
+		"rescuer_interaction_restricted",
+		"restricted rescuer projects rescuer last reason"
+	)
+	assertEqual(
+		target:GetAttribute("RescueContractLastReason"),
+		"rescuer_interaction_restricted",
+		"restricted rescuer projects target last reason"
+	)
 end
 
 do

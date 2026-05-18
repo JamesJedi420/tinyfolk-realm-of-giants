@@ -407,26 +407,32 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 	pruneExpiredContracts(resolvedNow)
 
 	if isCoolingDown(rescuer.UserId, resolvedNow) then
+		setRescueLastReason(rescuer, "request_cooldown")
 		return { accepted = false, reason = "request_cooldown" }
 	end
 
 	if isRejectCoolingDown(rescuer.UserId, resolvedNow) then
+		setRescueLastReason(rescuer, "request_cooldown")
 		return { accepted = false, reason = "request_cooldown" }
 	end
 
 	if type(targetUserId) ~= "number" then
 		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, "target_user_id_invalid")
 		return { accepted = false, reason = "target_user_id_invalid" }
 	end
 
 	local target = getPlayerByUserId(targetUserId)
 	if target == nil then
 		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, "target_not_found")
 		return { accepted = false, reason = "target_not_found" }
 	end
 
 	if isRescuerInteractionRestricted(rescuer) then
 		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, "rescuer_interaction_restricted")
+		setRescueLastReason(target, "rescuer_interaction_restricted")
 		return { accepted = false, reason = "rescuer_interaction_restricted" }
 	end
 
