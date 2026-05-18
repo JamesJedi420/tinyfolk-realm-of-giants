@@ -148,6 +148,18 @@ local function getCaptureServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getScoreServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._ScoreService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
 local function attachCarrierLoadSnapshot(self: Simulation, result: any, giantUserId: number?)
 	if type(result) ~= "table" or type(giantUserId) ~= "number" then
 		return
@@ -404,8 +416,10 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 		else
 			result = { accepted = false, reason = "grab_service_unavailable" }
 		end
-		if type(result) == "table" and type(result.snapshot) == "table" then
-			attachCarrierLoadSnapshot(self, result, result.snapshot.carriedByUserId)
+		local resultAny: any = result
+		local snapshot: any = resultAny["snapshot"]
+		if type(resultAny) == "table" and type(snapshot) == "table" then
+			attachCarrierLoadSnapshot(self, result, snapshot["carriedByUserId"])
 		end
 		appendResult(self, action, player, result)
 		appendMessage(
@@ -464,13 +478,28 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 			)
 		)
 	elseif action == "scoreEvent" then
-		local result = {
-			accepted = false,
-			reason = "not_implemented",
-			system = action,
-		}
+		local scoreServiceQueryApi = getScoreServiceQueryApi()
+		local result: any
+		if scoreServiceQueryApi ~= nil and type(scoreServiceQueryApi.RequestScoreEvent) == "function" then
+			result = scoreServiceQueryApi.RequestScoreEvent(player.UserId, payload.eventId, self.tick, payload.metadata)
+		else
+			result = {
+				accepted = false,
+				reason = "not_implemented",
+				system = action,
+			}
+		end
 		appendResult(self, action, player, result)
-		appendMessage(self, string.format("[Tick %d] %s by %s: NotImplemented", self.tick, action, player.Name))
+		appendMessage(
+			self,
+			string.format(
+				"[Tick %d] %s by %s: %s",
+				self.tick,
+				action,
+				player.Name,
+				if result.accepted == true then "Accepted" else "Rejected"
+			)
+		)
 	elseif action == "allyRecoverDowned" or action == "rescueDowned" then
 		local result = {
 			accepted = false,

@@ -327,6 +327,7 @@ end
 
 do
 	local captureRequests: { any } = {}
+	local scoreRequests: { any } = {}
 	_G._CaptureService_QueryAPI = {
 		RequestCapture = function(custodianUserId: number, targetUserId: number, at: number): any
 			table.insert(captureRequests, {
@@ -342,20 +343,43 @@ do
 		end,
 	}
 
+	_G._ScoreService_QueryAPI = {
+		RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
+			table.insert(scoreRequests, {
+				userId = userId,
+				eventId = eventId,
+				at = at,
+				metadata = metadata,
+			})
+			return {
+				accepted = true,
+				reason = "accepted",
+				record = {
+					userId = userId,
+					eventId = eventId,
+					awardedPoints = 10,
+				},
+			}
+		end,
+	}
+
 	local sim = MatchSimulation.new({ seed = 303 })
 	sim:addPlayer(1, "TestGiant", { role = "Giant" })
 	sim:addPlayer(11, "UnsupportedUser", { role = "Tinyfolk" })
 	sim:queueAction(1, "captureAttempt", { userId = 1, targetUserId = 11 })
 	sim:queueAction(1, "rescueAttempt", { userId = 11, targetUserId = 12 })
-	sim:queueAction(1, "scoreEvent", { userId = 11 })
+	sim:queueAction(1, "scoreEvent", { userId = 11, eventId = "rescue_complete", metadata = { source = "headless" } })
 	sim:advanceTick()
 
 	local results = sim:getResults()
 	assertEqual(results[3].result.reason, "target_not_downed", "capture rejects when target not downed")
 	assertEqual(results[4].result.reason, "not_implemented", "rescue unsupported without service")
-	assertEqual(results[5].result.reason, "not_implemented", "scoring unsupported explicit")
+	assertEqual(results[5].result.reason, "accepted", "scoring routes through score query api")
+	assertEqual(#scoreRequests, 1, "score query api invoked exactly once")
+	assertEqual(scoreRequests[1].eventId, "rescue_complete", "score query api receives event id")
 
 	_G._CaptureService_QueryAPI = nil
+	_G._ScoreService_QueryAPI = nil
 end
 
 do
@@ -524,8 +548,8 @@ do
 end
 
 do
-	local carriedByUserId: { [number]: number } = {}
-	local carriedTargetByGiantUserId: { [number]: number } = {}
+	local carriedByUserId: { [number]: number? } = {}
+	local carriedTargetByGiantUserId: { [number]: number? } = {}
 	local counterplayProgressByUserId: { [number]: number } = {}
 	local fakeGrabService = {
 		RequestGrab = function(giantUserId: number, targetUserId: number, _now: number): any
