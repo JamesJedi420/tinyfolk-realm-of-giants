@@ -403,16 +403,8 @@ activateRemote:FireServer(qtePlayer, {
 	now = 121.35,
 	qteTapAt = 121.35,
 })
-assertEqual(
-	qtePlayer:GetAttribute("StationTaskQteResult"),
-	"success",
-	"QTE success marks station task qte attribute"
-)
-assertEqual(
-	qtePlayer:GetAttribute("StationTaskLastReason"),
-	"completed",
-	"QTE success allows completed reason"
-)
+assertEqual(qtePlayer:GetAttribute("StationTaskQteResult"), "success", "QTE success marks station task qte attribute")
+assertEqual(qtePlayer:GetAttribute("StationTaskLastReason"), "completed", "QTE success allows completed reason")
 
 activateRemote:FireServer(qtePlayer, {
 	stationId = "MiningStation_A",
@@ -435,11 +427,7 @@ for i = warnsBeforeQteFail + 1, #warns do
 	end
 end
 assertTrue(sawQteFailed, "QTE miss rejects completion with task_qte_failed")
-assertEqual(
-	qtePlayer:GetAttribute("StationTaskQteResult"),
-	"failed",
-	"QTE failure marks station task qte attribute"
-)
+assertEqual(qtePlayer:GetAttribute("StationTaskQteResult"), "failed", "QTE failure marks station task qte attribute")
 assertEqual(
 	qtePlayer:GetAttribute("StationTaskObjectiveState"),
 	"regressing",

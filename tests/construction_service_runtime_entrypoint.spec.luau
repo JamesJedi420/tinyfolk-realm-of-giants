@@ -720,11 +720,7 @@ assertEqual(
 	"success",
 	"QTE success marks construction task qte attribute"
 )
-assertEqual(
-	qteBuilder:GetAttribute("ConstructionTaskLastReason"),
-	"completed",
-	"QTE success allows completed reason"
-)
+assertEqual(qteBuilder:GetAttribute("ConstructionTaskLastReason"), "completed", "QTE success allows completed reason")
 
 ConstructionConfig.TaskQteWindowSeconds = 0.2
 buildRemote:FireServer(qteBuilder, {

@@ -176,7 +176,11 @@ local function createFixture()
 	addChild(configFolder, "TinyfolkStatusConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkStatusConfig")
 
 	local statusFolder = makeNode("TinyfolkStatus", "Folder", "ReplicatedStorage.Shared.TinyfolkStatus")
-	addChild(statusFolder, "TimedConditionStateLogic", "../../ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic")
+	addChild(
+		statusFolder,
+		"TimedConditionStateLogic",
+		"../../ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic"
+	)
 
 	local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 	addChild(sharedFolder, "Config", configFolder)
@@ -217,9 +221,20 @@ TinyfolkStatusService.ResetForTests()
 
 do
 	TinyfolkStatusService.ResolveNow(tinyfolk, 100)
-	assertEqual(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearExposure), 0.7, "fear exposure derives from giant proximity")
-	assertFalse(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanic), "fear panic stays below threshold before enough exposure")
-	assertEqual(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.ConditionSummary), "Exposure", "fear exposure summary exposed")
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearExposure),
+		0.7,
+		"fear exposure derives from giant proximity"
+	)
+	assertFalse(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanic),
+		"fear panic stays below threshold before enough exposure"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.ConditionSummary),
+		"Exposure",
+		"fear exposure summary exposed"
+	)
 end
 
 do
@@ -227,7 +242,11 @@ do
 	TinyfolkStatusService.SetCondition(tinyfolk, "Stun", 2, 200)
 	assertTrue(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.BleedActive), "bleed condition becomes active")
 	assertTrue(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.StunActive), "stun condition becomes active")
-	assertEqual(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.ConditionSummary), "Exposure,Bleed,Stun", "timed conditions contribute to summary")
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.ConditionSummary),
+		"Exposure,Bleed,Stun",
+		"timed conditions contribute to summary"
+	)
 end
 
 do
@@ -236,7 +255,10 @@ do
 		(runService :: any).Heartbeat:Fire()
 	end
 	assertTrue(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanic), "near giant sustains panic state")
-	assertTrue(type(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanicUntil)) == "number", "panic exposes until timestamp")
+	assertTrue(
+		type(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanicUntil)) == "number",
+		"panic exposes until timestamp"
+	)
 end
 
 print("timed_condition_states_runtime_entrypoint: all checks passed")

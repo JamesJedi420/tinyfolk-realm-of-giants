@@ -409,16 +409,8 @@ activateRemote:FireServer(qtePlayer, {
 	now = 221.35,
 	qteTapAt = 221.35,
 })
-assertEqual(
-	qtePlayer:GetAttribute("ShrineTaskQteResult"),
-	"success",
-	"QTE success marks shrine task qte attribute"
-)
-assertEqual(
-	qtePlayer:GetAttribute("ShrineTaskLastReason"),
-	"completed",
-	"QTE success allows completed reason"
-)
+assertEqual(qtePlayer:GetAttribute("ShrineTaskQteResult"), "success", "QTE success marks shrine task qte attribute")
+assertEqual(qtePlayer:GetAttribute("ShrineTaskLastReason"), "completed", "QTE success allows completed reason")
 
 activateRemote:FireServer(qtePlayer, {
 	shrineId = "Shrine_C",
@@ -441,11 +433,7 @@ for i = warnsBeforeQteFail + 1, #warns do
 	end
 end
 assertTrue(sawQteFailed, "QTE miss rejects completion with task_qte_failed")
-assertEqual(
-	qtePlayer:GetAttribute("ShrineTaskQteResult"),
-	"failed",
-	"QTE failure marks shrine task qte attribute"
-)
+assertEqual(qtePlayer:GetAttribute("ShrineTaskQteResult"), "failed", "QTE failure marks shrine task qte attribute")
 assertEqual(
 	qtePlayer:GetAttribute("ShrineTaskObjectiveState"),
 	"regressing",

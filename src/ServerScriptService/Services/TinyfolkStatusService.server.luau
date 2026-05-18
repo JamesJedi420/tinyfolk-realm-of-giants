@@ -127,7 +127,12 @@ local function resolveTick(player: Player, now: number): any
 	return snapshot
 end
 
-function TinyfolkStatusService.SetCondition(player: Player, conditionName: string, durationSeconds: number, now: number?)
+function TinyfolkStatusService.SetCondition(
+	player: Player,
+	conditionName: string,
+	durationSeconds: number,
+	now: number?
+)
 	local currentNow = if type(now) == "number" then now else os.clock()
 	local state = getOrCreateState(player.UserId)
 	local nextState = TimedConditionStateLogic.ApplyCondition(

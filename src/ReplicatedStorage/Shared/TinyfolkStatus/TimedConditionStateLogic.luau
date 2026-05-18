@@ -48,7 +48,14 @@ end
 local function distanceBetween(a: any, b: any): number?
 	local aPositionX, aPositionY, aPositionZ = getVector3Position(a)
 	local bPositionX, bPositionY, bPositionZ = getVector3Position(b)
-	if aPositionX == nil or aPositionY == nil or aPositionZ == nil or bPositionX == nil or bPositionY == nil or bPositionZ == nil then
+	if
+		aPositionX == nil
+		or aPositionY == nil
+		or aPositionZ == nil
+		or bPositionX == nil
+		or bPositionY == nil
+		or bPositionZ == nil
+	then
 		return nil
 	end
 
@@ -111,7 +118,13 @@ local function getConditionSummary(snapshot: any): string
 	return table.concat(activeConditions, ",")
 end
 
-function TimedConditionStateLogic.ApplyCondition(state: TimedConditionState?, conditionName: any, now: number, durationSeconds: any, maxDurationSeconds: number?): TimedConditionState
+function TimedConditionStateLogic.ApplyCondition(
+	state: TimedConditionState?,
+	conditionName: any,
+	now: number,
+	durationSeconds: any,
+	maxDurationSeconds: number?
+): TimedConditionState
 	local nextState = cloneState(state)
 	local normalizedName = normalizeConditionName(conditionName)
 	if normalizedName == nil then
@@ -122,7 +135,11 @@ function TimedConditionStateLogic.ApplyCondition(state: TimedConditionState?, co
 	if duration < 0 then
 		duration = 0
 	end
-	local durationCap = if type(maxDurationSeconds) == "number" and maxDurationSeconds == maxDurationSeconds and maxDurationSeconds > 0 then maxDurationSeconds else 30
+	local durationCap = if type(maxDurationSeconds) == "number"
+			and maxDurationSeconds == maxDurationSeconds
+			and maxDurationSeconds > 0
+		then maxDurationSeconds
+		else 30
 	duration = math.min(duration, durationCap)
 	setConditionUntil(nextState, normalizedName, now + duration)
 	return nextState
@@ -138,7 +155,11 @@ function TimedConditionStateLogic.ClearCondition(state: TimedConditionState?, co
 	return nextState
 end
 
-function TimedConditionStateLogic.ResolveTick(state: TimedConditionState?, config: any, input: TickInput): (TimedConditionState, Snapshot)
+function TimedConditionStateLogic.ResolveTick(
+	state: TimedConditionState?,
+	config: any,
+	input: TickInput
+): (TimedConditionState, Snapshot)
 	local nextState = cloneState(state)
 	local now = input.now
 	local lastUpdatedAt = nextState.lastUpdatedAt
@@ -193,7 +214,12 @@ function TimedConditionStateLogic.ResolveTick(state: TimedConditionState?, confi
 	if nextFear >= panicThreshold and nearestDistance ~= nil then
 		panicUntil = math.max(type(panicUntil) == "number" and panicUntil or 0, now + panicDuration)
 		panicActive = true
-	elseif nextFear <= panicRecoveryThreshold and panicActive and type(panicUntil) == "number" and now >= panicUntil then
+	elseif
+		nextFear <= panicRecoveryThreshold
+		and panicActive
+		and type(panicUntil) == "number"
+		and now >= panicUntil
+	then
 		panicUntil = nil
 		panicActive = false
 	elseif not panicActive and nextFear < panicThreshold then
