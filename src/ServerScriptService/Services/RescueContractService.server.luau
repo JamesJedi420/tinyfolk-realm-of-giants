@@ -21,6 +21,7 @@ local ROLE_ATTRIBUTE = "Role"
 
 local state = RescueContractState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
+local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
 
 local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.PostRescueProtected
@@ -300,6 +301,24 @@ local function markRequest(userId: number, at: number)
 	lastRequestAtByUserId[userId] = at
 end
 
+local function isRejectCoolingDown(userId: number, at: number): boolean
+	local rejectCooldown = RescueContractConfig.RejectRequestCooldownSeconds
+	if type(rejectCooldown) ~= "number" or rejectCooldown <= 0 then
+		return false
+	end
+
+	local last = lastRejectedRequestAtByUserId[userId]
+	if last == nil then
+		return false
+	end
+
+	return (at - last) < rejectCooldown
+end
+
+local function markRejectedRequest(userId: number, at: number)
+	lastRejectedRequestAtByUserId[userId] = at
+end
+
 local function getDownedState(target: Player): boolean
 	local roleQueryApi = getRoleServiceQueryApi()
 	if roleQueryApi ~= nil and type(roleQueryApi.IsPlayerDowned) == "function" then
@@ -391,16 +410,23 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		return { accepted = false, reason = "request_cooldown" }
 	end
 
+	if isRejectCoolingDown(rescuer.UserId, resolvedNow) then
+		return { accepted = false, reason = "request_cooldown" }
+	end
+
 	if type(targetUserId) ~= "number" then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
 		return { accepted = false, reason = "target_user_id_invalid" }
 	end
 
 	local target = getPlayerByUserId(targetUserId)
 	if target == nil then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
 		return { accepted = false, reason = "target_not_found" }
 	end
 
 	if isRescuerInteractionRestricted(rescuer) then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
 		return { accepted = false, reason = "rescuer_interaction_restricted" }
 	end
 
@@ -429,6 +455,8 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 			clearRescueAcceleration(rescuer)
 		end
 		markRequest(rescuer.UserId, resolvedNow)
+	else
+		markRejectedRequest(rescuer.UserId, resolvedNow)
 	end
 	applyContractAttributesFromState()
 
@@ -509,6 +537,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	lastRejectedRequestAtByUserId[player.UserId] = nil
 	clearRescueAcceleration(player)
 	clearPostRescueProtection(player)
 	state = RescueContractState.RemovePlayer(state, player.UserId)
@@ -549,6 +578,7 @@ _G._RescueContractService_QueryAPI = {
 	ResetForTests = function()
 		state = RescueContractState.NewState()
 		lastRequestAtByUserId = {}
+		lastRejectedRequestAtByUserId = {}
 		rescueAccelerationExpiresAtByUserId = {}
 		for _, player in Players:GetPlayers() do
 			clearRescueAcceleration(player)

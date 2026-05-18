@@ -268,9 +268,24 @@ do
 	assertFalse(invalidTargetId.accepted, "invalid target id rejects")
 	assertEqual(invalidTargetId.reason, "target_user_id_invalid", "invalid target id reason")
 
-	local missingTarget = rescueApi.RequestRescueContract(rescuer.UserId, 999999, 250)
+	local missingTarget = rescueApi.RequestRescueContract(rescuer.UserId, 999999, 250.1)
 	assertFalse(missingTarget.accepted, "missing target rejects")
 	assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
+end
+
+do
+	resetState()
+	local invalidBaseline = rescueApi.RequestRescueContract(rescuer.UserId, "bad", 255)
+	assertFalse(invalidBaseline.accepted, "invalid request baseline rejects")
+	assertEqual(invalidBaseline.reason, "target_user_id_invalid", "invalid baseline reason")
+
+	local throttled = rescueApi.RequestRescueContract(rescuer.UserId, "bad", 255.01)
+	assertFalse(throttled.accepted, "rapid repeated invalid rescue request is throttled")
+	assertEqual(throttled.reason, "request_cooldown", "rapid repeated invalid rescue request cooldown reason")
+
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 255.06)
+	assertTrue(accepted.accepted, "invalid request does not consume accepted rescue cooldown")
+	assertEqual(accepted.reason, "accepted", "valid follow-up accepted after reject cooldown window")
 end
 
 do

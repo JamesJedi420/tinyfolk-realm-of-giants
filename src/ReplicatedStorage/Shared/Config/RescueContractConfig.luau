@@ -3,6 +3,7 @@
 local RescueContractConfig: any = {}
 
 RescueContractConfig.RequestCooldownSeconds = 0.2
+RescueContractConfig.RejectRequestCooldownSeconds = 0.05
 RescueContractConfig.RescueWindowSeconds = 12
 RescueContractConfig.TriggerRadiusStuds = 14
 RescueContractConfig.PostRescueProtectionSeconds = 4
