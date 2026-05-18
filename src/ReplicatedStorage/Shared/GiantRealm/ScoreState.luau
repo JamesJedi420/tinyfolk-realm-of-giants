@@ -227,19 +227,20 @@ function ScoreState.ResolveScoreEvent(state: State, input: ResolveInput): Transi
 
 	local categoryName = eventDefinition.category
 	local playerScore = clonePlayerScore(nextState.playerScores[input.userId])
-	local currentCategoryTotal = playerScore.categories[categoryName] or 0
+	local currentPlayerCategoryTotal = playerScore.categories[categoryName] or 0
+	local currentGlobalCategoryTotal = nextState.globalCategoryTotals[categoryName] or 0
 	local categoryCap = getCategoryCap(categoryName)
-	local remaining = categoryCap - currentCategoryTotal
-	local awardedPoints = math.min(points, math.max(remaining, 0))
-	if awardedPoints <= 0 then
+	local globalRemaining = categoryCap - currentGlobalCategoryTotal
+	local globalAwardedPoints = math.min(points, math.max(globalRemaining, 0))
+	if globalAwardedPoints <= 0 then
 		nextState.lastReason = "category_cap_reached"
 		return { accepted = false, reason = "category_cap_reached", state = nextState, record = nil }
 	end
 
-	playerScore.categories[categoryName] = currentCategoryTotal + awardedPoints
-	playerScore.total += awardedPoints
+	playerScore.categories[categoryName] = currentPlayerCategoryTotal + globalAwardedPoints
+	playerScore.total += globalAwardedPoints
 	nextState.playerScores[input.userId] = playerScore
-	nextState.globalCategoryTotals[categoryName] = (nextState.globalCategoryTotals[categoryName] or 0) + awardedPoints
+	nextState.globalCategoryTotals[categoryName] = currentGlobalCategoryTotal + globalAwardedPoints
 	nextState.repeatByActorEvent[repeatKey] = {
 		count = nextCount,
 		lastAt = input.now,
@@ -251,7 +252,7 @@ function ScoreState.ResolveScoreEvent(state: State, input: ResolveInput): Transi
 		userId = input.userId,
 		eventId = input.eventId,
 		category = categoryName,
-		awardedPoints = awardedPoints,
+		awardedPoints = globalAwardedPoints,
 		now = input.now,
 		metadata = input.metadata,
 	}
