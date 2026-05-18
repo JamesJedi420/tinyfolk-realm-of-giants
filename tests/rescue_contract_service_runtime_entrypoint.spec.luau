@@ -291,6 +291,27 @@ do
 	assertTrue(completed.accepted, "completion accepted for active contract")
 	assertEqual(completed.reason, "rescued", "completion reason")
 	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId), nil, "contract cleared after completion")
+	assertTrue(target:GetAttribute("PostRescueProtected") == true, "completion grants post-rescue protection")
+	assertTrue(
+		type(target:GetAttribute("PostRescueProtectionExpiresAt")) == "number",
+		"completion sets post-rescue protection expiry"
+	)
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 430)
+	assertTrue(accepted.accepted, "accepted before protection expiry cleanup")
+	local completed = rescueApi.CompleteRescueContract(rescuer.UserId, target.UserId, 431)
+	assertTrue(completed.accepted, "completed before protection expiry cleanup")
+
+	assertTrue(target:GetAttribute("PostRescueProtected") == true, "post-rescue protection active before expiry")
+	rescueApi.GetAllContracts(436)
+	assertTrue(target:GetAttribute("PostRescueProtected") == false, "post-rescue protection clears after expiry")
+	assertTrue(
+		target:GetAttribute("PostRescueProtectionExpiresAt") == nil,
+		"post-rescue protection expiry attribute clears after expiry"
+	)
 end
 
 do

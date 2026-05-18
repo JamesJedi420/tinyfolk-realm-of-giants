@@ -218,4 +218,31 @@ playersService.PlayerRemoving:Fire(giant)
 local afterRemove = captureApi.GetTargetCapture(2102, 1.1)
 assertTrue(afterRemove == nil, "player removing clears active capture")
 
+resetState()
+setDowned(targetA, false)
+targetA:SetAttribute("PostRescueProtected", true)
+targetA:SetAttribute("PostRescueProtectionExpiresAt", 20)
+local protectedReject = captureApi.RequestCapture(2101, 2102, 2.0)
+assertFalse(protectedReject.accepted, "capture rejected while target has post-rescue protection")
+assertEqual(protectedReject.reason, "target_post_rescue_protected", "post-rescue protection rejection reason")
+
+resetState()
+targetA:SetAttribute("PostRescueProtected", true)
+targetA:SetAttribute("PostRescueProtectionExpiresAt", 1.5)
+local afterExpiry = captureApi.RequestCapture(2101, 2102, 2.0)
+assertTrue(afterExpiry.accepted == true, "capture accepted after post-rescue protection expiry")
+assertTrue(targetA:GetAttribute("PostRescueProtected") == false, "expired post-rescue protection cleared")
+assertTrue(targetA:GetAttribute("PostRescueProtectionExpiresAt") == nil, "expired protection expiry attribute cleared")
+
+resetState()
+targetA:SetAttribute("PostRescueProtected", true)
+targetA:SetAttribute("PostRescueProtectionExpiresAt", 20)
+local downedCancellation = captureApi.RequestCapture(2101, 2102, 2.0)
+assertTrue(downedCancellation.accepted == true, "capture accepted when downed state cancels post-rescue protection")
+assertTrue(targetA:GetAttribute("PostRescueProtected") == false, "downed cancellation clears post-rescue protection")
+assertTrue(
+	targetA:GetAttribute("PostRescueProtectionExpiresAt") == nil,
+	"downed cancellation clears protection expiry attribute"
+)
+
 print("capture_service_runtime_entrypoint: all checks passed")

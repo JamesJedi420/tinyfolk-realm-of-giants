@@ -11,6 +11,8 @@ local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 
 local ROLE_ATTRIBUTE = "Role"
+local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
+local POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE = "PostRescueProtectionExpiresAt"
 
 local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
@@ -100,6 +102,36 @@ local function getDownedState(target: Player): boolean
 	end
 
 	return target:GetAttribute("DownedIsDowned") == true
+end
+
+local function clearPostRescueProtection(target: Player)
+	target:SetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE, false)
+	target:SetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE, nil)
+end
+
+local function isPostRescueProtected(target: Player, at: number): boolean
+	if target:GetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE) ~= true then
+		return false
+	end
+
+	-- Phase 3 bounded cancellation: once target is downed again, protection ends.
+	if getDownedState(target) then
+		clearPostRescueProtection(target)
+		return false
+	end
+
+	local expiresAt = target:GetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE)
+	if type(expiresAt) ~= "number" then
+		clearPostRescueProtection(target)
+		return false
+	end
+
+	if expiresAt <= at then
+		clearPostRescueProtection(target)
+		return false
+	end
+
+	return true
 end
 
 local function isInRange(custodian: Player, target: Player): boolean
@@ -199,6 +231,12 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	local target = getPlayerByUserId(targetUserId)
 	if target == nil then
 		return { accepted = false, reason = "target_not_found" }
+	end
+
+	if isPostRescueProtected(target, resolvedNow) then
+		setCaptureLastReason(custodian, "target_post_rescue_protected")
+		setCaptureLastReason(target, "target_post_rescue_protected")
+		return { accepted = false, reason = "target_post_rescue_protected" }
 	end
 
 	local transition = CaptureState.ResolveRequest(state, {

@@ -22,8 +22,48 @@ local ROLE_ATTRIBUTE = "Role"
 local state = RescueContractState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 
+local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.PostRescueProtected
+	or "PostRescueProtected"
+local postRescueProtectionExpiresAtAttributeName = RescueContractConfig.StateAttributes.PostRescueProtectionExpiresAt
+	or "PostRescueProtectionExpiresAt"
+
 local function now(): number
 	return os.clock()
+end
+
+local function clearPostRescueProtection(player: Player?)
+	if player == nil then
+		return
+	end
+
+	player:SetAttribute(postRescueProtectedAttributeName, false)
+	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, nil)
+end
+
+local function grantPostRescueProtection(player: Player?, at: number)
+	if player == nil then
+		return
+	end
+
+	local durationSeconds = RescueContractConfig.PostRescueProtectionSeconds
+	if type(durationSeconds) ~= "number" or durationSeconds <= 0 then
+		clearPostRescueProtection(player)
+		return
+	end
+
+	player:SetAttribute(postRescueProtectedAttributeName, true)
+	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, at + durationSeconds)
+end
+
+local function pruneExpiredPostRescueProtection(at: number)
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute(postRescueProtectedAttributeName) == true then
+			local expiresAt = player:GetAttribute(postRescueProtectionExpiresAtAttributeName)
+			if type(expiresAt) ~= "number" or expiresAt <= at then
+				clearPostRescueProtection(player)
+			end
+		end
+	end
 end
 
 local function ensureRemotesFolder(): Folder
@@ -278,6 +318,7 @@ end
 
 local function requestRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredPostRescueProtection(resolvedNow)
 	pruneExpiredContracts(resolvedNow)
 
 	if isCoolingDown(rescuer.UserId, resolvedNow) then
@@ -328,6 +369,7 @@ end
 
 local function completeRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredPostRescueProtection(resolvedNow)
 	pruneExpiredContracts(resolvedNow)
 
 	if type(targetUserId) ~= "number" then
@@ -346,6 +388,7 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 	setRescueLastReason(target, transition.reason)
 
 	if transition.accepted then
+		grantPostRescueProtection(target, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
 			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, { targetUserId = targetUserId })
@@ -392,6 +435,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	clearPostRescueProtection(player)
 	state = RescueContractState.RemovePlayer(state, player.UserId)
 	applyContractAttributesFromState()
 end)
@@ -413,12 +457,14 @@ _G._RescueContractService_QueryAPI = {
 	end,
 	GetRescuerContract = function(rescuerUserId: number, at: number?): any
 		if type(at) == "number" then
+			pruneExpiredPostRescueProtection(at)
 			pruneExpiredContracts(at)
 		end
 		return RescueContractState.GetRescuerContract(state, rescuerUserId)
 	end,
 	GetAllContracts = function(at: number?): { any }
 		if type(at) == "number" then
+			pruneExpiredPostRescueProtection(at)
 			pruneExpiredContracts(at)
 		end
 		return RescueContractState.GetContracts(state)
@@ -426,6 +472,9 @@ _G._RescueContractService_QueryAPI = {
 	ResetForTests = function()
 		state = RescueContractState.NewState()
 		lastRequestAtByUserId = {}
+		for _, player in Players:GetPlayers() do
+			clearPostRescueProtection(player)
+		end
 		applyContractAttributesFromState()
 	end,
 }
