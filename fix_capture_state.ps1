@@ -18,7 +18,7 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
 
 # Insert the constant
 if ($insertIdx -gt 0) {
-    $lines = $lines[0..($insertIdx)] + "local MAX_CUSTODY_DURATION_SECONDS = 12" + "" + $lines[($insertIdx+1)..($lines.Count-1)]
+    $lines = $lines[0..($insertIdx)] + "local MAX_CUSTODY_DURATION_SECONDS = 12" + "" + $lines[($insertIdx + 1)..($lines.Count - 1)]
 }
 
 # Convert back to string and write
