@@ -185,6 +185,16 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		return { accepted = false, reason = "target_contract_active", state = nextState, contract = nil }
 	end
 
+	if nextState.rescuerByTarget[input.rescuerUserId] ~= nil then
+		nextState.lastReason = "participant_contract_active"
+		return { accepted = false, reason = "participant_contract_active", state = nextState, contract = nil }
+	end
+
+	if nextState.contractsByRescuer[input.targetUserId] ~= nil then
+		nextState.lastReason = "participant_contract_active"
+		return { accepted = false, reason = "participant_contract_active", state = nextState, contract = nil }
+	end
+
 	local rescueWindowSeconds = if validNumber(input.rescueWindowSeconds) and input.rescueWindowSeconds > 0
 		then input.rescueWindowSeconds
 		else 0
@@ -248,12 +258,14 @@ end
 function RescueContractState.GetContracts(state: State): { RescueContract }
 	local contracts: { RescueContract } = {}
 	for _, contract in pairs(state.contractsByRescuer) do
-		table.insert(contracts, {
-			rescuerUserId = contract.rescuerUserId,
-			targetUserId = contract.targetUserId,
-			startedAt = contract.startedAt,
-			expiresAt = contract.expiresAt,
-		})
+		if contract ~= nil then
+			table.insert(contracts, {
+				rescuerUserId = contract.rescuerUserId,
+				targetUserId = contract.targetUserId,
+				startedAt = contract.startedAt,
+				expiresAt = contract.expiresAt,
+			})
+		end
 	end
 
 	table.sort(contracts, function(a: RescueContract, b: RescueContract)
@@ -271,9 +283,11 @@ function RescueContractState.RemovePlayer(state: State, userId: number): State
 
 	local removedTargetIds: { [number]: boolean } = {}
 	for rescuerUserId, contract in pairs(nextState.contractsByRescuer) do
-		if rescuerUserId == userId or contract.targetUserId == userId then
-			removedTargetIds[contract.targetUserId] = true
-			nextState.contractsByRescuer[rescuerUserId] = nil
+		if contract ~= nil then
+			if rescuerUserId == userId or contract.targetUserId == userId then
+				removedTargetIds[contract.targetUserId] = true
+				nextState.contractsByRescuer[rescuerUserId] = nil
+			end
 		end
 	end
 

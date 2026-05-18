@@ -127,4 +127,28 @@ do
 	assertEqual(afterExpiry.contract.targetUserId, 3, "post-expiry request targets new user")
 end
 
+do
+	local state = RescueContractState.NewState()
+	local first = RescueContractState.ResolveRequest(state, makeRequestInput({ rescuerUserId = 1, targetUserId = 2 }))
+	assertTrue(first.accepted, "first participant contract accepted")
+
+	local rescuerAlreadyTargeted = RescueContractState.ResolveRequest(
+		first.state,
+		makeRequestInput({ rescuerUserId = 2, targetUserId = 3, now = 101 })
+	)
+	assertFalse(rescuerAlreadyTargeted.accepted, "targeted player cannot start rescue")
+	assertEqual(
+		rescuerAlreadyTargeted.reason,
+		"participant_contract_active",
+		"targeted player start-recue rejection reason"
+	)
+
+	local targetAlreadyRescuing = RescueContractState.ResolveRequest(
+		first.state,
+		makeRequestInput({ rescuerUserId = 3, targetUserId = 1, now = 101 })
+	)
+	assertFalse(targetAlreadyRescuing.accepted, "active rescuer cannot be target")
+	assertEqual(targetAlreadyRescuing.reason, "participant_contract_active", "active rescuer target rejection reason")
+end
+
 print("rescue_contract_state: all checks passed")

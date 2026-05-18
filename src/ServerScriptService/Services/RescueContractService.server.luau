@@ -7,7 +7,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
-local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
@@ -191,6 +190,27 @@ local function getDownedState(target: Player): boolean
 	return target:GetAttribute("DownedIsDowned") == true
 end
 
+local function isRescuerInteractionRestricted(rescuer: Player): boolean
+	local roleQueryApi = getRoleServiceQueryApi()
+	if roleQueryApi == nil then
+		return false
+	end
+
+	if type(roleQueryApi.IsPlayerDowned) == "function" then
+		if roleQueryApi.IsPlayerDowned(rescuer.UserId) == true then
+			return true
+		end
+	end
+
+	if type(roleQueryApi.CanPlayerPerformInteraction) == "function" then
+		if roleQueryApi.CanPlayerPerformInteraction(rescuer.UserId, "rescueContractRequest") ~= true then
+			return true
+		end
+	end
+
+	return false
+end
+
 local function getCarriedState(target: Player): boolean
 	local grabQueryApi = getGrabServiceQueryApi()
 	if grabQueryApi ~= nil and type(grabQueryApi.IsPlayerCarried) == "function" then
@@ -198,14 +218,6 @@ local function getCarriedState(target: Player): boolean
 	end
 
 	return false
-end
-
-local function getPrimaryContractForAttributes(): any?
-	local contracts = RescueContractState.GetContracts(state)
-	if #contracts <= 0 then
-		return nil
-	end
-	return contracts[1]
 end
 
 local function applyContractAttributesFromState()
@@ -218,24 +230,21 @@ local function applyContractAttributesFromState()
 		player:SetAttribute(attrs.RescueExpiresAt, nil)
 	end
 
-	local contract = getPrimaryContractForAttributes()
+	local contracts = RescueContractState.GetContracts(state)
+	for _, contract in ipairs(contracts) do
+		local rescuer = getPlayerByUserId(contract.rescuerUserId)
+		if rescuer ~= nil then
+			rescuer:SetAttribute(attrs.RescueActive, true)
+			rescuer:SetAttribute(attrs.RescueTargetUserId, contract.targetUserId)
+			rescuer:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
+		end
 
-	if contract == nil then
-		return
-	end
-
-	local rescuer = getPlayerByUserId(contract.rescuerUserId)
-	if rescuer ~= nil then
-		rescuer:SetAttribute(attrs.RescueActive, true)
-		rescuer:SetAttribute(attrs.RescueTargetUserId, contract.targetUserId)
-		rescuer:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
-	end
-
-	local target = getPlayerByUserId(contract.targetUserId)
-	if target ~= nil then
-		target:SetAttribute(attrs.RescueActive, true)
-		target:SetAttribute(attrs.RescueRescuerUserId, contract.rescuerUserId)
-		target:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
+		local target = getPlayerByUserId(contract.targetUserId)
+		if target ~= nil then
+			target:SetAttribute(attrs.RescueActive, true)
+			target:SetAttribute(attrs.RescueRescuerUserId, contract.rescuerUserId)
+			target:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
+		end
 	end
 end
 
@@ -268,6 +277,10 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 	local target = getPlayerByUserId(targetUserId)
 	if target == nil then
 		return { accepted = false, reason = "target_not_found" }
+	end
+
+	if isRescuerInteractionRestricted(rescuer) then
+		return { accepted = false, reason = "rescuer_interaction_restricted" }
 	end
 
 	local transition = RescueContractState.ResolveRequest(state, {

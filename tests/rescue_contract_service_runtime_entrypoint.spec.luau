@@ -128,10 +128,21 @@ local targetTwo = MockPlayer.new(2103, "TargetTinyfolkTwo", {
 	positionZ = 6,
 	health = 100,
 })
+local rescuerTwo = MockPlayer.new(2104, "RescuerTinyfolkTwo", {
+	role = "Tinyfolk",
+	positionZ = 2,
+	health = 100,
+})
+local targetThree = MockPlayer.new(2105, "TargetTinyfolkThree", {
+	role = "Tinyfolk",
+	positionZ = 8,
+	health = 100,
+})
 target:SetAttribute("DownedIsDowned", true)
 targetTwo:SetAttribute("DownedIsDowned", true)
+targetThree:SetAttribute("DownedIsDowned", true)
 
-local playersList: { any } = { rescuer, target, targetTwo }
+local playersList: { any } = { rescuer, target, targetTwo, rescuerTwo, targetThree }
 local playersService: any = {
 	PlayerRemoving = makeSignal(),
 }
@@ -165,6 +176,27 @@ _G._GrabService_QueryAPI = {
 	end,
 }
 
+local restrictedRescuerUserId: number? = nil
+_G._RoleService_QueryAPI = {
+	IsPlayerDowned = function(userId: number): boolean
+		for _, player in ipairs(playersList) do
+			if player.UserId == userId then
+				if restrictedRescuerUserId == userId then
+					return true
+				end
+				return player:GetAttribute("DownedIsDowned") == true
+			end
+		end
+		return false
+	end,
+	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
+		if interactionName ~= "rescueContractRequest" then
+			return true
+		end
+		return restrictedRescuerUserId ~= userId
+	end,
+}
+
 require("../src/ServerScriptService/Services/RescueContractService.server")
 
 local rescueApi: any = _G._RescueContractService_QueryAPI
@@ -186,17 +218,26 @@ local function resetState()
 	setRole(rescuer, "Tinyfolk")
 	setRole(target, "Tinyfolk")
 	setRole(targetTwo, "Tinyfolk")
+	setRole(rescuerTwo, "Tinyfolk")
+	setRole(targetThree, "Tinyfolk")
 	setHumanoidHealth(rescuer, 100)
 	setHumanoidHealth(target, 100)
 	setHumanoidHealth(targetTwo, 100)
+	setHumanoidHealth(rescuerTwo, 100)
+	setHumanoidHealth(targetThree, 100)
 	target:SetAttribute("DownedIsDowned", true)
 	targetTwo:SetAttribute("DownedIsDowned", true)
+	targetThree:SetAttribute("DownedIsDowned", true)
 	target:SetAttribute("InSafeZone", false)
 	target:SetAttribute("SafeZoneType", nil)
 	target:SetAttribute("SafeZoneProtectionEndsAt", nil)
 	targetTwo:SetAttribute("InSafeZone", false)
 	targetTwo:SetAttribute("SafeZoneType", nil)
 	targetTwo:SetAttribute("SafeZoneProtectionEndsAt", nil)
+	targetThree:SetAttribute("InSafeZone", false)
+	targetThree:SetAttribute("SafeZoneType", nil)
+	targetThree:SetAttribute("SafeZoneProtectionEndsAt", nil)
+	restrictedRescuerUserId = nil
 end
 
 do
@@ -259,6 +300,14 @@ end
 
 do
 	resetState()
+	restrictedRescuerUserId = rescuer.UserId
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 470)
+	assertFalse(rejected.accepted, "restricted rescuer cannot request")
+	assertEqual(rejected.reason, "rescuer_interaction_restricted", "restricted rescuer rejection reason")
+end
+
+do
+	resetState()
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 500)
 	assertTrue(accepted.accepted, "baseline accepted before rejected follow-up request")
 
@@ -302,6 +351,20 @@ do
 	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 800.1), nil, "target leave clears active contract")
 	assertEqual(rescuer:GetAttribute("RescueContractActive"), false, "target leave clears rescuer active attribute")
 	assertEqual(target:GetAttribute("RescueContractActive"), false, "target leave clears target active attribute")
+end
+
+do
+	resetState()
+	local first = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 900)
+	assertTrue(first.accepted, "first parallel contract accepted")
+
+	local second = rescueApi.RequestRescueContract(rescuerTwo.UserId, targetThree.UserId, 900)
+	assertTrue(second.accepted, "second parallel contract accepted")
+
+	assertEqual(rescuer:GetAttribute("RescueContractActive"), true, "first rescuer active attribute set")
+	assertEqual(target:GetAttribute("RescueContractActive"), true, "first target active attribute set")
+	assertEqual(rescuerTwo:GetAttribute("RescueContractActive"), true, "second rescuer active attribute set")
+	assertEqual(targetThree:GetAttribute("RescueContractActive"), true, "second target active attribute set")
 end
 
 do
