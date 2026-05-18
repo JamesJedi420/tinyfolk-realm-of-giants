@@ -329,14 +329,52 @@ do
 	local sim = MatchSimulation.new({ seed = 303 })
 	sim:addPlayer(11, "UnsupportedUser", { role = "Tinyfolk" })
 	sim:queueAction(1, "captureAttempt", { userId = 11 })
-	sim:queueAction(1, "rescueAttempt", { userId = 11 })
+	sim:queueAction(1, "rescueAttempt", { userId = 11, targetUserId = 12 })
 	sim:queueAction(1, "scoreEvent", { userId = 11 })
 	sim:advanceTick()
 
 	local results = sim:getResults()
 	assertEqual(results[2].result.reason, "not_implemented", "capture unsupported explicit")
-	assertEqual(results[3].result.reason, "not_implemented", "rescue unsupported explicit")
+	assertEqual(results[3].result.reason, "not_implemented", "rescue unsupported without service")
 	assertEqual(results[4].result.reason, "not_implemented", "scoring unsupported explicit")
+end
+
+do
+	local recordedRequests: { any } = {}
+	_G._RescueContractService_QueryAPI = {
+		RequestRescueContract = function(rescuerUserId: number, targetUserId: number, at: number): any
+			table.insert(recordedRequests, {
+				rescuerUserId = rescuerUserId,
+				targetUserId = targetUserId,
+				at = at,
+			})
+			return {
+				accepted = true,
+				reason = "accepted",
+				contract = {
+					rescuerUserId = rescuerUserId,
+					targetUserId = targetUserId,
+					startedAt = at,
+					expiresAt = at + 12,
+				},
+			}
+		end,
+	}
+
+	local sim = MatchSimulation.new({ seed = 304 })
+	local rescuer = sim:addPlayer(21, "RescuerTinyfolk", { role = "Tinyfolk" })
+	sim:addPlayer(22, "TargetTinyfolk", { role = "Tinyfolk" })
+	sim:queueAction(1, "rescueAttempt", { userId = rescuer.UserId, targetUserId = 22 })
+	sim:advanceTick()
+
+	local results = sim:getResults()
+	assertEqual(results[3].result.accepted, true, "rescue attempt routes to rescue query API")
+	assertEqual(results[3].result.reason, "accepted", "rescue query API reason preserved")
+	assertEqual(#recordedRequests, 1, "rescue query API invoked exactly once")
+	assertEqual(recordedRequests[1].rescuerUserId, 21, "rescue query API receives rescuer id")
+	assertEqual(recordedRequests[1].targetUserId, 22, "rescue query API receives target id")
+
+	_G._RescueContractService_QueryAPI = nil
 end
 
 do
@@ -597,11 +635,7 @@ do
 	assertEqual(results[6].result.snapshot.state, "Counterplay", "headless counterplay state exposed")
 	assertEqual(results[7].result.snapshot.state, "Released", "headless counterplay release exposed")
 	assertEqual(results[7].result.carrierLoadSnapshot.slotsUsed, 0, "headless release clears carrier load")
-	assertEqual(
-		results[7].result.snapshot.releaseReason,
-		"counterplay_completed",
-		"headless release reason exposed"
-	)
+	assertEqual(results[7].result.snapshot.releaseReason, "counterplay_completed", "headless release reason exposed")
 end
 
 print("headless_match_simulation: all checks passed")

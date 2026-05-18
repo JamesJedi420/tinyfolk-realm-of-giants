@@ -8,5 +8,16 @@ if (-not $lune) {
     Write-Error 'lune is not installed. Install it with: & "$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe" install --id Lune.Lune --exact --source winget --accept-source-agreements --accept-package-agreements'
 }
 
-$testFile = Join-Path $repoRoot 'tests\upgrade_progression_logic.spec.luau'
-& $lune.Source run $testFile
+$testFiles = @(
+    'tests\upgrade_progression_logic.spec.luau',
+    'tests\emergency_reinforcement_state.spec.luau',
+    'tests\emergency_reinforcement_service_runtime_entrypoint.spec.luau',
+    'tests\rescue_contract_state.spec.luau',
+    'tests\rescue_contract_service_runtime_entrypoint.spec.luau',
+    'tests\headless_match_simulation.spec.luau'
+)
+
+foreach ($relativeTestPath in $testFiles) {
+    $testFile = Join-Path $repoRoot $relativeTestPath
+    & $lune.Source run $testFile
+}
