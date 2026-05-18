@@ -97,6 +97,7 @@ addChild(configFolder, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/Es
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 addChild(giantRealmFolder, "GrabState", "../../ReplicatedStorage/Shared/GiantRealm/GrabState")
+addChild(giantRealmFolder, "CarryLoadState", "../../ReplicatedStorage/Shared/GiantRealm/CarryLoadState")
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -162,6 +163,7 @@ local downedTinyfolk = MockPlayer.new(5, "DownedTinyfolk", { role = "Tinyfolk", 
 local missingRootTinyfolk = MockPlayer.new(6, "MissingRootTinyfolk", { role = "Tinyfolk", hasRoot = false })
 local deadTinyfolk = MockPlayer.new(7, "DeadTinyfolk", { role = "Tinyfolk", health = 0 })
 local otherGiant = MockPlayer.new(8, "OtherGiant", { role = "Giant", positionZ = 0 })
+local extraTinyfolk = MockPlayer.new(9, "ExtraTinyfolk", { role = "Tinyfolk", positionZ = 5 })
 playersList = {
 	giant,
 	tinyfolk,
@@ -171,6 +173,7 @@ playersList = {
 	missingRootTinyfolk,
 	deadTinyfolk,
 	otherGiant,
+	extraTinyfolk,
 }
 
 _G._RoleService_QueryAPI = {
@@ -201,7 +204,20 @@ do
 	assertEqual(tinyfolk:GetAttribute("CarriedState"), "Carried", "target carried attribute set")
 	assertEqual(tinyfolk:GetAttribute("CarriedByUserId"), giant.UserId, "target carrier attribute set")
 	assertEqual(giant:GetAttribute("CarriedTargetUserId"), tinyfolk.UserId, "giant target attribute set")
+	assertEqual(giant:GetAttribute("CarrySlotsUsed"), 1, "carrier slots attributed")
+	assertEqual(giant:GetAttribute("CarryCapacity"), 1, "carrier capacity attributed")
+	assertEqual(giant:GetAttribute("CarryAtCapacity"), true, "carrier capacity full attributed")
+	assertEqual(giant:GetAttribute("CarryOverloaded"), true, "carrier overloaded attributed")
+	assertEqual(giant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed, 12.8, "carrier speed reduced")
+	assertEqual(result.carrierLoadSnapshot.slotsUsed, 1, "grab result includes carrier load snapshot")
 	assertTrue(grabApi.IsPlayerCarried(tinyfolk.UserId), "query marks target carried")
+end
+
+do
+	local result = grabApi.RequestGrab(giant.UserId, extraTinyfolk.UserId, 100.2)
+	assertFalse(result.accepted, "capacity-full carrier rejects second target")
+	assertEqual(result.reason, "carry_capacity_full", "capacity-full carrier reason")
+	assertEqual(giant:GetAttribute("CarryLastRejectReason"), "carry_capacity_full", "capacity reject attributed")
 end
 
 do
@@ -223,6 +239,11 @@ do
 	assertFalse(grabApi.IsPlayerCarried(tinyfolk.UserId), "counterplay releases target")
 	assertEqual(tinyfolk:GetAttribute("CarriedState"), "Released", "release state attributed")
 	assertEqual(tinyfolk:GetAttribute("CarriedReleaseReason"), "counterplay_completed", "release reason attributed")
+	assertEqual(tinyfolk:GetAttribute("CarryLastDropReason"), "pre_grab_fallback", "counterplay release uses fallback drop")
+	assertEqual(giant:GetAttribute("CarrySlotsUsed"), 0, "counterplay clears carrier slots")
+	assertEqual(giant:GetAttribute("CarrySpeedMultiplier"), 1, "counterplay restores speed multiplier")
+	assertEqual(giant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed, 16, "counterplay restores carrier speed")
+	assertTrue(tinyfolk.Character.LastPivotCFrame ~= nil, "counterplay release pivots target to safe fallback")
 end
 
 do
@@ -271,8 +292,18 @@ do
 	playerRemoving:Fire(downedTinyfolk)
 	assertFalse(grabApi.IsPlayerCarried(downedTinyfolk.UserId), "target removal clears carried query")
 	assertEqual(otherGiant:GetAttribute("CarriedTargetUserId"), nil, "target removal clears carrier target")
+	assertEqual(otherGiant:GetAttribute("CarrySlotsUsed"), 0, "target removal clears carrier slots")
+	assertEqual(otherGiant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed, 16, "target removal restores carrier speed")
 	local nextGrab = grabApi.RequestGrab(otherGiant.UserId, tinyfolk.UserId, 120)
 	assertTrue(nextGrab.accepted, "carrier can grab again after target removal cleanup")
+end
+
+do
+	local loadSnapshot = grabApi.GetCarrierLoadSnapshot(otherGiant.UserId)
+	assertEqual(loadSnapshot.slotsUsed, 1, "carrier load query exposes current slot use")
+	local restricted = grabApi.CanGiantPerformCarryInteraction(otherGiant.UserId, "throughGapReach")
+	assertFalse(restricted.accepted, "carrier through-gap interaction restricted")
+	assertEqual(restricted.reason, "carrier_encumbered", "carrier interaction restriction reason")
 end
 
 print("grab_service_runtime_entrypoint: all checks passed")

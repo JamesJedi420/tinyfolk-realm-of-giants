@@ -11,6 +11,9 @@ GrabConfig.RequestCooldownSeconds = 0.15
 GrabConfig.CounterplayRequired = 3
 GrabConfig.CounterplayProgressPerAction = 1
 GrabConfig.CounterplayActionCooldownSeconds = 0.25
+GrabConfig.CarryCapacity = 1
+GrabConfig.CarryEncumbrancePerTinyfolk = 0.2
+GrabConfig.CarryMinimumSpeedMultiplier = 0.65
 
 GrabConfig.HoldOffset = Vector3.new(0, 6, -6)
 
@@ -24,6 +27,14 @@ GrabConfig.CarriedCounterplayRequiredAttribute = "CarriedCounterplayRequired"
 GrabConfig.CarriedReleaseReasonAttribute = "CarriedReleaseReason"
 GrabConfig.CarriedLastActionAttribute = "CarriedLastAction"
 GrabConfig.CarriedLastRejectReasonAttribute = "CarriedLastRejectReason"
+GrabConfig.CarrySlotsUsedAttribute = "CarrySlotsUsed"
+GrabConfig.CarryCapacityAttribute = "CarryCapacity"
+GrabConfig.CarryEncumbranceAttribute = "CarryEncumbrance"
+GrabConfig.CarrySpeedMultiplierAttribute = "CarrySpeedMultiplier"
+GrabConfig.CarryAtCapacityAttribute = "CarryAtCapacity"
+GrabConfig.CarryOverloadedAttribute = "CarryOverloaded"
+GrabConfig.CarryLastRejectReasonAttribute = "CarryLastRejectReason"
+GrabConfig.CarryLastDropReasonAttribute = "CarryLastDropReason"
 
 GrabConfig.PlaceProbeHeightStuds = 8
 GrabConfig.PlaceProbeDepthStuds = 20

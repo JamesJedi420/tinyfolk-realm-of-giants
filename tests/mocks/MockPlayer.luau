@@ -17,15 +17,32 @@ local function makeVector(x: number, y: number, z: number)
 		__sub = function(a: any, b: any)
 			return buildVector(a.x - b.x, a.y - b.y, a.z - b.z, vectorMt)
 		end,
+		__add = function(a: any, b: any)
+			return buildVector(a.x + b.x, a.y + b.y, a.z + b.z, vectorMt)
+		end,
+		__mul = function(a: any, b: any)
+			if type(a) == "number" then
+				return buildVector(a * b.x, a * b.y, a * b.z, vectorMt)
+			end
+			return buildVector(a.x * b, a.y * b, a.z * b, vectorMt)
+		end,
 	}
 
 	return buildVector(x, y, z, vectorMt)
 end
 
 local function makeRootPart(position: any)
+	local lookVector = makeVector(0, 0, 1)
+	local rightVector = makeVector(1, 0, 0)
 	local root: any = {
 		ClassName = "BasePart",
 		Position = position,
+		CFrame = {
+			Position = position,
+			LookVector = lookVector,
+			RightVector = rightVector,
+		},
+		Anchored = false,
 	}
 
 	function root:IsA(className: string): boolean
@@ -38,7 +55,16 @@ end
 local function makeCharacter(position: any, hasRoot: boolean, options: any?)
 	local root = if hasRoot then makeRootPart(position) else nil
 	local opts = options or {}
-	local character: any = {}
+	local humanoid = if opts.missingHumanoid == true
+		then nil
+		else {
+			Health = if type(opts.health) == "number" then opts.health else 100,
+			AutoRotate = true,
+			WalkSpeed = if type(opts.walkSpeed) == "number" then opts.walkSpeed else 16,
+		}
+	local character: any = {
+		LastPivotCFrame = nil,
+	}
 
 	function character:FindFirstChild(childName: string): any
 		if childName == "HumanoidRootPart" then
@@ -49,15 +75,19 @@ local function makeCharacter(position: any, hasRoot: boolean, options: any?)
 
 	function character:FindFirstChildOfClass(className: string): any
 		if className == "Humanoid" then
-			if opts.missingHumanoid == true then
-				return nil
-			end
-			return { Health = if type(opts.health) == "number" then opts.health else 100, AutoRotate = true }
+			return humanoid
 		end
 		return nil
 	end
 
-	function character:PivotTo(_cframe: any)
+	function character:PivotTo(cframe: any)
+		self.LastPivotCFrame = cframe
+		if root ~= nil then
+			root.CFrame = cframe
+			if type(cframe) == "table" and cframe.Position ~= nil then
+				root.Position = cframe.Position
+			end
+		end
 		return
 	end
 

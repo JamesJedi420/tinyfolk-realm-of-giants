@@ -108,6 +108,37 @@ local function getRoleServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getGrabServiceQueryApi(self: Simulation): any?
+	if self.grabService ~= nil then
+		return self.grabService
+	end
+
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._GrabService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
+local function attachCarrierLoadSnapshot(self: Simulation, result: any, giantUserId: number?)
+	if type(result) ~= "table" or type(giantUserId) ~= "number" then
+		return
+	end
+
+	if result.carrierLoadSnapshot ~= nil then
+		return
+	end
+
+	local grabServiceQueryApi = getGrabServiceQueryApi(self)
+	if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.GetCarrierLoadSnapshot) == "function" then
+		result.carrierLoadSnapshot = grabServiceQueryApi.GetCarrierLoadSnapshot(giantUserId)
+	end
+end
+
 function MatchSimulation.new(config: SimulationConfig?): Simulation
 	local configAny: any = config
 	local seed = normalizeSeed(if configAny ~= nil then configAny.seed else nil)
@@ -324,16 +355,13 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 	elseif action == "grabTinyfolk" or action == "carryDowned" then
 		local result: any
 		local targetUserId = payload.targetUserId
-		if self.grabService ~= nil and type(self.grabService.RequestGrab) == "function" then
-			result = self.grabService.RequestGrab(player.UserId, targetUserId, self.tick)
+		local grabServiceQueryApi = getGrabServiceQueryApi(self)
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestGrab) == "function" then
+			result = grabServiceQueryApi.RequestGrab(player.UserId, targetUserId, self.tick)
 		else
-			local grabServiceQueryApi: any = if type(_G) == "table" then _G._GrabService_QueryAPI else nil
-			if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestGrab) == "function" then
-				result = grabServiceQueryApi.RequestGrab(player.UserId, targetUserId, self.tick)
-			else
-				result = { accepted = false, reason = "grab_service_unavailable" }
-			end
+			result = { accepted = false, reason = "grab_service_unavailable" }
 		end
+		attachCarrierLoadSnapshot(self, result, player.UserId)
 		appendResult(self, action, player, result)
 		appendMessage(
 			self,
@@ -346,15 +374,14 @@ function MatchSimulation.executeAction(self: Simulation, action: string, params:
 		)
 	elseif action == "carriedCounterplay" then
 		local result: any
-		if self.grabService ~= nil and type(self.grabService.RequestCounterplay) == "function" then
-			result = self.grabService.RequestCounterplay(player.UserId, self.tick)
+		local grabServiceQueryApi = getGrabServiceQueryApi(self)
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestCounterplay) == "function" then
+			result = grabServiceQueryApi.RequestCounterplay(player.UserId, self.tick)
 		else
-			local grabServiceQueryApi: any = if type(_G) == "table" then _G._GrabService_QueryAPI else nil
-			if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.RequestCounterplay) == "function" then
-				result = grabServiceQueryApi.RequestCounterplay(player.UserId, self.tick)
-			else
-				result = { accepted = false, reason = "grab_service_unavailable" }
-			end
+			result = { accepted = false, reason = "grab_service_unavailable" }
+		end
+		if type(result) == "table" and type(result.snapshot) == "table" then
+			attachCarrierLoadSnapshot(self, result, result.snapshot.carriedByUserId)
 		end
 		appendResult(self, action, player, result)
 		appendMessage(

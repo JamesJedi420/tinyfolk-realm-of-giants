@@ -13,6 +13,7 @@ local GrabConfig = require(Config:WaitForChild("GrabConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local GrabState = require(GiantRealm:WaitForChild("GrabState"))
+local CarryLoadState = require(GiantRealm:WaitForChild("CarryLoadState"))
 
 local ROLE_ATTRIBUTE = "Role"
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -25,7 +26,9 @@ local HELD_BY_ATTRIBUTE = "HeldByUserId"
 
 local heldTargetByGiantUserId: {[number]: number} = {}
 local heldByTargetUserId: {[number]: number} = {}
+local carriedTargetsByGiantUserId: {[number]: {number}} = {}
 local carriedStateByTargetUserId: {[number]: any} = {}
+local preGrabCFrameByTargetUserId: {[number]: any} = {}
 local lastRequestAtByUserId: {[number]: number} = {}
 
 local function debugLog(message: string)
@@ -156,6 +159,93 @@ local function isCarried(userId: number): boolean
 	return heldByTargetUserId[userId] ~= nil
 end
 
+local function getGiantBaseWalkSpeed(): number
+	local humanoidBaseByRole = RoleConfig.HumanoidBaseByRole
+	if type(humanoidBaseByRole) == "table" then
+		local giantBase = humanoidBaseByRole[RoleConfig.Roles.Giant]
+		if type(giantBase) == "table" and type(giantBase.walkSpeed) == "number" then
+			return giantBase.walkSpeed
+		end
+	end
+
+	return 16
+end
+
+local function getCarrierTargetIds(giantUserId: number): { number }
+	local targetIds = carriedTargetsByGiantUserId[giantUserId]
+	if type(targetIds) == "table" then
+		local copied: { number } = {}
+		for _, targetUserId in targetIds do
+			table.insert(copied, targetUserId)
+		end
+		return copied
+	end
+
+	local heldTargetUserId = heldTargetByGiantUserId[giantUserId]
+	if type(heldTargetUserId) == "number" then
+		return { heldTargetUserId }
+	end
+
+	return {}
+end
+
+local function getCarrierLoadSnapshot(giantUserId: number): any
+	return CarryLoadState.Snapshot(GrabConfig, getCarrierTargetIds(giantUserId))
+end
+
+local function setCarrierLoadAttributes(giant: Player?, snapshot: any, lastRejectReason: string?, lastDropReason: string?)
+	if giant == nil then
+		return
+	end
+
+	giant:SetAttribute(GrabConfig.CarrySlotsUsedAttribute, snapshot.slotsUsed)
+	giant:SetAttribute(GrabConfig.CarryCapacityAttribute, snapshot.capacity)
+	giant:SetAttribute(GrabConfig.CarryEncumbranceAttribute, snapshot.encumbrance)
+	giant:SetAttribute(GrabConfig.CarrySpeedMultiplierAttribute, snapshot.speedMultiplier)
+	giant:SetAttribute(GrabConfig.CarryAtCapacityAttribute, snapshot.isAtCapacity)
+	giant:SetAttribute(GrabConfig.CarryOverloadedAttribute, snapshot.isOverloaded)
+	giant:SetAttribute(GrabConfig.CarryLastRejectReasonAttribute, lastRejectReason)
+	giant:SetAttribute(GrabConfig.CarryLastDropReasonAttribute, lastDropReason)
+end
+
+local function applyCarrierLoadState(giant: Player?, lastRejectReason: string?, lastDropReason: string?): any
+	if giant == nil then
+		return CarryLoadState.Snapshot(GrabConfig, {})
+	end
+
+	local snapshot = getCarrierLoadSnapshot(giant.UserId)
+	setCarrierLoadAttributes(giant, snapshot, lastRejectReason, lastDropReason)
+
+	local humanoid = getHumanoid(giant)
+	if humanoid ~= nil then
+		local baseWalkSpeed = getGiantBaseWalkSpeed()
+		humanoid.WalkSpeed = baseWalkSpeed * snapshot.speedMultiplier
+	end
+
+	return snapshot
+end
+
+local function addCarrierTarget(giantUserId: number, targetUserId: number)
+	carriedTargetsByGiantUserId[giantUserId] = { targetUserId }
+end
+
+local function removeCarrierTarget(giantUserId: number, targetUserId: number)
+	local existingTargets = carriedTargetsByGiantUserId[giantUserId]
+	if type(existingTargets) ~= "table" then
+		carriedTargetsByGiantUserId[giantUserId] = nil
+		return
+	end
+
+	local nextTargets: { number } = {}
+	for _, existingTargetUserId in existingTargets do
+		if existingTargetUserId ~= targetUserId then
+			table.insert(nextTargets, existingTargetUserId)
+		end
+	end
+
+	carriedTargetsByGiantUserId[giantUserId] = if #nextTargets > 0 then nextTargets else nil
+end
+
 local function evaluateTargetSafeZone(player: Player, at: number): any
 	return SafeZonePolicy.EvaluateProtection(EscapeConfig, {
 		safeZoneState = player:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
@@ -258,6 +348,8 @@ local function setHeldAttributes(giant: Player?, target: Player?)
 	end
 end
 
+local resolveSafeDropCFrame: any = nil
+
 local function clearHoldByGiantUserId(giantUserId: number, reason: string, placeCFrame: CFrame?)
 	local targetUserId = heldTargetByGiantUserId[giantUserId]
 	if not targetUserId then
@@ -268,9 +360,11 @@ local function clearHoldByGiantUserId(giantUserId: number, reason: string, place
 	local target = getPlayerByUserId(targetUserId)
 	local state = carriedStateByTargetUserId[targetUserId]
 	local releaseSnapshot: any = nil
+	local safeDropCFrame, dropReason = resolveSafeDropCFrame(giant, target, placeCFrame)
 
 	heldTargetByGiantUserId[giantUserId] = nil
 	heldByTargetUserId[targetUserId] = nil
+	removeCarrierTarget(giantUserId, targetUserId)
 	if state ~= nil and GrabState.IsCarried(state) then
 		local releaseResult = GrabState.Release(state, {
 			now = now(),
@@ -294,10 +388,11 @@ local function clearHoldByGiantUserId(giantUserId: number, reason: string, place
 				targetHumanoid.AutoRotate = true
 			end
 
-			if placeCFrame then
-				targetCharacter:PivotTo(placeCFrame)
+			if safeDropCFrame ~= nil then
+				targetCharacter:PivotTo(safeDropCFrame)
 			end
 		end
+		target:SetAttribute(GrabConfig.CarryLastDropReasonAttribute, dropReason)
 	end
 
 	setHeldAttributes(giant, nil)
@@ -311,8 +406,18 @@ local function clearHoldByGiantUserId(giantUserId: number, reason: string, place
 	if giant then
 		giant:SetAttribute(GrabConfig.CarriedTargetUserIdAttribute, nil)
 	end
+	preGrabCFrameByTargetUserId[targetUserId] = nil
+	applyCarrierLoadState(giant, nil, dropReason)
 
-	debugLog(string.format("Released hold giantUserId=%d targetUserId=%d reason=%s", giantUserId, targetUserId, reason))
+	debugLog(
+		string.format(
+			"Released hold giantUserId=%d targetUserId=%d reason=%s dropReason=%s",
+			giantUserId,
+			targetUserId,
+			reason,
+			dropReason
+		)
+	)
 end
 
 local function rejectGrab(player: Player, reason: string)
@@ -419,6 +524,88 @@ local function validatePlacePosition(giant: Player, target: Player, desiredPosit
 	return CFrame.new(finalPosition, finalPosition + giantRoot.CFrame.LookVector), nil
 end
 
+local function readRootCFrame(root: BasePart?): any?
+	if root == nil then
+		return nil
+	end
+
+	local ok, cframe = pcall(function()
+		return (root :: any).CFrame
+	end)
+	if ok and cframe ~= nil then
+		return cframe
+	end
+
+	local positionOk, position = pcall(function()
+		return (root :: any).Position
+	end)
+	if positionOk and position ~= nil and CFrame ~= nil and type((CFrame :: any).new) == "function" then
+		local createdOk, createdCFrame = pcall(function()
+			return CFrame.new(position)
+		end)
+		if createdOk then
+			return createdCFrame
+		end
+	end
+
+	return nil
+end
+
+local function capturePreGrabCFrame(target: Player)
+	preGrabCFrameByTargetUserId[target.UserId] = readRootCFrame(getHumanoidRootPart(target))
+end
+
+local function tryAddCandidate(candidates: { Vector3 }, callback: () -> any)
+	local ok, value = pcall(callback)
+	if ok and value ~= nil then
+		table.insert(candidates, value :: Vector3)
+	end
+end
+
+resolveSafeDropCFrame = function(giant: Player?, target: Player?, requestedCFrame: CFrame?): (any?, string)
+	if requestedCFrame ~= nil then
+		return requestedCFrame, "requested_place"
+	end
+
+	if giant ~= nil and target ~= nil then
+		local giantRoot = getHumanoidRootPart(giant)
+		if giantRoot ~= nil then
+			local candidates: { Vector3 } = {}
+			local defaultDistance = GrabConfig.DefaultPlaceDistanceStuds
+			tryAddCandidate(candidates, function()
+				return giantRoot.Position + giantRoot.CFrame.LookVector * defaultDistance
+			end)
+			tryAddCandidate(candidates, function()
+				return giantRoot.Position - giantRoot.CFrame.LookVector * defaultDistance
+			end)
+			tryAddCandidate(candidates, function()
+				return giantRoot.Position + giantRoot.CFrame.RightVector * defaultDistance
+			end)
+			tryAddCandidate(candidates, function()
+				return giantRoot.Position - giantRoot.CFrame.RightVector * defaultDistance
+			end)
+
+			for _, candidatePosition in candidates do
+				local ok, candidateCFrame = pcall(function()
+					return validatePlacePosition(giant, target, candidatePosition)
+				end)
+				if ok and candidateCFrame ~= nil then
+					return candidateCFrame, "nearby_valid_drop"
+				end
+			end
+		end
+	end
+
+	if target ~= nil then
+		local fallbackCFrame = preGrabCFrameByTargetUserId[target.UserId]
+		if fallbackCFrame ~= nil then
+			return fallbackCFrame, "pre_grab_fallback"
+		end
+	end
+
+	return nil, "drop_position_unresolved"
+end
+
 local function updateHeldTarget(giant: Player, target: Player)
 	local giantRoot = getHumanoidRootPart(giant)
 	local targetCharacter = target.Character
@@ -476,10 +663,6 @@ local function requestGrab(player: Player, targetUserIdPayload: unknown, nowOver
 		return { accepted = false, reason = "caller_not_giant" }
 	end
 
-	if heldTargetByGiantUserId[player.UserId] then
-		return { accepted = false, reason = "caller_already_carrying" }
-	end
-
 	if heldByTargetUserId[player.UserId] then
 		return { accepted = false, reason = "caller_currently_carried" }
 	end
@@ -513,6 +696,18 @@ local function requestGrab(player: Player, targetUserIdPayload: unknown, nowOver
 
 	if heldByTargetUserId[target.UserId] then
 		return { accepted = false, reason = "target_already_carried" }
+	end
+
+	local capacityResult = CarryLoadState.CanAcceptTarget(GrabConfig, getCarrierTargetIds(player.UserId), target.UserId)
+	if capacityResult.accepted ~= true then
+		setCarrierLoadAttributes(player, capacityResult.snapshot, capacityResult.reason, nil)
+		return capacityResult
+	end
+
+	if heldTargetByGiantUserId[player.UserId] then
+		local loadSnapshot = getCarrierLoadSnapshot(player.UserId)
+		setCarrierLoadAttributes(player, loadSnapshot, "carry_physical_slot_unavailable", nil)
+		return { accepted = false, reason = "carry_physical_slot_unavailable", snapshot = loadSnapshot }
 	end
 
 	if target.Character == nil then
@@ -581,9 +776,12 @@ local function requestGrab(player: Player, targetUserIdPayload: unknown, nowOver
 
 	heldTargetByGiantUserId[player.UserId] = target.UserId
 	heldByTargetUserId[target.UserId] = player.UserId
+	addCarrierTarget(player.UserId, target.UserId)
+	capturePreGrabCFrame(target)
 	setHeldAttributes(player, target)
 	setCarriedAttributes(target, carriedResult.snapshot)
 	setGiantCarriedAttributes(player, carriedResult.snapshot)
+	local carrierLoadSnapshot = applyCarrierLoadState(player, nil, nil)
 
 	updateHeldTarget(player, target)
 
@@ -592,6 +790,7 @@ local function requestGrab(player: Player, targetUserIdPayload: unknown, nowOver
 		reason = "accepted",
 		distance = distance,
 		snapshot = carriedResult.snapshot,
+		carrierLoadSnapshot = carrierLoadSnapshot,
 	}
 end
 
@@ -614,6 +813,10 @@ local function requestCounterplay(player: Player, nowOverride: number?): any
 
 	if result.accepted == true and result.snapshot.state == GrabState.States.Released then
 		clearHoldByGiantUserId(giantUserId, "counterplay_completed", nil)
+		result.carrierLoadSnapshot = getCarrierLoadSnapshot(giantUserId)
+		result.dropReason = player:GetAttribute(GrabConfig.CarryLastDropReasonAttribute)
+	elseif giant ~= nil then
+		result.carrierLoadSnapshot = getCarrierLoadSnapshot(giantUserId)
 	end
 
 	return result
@@ -707,6 +910,7 @@ local function setupPlayer(player: Player)
 	local freeSnapshot = GrabState.Snapshot(GrabState.New(now()))
 	setCarriedAttributes(player, freeSnapshot)
 	setGiantCarriedAttributes(player, freeSnapshot)
+	setCarrierLoadAttributes(player, CarryLoadState.Snapshot(GrabConfig, {}), nil, nil)
 
 	if type((player :: any).CharacterAdded) ~= "table" or type((player :: any).CharacterAdded.Connect) ~= "function" then
 		return
@@ -745,6 +949,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	end
 
 	carriedStateByTargetUserId[player.UserId] = nil
+	carriedTargetsByGiantUserId[player.UserId] = nil
+	preGrabCFrameByTargetUserId[player.UserId] = nil
 end)
 
 RunService.Heartbeat:Connect(function()
@@ -779,13 +985,26 @@ _G._GrabService_QueryAPI = {
 			return { accepted = false, reason = "not_carrying" }
 		end
 		clearHoldByGiantUserId(giantUserId, reason, nil)
-		return { accepted = true, reason = "accepted" }
+		return {
+			accepted = true,
+			reason = "accepted",
+			carrierLoadSnapshot = getCarrierLoadSnapshot(giantUserId),
+		}
 	end,
 	GetCarrySnapshot = function(userId: number): any
 		return getCarriedSnapshot(userId)
 	end,
+	GetCarrierLoadSnapshot = function(giantUserId: number): any
+		return getCarrierLoadSnapshot(giantUserId)
+	end,
 	IsPlayerCarried = function(userId: number): boolean
 		return isCarried(userId)
+	end,
+	IsCarrierEncumbered = function(giantUserId: number): boolean
+		return getCarrierLoadSnapshot(giantUserId).isEncumbered == true
+	end,
+	CanGiantPerformCarryInteraction = function(giantUserId: number, interactionName: string): any
+		return CarryLoadState.CanPerformCarrierInteraction(GrabConfig, getCarrierTargetIds(giantUserId), interactionName)
 	end,
 	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
 		local state = carriedStateByTargetUserId[userId]

@@ -582,6 +582,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				return { accepted = false, reason = "actor_carried" }
 			end
 		end
+		if
+			grabServiceQueryApi ~= nil
+			and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function"
+		then
+			local carryInteraction = grabServiceQueryApi.CanGiantPerformCarryInteraction(
+				player.UserId,
+				"traversalGapBlock"
+			)
+			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
+				return { accepted = false, reason = tostring(carryInteraction.reason or "carrier_encumbered") }
+			end
+		end
 
 		local callerRoot = getHumanoidRootPart(player)
 		if callerRoot == nil then
@@ -771,6 +783,16 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				return false
 			end
 			if type(target.UserId) == "number" and grabServiceQueryApi.IsPlayerCarried(target.UserId) == true then
+				return false
+			end
+		end
+		if
+			grabServiceQueryApi ~= nil
+			and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function"
+			and type(player.UserId) == "number"
+		then
+			local carryInteraction = grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "throughGapReach")
+			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
 				return false
 			end
 		end
