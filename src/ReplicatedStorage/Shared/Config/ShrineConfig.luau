@@ -13,6 +13,10 @@ ShrineConfig.TaskStabilizationThresholdSeconds = 0.4
 ShrineConfig.TaskMajorRegressionStepSeconds = 0.8
 ShrineConfig.TaskMajorRegressionMaxEvents = 2
 ShrineConfig.TaskRegressionWindowSeconds = 3.0
+ShrineConfig.TaskQteEnabled = false
+ShrineConfig.TaskQteWindowSeconds = 0.2
+ShrineConfig.TaskQteBonusSeconds = 0.35
+ShrineConfig.TaskQteFailureDisrupts = true
 
 ShrineConfig.TaskActiveShrineIdAttribute = "ShrineTaskActiveShrineId"
 ShrineConfig.TaskProgressRatioAttribute = "ShrineTaskProgressRatio"
@@ -23,6 +27,7 @@ ShrineConfig.TaskObjectiveStateAttribute = "ShrineTaskObjectiveState"
 ShrineConfig.TaskProgressSecondsAttribute = "ShrineTaskProgressSeconds"
 ShrineConfig.TaskRegressionCountAttribute = "ShrineTaskRegressionCount"
 ShrineConfig.TaskRegressingUntilAttribute = "ShrineTaskRegressingUntil"
+ShrineConfig.TaskQteResultAttribute = "ShrineTaskQteResult"
 
 ShrineConfig.GenerationIntervalSeconds = 2
 ShrineConfig.EssencePerTick = 3

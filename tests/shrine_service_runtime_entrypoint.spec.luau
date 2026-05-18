@@ -216,6 +216,8 @@ configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Con
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
+sharedConstructionFolder._Children["TaskQteTimingLogic"] =
+	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -230,6 +232,7 @@ local mapFolder = makeNode("Map", "Folder", "Workspace.Map")
 local stationsFolder = makeNode("Stations", "Folder", "Workspace.Map.Stations")
 addChild(stationsFolder, "Shrine_A", makeBasePart("Shrine_A", -8, 0, 10))
 addChild(stationsFolder, "Shrine_B", makeBasePart("Shrine_B", -6, 0, 10))
+addChild(stationsFolder, "Shrine_C", makeBasePart("Shrine_C", -10, 0, 10))
 addChild(mapFolder, "Stations", stationsFolder)
 addChild(workspaceService, "Map", mapFolder)
 
@@ -283,6 +286,7 @@ script = {
 
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
+local ShrineConfig = require("../src/ReplicatedStorage/Shared/Config/ShrineConfig")
 
 local legacyPlayer = makeAlivePlayer(7201, Vector3.new(-8, 0, 10))
 legacyPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
@@ -382,5 +386,70 @@ activateRemote:FireServer(taskPlayer, {
 	now = 207.0,
 })
 assertTrue(sawWarnContaining("task_regression_cap_reached"), "task regression cap rejection is surfaced")
+
+-- TIN-154 QTE slice: optional complete-time window can award early completion or apply disruption penalty.
+ShrineConfig.TaskQteEnabled = true
+ShrineConfig.TaskQteWindowSeconds = 0.2
+ShrineConfig.TaskQteBonusSeconds = 0.35
+ShrineConfig.TaskQteFailureDisrupts = true
+
+local qtePlayer = makeAlivePlayer(7203, Vector3.new(-10, 0, 10))
+qtePlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+qtePlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Worshipper)
+table.insert(playersList, qtePlayer)
+
+activateRemote:FireServer(qtePlayer, {
+	shrineId = "Shrine_C",
+	mode = "begin",
+	now = 220,
+})
+activateRemote:FireServer(qtePlayer, {
+	shrineId = "Shrine_C",
+	mode = "complete",
+	now = 221.35,
+	qteTapAt = 221.35,
+})
+assertEqual(
+	qtePlayer:GetAttribute("ShrineTaskQteResult"),
+	"success",
+	"QTE success marks shrine task qte attribute"
+)
+assertEqual(
+	qtePlayer:GetAttribute("ShrineTaskLastReason"),
+	"completed",
+	"QTE success allows completed reason"
+)
+
+activateRemote:FireServer(qtePlayer, {
+	shrineId = "Shrine_C",
+	mode = "begin",
+	now = 230,
+})
+local warnsBeforeQteFail = #warns
+activateRemote:FireServer(qtePlayer, {
+	shrineId = "Shrine_C",
+	mode = "complete",
+	now = 233.0,
+	qteTapAt = 233.0,
+})
+
+local sawQteFailed = false
+for i = warnsBeforeQteFail + 1, #warns do
+	if string.find(warns[i], "task_qte_failed", 1, true) ~= nil then
+		sawQteFailed = true
+		break
+	end
+end
+assertTrue(sawQteFailed, "QTE miss rejects completion with task_qte_failed")
+assertEqual(
+	qtePlayer:GetAttribute("ShrineTaskQteResult"),
+	"failed",
+	"QTE failure marks shrine task qte attribute"
+)
+assertEqual(
+	qtePlayer:GetAttribute("ShrineTaskObjectiveState"),
+	"regressing",
+	"QTE failure applies disruption regression penalty"
+)
 
 print("shrine_service_runtime_entrypoint: all checks passed")

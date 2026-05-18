@@ -19,6 +19,10 @@ StationConfig.TaskStabilizationThresholdSeconds = 0.4
 StationConfig.TaskMajorRegressionStepSeconds = 0.8
 StationConfig.TaskMajorRegressionMaxEvents = 2
 StationConfig.TaskRegressionWindowSeconds = 3.0
+StationConfig.TaskQteEnabled = false
+StationConfig.TaskQteWindowSeconds = 0.2
+StationConfig.TaskQteBonusSeconds = 0.35
+StationConfig.TaskQteFailureDisrupts = true
 
 StationConfig.TaskActiveStationIdAttribute = "StationTaskActiveStationId"
 StationConfig.TaskProgressRatioAttribute = "StationTaskProgressRatio"
@@ -29,6 +33,7 @@ StationConfig.TaskObjectiveStateAttribute = "StationTaskObjectiveState"
 StationConfig.TaskProgressSecondsAttribute = "StationTaskProgressSeconds"
 StationConfig.TaskRegressionCountAttribute = "StationTaskRegressionCount"
 StationConfig.TaskRegressingUntilAttribute = "StationTaskRegressingUntil"
+StationConfig.TaskQteResultAttribute = "StationTaskQteResult"
 
 StationConfig.GenerationIntervalSeconds = 1
 StationConfig.EssencePerTick = 2

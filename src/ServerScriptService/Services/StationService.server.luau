@@ -12,6 +12,7 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local ConstructionFolder = Shared:WaitForChild("Construction")
 local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
+local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -291,6 +292,10 @@ local function applyTaskAttributes(player: Player, taskSnapshot: any)
 	player:SetAttribute(StationConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
 end
 
+local function setTaskQteResultAttribute(player: Player, result: string?)
+	player:SetAttribute(StationConfig.TaskQteResultAttribute, result)
+end
+
 local function getTaskStateForStation(stationId: string): any
 	local existing = taskStateByStationId[stationId]
 	if existing ~= nil then
@@ -350,6 +355,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 	local stationId: string? = nil
 	local requestMode = "legacy"
 	local requestNow: number? = nil
+	local requestQteTapAt: number? = nil
 
 	if type(payload) == "string" then
 		stationId = payload
@@ -368,6 +374,9 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		requestMode = payloadAny.mode
 		if type(payloadAny.now) == "number" then
 			requestNow = payloadAny.now
+		end
+		if type(payloadAny.qteTapAt) == "number" then
+			requestQteTapAt = payloadAny.qteTapAt
 		end
 	else
 		rejectActivate(player, "malformed_payload")
@@ -399,6 +408,10 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		or requestMode == "unblock"
 		or requestMode == "disrupt"
 	then
+		if requestMode == "begin" and StationConfig.TaskQteEnabled == true then
+			setTaskQteResultAttribute(player, nil)
+		end
+
 		if requestMode ~= "cancel" and requestMode ~= "unblock" and requestMode ~= "block" then
 			local allowed, reason = validateActivationRequest(player, stationState)
 			if not allowed then
@@ -408,10 +421,46 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		end
 
 		local taskState = getTaskStateForStation(stationIdValue)
+		local resolvedNow = if type(requestNow) == "number" then requestNow else os.clock()
+
+		if requestMode == "complete" and StationConfig.TaskQteEnabled == true then
+			local qteAttemptAt = if type(requestQteTapAt) == "number" then requestQteTapAt else resolvedNow
+			local qteResult = TaskQteTimingLogic.Evaluate({
+				now = qteAttemptAt,
+				targetAt = taskState.endsAt,
+				windowSeconds = StationConfig.TaskQteWindowSeconds,
+				bonusSeconds = StationConfig.TaskQteBonusSeconds,
+			})
+
+			if qteResult.success then
+				setTaskQteResultAttribute(player, "success")
+				resolvedNow = qteResult.effectiveNow
+			else
+				setTaskQteResultAttribute(player, "failed")
+				if StationConfig.TaskQteFailureDisrupts == true then
+					local disruptResult = ContextualTaskProgressLogic.Resolve(taskState, {
+						eventType = "disrupt",
+						taskId = stationIdValue,
+						now = resolvedNow,
+						durationSeconds = StationConfig.TaskDurationSeconds,
+						regressionPerSecond = StationConfig.TaskRegressionPerSecond,
+						stabilizationThresholdSeconds = StationConfig.TaskStabilizationThresholdSeconds,
+						majorRegressionStepSeconds = StationConfig.TaskMajorRegressionStepSeconds,
+						majorRegressionMaxEvents = StationConfig.TaskMajorRegressionMaxEvents,
+						regressionWindowSeconds = StationConfig.TaskRegressionWindowSeconds,
+					})
+					applyTaskAttributes(player, disruptResult.snapshot)
+				end
+
+				rejectActivate(player, "task_qte_failed")
+				return
+			end
+		end
+
 		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
 			eventType = requestMode,
 			taskId = stationIdValue,
-			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			now = resolvedNow,
 			durationSeconds = StationConfig.TaskDurationSeconds,
 			regressionPerSecond = StationConfig.TaskRegressionPerSecond,
 			stabilizationThresholdSeconds = StationConfig.TaskStabilizationThresholdSeconds,

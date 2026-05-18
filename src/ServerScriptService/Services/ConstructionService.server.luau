@@ -9,6 +9,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 local ConstructionConfig: any
 local ResourceFlowState: any
 local ContextualTaskProgressLogic: any
+local TaskQteTimingLogic: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local BUILD_REMOTE_NAME = "ConstructionBuildRequest"
@@ -107,6 +108,7 @@ local function resolveDependencies()
 	ConstructionConfig = requireChildModule(config, "ConstructionConfig")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 	ContextualTaskProgressLogic = requireChildModule(construction, "ContextualTaskProgressLogic")
+	TaskQteTimingLogic = requireChildModule(construction, "TaskQteTimingLogic")
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -388,6 +390,15 @@ local function applyTaskAttributes(player: Player, taskSnapshot: any)
 	setAttribute(player, ConstructionConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
 end
 
+local function setTaskQteResultAttribute(player: Player, result: string?)
+	local setAttribute = (player :: any).SetAttribute
+	if type(setAttribute) ~= "function" then
+		return
+	end
+
+	setAttribute(player, ConstructionConfig.TaskQteResultAttribute, result)
+end
+
 local function getTaskStateForSite(siteId: string): any
 	local existing = taskStateBySiteId[siteId]
 	if existing ~= nil then
@@ -507,6 +518,7 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	local requestSiteId: string? = nil
 	local requestMode = "legacy"
 	local requestNow: number? = nil
+	local requestQteTapAt: number? = nil
 
 	if type(payload) == "string" then
 		requestSiteId = payload
@@ -527,6 +539,9 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		requestMode = payloadAny.mode
 		if type(payloadAny.now) == "number" then
 			requestNow = payloadAny.now
+		end
+		if type(payloadAny.qteTapAt) == "number" then
+			requestQteTapAt = payloadAny.qteTapAt
 		end
 	else
 		rejectBuild(player, "malformed_payload")
@@ -637,10 +652,51 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		or requestMode == "disrupt"
 	then
 		local taskState = getTaskStateForSite(siteId)
+		local resolvedNow = if type(requestNow) == "number" then requestNow else os.clock()
+
+		if requestMode == "begin" and ConstructionConfig.TaskQteEnabled == true then
+			setTaskQteResultAttribute(player, nil)
+		end
+
+		if requestMode == "complete" and ConstructionConfig.TaskQteEnabled == true then
+			local qteAttemptAt = if type(requestQteTapAt) == "number" then requestQteTapAt else resolvedNow
+			local qteResult = TaskQteTimingLogic.Evaluate({
+				now = qteAttemptAt,
+				targetAt = taskState.endsAt,
+				windowSeconds = ConstructionConfig.TaskQteWindowSeconds,
+				bonusSeconds = ConstructionConfig.TaskQteBonusSeconds,
+			})
+
+			if qteResult.success then
+				setTaskQteResultAttribute(player, "success")
+				resolvedNow = qteResult.effectiveNow
+			else
+				setTaskQteResultAttribute(player, "failed")
+				if ConstructionConfig.TaskQteFailureDisrupts == true then
+					local disruptResult = ContextualTaskProgressLogic.Resolve(taskState, {
+						eventType = "disrupt",
+						taskId = siteId,
+						now = resolvedNow,
+						durationSeconds = ConstructionConfig.TaskDurationSeconds,
+						regressionPerSecond = ConstructionConfig.TaskRegressionPerSecond,
+						stabilizationThresholdSeconds = ConstructionConfig.TaskStabilizationThresholdSeconds,
+						majorRegressionStepSeconds = ConstructionConfig.TaskMajorRegressionStepSeconds,
+						majorRegressionMaxEvents = ConstructionConfig.TaskMajorRegressionMaxEvents,
+						regressionWindowSeconds = ConstructionConfig.TaskRegressionWindowSeconds,
+					})
+					applyTaskAttributes(player, disruptResult.snapshot)
+				end
+
+				rejectBuild(player, "task_qte_failed")
+				logBuildOutcome("rejected", player, siteId, "task_qte_failed")
+				return
+			end
+		end
+
 		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
 			eventType = requestMode,
 			taskId = siteId,
-			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			now = resolvedNow,
 			durationSeconds = ConstructionConfig.TaskDurationSeconds,
 			regressionPerSecond = ConstructionConfig.TaskRegressionPerSecond,
 			stabilizationThresholdSeconds = ConstructionConfig.TaskStabilizationThresholdSeconds,

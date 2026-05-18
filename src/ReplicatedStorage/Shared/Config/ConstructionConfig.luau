@@ -13,6 +13,10 @@ ConstructionConfig.TaskStabilizationThresholdSeconds = 0.4
 ConstructionConfig.TaskMajorRegressionStepSeconds = 0.8
 ConstructionConfig.TaskMajorRegressionMaxEvents = 2
 ConstructionConfig.TaskRegressionWindowSeconds = 3.0
+ConstructionConfig.TaskQteEnabled = false
+ConstructionConfig.TaskQteWindowSeconds = 0.2
+ConstructionConfig.TaskQteBonusSeconds = 0.35
+ConstructionConfig.TaskQteFailureDisrupts = true
 
 ConstructionConfig.TaskActiveSiteIdAttribute = "ConstructionTaskActiveSiteId"
 ConstructionConfig.TaskProgressRatioAttribute = "ConstructionTaskProgressRatio"
@@ -23,6 +27,7 @@ ConstructionConfig.TaskObjectiveStateAttribute = "ConstructionTaskObjectiveState
 ConstructionConfig.TaskProgressSecondsAttribute = "ConstructionTaskProgressSeconds"
 ConstructionConfig.TaskRegressionCountAttribute = "ConstructionTaskRegressionCount"
 ConstructionConfig.TaskRegressingUntilAttribute = "ConstructionTaskRegressingUntil"
+ConstructionConfig.TaskQteResultAttribute = "ConstructionTaskQteResult"
 
 ConstructionConfig.CostBySiteId = {
 	ConstructionSite_A = {

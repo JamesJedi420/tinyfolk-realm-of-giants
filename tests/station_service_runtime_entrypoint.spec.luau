@@ -216,6 +216,8 @@ configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Con
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
+sharedConstructionFolder._Children["TaskQteTimingLogic"] =
+	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -278,6 +280,7 @@ script = {
 
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
+local StationConfig = require("../src/ReplicatedStorage/Shared/Config/StationConfig")
 
 local legacyPlayer = makeAlivePlayer(7101, Vector3.new(10, 0, 10))
 legacyPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
@@ -377,5 +380,70 @@ activateRemote:FireServer(taskPlayer, {
 	now = 106.9,
 })
 assertTrue(sawWarnContaining("task_regression_cap_reached"), "task regression cap rejection is surfaced")
+
+-- TIN-154 QTE slice: optional complete-time window can award early completion or apply disruption penalty.
+StationConfig.TaskQteEnabled = true
+StationConfig.TaskQteWindowSeconds = 0.2
+StationConfig.TaskQteBonusSeconds = 0.35
+StationConfig.TaskQteFailureDisrupts = true
+
+local qtePlayer = makeAlivePlayer(7103, Vector3.new(18, 0, 10))
+qtePlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+qtePlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Miner)
+table.insert(playersList, qtePlayer)
+
+activateRemote:FireServer(qtePlayer, {
+	stationId = "MiningStation_A",
+	mode = "begin",
+	now = 120,
+})
+activateRemote:FireServer(qtePlayer, {
+	stationId = "MiningStation_A",
+	mode = "complete",
+	now = 121.35,
+	qteTapAt = 121.35,
+})
+assertEqual(
+	qtePlayer:GetAttribute("StationTaskQteResult"),
+	"success",
+	"QTE success marks station task qte attribute"
+)
+assertEqual(
+	qtePlayer:GetAttribute("StationTaskLastReason"),
+	"completed",
+	"QTE success allows completed reason"
+)
+
+activateRemote:FireServer(qtePlayer, {
+	stationId = "MiningStation_A",
+	mode = "begin",
+	now = 130,
+})
+local warnsBeforeQteFail = #warns
+activateRemote:FireServer(qtePlayer, {
+	stationId = "MiningStation_A",
+	mode = "complete",
+	now = 133.0,
+	qteTapAt = 133.0,
+})
+
+local sawQteFailed = false
+for i = warnsBeforeQteFail + 1, #warns do
+	if string.find(warns[i], "task_qte_failed", 1, true) ~= nil then
+		sawQteFailed = true
+		break
+	end
+end
+assertTrue(sawQteFailed, "QTE miss rejects completion with task_qte_failed")
+assertEqual(
+	qtePlayer:GetAttribute("StationTaskQteResult"),
+	"failed",
+	"QTE failure marks station task qte attribute"
+)
+assertEqual(
+	qtePlayer:GetAttribute("StationTaskObjectiveState"),
+	"regressing",
+	"QTE failure applies disruption regression penalty"
+)
 
 print("station_service_runtime_entrypoint: all checks passed")

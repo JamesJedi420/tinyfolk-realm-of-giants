@@ -186,6 +186,8 @@ addChild(sharedFolder, "Config", configFolder)
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
+sharedConstructionFolder._Children["TaskQteTimingLogic"] =
+	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
@@ -687,5 +689,74 @@ for i = warnsBeforeRegressionCap + 1, #warns do
 	end
 end
 assertTrue(sawRegressionCap, "third major regression is rejected at configured cap")
+
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "cancel",
+	now = 303.1,
+})
+
+-- TIN-154 QTE slice: optional complete-time window can award early completion or apply disruption penalty.
+ConstructionConfig.TaskQteEnabled = true
+ConstructionConfig.TaskQteWindowSeconds = 5.0
+ConstructionConfig.TaskQteBonusSeconds = 0.35
+ConstructionConfig.TaskQteFailureDisrupts = true
+
+local qteBuilder = makeAlivePlayer(9601, Vector3.new(16, 0, 10))
+buildRemote:FireServer(qteBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 400,
+})
+buildRemote:FireServer(qteBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "complete",
+	now = 401.35,
+	qteTapAt = 401.35,
+})
+
+assertEqual(
+	qteBuilder:GetAttribute("ConstructionTaskQteResult"),
+	"success",
+	"QTE success marks construction task qte attribute"
+)
+assertEqual(
+	qteBuilder:GetAttribute("ConstructionTaskLastReason"),
+	"completed",
+	"QTE success allows completed reason"
+)
+
+ConstructionConfig.TaskQteWindowSeconds = 0.2
+buildRemote:FireServer(qteBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "begin",
+	now = 420,
+})
+local warnsBeforeQteFail = #warns
+buildRemote:FireServer(qteBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "complete",
+	now = 423.0,
+	qteTapAt = 423.0,
+})
+
+local sawQteFailed = false
+for i = warnsBeforeQteFail + 1, #warns do
+	if string.find(warns[i], "task_qte_failed", 1, true) ~= nil then
+		sawQteFailed = true
+		break
+	end
+end
+assertTrue(sawQteFailed, "QTE miss rejects completion with task_qte_failed")
+assertEqual(
+	qteBuilder:GetAttribute("ConstructionTaskQteResult"),
+	"failed",
+	"QTE failure marks construction task qte attribute"
+)
+assertEqual(
+	qteBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"regressing",
+	"QTE failure applies disruption regression penalty"
+)
 
 print("construction_service_runtime_entrypoint: contextual task progress slice checks passed")

@@ -525,6 +525,7 @@ local function beginConstructionTask(candidate: Candidate)
 			siteId = candidate.targetId,
 			mode = "complete",
 			now = os.clock(),
+			qteTapAt = os.clock(),
 		})
 		activeConstructionTaskSiteId = nil
 		activeConstructionTaskToken += 1
@@ -567,6 +568,7 @@ local function beginStationTask(candidate: Candidate)
 			stationId = candidate.targetId,
 			mode = "complete",
 			now = os.clock(),
+			qteTapAt = os.clock(),
 		})
 		activeStationTaskStationId = nil
 		activeStationTaskToken += 1
@@ -609,6 +611,7 @@ local function beginShrineTask(candidate: Candidate)
 			shrineId = candidate.targetId,
 			mode = "complete",
 			now = os.clock(),
+			qteTapAt = os.clock(),
 		})
 		activeShrineTaskShrineId = nil
 		activeShrineTaskToken += 1

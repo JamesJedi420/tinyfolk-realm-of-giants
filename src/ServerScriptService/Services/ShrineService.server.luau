@@ -12,6 +12,7 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local ConstructionFolder = Shared:WaitForChild("Construction")
 local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
+local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -228,6 +229,10 @@ local function applyTaskAttributes(player: Player, taskSnapshot: any)
 	player:SetAttribute(ShrineConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
 end
 
+local function setTaskQteResultAttribute(player: Player, result: string?)
+	player:SetAttribute(ShrineConfig.TaskQteResultAttribute, result)
+end
+
 local function getTaskStateForShrine(shrineId: string): any
 	local existing = taskStateByShrineId[shrineId]
 	if existing ~= nil then
@@ -273,6 +278,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 	local shrineId: string? = nil
 	local requestMode = "legacy"
 	local requestNow: number? = nil
+	local requestQteTapAt: number? = nil
 
 	if type(payload) == "string" then
 		shrineId = payload
@@ -291,6 +297,9 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 		requestMode = payloadAny.mode
 		if type(payloadAny.now) == "number" then
 			requestNow = payloadAny.now
+		end
+		if type(payloadAny.qteTapAt) == "number" then
+			requestQteTapAt = payloadAny.qteTapAt
 		end
 	else
 		rejectActivate(player, "malformed_payload")
@@ -322,6 +331,10 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 		or requestMode == "unblock"
 		or requestMode == "disrupt"
 	then
+		if requestMode == "begin" and ShrineConfig.TaskQteEnabled == true then
+			setTaskQteResultAttribute(player, nil)
+		end
+
 		if requestMode ~= "cancel" and requestMode ~= "unblock" and requestMode ~= "block" then
 			local allowed, reason = validateActivationRequest(player, shrineState)
 			if not allowed then
@@ -331,10 +344,46 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 		end
 
 		local taskState = getTaskStateForShrine(shrineIdValue)
+		local resolvedNow = if type(requestNow) == "number" then requestNow else os.clock()
+
+		if requestMode == "complete" and ShrineConfig.TaskQteEnabled == true then
+			local qteAttemptAt = if type(requestQteTapAt) == "number" then requestQteTapAt else resolvedNow
+			local qteResult = TaskQteTimingLogic.Evaluate({
+				now = qteAttemptAt,
+				targetAt = taskState.endsAt,
+				windowSeconds = ShrineConfig.TaskQteWindowSeconds,
+				bonusSeconds = ShrineConfig.TaskQteBonusSeconds,
+			})
+
+			if qteResult.success then
+				setTaskQteResultAttribute(player, "success")
+				resolvedNow = qteResult.effectiveNow
+			else
+				setTaskQteResultAttribute(player, "failed")
+				if ShrineConfig.TaskQteFailureDisrupts == true then
+					local disruptResult = ContextualTaskProgressLogic.Resolve(taskState, {
+						eventType = "disrupt",
+						taskId = shrineIdValue,
+						now = resolvedNow,
+						durationSeconds = ShrineConfig.TaskDurationSeconds,
+						regressionPerSecond = ShrineConfig.TaskRegressionPerSecond,
+						stabilizationThresholdSeconds = ShrineConfig.TaskStabilizationThresholdSeconds,
+						majorRegressionStepSeconds = ShrineConfig.TaskMajorRegressionStepSeconds,
+						majorRegressionMaxEvents = ShrineConfig.TaskMajorRegressionMaxEvents,
+						regressionWindowSeconds = ShrineConfig.TaskRegressionWindowSeconds,
+					})
+					applyTaskAttributes(player, disruptResult.snapshot)
+				end
+
+				rejectActivate(player, "task_qte_failed")
+				return
+			end
+		end
+
 		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
 			eventType = requestMode,
 			taskId = shrineIdValue,
-			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			now = resolvedNow,
 			durationSeconds = ShrineConfig.TaskDurationSeconds,
 			regressionPerSecond = ShrineConfig.TaskRegressionPerSecond,
 			stabilizationThresholdSeconds = ShrineConfig.TaskStabilizationThresholdSeconds,
