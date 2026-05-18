@@ -393,5 +393,13 @@ do
 	assertTrue((snap.total or 0) > 0, "minMultiplier prevents points from going to zero")
 	assertTrue((snap.categories.control or 0) >= 90 * 0.3, "minMultiplier respected (90 base * 0.3 min)")
 end
+do
+	local state = ScoreState.NewState()
+	state.playerScores[8000] = { total = -100, categories = { objective = -50, teamplay = -50 } }
+	
+	local snap = ScoreState.GetPlayerSnapshot(state, 8000)
+	assertEqual(snap.total, -100, "corrupted total preserved in snapshot")
+	assertEqual(snap.categories.objective, -50, "corrupted category preserved")
+end
 
 print("score_state: all checks passed")
