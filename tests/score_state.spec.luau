@@ -152,4 +152,139 @@ do
 	assertEqual(recent[1].eventId, "capture_release", "recent events returns newest")
 end
 
+do
+	local state = newState()
+	local first = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 2001,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+		metadata = nil,
+	})
+	assertTrue(first.accepted, "nil metadata accepted")
+	assertEqual(first.record.metadata, nil, "nil metadata preserved")
+end
+
+do
+	local state = newState()
+	local first = ScoreState.ResolveScoreEvent(state, {
+		now = 1000000,
+		userId = 2002,
+		eventId = "rescue_complete",
+		actorRole = "Tinyfolk",
+	})
+	assertTrue(first.accepted, "very large tick accepted")
+	assertEqual(first.record.now, 1000000, "very large tick preserved")
+end
+
+do
+	local state = newState()
+	local first = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 2003,
+		eventId = "rescue_complete",
+		actorRole = "Tinyfolk",
+	})
+	local second = ScoreState.ResolveScoreEvent(first.state, {
+		now = 2,
+		userId = 2003,
+		eventId = "rescue_complete",
+		actorRole = "Tinyfolk",
+	})
+
+	local afterDecayWindow = ScoreState.ResolveScoreEvent(second.state, {
+		now = 2 + 45 + 1,
+		userId = 2003,
+		eventId = "rescue_complete",
+		actorRole = "Tinyfolk",
+	})
+
+	assertTrue(afterDecayWindow.record.awardedPoints == 80, "repeat counter resets after decay window expires")
+end
+
+do
+	local state = newState()
+	local objectiveEvents = {}
+
+	for i = 1, 10 do
+		local transition = ScoreState.ResolveScoreEvent(state, {
+			now = i * 100,
+			userId = 2004,
+			eventId = "escape_success",
+			actorRole = "Tinyfolk",
+		})
+		state = transition.state
+		table.insert(objectiveEvents, transition)
+	end
+
+	local totals = ScoreState.GetCategoryTotals(state)
+	assertEqual(totals.objective, 500, "category total at cap")
+	assertTrue(objectiveEvents[#objectiveEvents].accepted == false, "later event rejected after category cap")
+end
+
+do
+	local state = newState()
+
+	local tinyfolkEscape = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 2005,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+	})
+
+	local giantCapture = ScoreState.ResolveScoreEvent(tinyfolkEscape.state, {
+		now = 2,
+		userId = 2006,
+		eventId = "capture_success",
+		actorRole = "Giant",
+	})
+
+	local totals = ScoreState.GetCategoryTotals(giantCapture.state)
+	assertEqual(totals.objective, 100, "tinyfolk objective points")
+	assertEqual(totals.control, 90, "giant control points")
+end
+
+do
+	local state = newState()
+	local transition = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 2007,
+		eventId = "escape_success",
+		actorRole = "Tinyfolk",
+	})
+
+	local snapshot = ScoreState.GetPlayerSnapshot(transition.state, 2007)
+	assertEqual(snapshot.total, 100, "player score total accurate")
+	assertEqual(snapshot.categories.objective, 100, "player category score accurate")
+
+	local noSnapshot = ScoreState.GetPlayerSnapshot(transition.state, 9999)
+	assertEqual(noSnapshot.total, 0, "nonexistent player score zero")
+	assertEqual(noSnapshot.categories.objective or 0, 0, "nonexistent player category zero")
+end
+
+do
+	local state = newState()
+	local transitions: { any } = {}
+
+	for i = 1, 60 do
+		local userId = 2000 + ((i - 1) // 5) + 1
+		local transitionTime = i * 100
+		local transition = ScoreState.ResolveScoreEvent(state, {
+			now = transitionTime,
+			userId = userId,
+			eventId = "capture_release",
+			actorRole = "Giant",
+		})
+		state = transition.state
+		if transition.accepted then
+			table.insert(transitions, transition)
+		end
+	end
+	
+	local recent = ScoreState.GetRecentEvents(state)
+	assertEqual(#recent, 50, "recent events capped at max")
+	assertEqual(recent[1].userId, transitions[11].record.userId, "oldest recent event matches")
+	assertEqual(recent[50].userId, transitions[60].record.userId, "newest recent event matches")
+end
+
 print("score_state: all checks passed")

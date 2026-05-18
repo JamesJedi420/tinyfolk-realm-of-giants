@@ -80,7 +80,19 @@ local function getRoleServiceQueryApi(): any?
 
 	return queryApi
 end
+local function getScoreServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
 
+	local queryApi = globalValue._ScoreService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
 local function getDownedState(target: Player): boolean
 	local roleQueryApi = getRoleServiceQueryApi()
 	if roleQueryApi ~= nil and type(roleQueryApi.IsPlayerDowned) == "function" then
@@ -206,6 +218,15 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	setCaptureLastReason(target, transition.reason)
 	if transition.accepted then
 		markRequest(custodian.UserId, resolvedNow)
+		local scoreApi = getScoreServiceQueryApi()
+		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
+			scoreApi.RequestScoreEvent(
+				custodian.UserId,
+				"capture_success",
+				resolvedNow,
+				{ targetUserId = target.UserId }
+			)
+		end
 	end
 	applyCaptureAttributesFromState()
 

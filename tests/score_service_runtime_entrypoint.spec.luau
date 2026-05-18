@@ -202,4 +202,84 @@ do
 	assertEqual(recent[1].eventId, "capture_success", "recent newest event id")
 end
 
+do
+	resetState()
+
+	for i = 1, 10 do
+		scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", i * 100, nil)
+	end
+
+	local catTotals = scoreApi.GetCategoryTotals()
+	assertEqual(catTotals.objective or 0, 500, "category total at cap")
+
+	local sixthAttempt = scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1100, nil)
+	assertFalse(sixthAttempt.accepted, "event rejected when category at cap")
+	assertEqual(sixthAttempt.reason, "category_cap_reached", "correct rejection reason for category cap")
+end
+
+do
+	resetState()
+	local first = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 1, nil)
+	local second = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 2, nil)
+	local third = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 3, nil)
+
+	local recent = scoreApi.GetRecentScoreEvents(2)
+	assertEqual(#recent, 2, "recent returns requested limit")
+	assertEqual(recent[1].sequence, second.record.sequence, "recent oldest is second event")
+	assertEqual(recent[2].sequence, third.record.sequence, "recent newest is third event")
+end
+
+do
+	resetState()
+
+	for i = 1, 3 do
+		scoreApi.RequestScoreEvent(giant.UserId, "capture_success", i, nil)
+	end
+
+	local snapshot = scoreApi.GetPlayerScoreSnapshot(giant.UserId)
+	assertTrue(snapshot.total > 0, "snapshot total updated after multiple events")
+	assertTrue(snapshot.categories.control > 0, "snapshot category total updated")
+end
+
+do
+	resetState()
+	scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, { source = "test" })
+
+	local attrs = tinyfolk:GetAttributes()
+	assertTrue(attrs["ScoreTotal"] == 100, "score total attribute set")
+	assertTrue(attrs["ScoreObjective"] == 100, "score category attribute set")
+end
+
+do
+	resetState()
+	local attributes1 = tinyfolk:GetAttributes()
+	assertTrue(attributes1["ScoreTotal"] == 0, "initial score attributes zero")
+
+	scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, nil)
+
+	local attributes2 = tinyfolk:GetAttributes()
+	assertTrue(attributes2["ScoreTotal"] == 100, "score attributes updated after event")
+
+	resetState()
+
+	local attributes3 = tinyfolk:GetAttributes()
+	assertTrue(attributes3["ScoreTotal"] == 0, "score attributes reset after reset call")
+end
+
+do
+	resetState()
+	scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, nil)
+	scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 2, nil)
+
+	local tinyfolkSnap = scoreApi.GetPlayerScoreSnapshot(tinyfolk.UserId)
+	local giantSnap = scoreApi.GetPlayerScoreSnapshot(giant.UserId)
+
+	assertEqual(tinyfolkSnap.total, 100, "tinyfolk score 100")
+	assertEqual(giantSnap.total, 90, "giant score 90")
+
+	local totals = scoreApi.GetCategoryTotals()
+	assertEqual(totals.objective, 100, "objective total 100")
+	assertEqual(totals.control, 90, "control total 90")
+end
+
 print("score_service_runtime_entrypoint: all checks passed")

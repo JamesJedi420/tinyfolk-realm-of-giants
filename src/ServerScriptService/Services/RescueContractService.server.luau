@@ -125,6 +125,20 @@ local function getGrabServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getScoreServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._ScoreService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function evaluateTargetSafeZoneProtection(target: Player, at: number): boolean
 	local safeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
 	local safeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
@@ -330,6 +344,14 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 	setRescueLastReason(rescuer, transition.reason)
 	local target = getPlayerByUserId(targetUserId)
 	setRescueLastReason(target, transition.reason)
+
+	if transition.accepted then
+		local scoreApi = getScoreServiceQueryApi()
+		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
+			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, { targetUserId = targetUserId })
+		end
+	end
+
 	applyContractAttributesFromState()
 
 	return {

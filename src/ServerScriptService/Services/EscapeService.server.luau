@@ -124,6 +124,20 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local lastBlockRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
+	local function getScoreServiceQueryApi(): any?
+		local globalValue: any = _G
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+
+		local queryApi = globalValue._ScoreService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+
+		return queryApi
+	end
+
 	local function ensureRemotesFolder(): Folder?
 		if ReplicatedStorage == nil or type(ReplicatedStorage.FindFirstChild) ~= "function" then
 			return nil
@@ -582,14 +596,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				return { accepted = false, reason = "actor_carried" }
 			end
 		end
-		if
-			grabServiceQueryApi ~= nil
-			and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function"
-		then
-			local carryInteraction = grabServiceQueryApi.CanGiantPerformCarryInteraction(
-				player.UserId,
-				"traversalGapBlock"
-			)
+		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function" then
+			local carryInteraction =
+				grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "traversalGapBlock")
 			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
 				return { accepted = false, reason = tostring(carryInteraction.reason or "carrier_encumbered") }
 			end
@@ -736,6 +745,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		routePart:SetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE, successfulEscapes + 1)
 		trySendToTinyfolkMovementTraitService(player, routeId)
 
+		local scoreApi = getScoreServiceQueryApi()
+		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
+			scoreApi.RequestScoreEvent(player.UserId, "escape_success", now(), { routeId = routeId })
+		end
+
 		return { accepted = true, reason = "accepted" }
 	end
 
@@ -791,7 +805,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function"
 			and type(player.UserId) == "number"
 		then
-			local carryInteraction = grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "throughGapReach")
+			local carryInteraction =
+				grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "throughGapReach")
 			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
 				return false
 			end

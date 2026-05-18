@@ -130,6 +130,14 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 		attributes[attributeName] = value
 	end
 
+	function self:GetAttributes(): { [string]: any }
+		local result: { [string]: any } = {}
+		for k, v in pairs(attributes) do
+			result[k] = v
+		end
+		return result
+	end
+
 	return self
 end
 
