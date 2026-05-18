@@ -183,6 +183,11 @@ configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
 
+local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
+sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
+	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
+addChild(sharedFolder, "Construction", sharedConstructionFolder)
+
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
 addChild(replicatedStorage, "Shared", sharedFolder)
 addChild(replicatedStorage, "Remotes", remotesFolder)
@@ -193,6 +198,8 @@ local stationsFolder = makeNode("Stations", "Folder", "Workspace.Map.Stations")
 addChild(mapFolder, "Stations", stationsFolder)
 local constructionSitePart = makeBasePart("ConstructionSite_A", 10, 0, 10)
 addChild(mapFolder, "ConstructionSite_A", constructionSitePart)
+local constructionSitePartB = makeBasePart("ConstructionSite_B", 15, 0, 10)
+addChild(mapFolder, "ConstructionSite_B", constructionSitePartB)
 addChild(workspaceService, "Map", mapFolder)
 
 local playerRemovingConnections: { (any) -> () } = {}
@@ -289,6 +296,13 @@ local function makeAlivePlayer(userId: number, position: Vector3)
 	return {
 		UserId = userId,
 		Character = character,
+		_Attributes = {},
+		SetAttribute = function(self: any, attributeName: string, value: any)
+			self._Attributes[attributeName] = value
+		end,
+		GetAttribute = function(self: any, attributeName: string): any
+			return self._Attributes[attributeName]
+		end,
 	}
 end
 
@@ -425,9 +439,20 @@ assertTrue(debugResponse ~= nil, "targeted district debug: response payload popu
 assertEqual(debugResponse.districtId, "District_Startup_B", "targeted district debug: districtId field present")
 assertEqual(debugResponse.isBuilt, false, "targeted district debug: isBuilt field correct")
 assertEqual(debugResponse.buildCount, 0, "targeted district debug: buildCount field correct")
-assertTrue(debugResponse.lastBuiltByUserId == nil, "targeted district debug: lastBuiltByUserId nil for unbuilt district")
-assertEqual(debugResponse.woodCost, ConstructionConfig.DistrictDefaultCost.wood, "targeted district debug: woodCost field matches config")
-assertEqual(debugResponse.stoneCost, ConstructionConfig.DistrictDefaultCost.stone, "targeted district debug: stoneCost field matches config")
+assertTrue(
+	debugResponse.lastBuiltByUserId == nil,
+	"targeted district debug: lastBuiltByUserId nil for unbuilt district"
+)
+assertEqual(
+	debugResponse.woodCost,
+	ConstructionConfig.DistrictDefaultCost.wood,
+	"targeted district debug: woodCost field matches config"
+)
+assertEqual(
+	debugResponse.stoneCost,
+	ConstructionConfig.DistrictDefaultCost.stone,
+	"targeted district debug: stoneCost field matches config"
+)
 assertTrue(debugResponse.woodStored ~= nil, "targeted district debug: woodStored flow snapshot field present")
 assertTrue(debugResponse.stoneStored ~= nil, "targeted district debug: stoneStored flow snapshot field present")
 
@@ -463,3 +488,204 @@ assertTrue(sawDistrictEntry, "snapshot-all debug: at least one district entry pr
 assertTrue(sawSiteEntry, "snapshot-all debug: site entry still present in snapshot")
 
 print("construction_service_runtime_entrypoint: district debug-surface slice checks passed")
+
+-- TIN-153 phase 1: construction contextual task begin/cancel/complete slice.
+local taskBuilder = makeAlivePlayer(9401, Vector3.new(16, 0, 10))
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "begin",
+	now = 200,
+})
+
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskActiveSiteId"),
+	"ConstructionSite_B",
+	"task begin sets active site id attribute"
+)
+assertEqual(taskBuilder:GetAttribute("ConstructionTaskLastReason"), "began", "task begin sets began reason")
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"progressing",
+	"task begin sets progressing objective state"
+)
+
+local siteBState = siteStateById["ConstructionSite_B"]
+assertTrue(siteBState ~= nil, "site B state present")
+assertEqual(siteBState.isBuilt, false, "task begin does not instantly build")
+
+local warnsBeforeNotReady = #warns
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "complete",
+	now = 200.4,
+})
+local sawNotReady = false
+for i = warnsBeforeNotReady + 1, #warns do
+	if string.find(warns[i], "task_not_ready", 1, true) then
+		sawNotReady = true
+		break
+	end
+end
+assertTrue(sawNotReady, "task complete before timer ends is rejected")
+assertEqual(siteBState.isBuilt, false, "task not_ready rejection keeps site unbuilt")
+
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "cancel",
+	now = 201,
+})
+assertTrue(taskBuilder:GetAttribute("ConstructionTaskActiveSiteId") == nil, "task cancel clears active site id")
+assertEqual(taskBuilder:GetAttribute("ConstructionTaskLastReason"), "canceled", "task cancel sets canceled reason")
+assertEqual(taskBuilder:GetAttribute("ConstructionTaskObjectiveState"), "idle", "task cancel sets idle objective state")
+
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "begin",
+	now = 202,
+})
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_B",
+	mode = "complete",
+	now = 204,
+})
+
+assertEqual(siteBState.isBuilt, true, "task complete after timer builds site")
+assertEqual(siteBState.buildCount, 1, "task complete increments build count")
+assertEqual(siteBState.lastBuiltByUserId, 9401, "task complete tracks builder user id")
+assertTrue(taskBuilder:GetAttribute("ConstructionTaskActiveSiteId") == nil, "task complete clears active site")
+assertEqual(taskBuilder:GetAttribute("ConstructionTaskLastReason"), "completed", "task complete sets completed reason")
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"completed",
+	"task complete sets completed objective state"
+)
+
+-- TIN-154-prep: disruption and blocked state transitions through service task modes.
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 206,
+})
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "disrupt",
+	now = 206.5,
+})
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"regressing",
+	"task disrupt sets regressing objective state"
+)
+assertEqual(taskBuilder:GetAttribute("ConstructionTaskLastReason"), "disrupted", "task disrupt sets disrupted reason")
+assertTrue(taskBuilder:GetAttribute("ConstructionTaskProgressSeconds") ~= nil, "task disrupt exposes progress seconds")
+assertTrue(taskBuilder:GetAttribute("ConstructionTaskRegressionCount") ~= nil, "task disrupt exposes regression count")
+
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "block",
+	now = 207.0,
+})
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"blocked",
+	"task block sets blocked objective state"
+)
+
+local warnsBeforeBlockedBegin = #warns
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 207.5,
+})
+local sawTaskBlocked = false
+for i = warnsBeforeBlockedBegin + 1, #warns do
+	if string.find(warns[i], "task_blocked", 1, true) then
+		sawTaskBlocked = true
+		break
+	end
+end
+assertTrue(sawTaskBlocked, "task begin while blocked is rejected")
+
+buildRemote:FireServer(taskBuilder, {
+	siteId = "ConstructionSite_A",
+	mode = "unblock",
+	now = 208,
+})
+assertEqual(
+	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
+	"idle",
+	"task unblock returns objective state to idle"
+)
+
+-- Shared objective state (site-scoped): begin from one user should block begin from another.
+local taskBuilderA = makeAlivePlayer(9501, Vector3.new(16, 0, 10))
+local taskBuilderB = makeAlivePlayer(9502, Vector3.new(16, 0, 10))
+buildRemote:FireServer(taskBuilderA, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 300,
+})
+
+local warnsBeforeSharedBegin = #warns
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 300.3,
+})
+local sawAlreadyActive = false
+for i = warnsBeforeSharedBegin + 1, #warns do
+	if string.find(warns[i], "task_already_active", 1, true) then
+		sawAlreadyActive = true
+		break
+	end
+end
+assertTrue(sawAlreadyActive, "shared site task begin from second user is rejected while active")
+
+-- Cancel should bypass request cooldown so quick key release can cancel an active begin.
+buildRemote:FireServer(taskBuilderA, {
+	siteId = "ConstructionSite_A",
+	mode = "cancel",
+	now = 300.35,
+})
+assertEqual(taskBuilderA:GetAttribute("ConstructionTaskLastReason"), "canceled", "cancel bypass cooldown succeeds")
+
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 301,
+})
+assertEqual(
+	taskBuilderB:GetAttribute("ConstructionTaskLastReason"),
+	"resumed",
+	"second user can begin after shared task is canceled"
+)
+
+-- Regression-cap check: third major regression on same site should reject at configured cap.
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "disrupt",
+	now = 301.6,
+})
+
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "begin",
+	now = 302.2,
+})
+
+local warnsBeforeRegressionCap = #warns
+buildRemote:FireServer(taskBuilderB, {
+	siteId = "ConstructionSite_A",
+	mode = "disrupt",
+	now = 302.8,
+})
+local sawRegressionCap = false
+for i = warnsBeforeRegressionCap + 1, #warns do
+	if string.find(warns[i], "task_regression_cap_reached", 1, true) then
+		sawRegressionCap = true
+		break
+	end
+end
+assertTrue(sawRegressionCap, "third major regression is rejected at configured cap")
+
+print("construction_service_runtime_entrypoint: contextual task progress slice checks passed")

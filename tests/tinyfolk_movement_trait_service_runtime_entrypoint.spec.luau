@@ -83,9 +83,11 @@ end
 local function addChild(parent: any, childName: string, child: any)
 	parent._Children[childName] = child
 	if type(child) == "table" then
-		child.Parent = parent
+		(child :: any).Parent = parent
 	end
 end
+
+local heartbeat = makeSignal()
 
 local function makeCharacter(hasRootPart: boolean, humanoidHealth: number, walkSpeed: number)
 	local humanoid: any = {
@@ -113,7 +115,13 @@ local function makeCharacter(hasRootPart: boolean, humanoidHealth: number, walkS
 	return character, humanoid
 end
 
-local function makePlayer(userId: number, role: string?, hasTrait: boolean, hasRootPart: boolean?, humanoidHealth: number?)
+local function makePlayer(
+	userId: number,
+	role: string?,
+	hasTrait: boolean,
+	hasRootPart: boolean?,
+	humanoidHealth: number?
+)
 	local attributes: { [string]: any } = {}
 	local character, humanoid = makeCharacter(hasRootPart ~= false, humanoidHealth or 100, 16)
 	local player: any = {
@@ -140,10 +148,19 @@ end
 
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
-addChild(configFolder, "TinyfolkMovementTraitConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkMovementTraitConfig")
+addChild(
+	configFolder,
+	"TinyfolkMovementTraitConfig",
+	"../../ReplicatedStorage/Shared/Config/TinyfolkMovementTraitConfig"
+)
 
 local movementFolder = makeNode("TinyfolkMovement", "Folder", "ReplicatedStorage.Shared.TinyfolkMovement")
-addChild(movementFolder, "PostCrossingBurstLogic", "../../ReplicatedStorage/Shared/TinyfolkMovement/PostCrossingBurstLogic")
+addChild(
+	movementFolder,
+	"PostCrossingBurstLogic",
+	"../../ReplicatedStorage/Shared/TinyfolkMovement/PostCrossingBurstLogic"
+)
+addChild(movementFolder, "SprintStaminaLogic", "../../ReplicatedStorage/Shared/TinyfolkMovement/SprintStaminaLogic")
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -159,6 +176,12 @@ local playersService: any = {
 	PlayerRemoving = playerRemoving,
 }
 
+local runService: any = {
+	Name = "RunService",
+	ClassName = "RunService",
+	Heartbeat = heartbeat,
+}
+
 local fakeGame: any = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "Players" then
@@ -166,6 +189,9 @@ function fakeGame:GetService(serviceName: string): any
 	end
 	if serviceName == "ReplicatedStorage" then
 		return replicatedStorage
+	end
+	if serviceName == "RunService" then
+		return runService
 	end
 	error(string.format("unsupported service: %s", serviceName))
 	return nil
@@ -185,11 +211,29 @@ do
 
 	assertTrue(outcome.accepted, "Tinyfolk with trait receives accepted burst")
 	assertEqual(humanoid.WalkSpeed, 22, "accepted burst applies bounded WalkSpeed")
-	assertEqual(player:GetAttribute(TraitConfig.Attributes.BurstActive), true, "accepted burst exposes active attribute")
-	assertEqual(player:GetAttribute(TraitConfig.Attributes.TraceCostActive), true, "accepted burst exposes trace attribute")
-	assertEqual(player:GetAttribute(TraitConfig.Attributes.TraceCostReason), "PostCrossingBurst", "accepted burst exposes trace reason")
-	assertTrue(type(player:GetAttribute(TraitConfig.Attributes.BurstCooldownUntil)) == "number", "accepted burst exposes cooldown")
-	assertTrue(type(player:GetAttribute(TraitConfig.Attributes.SharedBurstCooldownUntil)) == "number", "accepted burst exposes shared cooldown")
+	assertEqual(
+		player:GetAttribute(TraitConfig.Attributes.BurstActive),
+		true,
+		"accepted burst exposes active attribute"
+	)
+	assertEqual(
+		player:GetAttribute(TraitConfig.Attributes.TraceCostActive),
+		true,
+		"accepted burst exposes trace attribute"
+	)
+	assertEqual(
+		player:GetAttribute(TraitConfig.Attributes.TraceCostReason),
+		"PostCrossingBurst",
+		"accepted burst exposes trace reason"
+	)
+	assertTrue(
+		type(player:GetAttribute(TraitConfig.Attributes.BurstCooldownUntil)) == "number",
+		"accepted burst exposes cooldown"
+	)
+	assertTrue(
+		type(player:GetAttribute(TraitConfig.Attributes.SharedBurstCooldownUntil)) == "number",
+		"accepted burst exposes shared cooldown"
+	)
 	assertEqual(#scheduledCallbacks, 1, "accepted burst schedules restoration")
 
 	scheduledCallbacks[1]()
@@ -236,6 +280,48 @@ do
 	assertFalse(outcome.accepted, "dead humanoid does not trigger burst")
 	assertEqual(outcome.reason, "humanoid_not_alive", "dead humanoid rejection reason")
 	assertEqual(humanoid.WalkSpeed, 16, "dead humanoid WalkSpeed unchanged")
+end
+
+do
+	TinyfolkMovementTraitService.ResetForTests()
+	local player, humanoid = makePlayer(6110, RoleConfig.Roles.Tinyfolk, true)
+	local start = TinyfolkMovementTraitService.SetSprintRequestedAtTime(player, true, 10)
+	assertTrue(start.accepted, "sprint start accepted")
+	assertTrue(start.snapshot.isSprinting, "sprint start snapshot active")
+	assertEqual(start.snapshot.speedMultiplier, 1.25, "sprint start snapshot multiplier")
+	assertEqual(humanoid.WalkSpeed, 16 * 1.25, "sprint start applies walk speed")
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintActive), true, "sprint active attribute set")
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintRequested), true, "sprint requested attribute set")
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintStamina), 100, "sprint start stamina readable")
+
+	local drained = TinyfolkMovementTraitService.SetSprintRequestedAtTime(player, true, 11)
+
+	assertTrue(drained.accepted, "sprint drain accepted")
+	assertEqual(drained.snapshot.stamina, 75, "sprint drain reduces stamina")
+	assertEqual(drained.snapshot.staminaRatio, 0.75, "sprint drain ratio")
+	assertEqual(humanoid.WalkSpeed, 16 * 1.25, "sprint drain keeps speed")
+
+	local exhausted = TinyfolkMovementTraitService.SetSprintRequestedAtTime(player, true, 15)
+
+	assertFalse(exhausted.accepted, "exhaustion blocks sprint")
+	assertEqual(exhausted.reason, "stamina_empty", "exhaustion reason")
+	assertEqual(exhausted.snapshot.stamina, 0, "exhaustion clamps stamina")
+	assertEqual(humanoid.WalkSpeed, 16, "exhaustion restores baseline walk speed")
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintExhausted), true, "exhaustion attribute set")
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintBreathless), true, "breathless attribute set")
+
+	local recovered = TinyfolkMovementTraitService.SetSprintRequestedAtTime(player, false, 17)
+
+	assertTrue(recovered.accepted, "recovery tick accepted")
+	assertEqual(recovered.snapshot.stamina, 40, "recovery restores stamina")
+	assertEqual(recovered.snapshot.isExhausted, false, "recovery clears exhaustion")
+	assertEqual(humanoid.WalkSpeed, 16, "recovery restores walk speed")
+	assertEqual(
+		player:GetAttribute(TraitConfig.Attributes.SprintRequested),
+		false,
+		"recovery requested attribute cleared"
+	)
+	assertEqual(player:GetAttribute(TraitConfig.Attributes.SprintActive), false, "recovery active attribute cleared")
 end
 
 task = originalTask

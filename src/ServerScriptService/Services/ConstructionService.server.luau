@@ -8,6 +8,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 
 local ConstructionConfig: any
 local ResourceFlowState: any
+local ContextualTaskProgressLogic: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local BUILD_REMOTE_NAME = "ConstructionBuildRequest"
@@ -50,6 +51,7 @@ type DistrictBuildState = {
 local siteStateById: { [string]: ConstructionSiteState } = {}
 local districtBuildStateById: { [string]: DistrictBuildState } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
+local taskStateBySiteId: { [string]: any } = {}
 
 local function debugLog(message: string)
 	print(string.format("[ConstructionService] %s", message))
@@ -97,8 +99,14 @@ local function resolveDependencies()
 		error("startup_dependency_missing child=Config parent=ReplicatedStorage.Shared")
 	end
 
+	local construction = shared:WaitForChild("Construction", STARTUP_WAIT_TIMEOUT_SECONDS)
+	if not construction then
+		error("startup_dependency_missing child=Construction parent=ReplicatedStorage.Shared")
+	end
+
 	ConstructionConfig = requireChildModule(config, "ConstructionConfig")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
+	ContextualTaskProgressLogic = requireChildModule(construction, "ContextualTaskProgressLogic")
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -136,17 +144,22 @@ local function ensureRemoteEvent(parentFolder: Folder, remoteName: string): Remo
 	return remote
 end
 
-local function isCoolingDown(userId: number): boolean
+local function isCoolingDown(userId: number, at: number?): boolean
 	local last = lastRequestAtByUserId[userId]
 	if last == nil then
 		return false
 	end
+	local lastAt = last :: number
 
-	return (os.clock() - last) < ConstructionConfig.RequestCooldownSeconds
+	if type(at) == "number" then
+		return (at - lastAt) < ConstructionConfig.RequestCooldownSeconds
+	end
+
+	return (os.clock() - lastAt) < ConstructionConfig.RequestCooldownSeconds
 end
 
-local function markRequest(userId: number)
-	lastRequestAtByUserId[userId] = os.clock()
+local function markRequest(userId: number, at: number?)
+	lastRequestAtByUserId[userId] = if type(at) == "number" then at else os.clock()
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -358,6 +371,110 @@ local function rejectDebug(player: Player, reason: string)
 	debugWarn(string.format("Rejected ConstructionDebugStateRequest userId=%d reason=%s", player.UserId, reason))
 end
 
+local function applyTaskAttributes(player: Player, taskSnapshot: any)
+	local setAttribute = (player :: any).SetAttribute
+	if type(setAttribute) ~= "function" then
+		return
+	end
+
+	setAttribute(player, ConstructionConfig.TaskActiveSiteIdAttribute, taskSnapshot.activeTaskId)
+	setAttribute(player, ConstructionConfig.TaskProgressRatioAttribute, taskSnapshot.progressRatio)
+	setAttribute(player, ConstructionConfig.TaskStartedAtAttribute, taskSnapshot.startedAt)
+	setAttribute(player, ConstructionConfig.TaskEndsAtAttribute, taskSnapshot.endsAt)
+	setAttribute(player, ConstructionConfig.TaskLastReasonAttribute, taskSnapshot.lastReason)
+	setAttribute(player, ConstructionConfig.TaskObjectiveStateAttribute, taskSnapshot.objectiveState)
+	setAttribute(player, ConstructionConfig.TaskProgressSecondsAttribute, taskSnapshot.progressSeconds)
+	setAttribute(player, ConstructionConfig.TaskRegressionCountAttribute, taskSnapshot.majorRegressionEvents)
+	setAttribute(player, ConstructionConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
+end
+
+local function getTaskStateForSite(siteId: string): any
+	local existing = taskStateBySiteId[siteId]
+	if existing ~= nil then
+		return existing
+	end
+
+	local created = ContextualTaskProgressLogic.New()
+	taskStateBySiteId[siteId] = created
+	return created
+end
+
+local function attemptSiteBuild(player: Player, siteId: string, siteState: ConstructionSiteState): (boolean, string?)
+	if siteState.isBuilt then
+		return false, "already_built"
+	end
+
+	if not isPlayerAlive(player) then
+		return false, "player_not_alive"
+	end
+
+	local root = getHumanoidRootPart(player)
+	if root == nil then
+		return false, "humanoid_root_missing"
+	end
+
+	local distance = (siteState.part.Position - root.Position).Magnitude
+	if distance > ConstructionConfig.InteractionRangeStuds then
+		return false,
+			string.format("out_of_range distance=%.2f max=%.2f", distance, ConstructionConfig.InteractionRangeStuds)
+	end
+
+	local woodCost, stoneCost = getSiteCost(siteId)
+	if not woodCost or not stoneCost then
+		return false, "invalid_site_cost_config"
+	end
+
+	local spent, flowSnapshot, spendError =
+		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId)
+	if not spent then
+		applyDebugAttributes(siteState)
+		return false, spendError or "insufficient_materials"
+	end
+
+	local previousIsBuilt = siteState.isBuilt
+	local previousBuildCount = siteState.buildCount
+	local previousLastBuiltByUserId = siteState.lastBuiltByUserId
+	local previousColor = siteState.part.Color
+	local previousMaterial = siteState.part.Material
+
+	local appliedBuiltState, applyError = pcall(function()
+		siteState.isBuilt = true
+		siteState.buildCount += 1
+		siteState.lastBuiltByUserId = player.UserId
+		applyBuiltVisualState(siteState)
+		applyDebugAttributes(siteState)
+	end)
+
+	if not appliedBuiltState then
+		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "ConstructionRollback:" .. siteId)
+
+		siteState.isBuilt = previousIsBuilt
+		siteState.buildCount = previousBuildCount
+		siteState.lastBuiltByUserId = previousLastBuiltByUserId
+		pcall(function()
+			siteState.part.Color = previousColor
+			siteState.part.Material = previousMaterial
+			applyDebugAttributes(siteState)
+		end)
+
+		return false, string.format("build_state_apply_failed detail=%s", tostring(applyError))
+	end
+
+	debugLog(
+		string.format(
+			"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+			player.UserId,
+			siteId,
+			woodCost,
+			stoneCost,
+			flowSnapshot.Wood.stored,
+			flowSnapshot.Stone.stored
+		)
+	)
+
+	return true, nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 debugLog("Ensuring construction remotes")
 local buildRemote = ensureRemoteEvent(remotesFolder, BUILD_REMOTE_NAME)
@@ -387,23 +504,56 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		string.format("Received ConstructionBuildRequest userId=%d payloadType=%s", player.UserId, typeof(payload))
 	)
 
-	if isCoolingDown(player.UserId) then
-		rejectBuild(player, "request_cooldown")
-		logBuildOutcome("rejected", player, "<unknown>", "request_cooldown")
-		return
-	end
+	local requestSiteId: string? = nil
+	local requestMode = "legacy"
+	local requestNow: number? = nil
 
-	markRequest(player.UserId)
+	if type(payload) == "string" then
+		requestSiteId = payload
+	elseif type(payload) == "table" then
+		local payloadAny = payload :: any
+		if type(payloadAny.siteId) ~= "string" or payloadAny.siteId == "" then
+			rejectBuild(player, "malformed_payload")
+			logBuildOutcome("rejected", player, "<unknown>", "malformed_payload")
+			return
+		end
+		if type(payloadAny.mode) ~= "string" then
+			rejectBuild(player, "malformed_payload")
+			logBuildOutcome("rejected", player, "<unknown>", "malformed_payload")
+			return
+		end
 
-	if type(payload) ~= "string" then
+		requestSiteId = payloadAny.siteId
+		requestMode = payloadAny.mode
+		if type(payloadAny.now) == "number" then
+			requestNow = payloadAny.now
+		end
+	else
 		rejectBuild(player, "malformed_payload")
 		logBuildOutcome("rejected", player, "<unknown>", "malformed_payload")
 		return
 	end
 
-	local siteId = payload
+	local bypassCooldown = requestMode == "cancel"
+	if not bypassCooldown and isCoolingDown(player.UserId, requestNow) then
+		rejectBuild(player, "request_cooldown")
+		logBuildOutcome("rejected", player, "<unknown>", "request_cooldown")
+		return
+	end
+
+	if not bypassCooldown then
+		markRequest(player.UserId, requestNow)
+	end
+
+	local siteId = requestSiteId :: string
 	local siteState = siteStateById[siteId]
 	if not siteState then
+		if requestMode ~= "legacy" then
+			rejectBuild(player, "task_mode_site_only")
+			logBuildOutcome("rejected", player, siteId, "task_mode_site_only")
+			return
+		end
+
 		-- TIN-197: check district build-state table before falling to site_not_found.
 		local districtState = districtBuildStateById[siteId]
 		if not districtState then
@@ -478,94 +628,52 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	if siteState.isBuilt then
-		rejectBuild(player, "already_built")
-		logBuildOutcome("rejected", player, siteId, "already_built")
+	if
+		requestMode == "begin"
+		or requestMode == "cancel"
+		or requestMode == "complete"
+		or requestMode == "block"
+		or requestMode == "unblock"
+		or requestMode == "disrupt"
+	then
+		local taskState = getTaskStateForSite(siteId)
+		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
+			eventType = requestMode,
+			taskId = siteId,
+			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			durationSeconds = ConstructionConfig.TaskDurationSeconds,
+			regressionPerSecond = ConstructionConfig.TaskRegressionPerSecond,
+			stabilizationThresholdSeconds = ConstructionConfig.TaskStabilizationThresholdSeconds,
+			majorRegressionStepSeconds = ConstructionConfig.TaskMajorRegressionStepSeconds,
+			majorRegressionMaxEvents = ConstructionConfig.TaskMajorRegressionMaxEvents,
+			regressionWindowSeconds = ConstructionConfig.TaskRegressionWindowSeconds,
+		})
+		applyTaskAttributes(player, taskResult.snapshot)
+
+		if not taskResult.accepted then
+			local reason = string.format("task_%s", taskResult.reason)
+			rejectBuild(player, reason)
+			logBuildOutcome("rejected", player, siteId, reason)
+			return
+		end
+
+		if requestMode ~= "complete" then
+			logBuildOutcome("accepted", player, siteId, string.format("task_%s", taskResult.reason))
+			return
+		end
+	elseif requestMode ~= "legacy" then
+		rejectBuild(player, "invalid_mode")
+		logBuildOutcome("rejected", player, siteId, "invalid_mode")
 		return
 	end
 
-	if not isPlayerAlive(player) then
-		rejectBuild(player, "player_not_alive")
-		logBuildOutcome("rejected", player, siteId, "player_not_alive")
+	local succeeded, failureReason = attemptSiteBuild(player, siteId, siteState)
+	if not succeeded then
+		rejectBuild(player, failureReason :: string)
+		logBuildOutcome("rejected", player, siteId, failureReason)
 		return
 	end
 
-	local root = getHumanoidRootPart(player)
-	if root == nil then
-		rejectBuild(player, "humanoid_root_missing")
-		logBuildOutcome("rejected", player, siteId, "humanoid_root_missing")
-		return
-	end
-
-	local distance = (siteState.part.Position - root.Position).Magnitude
-	if distance > ConstructionConfig.InteractionRangeStuds then
-		local outOfRangeReason =
-			string.format("out_of_range distance=%.2f max=%.2f", distance, ConstructionConfig.InteractionRangeStuds)
-		rejectBuild(player, outOfRangeReason)
-		logBuildOutcome("rejected", player, siteId, outOfRangeReason)
-		return
-	end
-
-	local woodCost, stoneCost = getSiteCost(siteId)
-	if not woodCost or not stoneCost then
-		rejectBuild(player, "invalid_site_cost_config")
-		logBuildOutcome("rejected", player, siteId, "invalid_site_cost_config")
-		return
-	end
-
-	local spent, flowSnapshot, spendError =
-		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId)
-	if not spent then
-		local spendReason = spendError or "insufficient_materials"
-		rejectBuild(player, spendReason)
-		applyDebugAttributes(siteState)
-		logBuildOutcome("rejected", player, siteId, spendReason)
-		return
-	end
-
-	local previousIsBuilt = siteState.isBuilt
-	local previousBuildCount = siteState.buildCount
-	local previousLastBuiltByUserId = siteState.lastBuiltByUserId
-	local previousColor = siteState.part.Color
-	local previousMaterial = siteState.part.Material
-
-	local appliedBuiltState, applyError = pcall(function()
-		siteState.isBuilt = true
-		siteState.buildCount += 1
-		siteState.lastBuiltByUserId = player.UserId
-		applyBuiltVisualState(siteState)
-		applyDebugAttributes(siteState)
-	end)
-
-	if not appliedBuiltState then
-		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "ConstructionRollback:" .. siteId)
-
-		siteState.isBuilt = previousIsBuilt
-		siteState.buildCount = previousBuildCount
-		siteState.lastBuiltByUserId = previousLastBuiltByUserId
-		pcall(function()
-			siteState.part.Color = previousColor
-			siteState.part.Material = previousMaterial
-			applyDebugAttributes(siteState)
-		end)
-
-		local applyFailureReason = string.format("build_state_apply_failed detail=%s", tostring(applyError))
-		rejectBuild(player, applyFailureReason)
-		logBuildOutcome("rejected", player, siteId, applyFailureReason)
-		return
-	end
-
-	debugLog(
-		string.format(
-			"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
-			player.UserId,
-			siteId,
-			woodCost,
-			stoneCost,
-			flowSnapshot.Wood.stored,
-			flowSnapshot.Stone.stored
-		)
-	)
 	logBuildOutcome("accepted", player, siteId, nil)
 end)
 
@@ -682,13 +790,7 @@ local function handleDebugRequest(player: Player, payload: unknown)
 	end
 
 	debugResponseRemote:FireClient(player, snapshot)
-	debugLog(
-		string.format(
-			"Sent construction debug state snapshot userId=%d entryCount=%d",
-			player.UserId,
-			#snapshot
-		)
-	)
+	debugLog(string.format("Sent construction debug state snapshot userId=%d entryCount=%d", player.UserId, #snapshot))
 end
 
 debugRequestRemote.OnServerEvent:Connect(handleDebugRequest)

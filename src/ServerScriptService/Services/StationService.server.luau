@@ -10,6 +10,8 @@ local Config = Shared:WaitForChild("Config")
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
+local ConstructionFolder = Shared:WaitForChild("Construction")
+local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
 local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -33,7 +35,7 @@ local ATTRIBUTE_TICK_COUNT = "EssenceTickCount"
 local ATTRIBUTE_LAST_TICK_AT = "LastTickAt"
 local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
-local STATION_FOLDER_PATH = {"Map", "Stations"}
+local STATION_FOLDER_PATH = { "Map", "Stations" }
 
 type StationState = {
 	stationId: string,
@@ -47,8 +49,9 @@ type StationState = {
 	accumulatorSeconds: number,
 }
 
-local stationStateById: {[string]: StationState} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+local stationStateById: { [string]: StationState } = {}
+local lastRequestAtByUserId: { [number]: number? } = {}
+local taskStateByStationId: { [string]: any } = {}
 
 local function debugLog(message: string)
 	print(string.format("[StationService] %s", message))
@@ -84,17 +87,22 @@ local function ensureRemoteEvent(parentFolder: Folder, remoteName: string): Remo
 	return remote
 end
 
-local function isCoolingDown(userId: number): boolean
+local function isCoolingDown(userId: number, at: number?): boolean
 	local last = lastRequestAtByUserId[userId]
 	if not last then
 		return false
 	end
+	local lastAt = last :: number
 
-	return (os.clock() - last) < StationConfig.RequestCooldownSeconds
+	if type(at) == "number" then
+		return (at - lastAt) < StationConfig.RequestCooldownSeconds
+	end
+
+	return (os.clock() - lastAt) < StationConfig.RequestCooldownSeconds
 end
 
-local function markRequest(userId: number)
-	lastRequestAtByUserId[userId] = os.clock()
+local function markRequest(userId: number, at: number?)
+	lastRequestAtByUserId[userId] = if type(at) == "number" then at else os.clock()
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -114,7 +122,7 @@ end
 local function getPlayerByUserId(userId: number): Player?
 	for _, player in Players:GetPlayers() do
 		if player.UserId == userId then
-			return player
+			return player :: Player
 		end
 	end
 
@@ -132,7 +140,7 @@ local function isPlayerAlive(player: Player): boolean
 		return false
 	end
 
-	return humanoid.Health > 0
+	return (humanoid :: Humanoid).Health > 0
 end
 
 local function applyDebugAttributes(state: StationState)
@@ -260,7 +268,74 @@ local function deactivateStation(state: StationState, reason: string)
 	state.isActive = false
 	state.accumulatorSeconds = 0
 	applyDebugAttributes(state)
-	debugLog(string.format("Station deactivated id=%s reason=%s materialType=%s total=%d", state.stationId, reason, state.materialType, state.resourceTotal))
+	debugLog(
+		string.format(
+			"Station deactivated id=%s reason=%s materialType=%s total=%d",
+			state.stationId,
+			reason,
+			state.materialType,
+			state.resourceTotal
+		)
+	)
+end
+
+local function applyTaskAttributes(player: Player, taskSnapshot: any)
+	player:SetAttribute(StationConfig.TaskActiveStationIdAttribute, taskSnapshot.activeTaskId)
+	player:SetAttribute(StationConfig.TaskProgressRatioAttribute, taskSnapshot.progressRatio)
+	player:SetAttribute(StationConfig.TaskStartedAtAttribute, taskSnapshot.startedAt)
+	player:SetAttribute(StationConfig.TaskEndsAtAttribute, taskSnapshot.endsAt)
+	player:SetAttribute(StationConfig.TaskLastReasonAttribute, taskSnapshot.lastReason)
+	player:SetAttribute(StationConfig.TaskObjectiveStateAttribute, taskSnapshot.objectiveState)
+	player:SetAttribute(StationConfig.TaskProgressSecondsAttribute, taskSnapshot.progressSeconds)
+	player:SetAttribute(StationConfig.TaskRegressionCountAttribute, taskSnapshot.majorRegressionEvents)
+	player:SetAttribute(StationConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
+end
+
+local function getTaskStateForStation(stationId: string): any
+	local existing = taskStateByStationId[stationId]
+	if existing ~= nil then
+		return existing
+	end
+
+	local created = ContextualTaskProgressLogic.New()
+	taskStateByStationId[stationId] = created
+	return created
+end
+
+local function validateActivationRequest(player: Player, stationState: StationState): (boolean, string?)
+	if not isPlayerAlive(player) then
+		return false, "player_not_alive"
+	end
+
+	if player:GetAttribute("Role") ~= RoleConfig.Roles.Tinyfolk then
+		return false, "requester_not_tinyfolk"
+	end
+
+	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
+	if requiredSpecialistRole then
+		local specialistRole = player:GetAttribute("SpecialistRole")
+		if type(specialistRole) ~= "string" or specialistRole == SpecialistConfig.SpecialistRoles.None then
+			return false, string.format("specialist_role_required required=%s", requiredSpecialistRole)
+		end
+
+		if specialistRole ~= requiredSpecialistRole then
+			return false,
+				string.format("specialist_role_mismatch required=%s actual=%s", requiredSpecialistRole, specialistRole)
+		end
+	end
+
+	local root = getHumanoidRootPart(player)
+	if not root then
+		return false, "humanoid_root_missing"
+	end
+	local rootPart = root :: BasePart
+
+	local distance = (stationState.part.Position - rootPart.Position).Magnitude
+	if distance > StationConfig.ActivationRangeStuds then
+		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, StationConfig.ActivationRangeStuds)
+	end
+
+	return true, nil
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -272,58 +347,96 @@ ResourceFlowState.RefreshDeliveryPoints()
 registerStationsFromWorkspace()
 
 stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	if isCoolingDown(player.UserId) then
-		rejectActivate(player, "request_cooldown")
-		return
-	end
+	local stationId: string? = nil
+	local requestMode = "legacy"
+	local requestNow: number? = nil
 
-	markRequest(player.UserId)
+	if type(payload) == "string" then
+		stationId = payload
+	elseif type(payload) == "table" then
+		local payloadAny = payload :: any
+		if type(payloadAny.stationId) ~= "string" or payloadAny.stationId == "" then
+			rejectActivate(player, "malformed_payload")
+			return
+		end
+		if type(payloadAny.mode) ~= "string" then
+			rejectActivate(player, "malformed_payload")
+			return
+		end
 
-	if type(payload) ~= "string" then
+		stationId = payloadAny.stationId
+		requestMode = payloadAny.mode
+		if type(payloadAny.now) == "number" then
+			requestNow = payloadAny.now
+		end
+	else
 		rejectActivate(player, "malformed_payload")
 		return
 	end
 
-	local stationId = payload
-	local stationState = stationStateById[stationId]
+	local bypassCooldown = requestMode == "cancel"
+	if not bypassCooldown and isCoolingDown(player.UserId, requestNow) then
+		rejectActivate(player, "request_cooldown")
+		return
+	end
+
+	if not bypassCooldown then
+		markRequest(player.UserId, requestNow)
+	end
+
+	local stationIdValue = stationId :: string
+	local stationState = stationStateById[stationIdValue]
 	if not stationState then
 		rejectActivate(player, "station_not_found")
 		return
 	end
 
-	if not isPlayerAlive(player) then
-		rejectActivate(player, "player_not_alive")
-		return
-	end
+	if
+		requestMode == "begin"
+		or requestMode == "cancel"
+		or requestMode == "complete"
+		or requestMode == "block"
+		or requestMode == "unblock"
+		or requestMode == "disrupt"
+	then
+		if requestMode ~= "cancel" and requestMode ~= "unblock" and requestMode ~= "block" then
+			local allowed, reason = validateActivationRequest(player, stationState)
+			if not allowed then
+				rejectActivate(player, reason :: string)
+				return
+			end
+		end
 
-	if player:GetAttribute("Role") ~= RoleConfig.Roles.Tinyfolk then
-		rejectActivate(player, "requester_not_tinyfolk")
-		return
-	end
+		local taskState = getTaskStateForStation(stationIdValue)
+		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
+			eventType = requestMode,
+			taskId = stationIdValue,
+			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			durationSeconds = StationConfig.TaskDurationSeconds,
+			regressionPerSecond = StationConfig.TaskRegressionPerSecond,
+			stabilizationThresholdSeconds = StationConfig.TaskStabilizationThresholdSeconds,
+			majorRegressionStepSeconds = StationConfig.TaskMajorRegressionStepSeconds,
+			majorRegressionMaxEvents = StationConfig.TaskMajorRegressionMaxEvents,
+			regressionWindowSeconds = StationConfig.TaskRegressionWindowSeconds,
+		})
+		applyTaskAttributes(player, taskResult.snapshot)
 
-	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
-	if requiredSpecialistRole then
-		local specialistRole = player:GetAttribute("SpecialistRole")
-		if type(specialistRole) ~= "string" or specialistRole == SpecialistConfig.SpecialistRoles.None then
-			rejectActivate(player, string.format("specialist_role_required required=%s", requiredSpecialistRole))
+		if not taskResult.accepted then
+			rejectActivate(player, string.format("task_%s", taskResult.reason))
 			return
 		end
 
-		if specialistRole ~= requiredSpecialistRole then
-			rejectActivate(player, string.format("specialist_role_mismatch required=%s actual=%s", requiredSpecialistRole, specialistRole))
+		if requestMode ~= "complete" then
 			return
 		end
-	end
-
-	local root = getHumanoidRootPart(player)
-	if not root then
-		rejectActivate(player, "humanoid_root_missing")
+	elseif requestMode ~= "legacy" then
+		rejectActivate(player, "invalid_mode")
 		return
 	end
 
-	local distance = (stationState.part.Position - root.Position).Magnitude
-	if distance > StationConfig.ActivationRangeStuds then
-		rejectActivate(player, string.format("out_of_range distance=%.2f max=%.2f", distance, StationConfig.ActivationRangeStuds))
+	local allowed, reason = validateActivationRequest(player, stationState)
+	if not allowed then
+		rejectActivate(player, reason :: string)
 		return
 	end
 
@@ -336,15 +449,17 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 			if afterSnapshot.inTransit > beforeSnapshot.inTransit then
 				stationState.resourceTotal = afterSnapshot.produced
 				applyDebugAttributes(stationState)
-				debugLog(string.format(
-					"Accepted StationHaul userId=%d stationId=%s material=%s moved=%.0f produced=%.0f inTransit=%.0f",
-					player.UserId,
-					stationState.stationId,
-					materialName,
-					afterSnapshot.inTransit - beforeSnapshot.inTransit,
-					afterSnapshot.produced,
-					afterSnapshot.inTransit
-				))
+				debugLog(
+					string.format(
+						"Accepted StationHaul userId=%d stationId=%s material=%s moved=%.0f produced=%.0f inTransit=%.0f",
+						player.UserId,
+						stationState.stationId,
+						materialName,
+						afterSnapshot.inTransit - beforeSnapshot.inTransit,
+						afterSnapshot.produced,
+						afterSnapshot.inTransit
+					)
+				)
 				return
 			end
 		end
@@ -361,7 +476,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 	stationState.accumulatorSeconds = 0
 	applyDebugAttributes(stationState)
 
-	debugLog(string.format("Accepted StationActivateRequest userId=%d stationId=%s", player.UserId, stationId))
+	debugLog(string.format("Accepted StationActivateRequest userId=%d stationId=%s", player.UserId, stationIdValue))
 end)
 
 stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -453,7 +568,9 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 
 		while stationState.accumulatorSeconds >= StationConfig.GenerationIntervalSeconds and stationState.isActive do
 			local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
-			local activatingPlayer = stationState.activatedByUserId and getPlayerByUserId(stationState.activatedByUserId) or nil
+			local activatingPlayer = stationState.activatedByUserId
+					and getPlayerByUserId(stationState.activatedByUserId)
+				or nil
 			if requiredSpecialistRole then
 				if not activatingPlayer then
 					deactivateStation(stationState, "activator_missing")
@@ -484,22 +601,27 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			end
 
 			local materialSnapshot = stationState.materialType == "Stone"
-				and ResourceFlowState.GetMaterialSnapshot("Stone")
+					and ResourceFlowState.GetMaterialSnapshot("Stone")
 				or ResourceFlowState.GetMaterialSnapshot("Wood")
 			local remainingCapacity = maxTotal - materialSnapshot.produced
 			local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
 			if generatedAmount <= 0 then
 				applyDebugAttributes(stationState)
-				deactivateStation(stationState, stationState.materialType == "Stone" and "max_stone_produced_reached" or "max_wood_produced_reached")
+				deactivateStation(
+					stationState,
+					stationState.materialType == "Stone" and "max_stone_produced_reached" or "max_wood_produced_reached"
+				)
 				break
 			end
 
 			local flowSnapshot
 			if stationState.materialType == "Stone" then
-				flowSnapshot = ResourceFlowState.AddProduced("Stone", "MiningStation:" .. stationState.stationId, generatedAmount)
+				flowSnapshot =
+					ResourceFlowState.AddProduced("Stone", "MiningStation:" .. stationState.stationId, generatedAmount)
 				stationState.resourceTotal = flowSnapshot.produced
 			else
-				flowSnapshot = ResourceFlowState.AddProduced("Wood", "WorkStation:" .. stationState.stationId, generatedAmount)
+				flowSnapshot =
+					ResourceFlowState.AddProduced("Wood", "WorkStation:" .. stationState.stationId, generatedAmount)
 				stationState.resourceTotal = flowSnapshot.produced
 			end
 
@@ -507,10 +629,32 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 				stationState.resourceTotal = maxTotal
 				applyDebugAttributes(stationState)
 				if stationState.materialType == "Stone" then
-					debugLog(string.format("Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f", stationState.stationId, stationState.tickCount, generatedAmount, stationState.resourceTotal, flowSnapshot.inTransit, flowSnapshot.stored, flowSnapshot.usable))
+					debugLog(
+						string.format(
+							"Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+							stationState.stationId,
+							stationState.tickCount,
+							generatedAmount,
+							stationState.resourceTotal,
+							flowSnapshot.inTransit,
+							flowSnapshot.stored,
+							flowSnapshot.usable
+						)
+					)
 					deactivateStation(stationState, "max_stone_produced_reached")
 				else
-					debugLog(string.format("Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f", stationState.stationId, stationState.tickCount, generatedAmount, stationState.resourceTotal, flowSnapshot.inTransit, flowSnapshot.stored, flowSnapshot.usable))
+					debugLog(
+						string.format(
+							"Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+							stationState.stationId,
+							stationState.tickCount,
+							generatedAmount,
+							stationState.resourceTotal,
+							flowSnapshot.inTransit,
+							flowSnapshot.stored,
+							flowSnapshot.usable
+						)
+					)
 					deactivateStation(stationState, "max_wood_produced_reached")
 				end
 				break
@@ -519,9 +663,31 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			applyDebugAttributes(stationState)
 			if stationState.tickCount % StationConfig.DebugLogEveryTicks == 0 then
 				if stationState.materialType == "Stone" then
-					debugLog(string.format("Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f", stationState.stationId, stationState.tickCount, generatedAmount, stationState.resourceTotal, flowSnapshot.inTransit, flowSnapshot.stored, flowSnapshot.usable))
+					debugLog(
+						string.format(
+							"Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+							stationState.stationId,
+							stationState.tickCount,
+							generatedAmount,
+							stationState.resourceTotal,
+							flowSnapshot.inTransit,
+							flowSnapshot.stored,
+							flowSnapshot.usable
+						)
+					)
 				else
-					debugLog(string.format("Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f", stationState.stationId, stationState.tickCount, generatedAmount, stationState.resourceTotal, flowSnapshot.inTransit, flowSnapshot.stored, flowSnapshot.usable))
+					debugLog(
+						string.format(
+							"Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+							stationState.stationId,
+							stationState.tickCount,
+							generatedAmount,
+							stationState.resourceTotal,
+							flowSnapshot.inTransit,
+							flowSnapshot.stored,
+							flowSnapshot.usable
+						)
+					)
 				end
 			end
 		end
@@ -533,3 +699,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 end)
 
 debugLog("StationService initialized")
+
+-- Test-only exports for runtime proof slices.
+_G._StationService_StationState = stationStateById
+_G._StationService_TaskState = taskStateByStationId

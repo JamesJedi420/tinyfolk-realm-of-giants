@@ -13,6 +13,13 @@ TinyfolkMovementTraitConfig.TraceCostReason = "PostCrossingBurst"
 
 TinyfolkMovementTraitConfig.MaxBurstWalkSpeed = 24
 
+TinyfolkMovementTraitConfig.SprintMaxStamina = 100
+TinyfolkMovementTraitConfig.SprintDrainPerSecond = 25
+TinyfolkMovementTraitConfig.SprintRegenPerSecond = 20
+TinyfolkMovementTraitConfig.SprintExhaustedRecoveryThreshold = 25
+TinyfolkMovementTraitConfig.SprintWalkSpeedMultiplier = 1.25
+TinyfolkMovementTraitConfig.SprintMaxWalkSpeed = 24
+
 TinyfolkMovementTraitConfig.Attributes = {
 	BurstActive = "TinyfolkPostCrossingBurstActive",
 	BurstUntil = "TinyfolkPostCrossingBurstUntil",
@@ -21,6 +28,16 @@ TinyfolkMovementTraitConfig.Attributes = {
 	TraceCostActive = "TinyfolkTraceCostActive",
 	TraceCostUntil = "TinyfolkTraceCostUntil",
 	TraceCostReason = "TinyfolkTraceCostReason",
+	SprintRequested = "TinyfolkSprintRequested",
+	SprintActive = "TinyfolkSprintActive",
+	SprintExhausted = "TinyfolkSprintExhausted",
+	SprintBreathless = "TinyfolkSprintBreathless",
+	SprintStamina = "TinyfolkSprintStamina",
+	SprintMaxStamina = "TinyfolkSprintMaxStamina",
+	SprintStaminaRatio = "TinyfolkSprintStaminaRatio",
+	SprintSpeedMultiplier = "TinyfolkSprintSpeedMultiplier",
+	SprintRecoveryThreshold = "TinyfolkSprintRecoveryThreshold",
+	SprintReason = "TinyfolkSprintReason",
 }
 
 return TinyfolkMovementTraitConfig

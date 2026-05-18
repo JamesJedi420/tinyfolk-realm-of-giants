@@ -41,7 +41,13 @@ local specialistAssignRemote = remotesFolder:WaitForChild(SPECIALIST_ASSIGN_REMO
 local specialistClearRemote = remotesFolder:WaitForChild(SPECIALIST_CLEAR_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
-local lastSentAtBySignature: {[string]: number} = {}
+local lastSentAtBySignature: { [string]: number } = {}
+local activeConstructionTaskSiteId: string? = nil
+local activeConstructionTaskToken = 0
+local activeStationTaskStationId: string? = nil
+local activeStationTaskToken = 0
+local activeShrineTaskShrineId: string? = nil
+local activeShrineTaskToken = 0
 
 type CandidateAction =
 	"escape_attempt"
@@ -60,7 +66,7 @@ type Candidate = {
 	payload: any,
 }
 
-local PRIORITY_BY_ACTION: {[CandidateAction]: number} = {
+local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	escape_attempt = 1,
 	construction_build = 2,
 	upgrade_board_progress = 3,
@@ -94,7 +100,7 @@ local function startsWithPrefix(name: string, prefix: string): boolean
 	return string.match(name, "^" .. prefix) ~= nil
 end
 
-local function pushCandidate(candidates: {Candidate}, candidate: Candidate)
+local function pushCandidate(candidates: { Candidate }, candidate: Candidate)
 	table.insert(candidates, candidate)
 end
 
@@ -127,7 +133,7 @@ local function getProducedForMaterialStation(stationPart: BasePart): number
 	return 0
 end
 
-local function collectCandidates(localRoot: BasePart): {Candidate}
+local function collectCandidates(localRoot: BasePart): { Candidate }
 	local mapRoot = Workspace:FindFirstChild("Map")
 	if not mapRoot then
 		return {}
@@ -135,23 +141,30 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 
 	local role = localPlayer:GetAttribute("Role")
 	local specialistRoleValue = localPlayer:GetAttribute("SpecialistRole")
-	local specialistRole = if type(specialistRoleValue) == "string" then specialistRoleValue else SpecialistConfig.SpecialistRoles.None
+	local specialistRole = if type(specialistRoleValue) == "string"
+		then specialistRoleValue
+		else SpecialistConfig.SpecialistRoles.None
 
 	local isTinyfolk = role == RoleConfig.Roles.Tinyfolk
 	local isGiant = role == RoleConfig.Roles.Giant
 	local nextUpgradeId = if isGiant then chooseNextUpgradeId() else nil
 
-	local candidates: {Candidate} = {}
+	local candidates: { Candidate } = {}
 
 	for _, descendant in mapRoot:GetDescendants() do
 		if not descendant:IsA("BasePart") then
 			continue
 		end
+		local part = descendant :: BasePart
 
-		local distance = (descendant.Position - localRoot.Position).Magnitude
-		local targetId = descendant.Name
+		local distance = (part.Position - localRoot.Position).Magnitude
+		local targetId = part.Name
 
-		if isTinyfolk and startsWithPrefix(targetId, EscapeConfig.EscapeRouteNamePrefix) and distance <= EscapeConfig.TriggerRadiusStuds then
+		if
+			isTinyfolk
+			and startsWithPrefix(targetId, EscapeConfig.EscapeRouteNamePrefix)
+			and distance <= EscapeConfig.TriggerRadiusStuds
+		then
 			pushCandidate(candidates, {
 				action = "escape_attempt",
 				targetId = targetId,
@@ -162,7 +175,10 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 			})
 		end
 
-		if startsWithPrefix(targetId, ConstructionConfig.ConstructionSiteNamePrefix) and distance <= ConstructionConfig.InteractionRangeStuds then
+		if
+			startsWithPrefix(targetId, ConstructionConfig.ConstructionSiteNamePrefix)
+			and distance <= ConstructionConfig.InteractionRangeStuds
+		then
 			pushCandidate(candidates, {
 				action = "construction_build",
 				targetId = targetId,
@@ -173,7 +189,11 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 			})
 		end
 
-		if nextUpgradeId and startsWithPrefix(targetId, UpgradeBoardConfig.BoardNamePrefix) and distance <= UpgradeBoardConfig.InteractionRangeStuds then
+		if
+			nextUpgradeId
+			and startsWithPrefix(targetId, UpgradeBoardConfig.BoardNamePrefix)
+			and distance <= UpgradeBoardConfig.InteractionRangeStuds
+		then
 			pushCandidate(candidates, {
 				action = "upgrade_board_progress",
 				targetId = targetId,
@@ -187,7 +207,10 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 			})
 		end
 
-		if startsWithPrefix(targetId, StationConfig.WarehouseNamePrefix) and distance <= StationConfig.ActivationRangeStuds then
+		if
+			startsWithPrefix(targetId, StationConfig.WarehouseNamePrefix)
+			and distance <= StationConfig.ActivationRangeStuds
+		then
 			pushCandidate(candidates, {
 				action = "warehouse_deliver",
 				targetId = targetId,
@@ -198,7 +221,10 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 			})
 		end
 
-		if startsWithPrefix(targetId, StationConfig.StationNamePrefix) or startsWithPrefix(targetId, StationConfig.MiningStationNamePrefix) then
+		if
+			startsWithPrefix(targetId, StationConfig.StationNamePrefix)
+			or startsWithPrefix(targetId, StationConfig.MiningStationNamePrefix)
+		then
 			if distance <= StationConfig.ActivationRangeStuds then
 				local requiredSpecialistRole = StationConfig.RequiredSpecialistRoleByStationId[targetId]
 				if type(requiredSpecialistRole) ~= "string" then
@@ -212,7 +238,7 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 					})
 				elseif isTinyfolk then
 					if specialistRole == requiredSpecialistRole then
-						local producedTotal = getProducedForMaterialStation(descendant)
+						local producedTotal = getProducedForMaterialStation(part)
 						local mode = if producedTotal > 0 then "pickup" else "activate"
 						pushCandidate(candidates, {
 							action = "station_pickup_or_assign",
@@ -251,7 +277,11 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 			end
 		end
 
-		if startsWithPrefix(targetId, ShrineConfig.ShrineNamePrefix) and distance <= ShrineConfig.ActivationRangeStuds and isTinyfolk then
+		if
+			startsWithPrefix(targetId, ShrineConfig.ShrineNamePrefix)
+			and distance <= ShrineConfig.ActivationRangeStuds
+			and isTinyfolk
+		then
 			if specialistRole == SpecialistConfig.SpecialistRoles.Worshipper then
 				pushCandidate(candidates, {
 					action = "shrine_assign_worshipper",
@@ -292,7 +322,7 @@ local function collectCandidates(localRoot: BasePart): {Candidate}
 	return candidates
 end
 
-local function pickWinningCandidate(candidates: {Candidate}): Candidate?
+local function pickWinningCandidate(candidates: { Candidate }): Candidate?
 	table.sort(candidates, function(a, b)
 		if a.priority ~= b.priority then
 			return a.priority < b.priority
@@ -309,8 +339,18 @@ local function pickWinningCandidate(candidates: {Candidate}): Candidate?
 end
 
 local function getCandidateSignature(candidate: Candidate): string
-	if candidate.action == "upgrade_board_progress" and type(candidate.payload) == "table" and type(candidate.payload.upgradeId) == "string" then
-		return string.format("%s|%s|%s|%s", candidate.action, candidate.targetId, candidate.mode, candidate.payload.upgradeId)
+	if
+		candidate.action == "upgrade_board_progress"
+		and type(candidate.payload) == "table"
+		and type(candidate.payload.upgradeId) == "string"
+	then
+		return string.format(
+			"%s|%s|%s|%s",
+			candidate.action,
+			candidate.targetId,
+			candidate.mode,
+			candidate.payload.upgradeId
+		)
 	end
 
 	return string.format("%s|%s|%s", candidate.action, candidate.targetId, candidate.mode)
@@ -399,6 +439,183 @@ local function fireCandidate(candidate: Candidate)
 	end
 end
 
+local function cancelActiveConstructionTask(reason: string)
+	if activeConstructionTaskSiteId == nil then
+		return
+	end
+
+	local siteId = activeConstructionTaskSiteId
+	activeConstructionTaskSiteId = nil
+	activeConstructionTaskToken += 1
+
+	constructionBuildRemote:FireServer({
+		siteId = siteId,
+		mode = "cancel",
+		now = os.clock(),
+	})
+	debugLog(string.format("Sent construction task cancel siteId=%s reason=%s", siteId, reason))
+end
+
+local function cancelActiveStationTask(reason: string)
+	if activeStationTaskStationId == nil then
+		return
+	end
+
+	local stationId = activeStationTaskStationId
+	activeStationTaskStationId = nil
+	activeStationTaskToken += 1
+
+	stationActivateRemote:FireServer({
+		stationId = stationId,
+		mode = "cancel",
+		now = os.clock(),
+	})
+	debugLog(string.format("Sent station task cancel stationId=%s reason=%s", stationId, reason))
+end
+
+local function cancelActiveShrineTask(reason: string)
+	if activeShrineTaskShrineId == nil then
+		return
+	end
+
+	local shrineId = activeShrineTaskShrineId
+	activeShrineTaskShrineId = nil
+	activeShrineTaskToken += 1
+
+	shrineActivateRemote:FireServer({
+		shrineId = shrineId,
+		mode = "cancel",
+		now = os.clock(),
+	})
+	debugLog(string.format("Sent shrine task cancel shrineId=%s reason=%s", shrineId, reason))
+end
+
+local function beginConstructionTask(candidate: Candidate)
+	cancelActiveConstructionTask("new_begin")
+	cancelActiveStationTask("construction_begin")
+	cancelActiveShrineTask("construction_begin")
+
+	activeConstructionTaskSiteId = candidate.targetId
+	activeConstructionTaskToken += 1
+	local tokenAtBegin = activeConstructionTaskToken
+
+	constructionBuildRemote:FireServer({
+		siteId = candidate.targetId,
+		mode = "begin",
+		now = os.clock(),
+	})
+
+	debugLog(
+		string.format(
+			"Sent construction task begin siteId=%s duration=%.2f",
+			candidate.targetId,
+			ConstructionConfig.TaskDurationSeconds
+		)
+	)
+
+	task.delay(ConstructionConfig.TaskDurationSeconds, function()
+		if activeConstructionTaskSiteId ~= candidate.targetId then
+			return
+		end
+		if activeConstructionTaskToken ~= tokenAtBegin then
+			return
+		end
+
+		constructionBuildRemote:FireServer({
+			siteId = candidate.targetId,
+			mode = "complete",
+			now = os.clock(),
+		})
+		activeConstructionTaskSiteId = nil
+		activeConstructionTaskToken += 1
+		debugLog(string.format("Sent construction task complete siteId=%s", candidate.targetId))
+	end)
+end
+
+local function beginStationTask(candidate: Candidate)
+	cancelActiveConstructionTask("station_begin")
+	cancelActiveStationTask("new_begin")
+	cancelActiveShrineTask("station_begin")
+
+	activeStationTaskStationId = candidate.targetId
+	activeStationTaskToken += 1
+	local tokenAtBegin = activeStationTaskToken
+
+	stationActivateRemote:FireServer({
+		stationId = candidate.targetId,
+		mode = "begin",
+		now = os.clock(),
+	})
+
+	debugLog(
+		string.format(
+			"Sent station task begin stationId=%s duration=%.2f",
+			candidate.targetId,
+			StationConfig.TaskDurationSeconds
+		)
+	)
+
+	task.delay(StationConfig.TaskDurationSeconds, function()
+		if activeStationTaskStationId ~= candidate.targetId then
+			return
+		end
+		if activeStationTaskToken ~= tokenAtBegin then
+			return
+		end
+
+		stationActivateRemote:FireServer({
+			stationId = candidate.targetId,
+			mode = "complete",
+			now = os.clock(),
+		})
+		activeStationTaskStationId = nil
+		activeStationTaskToken += 1
+		debugLog(string.format("Sent station task complete stationId=%s", candidate.targetId))
+	end)
+end
+
+local function beginShrineTask(candidate: Candidate)
+	cancelActiveConstructionTask("shrine_begin")
+	cancelActiveStationTask("shrine_begin")
+	cancelActiveShrineTask("new_begin")
+
+	activeShrineTaskShrineId = candidate.targetId
+	activeShrineTaskToken += 1
+	local tokenAtBegin = activeShrineTaskToken
+
+	shrineActivateRemote:FireServer({
+		shrineId = candidate.targetId,
+		mode = "begin",
+		now = os.clock(),
+	})
+
+	debugLog(
+		string.format(
+			"Sent shrine task begin shrineId=%s duration=%.2f",
+			candidate.targetId,
+			ShrineConfig.TaskDurationSeconds
+		)
+	)
+
+	task.delay(ShrineConfig.TaskDurationSeconds, function()
+		if activeShrineTaskShrineId ~= candidate.targetId then
+			return
+		end
+		if activeShrineTaskToken ~= tokenAtBegin then
+			return
+		end
+
+		shrineActivateRemote:FireServer({
+			shrineId = candidate.targetId,
+			mode = "complete",
+			now = os.clock(),
+		})
+		activeShrineTaskShrineId = nil
+		activeShrineTaskToken += 1
+		debugLog(string.format("Sent shrine task complete shrineId=%s", candidate.targetId))
+	end)
+end
+
 local function requestContextInteraction()
 	local root = getHumanoidRootPart(localPlayer.Character)
 	if not root then
@@ -412,21 +629,39 @@ local function requestContextInteraction()
 		debugLog("Resolved action=none target=none mode=none")
 		return
 	end
+	local resolvedWinner = winner :: Candidate
 
-	debugLog(string.format(
-		"Resolved action=%s target=%s mode=%s priority=%d distance=%.2f",
-		winner.action,
-		winner.targetId,
-		winner.mode,
-		winner.priority,
-		winner.distance
-	))
+	debugLog(
+		string.format(
+			"Resolved action=%s target=%s mode=%s priority=%d distance=%.2f",
+			resolvedWinner.action,
+			resolvedWinner.targetId,
+			resolvedWinner.mode,
+			resolvedWinner.priority,
+			resolvedWinner.distance
+		)
+	)
 
-	if not shouldSendCandidate(winner) then
+	if not shouldSendCandidate(resolvedWinner) then
 		return
 	end
 
-	fireCandidate(winner)
+	if resolvedWinner.action == "construction_build" then
+		beginConstructionTask(resolvedWinner)
+		return
+	end
+
+	if resolvedWinner.action == "station_pickup_or_assign" and resolvedWinner.mode == "activate" then
+		beginStationTask(resolvedWinner)
+		return
+	end
+
+	if resolvedWinner.action == "shrine_assign_worshipper" and resolvedWinner.mode == "activate" then
+		beginShrineTask(resolvedWinner)
+		return
+	end
+
+	fireCandidate(resolvedWinner)
 end
 
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
@@ -441,6 +676,16 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEv
 	if input.KeyCode == INTERACT_KEY then
 		requestContextInteraction()
 	end
+end)
+
+UserInputService.InputEnded:Connect(function(input: InputObject, _gameProcessedEvent: boolean)
+	if input.KeyCode ~= INTERACT_KEY then
+		return
+	end
+
+	cancelActiveConstructionTask("input_ended")
+	cancelActiveStationTask("input_ended")
+	cancelActiveShrineTask("input_ended")
 end)
 
 debugLog("Input hook active (F=Context Interaction Resolver)")

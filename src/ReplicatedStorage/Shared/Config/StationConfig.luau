@@ -1,6 +1,6 @@
 --!strict
 
-local StationConfig = {}
+local StationConfig: any = {}
 
 StationConfig.StationNamePrefix = "WorkStation_"
 StationConfig.MiningStationNamePrefix = "MiningStation_"
@@ -13,6 +13,22 @@ StationConfig.DefaultGranaryId = "Granary_A"
 
 StationConfig.ActivationRangeStuds = 16
 StationConfig.RequestCooldownSeconds = 0.2
+StationConfig.TaskDurationSeconds = 1.5
+StationConfig.TaskRegressionPerSecond = 0.35
+StationConfig.TaskStabilizationThresholdSeconds = 0.4
+StationConfig.TaskMajorRegressionStepSeconds = 0.8
+StationConfig.TaskMajorRegressionMaxEvents = 2
+StationConfig.TaskRegressionWindowSeconds = 3.0
+
+StationConfig.TaskActiveStationIdAttribute = "StationTaskActiveStationId"
+StationConfig.TaskProgressRatioAttribute = "StationTaskProgressRatio"
+StationConfig.TaskStartedAtAttribute = "StationTaskStartedAt"
+StationConfig.TaskEndsAtAttribute = "StationTaskEndsAt"
+StationConfig.TaskLastReasonAttribute = "StationTaskLastReason"
+StationConfig.TaskObjectiveStateAttribute = "StationTaskObjectiveState"
+StationConfig.TaskProgressSecondsAttribute = "StationTaskProgressSeconds"
+StationConfig.TaskRegressionCountAttribute = "StationTaskRegressionCount"
+StationConfig.TaskRegressingUntilAttribute = "StationTaskRegressingUntil"
 
 StationConfig.GenerationIntervalSeconds = 1
 StationConfig.EssencePerTick = 2

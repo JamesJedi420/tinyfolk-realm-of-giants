@@ -10,6 +10,8 @@ local Config = Shared:WaitForChild("Config")
 local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
+local ConstructionFolder = Shared:WaitForChild("Construction")
+local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -23,7 +25,7 @@ local ATTRIBUTE_TICK_COUNT = "EssenceTickCount"
 local ATTRIBUTE_LAST_TICK_AT = "LastTickAt"
 local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
-local SHRINE_FOLDER_PATH = {"Map", "Stations"}
+local SHRINE_FOLDER_PATH = { "Map", "Stations" }
 
 type ShrineState = {
 	shrineId: string,
@@ -36,8 +38,9 @@ type ShrineState = {
 	accumulatorSeconds: number,
 }
 
-local shrineStateById: {[string]: ShrineState} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+local shrineStateById: { [string]: ShrineState } = {}
+local lastRequestAtByUserId: { [number]: number? } = {}
+local taskStateByShrineId: { [string]: any } = {}
 
 local function debugLog(message: string)
 	print(string.format("[ShrineService] %s", message))
@@ -73,17 +76,22 @@ local function ensureRemoteEvent(parentFolder: Folder, remoteName: string): Remo
 	return remote
 end
 
-local function isCoolingDown(userId: number): boolean
+local function isCoolingDown(userId: number, at: number?): boolean
 	local last = lastRequestAtByUserId[userId]
 	if not last then
 		return false
 	end
+	local lastAt = last :: number
 
-	return (os.clock() - last) < ShrineConfig.RequestCooldownSeconds
+	if type(at) == "number" then
+		return (at - lastAt) < ShrineConfig.RequestCooldownSeconds
+	end
+
+	return (os.clock() - lastAt) < ShrineConfig.RequestCooldownSeconds
 end
 
-local function markRequest(userId: number)
-	lastRequestAtByUserId[userId] = os.clock()
+local function markRequest(userId: number, at: number?)
+	lastRequestAtByUserId[userId] = if type(at) == "number" then at else os.clock()
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -111,7 +119,7 @@ local function isPlayerAlive(player: Player): boolean
 		return false
 	end
 
-	return humanoid.Health > 0
+	return (humanoid :: Humanoid).Health > 0
 end
 
 local function isPlayerTinyfolkWorshipper(player: Player): boolean
@@ -203,7 +211,55 @@ local function deactivateShrine(state: ShrineState, reason: string)
 	state.isActive = false
 	state.accumulatorSeconds = 0
 	applyDebugAttributes(state)
-	debugLog(string.format("Shrine deactivated id=%s reason=%s essenceTotal=%d", state.shrineId, reason, state.essenceTotal))
+	debugLog(
+		string.format("Shrine deactivated id=%s reason=%s essenceTotal=%d", state.shrineId, reason, state.essenceTotal)
+	)
+end
+
+local function applyTaskAttributes(player: Player, taskSnapshot: any)
+	player:SetAttribute(ShrineConfig.TaskActiveShrineIdAttribute, taskSnapshot.activeTaskId)
+	player:SetAttribute(ShrineConfig.TaskProgressRatioAttribute, taskSnapshot.progressRatio)
+	player:SetAttribute(ShrineConfig.TaskStartedAtAttribute, taskSnapshot.startedAt)
+	player:SetAttribute(ShrineConfig.TaskEndsAtAttribute, taskSnapshot.endsAt)
+	player:SetAttribute(ShrineConfig.TaskLastReasonAttribute, taskSnapshot.lastReason)
+	player:SetAttribute(ShrineConfig.TaskObjectiveStateAttribute, taskSnapshot.objectiveState)
+	player:SetAttribute(ShrineConfig.TaskProgressSecondsAttribute, taskSnapshot.progressSeconds)
+	player:SetAttribute(ShrineConfig.TaskRegressionCountAttribute, taskSnapshot.majorRegressionEvents)
+	player:SetAttribute(ShrineConfig.TaskRegressingUntilAttribute, taskSnapshot.regressingUntil)
+end
+
+local function getTaskStateForShrine(shrineId: string): any
+	local existing = taskStateByShrineId[shrineId]
+	if existing ~= nil then
+		return existing
+	end
+
+	local created = ContextualTaskProgressLogic.New()
+	taskStateByShrineId[shrineId] = created
+	return created
+end
+
+local function validateActivationRequest(player: Player, shrineState: ShrineState): (boolean, string?)
+	if not isPlayerAlive(player) then
+		return false, "player_not_alive"
+	end
+
+	local root = getHumanoidRootPart(player)
+	if not root then
+		return false, "humanoid_root_missing"
+	end
+	local rootPart = root :: BasePart
+
+	local distance = (shrineState.part.Position - rootPart.Position).Magnitude
+	if distance > ShrineConfig.ActivationRangeStuds then
+		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, ShrineConfig.ActivationRangeStuds)
+	end
+
+	if not isPlayerTinyfolkWorshipper(player) then
+		return false, "worshipper_role_required"
+	end
+
+	return true, nil
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -214,44 +270,96 @@ local shrineDebugStateResponseRemote = ensureRemoteEvent(remotesFolder, DEBUG_RE
 registerShrinesFromWorkspace()
 
 shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	if isCoolingDown(player.UserId) then
-		rejectActivate(player, "request_cooldown")
-		return
-	end
+	local shrineId: string? = nil
+	local requestMode = "legacy"
+	local requestNow: number? = nil
 
-	markRequest(player.UserId)
+	if type(payload) == "string" then
+		shrineId = payload
+	elseif type(payload) == "table" then
+		local payloadAny = payload :: any
+		if type(payloadAny.shrineId) ~= "string" or payloadAny.shrineId == "" then
+			rejectActivate(player, "malformed_payload")
+			return
+		end
+		if type(payloadAny.mode) ~= "string" then
+			rejectActivate(player, "malformed_payload")
+			return
+		end
 
-	if type(payload) ~= "string" then
+		shrineId = payloadAny.shrineId
+		requestMode = payloadAny.mode
+		if type(payloadAny.now) == "number" then
+			requestNow = payloadAny.now
+		end
+	else
 		rejectActivate(player, "malformed_payload")
 		return
 	end
 
-	local shrineId = payload
-	local shrineState = shrineStateById[shrineId]
+	local bypassCooldown = requestMode == "cancel"
+	if not bypassCooldown and isCoolingDown(player.UserId, requestNow) then
+		rejectActivate(player, "request_cooldown")
+		return
+	end
+
+	if not bypassCooldown then
+		markRequest(player.UserId, requestNow)
+	end
+
+	local shrineIdValue = shrineId :: string
+	local shrineState = shrineStateById[shrineIdValue]
 	if not shrineState then
 		rejectActivate(player, "shrine_not_found")
 		return
 	end
 
-	if not isPlayerAlive(player) then
-		rejectActivate(player, "player_not_alive")
+	if
+		requestMode == "begin"
+		or requestMode == "cancel"
+		or requestMode == "complete"
+		or requestMode == "block"
+		or requestMode == "unblock"
+		or requestMode == "disrupt"
+	then
+		if requestMode ~= "cancel" and requestMode ~= "unblock" and requestMode ~= "block" then
+			local allowed, reason = validateActivationRequest(player, shrineState)
+			if not allowed then
+				rejectActivate(player, reason :: string)
+				return
+			end
+		end
+
+		local taskState = getTaskStateForShrine(shrineIdValue)
+		local taskResult = ContextualTaskProgressLogic.Resolve(taskState, {
+			eventType = requestMode,
+			taskId = shrineIdValue,
+			now = if type(requestNow) == "number" then requestNow else os.clock(),
+			durationSeconds = ShrineConfig.TaskDurationSeconds,
+			regressionPerSecond = ShrineConfig.TaskRegressionPerSecond,
+			stabilizationThresholdSeconds = ShrineConfig.TaskStabilizationThresholdSeconds,
+			majorRegressionStepSeconds = ShrineConfig.TaskMajorRegressionStepSeconds,
+			majorRegressionMaxEvents = ShrineConfig.TaskMajorRegressionMaxEvents,
+			regressionWindowSeconds = ShrineConfig.TaskRegressionWindowSeconds,
+		})
+		applyTaskAttributes(player, taskResult.snapshot)
+
+		if not taskResult.accepted then
+			rejectActivate(player, string.format("task_%s", taskResult.reason))
+			return
+		end
+
+		if requestMode ~= "complete" then
+			return
+		end
+	elseif requestMode ~= "legacy" then
+		rejectActivate(player, "invalid_mode")
 		return
 	end
 
-	local root = getHumanoidRootPart(player)
-	if not root then
-		rejectActivate(player, "humanoid_root_missing")
-		return
-	end
-
-	local distance = (shrineState.part.Position - root.Position).Magnitude
-	if distance > ShrineConfig.ActivationRangeStuds then
-		rejectActivate(player, string.format("out_of_range distance=%.2f max=%.2f", distance, ShrineConfig.ActivationRangeStuds))
-		return
-	end
-
-	if not isPlayerTinyfolkWorshipper(player) then
-		rejectActivate(player, "worshipper_role_required")
+	local allowed, reason = validateActivationRequest(player, shrineState)
+	if not allowed then
+		rejectActivate(player, reason :: string)
 		return
 	end
 
@@ -266,7 +374,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 	shrineState.accumulatorSeconds = 0
 	applyDebugAttributes(shrineState)
 
-	debugLog(string.format("Accepted ShrineActivateRequest userId=%d shrineId=%s", player.UserId, shrineId))
+	debugLog(string.format("Accepted ShrineActivateRequest userId=%d shrineId=%s", player.UserId, shrineIdValue))
 end)
 
 shrineDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -328,7 +436,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		shrineState.accumulatorSeconds += deltaTime
 
 		while shrineState.accumulatorSeconds >= ShrineConfig.GenerationIntervalSeconds and shrineState.isActive do
-			local activatingPlayer = shrineState.activatedByUserId and Players:GetPlayerByUserId(shrineState.activatedByUserId)
+			local activatingPlayer = shrineState.activatedByUserId
+				and Players:GetPlayerByUserId(shrineState.activatedByUserId)
 			if not activatingPlayer or not isPlayerTinyfolkWorshipper(activatingPlayer) then
 				applyDebugAttributes(shrineState)
 				deactivateShrine(shrineState, "worshipper_role_lost")
@@ -353,17 +462,39 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			if shrineState.essenceTotal >= ShrineConfig.MaxEssenceTotal then
 				shrineState.essenceTotal = ShrineConfig.MaxEssenceTotal
 				applyDebugAttributes(shrineState)
-				debugLog(string.format("Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f", shrineState.shrineId, shrineState.tickCount, generatedAmount, shrineState.essenceTotal, sessionSnapshot.total))
+				debugLog(
+					string.format(
+						"Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f",
+						shrineState.shrineId,
+						shrineState.tickCount,
+						generatedAmount,
+						shrineState.essenceTotal,
+						sessionSnapshot.total
+					)
+				)
 				deactivateShrine(shrineState, "max_essence_reached")
 				break
 			end
 
 			applyDebugAttributes(shrineState)
 			if shrineState.tickCount % ShrineConfig.DebugLogEveryTicks == 0 then
-				debugLog(string.format("Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f", shrineState.shrineId, shrineState.tickCount, generatedAmount, shrineState.essenceTotal, sessionSnapshot.total))
+				debugLog(
+					string.format(
+						"Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f",
+						shrineState.shrineId,
+						shrineState.tickCount,
+						generatedAmount,
+						shrineState.essenceTotal,
+						sessionSnapshot.total
+					)
+				)
 			end
 		end
 	end
 end)
 
 debugLog("ShrineService initialized")
+
+-- Test-only exports for runtime proof slices.
+_G._ShrineService_ShrineState = shrineStateById
+_G._ShrineService_TaskState = taskStateByShrineId
