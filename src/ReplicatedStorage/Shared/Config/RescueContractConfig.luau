@@ -5,7 +5,6 @@ local RescueContractConfig: any = {}
 RescueContractConfig.RequestCooldownSeconds = 0.2
 RescueContractConfig.RescueWindowSeconds = 12
 RescueContractConfig.TriggerRadiusStuds = 14
-RescueContractConfig.MaxConcurrentContractsPerRescuer = 1
 
 RescueContractConfig.StateAttributes = {
 	RescueActive = "RescueContractActive",

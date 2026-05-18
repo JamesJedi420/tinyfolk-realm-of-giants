@@ -10,8 +10,8 @@ export type RescueContract = {
 }
 
 export type State = {
-	contractsByRescuer: { [number]: RescueContract },
-	rescuerByTarget: { [number]: number },
+	contractsByRescuer: { [number]: RescueContract? },
+	rescuerByTarget: { [number]: number? },
 	lastReason: string?,
 }
 
@@ -26,7 +26,6 @@ export type RequestInput = {
 	targetCarried: boolean,
 	targetProtected: boolean,
 	inRange: boolean,
-	maxConcurrentContractsPerRescuer: number,
 	rescueWindowSeconds: number,
 }
 
@@ -44,25 +43,39 @@ export type TransitionResult = {
 }
 
 local function validNumber(value: any): boolean
-	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value then
+		return false
+	end
+	if value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
 end
 
 local function validNow(now: any): boolean
-	return validNumber(now) and now >= 0
+	if not validNumber(now) then
+		return false
+	end
+	return now >= 0
 end
 
 local function cloneState(state: State): State
-	local contractsByRescuer: { [number]: RescueContract } = {}
+	local contractsByRescuer: { [number]: RescueContract? } = {}
 	for rescuerUserId, contract in pairs(state.contractsByRescuer) do
-		contractsByRescuer[rescuerUserId] = {
-			rescuerUserId = contract.rescuerUserId,
-			targetUserId = contract.targetUserId,
-			startedAt = contract.startedAt,
-			expiresAt = contract.expiresAt,
-		}
+		if contract ~= nil then
+			contractsByRescuer[rescuerUserId] = {
+				rescuerUserId = contract.rescuerUserId,
+				targetUserId = contract.targetUserId,
+				startedAt = contract.startedAt,
+				expiresAt = contract.expiresAt,
+			}
+		end
 	end
 
-	local rescuerByTarget: { [number]: number } = {}
+	local rescuerByTarget: { [number]: number? } = {}
 	for targetUserId, rescuerUserId in pairs(state.rescuerByTarget) do
 		rescuerByTarget[targetUserId] = rescuerUserId
 	end
@@ -82,6 +95,36 @@ function RescueContractState.NewState(): State
 	}
 end
 
+local function pruneExpiredInPlace(nextState: State, now: number)
+	local expiredRescuers: { number } = {}
+
+	for rescuerUserId, contract in pairs(nextState.contractsByRescuer) do
+		if contract ~= nil then
+			if contract.expiresAt <= now then
+				table.insert(expiredRescuers, rescuerUserId)
+			end
+		end
+	end
+
+	for _, rescuerUserId in ipairs(expiredRescuers) do
+		local contract = nextState.contractsByRescuer[rescuerUserId]
+		if contract ~= nil then
+			nextState.rescuerByTarget[contract.targetUserId] = nil
+			nextState.contractsByRescuer[rescuerUserId] = nil
+		end
+	end
+end
+
+function RescueContractState.PruneExpired(state: State, now: number): State
+	if not validNow(now) then
+		return cloneState(state)
+	end
+
+	local nextState = cloneState(state)
+	pruneExpiredInPlace(nextState, now)
+	return nextState
+end
+
 function RescueContractState.ResolveRequest(state: State, input: RequestInput): TransitionResult
 	local nextState = cloneState(state)
 
@@ -89,6 +132,8 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		nextState.lastReason = "invalid_now"
 		return { accepted = false, reason = "invalid_now", state = nextState, contract = nil }
 	end
+
+	pruneExpiredInPlace(nextState, input.now)
 
 	if input.rescuerRole ~= "Tinyfolk" then
 		nextState.lastReason = "rescuer_not_tinyfolk"
@@ -140,11 +185,6 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		return { accepted = false, reason = "target_contract_active", state = nextState, contract = nil }
 	end
 
-	if type(input.maxConcurrentContractsPerRescuer) == "number" and input.maxConcurrentContractsPerRescuer <= 0 then
-		nextState.lastReason = "rescuer_contract_limit_reached"
-		return { accepted = false, reason = "rescuer_contract_limit_reached", state = nextState, contract = nil }
-	end
-
 	local rescueWindowSeconds = if validNumber(input.rescueWindowSeconds) and input.rescueWindowSeconds > 0
 		then input.rescueWindowSeconds
 		else 0
@@ -175,6 +215,8 @@ function RescueContractState.ResolveComplete(state: State, input: CompleteInput)
 		nextState.lastReason = "invalid_now"
 		return { accepted = false, reason = "invalid_now", state = nextState, contract = nil }
 	end
+
+	pruneExpiredInPlace(nextState, input.now)
 
 	local contract = nextState.contractsByRescuer[input.rescuerUserId]
 	if contract == nil then
@@ -222,6 +264,26 @@ function RescueContractState.GetContracts(state: State): { RescueContract }
 	end)
 
 	return contracts
+end
+
+function RescueContractState.RemovePlayer(state: State, userId: number): State
+	local nextState = cloneState(state)
+
+	local removedTargetIds: { [number]: boolean } = {}
+	for rescuerUserId, contract in pairs(nextState.contractsByRescuer) do
+		if rescuerUserId == userId or contract.targetUserId == userId then
+			removedTargetIds[contract.targetUserId] = true
+			nextState.contractsByRescuer[rescuerUserId] = nil
+		end
+	end
+
+	for targetUserId, rescuerUserId in pairs(nextState.rescuerByTarget) do
+		if targetUserId == userId or rescuerUserId == userId or removedTargetIds[targetUserId] == true then
+			nextState.rescuerByTarget[targetUserId] = nil
+		end
+	end
+
+	return nextState
 end
 
 return RescueContractState

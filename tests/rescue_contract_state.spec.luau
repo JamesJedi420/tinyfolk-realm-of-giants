@@ -35,7 +35,6 @@ local function makeRequestInput(overrides: any?): any
 		targetCarried = false,
 		targetProtected = false,
 		inRange = true,
-		maxConcurrentContractsPerRescuer = 1,
 		rescueWindowSeconds = 12,
 	}
 
@@ -66,6 +65,36 @@ end
 
 do
 	local state = RescueContractState.NewState()
+	local carried = RescueContractState.ResolveRequest(state, makeRequestInput({ targetCarried = true }))
+	assertFalse(carried.accepted, "carried target rejected")
+	assertEqual(carried.reason, "target_carried", "carried rejection reason")
+
+	local protected = RescueContractState.ResolveRequest(state, makeRequestInput({ targetProtected = true }))
+	assertFalse(protected.accepted, "protected target rejected")
+	assertEqual(protected.reason, "target_safe_zone_protected", "safe-zone rejection reason")
+
+	local outOfRange = RescueContractState.ResolveRequest(state, makeRequestInput({ inRange = false }))
+	assertFalse(outOfRange.accepted, "out-of-range target rejected")
+	assertEqual(outOfRange.reason, "target_out_of_range", "out-of-range rejection reason")
+end
+
+do
+	local state = RescueContractState.NewState()
+	local invalidRequest = RescueContractState.ResolveRequest(state, makeRequestInput({ now = -1 }))
+	assertFalse(invalidRequest.accepted, "invalid request now rejected")
+	assertEqual(invalidRequest.reason, "invalid_now", "invalid request now reason")
+
+	local invalidComplete = RescueContractState.ResolveComplete(state, {
+		now = -1,
+		rescuerUserId = 1,
+		targetUserId = 2,
+	})
+	assertFalse(invalidComplete.accepted, "invalid complete now rejected")
+	assertEqual(invalidComplete.reason, "invalid_now", "invalid complete now reason")
+end
+
+do
+	local state = RescueContractState.NewState()
 	local accepted = RescueContractState.ResolveRequest(state, makeRequestInput())
 
 	assertTrue(accepted.accepted, "valid request accepted")
@@ -85,6 +114,17 @@ do
 	assertTrue(complete.accepted, "complete resolves active contract")
 	assertEqual(complete.reason, "rescued", "complete reason")
 	assertEqual(RescueContractState.GetRescuerContract(complete.state, 1), nil, "contract removed after completion")
+end
+
+do
+	local state = RescueContractState.NewState()
+	local accepted = RescueContractState.ResolveRequest(state, makeRequestInput({ now = 10, rescueWindowSeconds = 2 }))
+	assertTrue(accepted.accepted, "short-window contract accepted")
+
+	local afterExpiry =
+		RescueContractState.ResolveRequest(accepted.state, makeRequestInput({ now = 13, targetUserId = 3 }))
+	assertTrue(afterExpiry.accepted, "expired contract no longer blocks request")
+	assertEqual(afterExpiry.contract.targetUserId, 3, "post-expiry request targets new user")
 end
 
 print("rescue_contract_state: all checks passed")

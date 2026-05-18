@@ -123,9 +123,15 @@ local target = MockPlayer.new(2102, "TargetTinyfolk", {
 	positionZ = 4,
 	health = 100,
 })
+local targetTwo = MockPlayer.new(2103, "TargetTinyfolkTwo", {
+	role = "Tinyfolk",
+	positionZ = 6,
+	health = 100,
+})
 target:SetAttribute("DownedIsDowned", true)
+targetTwo:SetAttribute("DownedIsDowned", true)
 
-local playersList: { any } = { rescuer, target }
+local playersList: { any } = { rescuer, target, targetTwo }
 local playersService: any = {
 	PlayerRemoving = makeSignal(),
 }
@@ -179,12 +185,18 @@ local function resetState()
 	rescueApi.ResetForTests()
 	setRole(rescuer, "Tinyfolk")
 	setRole(target, "Tinyfolk")
+	setRole(targetTwo, "Tinyfolk")
 	setHumanoidHealth(rescuer, 100)
 	setHumanoidHealth(target, 100)
+	setHumanoidHealth(targetTwo, 100)
 	target:SetAttribute("DownedIsDowned", true)
+	targetTwo:SetAttribute("DownedIsDowned", true)
 	target:SetAttribute("InSafeZone", false)
 	target:SetAttribute("SafeZoneType", nil)
 	target:SetAttribute("SafeZoneProtectionEndsAt", nil)
+	targetTwo:SetAttribute("InSafeZone", false)
+	targetTwo:SetAttribute("SafeZoneType", nil)
+	targetTwo:SetAttribute("SafeZoneProtectionEndsAt", nil)
 end
 
 do
@@ -225,6 +237,71 @@ do
 	assertTrue(completed.accepted, "completion accepted for active contract")
 	assertEqual(completed.reason, "rescued", "completion reason")
 	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId), nil, "contract cleared after completion")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 450)
+	assertTrue(accepted.accepted, "baseline accepted before rejected completion")
+
+	local rejectedComplete = rescueApi.CompleteRescueContract(rescuer.UserId, targetTwo.UserId, 451)
+	assertFalse(rejectedComplete.accepted, "completion rejects wrong target")
+	assertEqual(rejectedComplete.reason, "target_mismatch", "wrong target completion reason")
+
+	local activeContract = rescueApi.GetRescuerContract(rescuer.UserId, 451)
+	assertTrue(activeContract ~= nil, "rejected completion preserves active contract")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractTargetUserId"),
+		target.UserId,
+		"rejected completion preserves rescuer attribute target"
+	)
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 500)
+	assertTrue(accepted.accepted, "baseline accepted before rejected follow-up request")
+
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, targetTwo.UserId, 500.1)
+	assertFalse(rejected.accepted, "rapid follow-up request rejected")
+	assertEqual(rejected.reason, "request_cooldown", "follow-up cooldown reason")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractTargetUserId"),
+		target.UserId,
+		"rejected follow-up request preserves active attribute target"
+	)
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 600)
+	assertTrue(accepted.accepted, "contract accepted before expiry test")
+
+	local postExpiry = rescueApi.RequestRescueContract(rescuer.UserId, targetTwo.UserId, 612.1)
+	assertTrue(postExpiry.accepted, "expired contract is pruned before next request")
+	assertEqual(postExpiry.contract.targetUserId, targetTwo.UserId, "post-expiry request targets second target")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 700)
+	assertTrue(accepted.accepted, "accepted before rescuer leave cleanup")
+
+	playersService.PlayerRemoving:Fire(rescuer)
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 700.1), nil, "rescuer leave clears active contract")
+	assertEqual(rescuer:GetAttribute("RescueContractActive"), false, "rescuer leave clears active attribute")
+	assertEqual(target:GetAttribute("RescueContractActive"), false, "rescuer leave clears target active attribute")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 800)
+	assertTrue(accepted.accepted, "accepted before target leave cleanup")
+
+	playersService.PlayerRemoving:Fire(target)
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 800.1), nil, "target leave clears active contract")
+	assertEqual(rescuer:GetAttribute("RescueContractActive"), false, "target leave clears rescuer active attribute")
+	assertEqual(target:GetAttribute("RescueContractActive"), false, "target leave clears target active attribute")
 end
 
 do

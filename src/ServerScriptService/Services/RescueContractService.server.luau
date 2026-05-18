@@ -146,8 +146,10 @@ local function isInRange(rescuer: Player, target: Player): boolean
 	if rescuerRoot == nil or targetRoot == nil then
 		return false
 	end
+	local rescuerRootPart = rescuerRoot :: BasePart
+	local targetRootPart = targetRoot :: BasePart
 
-	local delta = (rescuerRoot.Position - targetRoot.Position)
+	local delta = (rescuerRootPart.Position - targetRootPart.Position)
 	if delta == nil then
 		return false
 	end
@@ -198,7 +200,15 @@ local function getCarriedState(target: Player): boolean
 	return false
 end
 
-local function applyContractAttributes(contract: any?)
+local function getPrimaryContractForAttributes(): any?
+	local contracts = RescueContractState.GetContracts(state)
+	if #contracts <= 0 then
+		return nil
+	end
+	return contracts[1]
+end
+
+local function applyContractAttributesFromState()
 	local attrs = RescueContractConfig.StateAttributes
 
 	for _, player in Players:GetPlayers() do
@@ -207,6 +217,8 @@ local function applyContractAttributes(contract: any?)
 		player:SetAttribute(attrs.RescueRescuerUserId, nil)
 		player:SetAttribute(attrs.RescueExpiresAt, nil)
 	end
+
+	local contract = getPrimaryContractForAttributes()
 
 	if contract == nil then
 		return
@@ -227,6 +239,11 @@ local function applyContractAttributes(contract: any?)
 	end
 end
 
+local function pruneExpiredContracts(at: number)
+	state = RescueContractState.PruneExpired(state, at)
+	applyContractAttributesFromState()
+end
+
 local function setRescueLastReason(player: Player?, reason: string)
 	if player == nil then
 		return
@@ -238,6 +255,7 @@ end
 
 local function requestRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredContracts(resolvedNow)
 
 	if isCoolingDown(rescuer.UserId, resolvedNow) then
 		return { accepted = false, reason = "request_cooldown" }
@@ -263,7 +281,6 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		targetCarried = getCarriedState(target),
 		targetProtected = evaluateTargetSafeZoneProtection(target, resolvedNow),
 		inRange = isInRange(rescuer, target),
-		maxConcurrentContractsPerRescuer = RescueContractConfig.MaxConcurrentContractsPerRescuer,
 		rescueWindowSeconds = RescueContractConfig.RescueWindowSeconds,
 	})
 
@@ -273,7 +290,7 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 	if transition.accepted then
 		markRequest(rescuer.UserId, resolvedNow)
 	end
-	applyContractAttributes(transition.contract)
+	applyContractAttributesFromState()
 
 	return {
 		accepted = transition.accepted,
@@ -284,6 +301,7 @@ end
 
 local function completeRescueContract(rescuer: Player, targetUserId: any, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredContracts(resolvedNow)
 
 	if type(targetUserId) ~= "number" then
 		return { accepted = false, reason = "target_user_id_invalid" }
@@ -299,7 +317,7 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 	setRescueLastReason(rescuer, transition.reason)
 	local target = getPlayerByUserId(targetUserId)
 	setRescueLastReason(target, transition.reason)
-	applyContractAttributes(nil)
+	applyContractAttributesFromState()
 
 	return {
 		accepted = transition.accepted,
@@ -339,6 +357,8 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	state = RescueContractState.RemovePlayer(state, player.UserId)
+	applyContractAttributesFromState()
 end)
 
 _G._RescueContractService_QueryAPI = {
@@ -356,15 +376,21 @@ _G._RescueContractService_QueryAPI = {
 		end
 		return completeRescueContract(rescuer, targetUserId, at)
 	end,
-	GetRescuerContract = function(rescuerUserId: number): any
+	GetRescuerContract = function(rescuerUserId: number, at: number?): any
+		if type(at) == "number" then
+			pruneExpiredContracts(at)
+		end
 		return RescueContractState.GetRescuerContract(state, rescuerUserId)
 	end,
-	GetAllContracts = function(): { any }
+	GetAllContracts = function(at: number?): { any }
+		if type(at) == "number" then
+			pruneExpiredContracts(at)
+		end
 		return RescueContractState.GetContracts(state)
 	end,
 	ResetForTests = function()
 		state = RescueContractState.NewState()
 		lastRequestAtByUserId = {}
-		applyContractAttributes(nil)
+		applyContractAttributesFromState()
 	end,
 }
