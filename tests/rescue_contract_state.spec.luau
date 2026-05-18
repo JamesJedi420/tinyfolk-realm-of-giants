@@ -157,6 +157,22 @@ end
 
 do
 	local state = RescueContractState.NewState()
+	local invalidWindow = RescueContractState.ResolveRequest(
+		state,
+		makeRequestInput({
+			now = 40,
+			rescueWindowSeconds = 0,
+			accelerationActive = true,
+			accelerationWindowBonusSeconds = 3,
+		})
+	)
+
+	assertFalse(invalidWindow.accepted, "invalid base rescue window rejected even with acceleration")
+	assertEqual(invalidWindow.reason, "rescue_window_invalid", "invalid rescue window rejection reason")
+end
+
+do
+	local state = RescueContractState.NewState()
 	local first = RescueContractState.ResolveRequest(state, makeRequestInput({ rescuerUserId = 1, targetUserId = 2 }))
 	assertTrue(first.accepted, "first participant contract accepted")
 

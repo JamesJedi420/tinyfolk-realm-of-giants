@@ -199,9 +199,15 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		return { accepted = false, reason = "participant_contract_active", state = nextState, contract = nil }
 	end
 
-	local rescueWindowSeconds: number = if validNumber(input.rescueWindowSeconds) and input.rescueWindowSeconds > 0
+	local rescueWindowSeconds: number = if validNumber(input.rescueWindowSeconds)
+			and input.rescueWindowSeconds > 0
 		then input.rescueWindowSeconds
 		else 0
+	if rescueWindowSeconds <= 0 then
+		nextState.lastReason = "rescue_window_invalid"
+		return { accepted = false, reason = "rescue_window_invalid", state = nextState, contract = nil }
+	end
+
 	local accelerationBonusSeconds = 0
 	local bonusInput = input.accelerationWindowBonusSeconds
 	if type(bonusInput) == "number" and validNumber(bonusInput) and bonusInput > 0 then

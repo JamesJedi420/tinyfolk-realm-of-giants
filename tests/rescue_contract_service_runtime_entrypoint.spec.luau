@@ -349,6 +349,28 @@ end
 
 do
 	resetState()
+	local firstAccepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 700)
+	assertTrue(firstAccepted.accepted, "baseline accepted before rejected acceleration request")
+	local firstCompleted = rescueApi.CompleteRescueContract(rescuer.UserId, target.UserId, 701)
+	assertTrue(firstCompleted.accepted, "baseline completed before rejected acceleration request")
+
+	target:SetAttribute("DownedIsDowned", false)
+	local rejectedAcceleratedRequest = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 702)
+	assertFalse(rejectedAcceleratedRequest.accepted, "rejected request does not consume acceleration")
+	assertEqual(rejectedAcceleratedRequest.reason, "target_not_downed", "rejected accelerated request reason")
+	assertTrue(
+		rescuer:GetAttribute("RescueAccelerationActive") == true,
+		"acceleration remains active after rejected request"
+	)
+	assertEqual(
+		rescuer:GetAttribute("RescueAccelerationExpiresAt"),
+		721,
+		"acceleration expiry remains unchanged after rejected request"
+	)
+end
+
+do
+	resetState()
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 450)
 	assertTrue(accepted.accepted, "baseline accepted before rejected completion")
 
