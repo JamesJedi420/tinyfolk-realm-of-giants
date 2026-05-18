@@ -733,7 +733,6 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
-	carriedStateByTargetUserId[player.UserId] = nil
 
 	local giantHolding = heldTargetByGiantUserId[player.UserId]
 	if giantHolding then
@@ -744,6 +743,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if heldByGiant then
 		clearHoldByGiantUserId(heldByGiant, "target_left_game", nil)
 	end
+
+	carriedStateByTargetUserId[player.UserId] = nil
 end)
 
 RunService.Heartbeat:Connect(function()

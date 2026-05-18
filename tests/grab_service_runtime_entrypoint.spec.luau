@@ -267,4 +267,12 @@ do
 	assertEqual(downedTinyfolk:GetAttribute("CarriedState"), "Carried", "downed carried attribute set")
 end
 
+do
+	playerRemoving:Fire(downedTinyfolk)
+	assertFalse(grabApi.IsPlayerCarried(downedTinyfolk.UserId), "target removal clears carried query")
+	assertEqual(otherGiant:GetAttribute("CarriedTargetUserId"), nil, "target removal clears carrier target")
+	local nextGrab = grabApi.RequestGrab(otherGiant.UserId, tinyfolk.UserId, 120)
+	assertTrue(nextGrab.accepted, "carrier can grab again after target removal cleanup")
+end
+
 print("grab_service_runtime_entrypoint: all checks passed")
