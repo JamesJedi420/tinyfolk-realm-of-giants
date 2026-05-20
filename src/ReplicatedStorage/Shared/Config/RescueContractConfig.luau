@@ -10,8 +10,11 @@ RescueContractConfig.PostRescueProtectionSeconds = 4
 RescueContractConfig.RescueAccelerationDurationSeconds = 20
 RescueContractConfig.RescueAccelerationWindowBonusSeconds = 3
 RescueContractConfig.TargetRealmOwnerUserIdAttribute = "GiantRealmOwnerUserId"
+RescueContractConfig.TargetRealmIdAttribute = "GiantRealmId"
 RescueContractConfig.RescueEntryRouteAttribute = "RescueEntryRoute"
 RescueContractConfig.RescueEntryRouteKind = "RescueEntry"
+RescueContractConfig.QueueRewardHint = "rescue_contract"
+RescueContractConfig.QueueDangerRating = 0.5
 
 RescueContractConfig.StateAttributes = {
 	RescueActive = "RescueContractActive",

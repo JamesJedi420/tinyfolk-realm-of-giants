@@ -104,6 +104,11 @@ addChild(configFolder, "RescueContractConfig", "../../ReplicatedStorage/Shared/C
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 addChild(giantRealmFolder, "RescueContractState", "../../ReplicatedStorage/Shared/GiantRealm/RescueContractState")
+addChild(
+	giantRealmFolder,
+	"RescueContractQueueState",
+	"../../ReplicatedStorage/Shared/GiantRealm/RescueContractQueueState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -233,10 +238,35 @@ _G._ScoreService_QueryAPI = {
 	end,
 }
 
+local handoffRequests: { any } = {}
+local handoffShouldReject = false
+local handoffExpiryProbeAt: number? = nil
+_G._RescueHandoffService_QueryAPI = {
+	CreateHandoffLock = function(payload: any): any
+		table.insert(handoffRequests, payload)
+		if type(handoffExpiryProbeAt) == "number" then
+			local rescueQueryApi: any = _G._RescueContractService_QueryAPI
+			if
+				type(rescueQueryApi) == "table"
+				and type((rescueQueryApi :: any).GetRescueQueueEntries) == "function"
+			then
+				(rescueQueryApi :: any).GetRescueQueueEntries(handoffExpiryProbeAt)
+			end
+		end
+		if handoffShouldReject then
+			return { accepted = false, reason = "handoff_lock_busy" }
+		end
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+
 require("../src/ServerScriptService/Services/RescueContractService.server")
 
 local rescueApi: any = _G._RescueContractService_QueryAPI
 assertTrue(type(rescueApi) == "table", "service exposes query API")
+
+local hubSurfaceApi: any = _G._RescueContractHubSurface_QueryAPI
+assertTrue(type(hubSurfaceApi) == "table", "service exposes hub surface API")
 
 local function setRole(player: any, role: string)
 	player:SetAttribute("Role", role)
@@ -282,6 +312,9 @@ local function resetState()
 	rescueRouteMode = "accepted"
 	routeRequests = {}
 	scoreRequests = {}
+	handoffRequests = {}
+	handoffShouldReject = false
+	handoffExpiryProbeAt = nil
 end
 
 do
@@ -307,7 +340,102 @@ do
 		"RescueEntryRoute_9001",
 		"rescuer attribute stores entry route"
 	)
-	assertEqual(target:GetAttribute("RescueContractEntryRouteKind"), "RescueEntry", "target attribute stores route kind")
+	assertEqual(
+		target:GetAttribute("RescueContractEntryRouteKind"),
+		"RescueEntry",
+		"target attribute stores route kind"
+	)
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(100.1)
+	assertEqual(#queueEntries, 1, "accepted contract publishes one queue entry")
+	assertEqual(queueEntries[1].capturedUserId, target.UserId, "queue entry stores captured user")
+	assertEqual(queueEntries[1].realmId, "giant_realm_9001", "queue entry stores fallback realm id")
+	assertEqual(queueEntries[1].rewardHint, "rescue_contract", "queue entry stores reward hint")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 140)
+	assertTrue(accepted.accepted, "accepted before queue accept")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(140.1)
+	assertEqual(#queueEntries, 1, "queue has one pending entry before accept")
+	local queueEntryId = queueEntries[1].queueEntryId
+
+	local queueAccept = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 140.2)
+	assertTrue(queueAccept.accepted, "queue accept succeeds when handoff lock accepts")
+	assertEqual(queueAccept.reason, "accepted", "queue accept reason")
+	assertEqual(#handoffRequests, 1, "queue accept creates one handoff lock request")
+	assertEqual(handoffRequests[1].queueEntryId, queueEntryId, "handoff request receives queue entry id")
+	assertEqual(handoffRequests[1].capturedUserId, target.UserId, "handoff request receives captured user")
+	assertEqual(handoffRequests[1].acceptedByUserId, rescuerTwo.UserId, "handoff request receives acceptor")
+
+	local pendingAfterAccept = rescueApi.GetRescueQueueEntries(140.3)
+	assertEqual(#pendingAfterAccept, 0, "accepted queue entry no longer returned as pending")
+end
+
+do
+	resetState()
+	local firstAccepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 141)
+	assertTrue(firstAccepted.accepted, "first accepted before hub list limit check")
+	local secondAccepted = rescueApi.RequestRescueContract(rescuerTwo.UserId, targetThree.UserId, 141)
+	assertTrue(secondAccepted.accepted, "second accepted before hub list limit check")
+
+	local limitedQueue = hubSurfaceApi.GetPendingRescueQueueEntries(1, 141.1)
+	assertEqual(#limitedQueue, 1, "hub list applies positive limit")
+	local zeroQueue = hubSurfaceApi.GetPendingRescueQueueEntries(0, 141.1)
+	assertEqual(#zeroQueue, 0, "hub list returns empty for non-positive limit")
+
+	local queueEntries = hubSurfaceApi.GetPendingRescueQueueEntries(nil, 141.1)
+	assertEqual(#queueEntries, 2, "hub list returns pending entries")
+	local queueEntryId = queueEntries[1].queueEntryId
+
+	local queueAccept = hubSurfaceApi.AcceptRescueQueueEntry(rescuer.UserId, queueEntryId, 141.2)
+	assertTrue(queueAccept.accepted, "hub surface can accept queue entry")
+	assertEqual(queueAccept.reason, "accepted", "hub surface accept reason")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 145)
+	assertTrue(accepted.accepted, "accepted before queue lock rejection")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(145.1)
+	local queueEntryId = queueEntries[1].queueEntryId
+	handoffShouldReject = true
+
+	local queueReject = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 145.2)
+	assertFalse(queueReject.accepted, "queue accept rejects when handoff lock rejects")
+	assertEqual(queueReject.reason, "handoff_lock_busy", "queue accept returns handoff lock reason")
+
+	local pendingAfterReject = rescueApi.GetRescueQueueEntries(145.3)
+	assertEqual(#pendingAfterReject, 1, "queue entry remains pending when handoff lock rejects")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 146)
+	assertTrue(accepted.accepted, "accepted before queue race-like probe")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(146.1)
+	local queueEntryId = queueEntries[1].queueEntryId
+	handoffExpiryProbeAt = 200
+
+	local queueResult = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 146.2)
+	assertFalse(queueResult.accepted, "queue accept rejects if entry is no longer pending after lock call")
+	assertEqual(queueResult.reason, "queue_entry_not_pending", "queue race-like rejection reason")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 150)
+	assertTrue(accepted.accepted, "accepted before queue expiry")
+
+	local pendingAtStart = rescueApi.GetRescueQueueEntries(150.1)
+	assertEqual(#pendingAtStart, 1, "queue entry initially pending")
+
+	local pendingAfterExpiry = rescueApi.GetRescueQueueEntries(163)
+	assertEqual(#pendingAfterExpiry, 0, "expired queue entry pruned from pending list")
 end
 
 do
@@ -327,7 +455,11 @@ do
 	assertFalse(rejected.accepted, "missing rescue entry route rejects")
 	assertEqual(rejected.reason, "rescue_entry_route_missing", "missing route reason")
 	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 120.1), nil, "missing route does not create contract")
-	assertEqual(rescuer:GetAttribute("RescueContractLastReason"), "rescue_entry_route_missing", "missing route reason projects")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractLastReason"),
+		"rescue_entry_route_missing",
+		"missing route reason projects"
+	)
 end
 
 do

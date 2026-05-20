@@ -11,6 +11,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
+local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local REQUEST_REMOTE_NAME = "RescueContractRequest"
@@ -20,9 +21,11 @@ local COMPLETE_REMOTE_NAME = "RescueContractCompleteRequest"
 local ROLE_ATTRIBUTE = "Role"
 
 local state = RescueContractState.NewState()
+local rescueQueueState = RescueContractQueueState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
+local nextQueueSequence = 0
 
 local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.PostRescueProtected
 	or "PostRescueProtected"
@@ -259,6 +262,20 @@ local function getEscapeServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getRescueHandoffQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._RescueHandoffService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function evaluateTargetSafeZoneProtection(target: Player, at: number): boolean
 	local safeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
 	local safeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
@@ -389,7 +406,10 @@ local function readTargetRealmOwnerUserId(target: Player): number?
 	return nil
 end
 
-local function resolveRescueEntryRoute(targetUserId: number, targetRealmOwnerUserId: number): (boolean, string, string?, string?)
+local function resolveRescueEntryRoute(
+	targetUserId: number,
+	targetRealmOwnerUserId: number
+): (boolean, string, string?, string?)
 	local escapeQueryApi = getEscapeServiceQueryApi()
 	if escapeQueryApi == nil or type(escapeQueryApi.ResolveRescueEntryRoute) ~= "function" then
 		return false, "rescue_entry_route_missing", nil, nil
@@ -432,6 +452,117 @@ local function resolveRescueEntryRoute(targetUserId: number, targetRealmOwnerUse
 	return true, "accepted", resultTable.routeId, routeKind
 end
 
+local function pruneExpiredQueueEntries(at: number)
+	local expiredEntries
+	rescueQueueState, expiredEntries = RescueContractQueueState.PruneExpired(rescueQueueState, at)
+	if #expiredEntries <= 0 then
+		return
+	end
+
+	local handoffApi = getRescueHandoffQueryApi()
+	if handoffApi == nil or type(handoffApi.OnRescueQueueExpired) ~= "function" then
+		return
+	end
+
+	for _, expiredEntry in ipairs(expiredEntries) do
+		pcall(function()
+			handoffApi.OnRescueQueueExpired({
+				queueEntryId = expiredEntry.queueEntryId,
+				capturedUserId = expiredEntry.capturedUserId,
+				realmId = expiredEntry.realmId,
+				sessionId = expiredEntry.sessionId,
+				reason = "expired",
+				at = at,
+			})
+		end)
+	end
+end
+
+local function readTargetRealmId(target: Player, targetRealmOwnerUserId: number): string
+	local attributeName = RescueContractConfig.TargetRealmIdAttribute
+	if type(attributeName) == "string" and attributeName ~= "" then
+		local value = target:GetAttribute(attributeName)
+		if type(value) == "string" and value ~= "" then
+			return value
+		end
+	end
+
+	return string.format("giant_realm_%d", targetRealmOwnerUserId)
+end
+
+local function makeQueueEntryId(rescuerUserId: number, targetUserId: number, at: number): string
+	nextQueueSequence += 1
+	local atMillis = math.floor(at * 1000)
+	return string.format("rescue_queue_%d_%d_%d_%d", rescuerUserId, targetUserId, atMillis, nextQueueSequence)
+end
+
+local function publishRescueQueueEntry(contract: any, target: Player?, at: number)
+	if type(contract) ~= "table" then
+		return
+	end
+
+	local targetRealmOwnerUserId = contract.targetRealmOwnerUserId
+	if type(targetRealmOwnerUserId) ~= "number" then
+		return
+	end
+
+	local queueRewardHint = RescueContractConfig.QueueRewardHint
+	if type(queueRewardHint) ~= "string" or queueRewardHint == "" then
+		queueRewardHint = "rescue_contract"
+	end
+
+	local queueDangerRating = RescueContractConfig.QueueDangerRating
+	if type(queueDangerRating) ~= "number" or queueDangerRating ~= queueDangerRating then
+		queueDangerRating = 0.5
+	end
+	if queueDangerRating < 0 then
+		queueDangerRating = 0
+	elseif queueDangerRating > 1 then
+		queueDangerRating = 1
+	end
+
+	local expiration = contract.expiresAt
+	if
+		type(expiration) ~= "number"
+		or expiration ~= expiration
+		or expiration == math.huge
+		or expiration == -math.huge
+	then
+		local fallbackWindow = RescueContractConfig.RescueWindowSeconds
+		if type(fallbackWindow) ~= "number" or fallbackWindow <= 0 then
+			fallbackWindow = 0
+		end
+		expiration = at + fallbackWindow
+	end
+
+	local realmId = if target ~= nil
+		then readTargetRealmId(target, targetRealmOwnerUserId)
+		else string.format("giant_realm_%d", targetRealmOwnerUserId)
+
+	local sessionId = game.JobId
+	if type(sessionId) ~= "string" or sessionId == "" then
+		sessionId = "local_session"
+	end
+
+	local queueEntry = {
+		queueEntryId = makeQueueEntryId(contract.rescuerUserId, contract.targetUserId, at),
+		capturedUserId = contract.targetUserId,
+		realmId = realmId,
+		sessionId = sessionId,
+		rewardHint = queueRewardHint,
+		dangerRating = queueDangerRating,
+		expiration = expiration,
+		rescuerUserId = contract.rescuerUserId,
+		targetRealmOwnerUserId = targetRealmOwnerUserId,
+		entryRouteId = contract.entryRouteId,
+		entryRouteKind = contract.entryRouteKind,
+		createdAt = at,
+		status = "pending",
+	}
+
+	rescueQueueState = RescueContractQueueState.UpsertPending(rescueQueueState, queueEntry)
+end
+
 local function applyContractAttributesFromState()
 	local attrs = RescueContractConfig.StateAttributes
 
@@ -471,6 +602,7 @@ end
 
 local function pruneExpiredContracts(at: number)
 	state = RescueContractState.PruneExpired(state, at)
+	pruneExpiredQueueEntries(at)
 	applyContractAttributesFromState()
 end
 
@@ -582,6 +714,7 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 			clearRescueAcceleration(rescuer)
 		end
 		markRequest(rescuer.UserId, resolvedNow)
+		publishRescueQueueEntry(transition.contract, target, resolvedNow)
 	else
 		markRejectedRequest(rescuer.UserId, resolvedNow)
 	end
@@ -616,6 +749,13 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 	setRescueLastReason(target, transition.reason)
 
 	if transition.accepted then
+		rescueQueueState = RescueContractQueueState.MarkResolvedByContract(
+			rescueQueueState,
+			rescuer.UserId,
+			targetUserId,
+			"rescued",
+			resolvedNow
+		)
 		grantPostRescueProtection(target, resolvedNow)
 		grantRescueAcceleration(rescuer, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()
@@ -637,6 +777,101 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 		reason = transition.reason,
 		contract = transition.contract,
 	}
+end
+
+local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, at: number?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredRescueAcceleration(resolvedNow)
+	pruneExpiredPostRescueProtection(resolvedNow)
+	pruneExpiredContracts(resolvedNow)
+
+	if type(acceptedByUserId) ~= "number" or acceptedByUserId <= 0 or acceptedByUserId % 1 ~= 0 then
+		return { accepted = false, reason = "accepted_by_user_id_invalid" }
+	end
+
+	if type(queueEntryId) ~= "string" or queueEntryId == "" then
+		return { accepted = false, reason = "queue_entry_id_invalid" }
+	end
+
+	local queueEntry = RescueContractQueueState.GetEntry(rescueQueueState, queueEntryId)
+	if queueEntry == nil or queueEntry.status ~= "pending" then
+		return { accepted = false, reason = "queue_entry_missing" }
+	end
+
+	local handoffApi = getRescueHandoffQueryApi()
+	if handoffApi == nil or type(handoffApi.CreateHandoffLock) ~= "function" then
+		return { accepted = false, reason = "handoff_lock_unavailable" }
+	end
+
+	local lockOk, lockResult = pcall(function()
+		return handoffApi.CreateHandoffLock({
+			queueEntryId = queueEntry.queueEntryId,
+			capturedUserId = queueEntry.capturedUserId,
+			realmId = queueEntry.realmId,
+			sessionId = queueEntry.sessionId,
+			rewardHint = queueEntry.rewardHint,
+			dangerRating = queueEntry.dangerRating,
+			expiration = queueEntry.expiration,
+			rescuerUserId = queueEntry.rescuerUserId,
+			targetRealmOwnerUserId = queueEntry.targetRealmOwnerUserId,
+			entryRouteId = queueEntry.entryRouteId,
+			entryRouteKind = queueEntry.entryRouteKind,
+			acceptedByUserId = acceptedByUserId,
+			at = resolvedNow,
+		})
+	end)
+	if not lockOk then
+		return { accepted = false, reason = "handoff_lock_failed" }
+	end
+
+	if type(lockResult) ~= "table" or lockResult.accepted ~= true then
+		local rejectedReason = "handoff_lock_rejected"
+		if type(lockResult) == "table" and type((lockResult :: any).reason) == "string" then
+			rejectedReason = (lockResult :: any).reason
+		end
+		return { accepted = false, reason = rejectedReason }
+	end
+
+	local acceptedTransition: boolean? = nil
+	rescueQueueState, queueEntry, acceptedTransition =
+		RescueContractQueueState.MarkAccepted(rescueQueueState, queueEntryId, acceptedByUserId, resolvedNow)
+	if acceptedTransition ~= true or queueEntry == nil or queueEntry.status ~= "accepted" then
+		return { accepted = false, reason = "queue_entry_not_pending" }
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		queueEntry = queueEntry,
+	}
+end
+
+local function listRescueQueueEntriesForHub(limit: any, at: number?): { any }
+	if type(at) == "number" then
+		pruneExpiredRescueAcceleration(at)
+		pruneExpiredPostRescueProtection(at)
+		pruneExpiredContracts(at)
+	end
+
+	local entries = RescueContractQueueState.GetPendingEntries(rescueQueueState)
+	if type(limit) ~= "number" or limit ~= limit or limit == math.huge or limit == -math.huge then
+		return entries
+	end
+
+	local resolvedLimit = math.floor(limit)
+	if resolvedLimit <= 0 then
+		return {}
+	end
+
+	if #entries <= resolvedLimit then
+		return entries
+	end
+
+	local limited: { any } = {}
+	for index = 1, resolvedLimit do
+		table.insert(limited, entries[index])
+	end
+	return limited
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -674,6 +909,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	clearRescueAcceleration(player)
 	clearPostRescueProtection(player)
 	state = RescueContractState.RemovePlayer(state, player.UserId)
+	rescueQueueState =
+		RescueContractQueueState.MarkResolvedForParticipant(rescueQueueState, player.UserId, "player_left", now())
 	applyContractAttributesFromState()
 end)
 
@@ -708,8 +945,21 @@ _G._RescueContractService_QueryAPI = {
 		end
 		return RescueContractState.GetContracts(state)
 	end,
+	GetRescueQueueEntries = function(at: number?): { any }
+		if type(at) == "number" then
+			pruneExpiredRescueAcceleration(at)
+			pruneExpiredPostRescueProtection(at)
+			pruneExpiredContracts(at)
+		end
+		return RescueContractQueueState.GetPendingEntries(rescueQueueState)
+	end,
+	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
+		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
+	end,
 	ResetForTests = function()
 		state = RescueContractState.NewState()
+		rescueQueueState = RescueContractQueueState.NewState()
+		nextQueueSequence = 0
 		lastRequestAtByUserId = {}
 		lastRejectedRequestAtByUserId = {}
 		rescueAccelerationExpiresAtByUserId = {}
@@ -718,5 +968,14 @@ _G._RescueContractService_QueryAPI = {
 			clearPostRescueProtection(player)
 		end
 		applyContractAttributesFromState()
+	end,
+}
+
+_G._RescueContractHubSurface_QueryAPI = {
+	GetPendingRescueQueueEntries = function(limit: any, at: number?): { any }
+		return listRescueQueueEntriesForHub(limit, at)
+	end,
+	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
+		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
 	end,
 }
