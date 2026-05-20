@@ -21,6 +21,9 @@ local function cloneState(state: TimedConditionState?): TimedConditionState
 end
 
 local function clamp(value: number, minValue: number, maxValue: number): number
+	if value ~= value or value == math.huge or value == -math.huge then
+		return minValue
+	end
 	if value < minValue then
 		return minValue
 	end
@@ -28,6 +31,53 @@ local function clamp(value: number, minValue: number, maxValue: number): number
 		return maxValue
 	end
 	return value
+end
+
+local function getGiantProximityWarningConfig(config: any): any
+	if type(config) ~= "table" or type(config.GiantProximityWarning) ~= "table" then
+		return {}
+	end
+	return config.GiantProximityWarning
+end
+
+local function warningLevelName(config: any, key: string, fallback: string): string
+	local warningConfig = getGiantProximityWarningConfig(config)
+	local levels = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
+	local value = levels[key]
+	if type(value) == "string" and value ~= "" then
+		return value
+	end
+	return fallback
+end
+
+local function warningThreshold(config: any, key: string, fallback: number): number
+	local warningConfig = getGiantProximityWarningConfig(config)
+	local thresholds = if type(warningConfig.ExposureThresholds) == "table"
+		then warningConfig.ExposureThresholds
+		else {}
+	return clamp(tonumber(thresholds[key]) or fallback, 0, 1)
+end
+
+function TimedConditionStateLogic.ResolveGiantProximityWarningLevel(
+	config: any,
+	exposureRatio: any,
+	panicActive: any
+): string
+	local exposure = clamp(tonumber(exposureRatio) or 0, 0, 1)
+	if panicActive == true then
+		return warningLevelName(config, "Danger", "danger")
+	end
+
+	if exposure >= warningThreshold(config, "Danger", 0.75) then
+		return warningLevelName(config, "Danger", "danger")
+	end
+	if exposure >= warningThreshold(config, "Near", 0.45) then
+		return warningLevelName(config, "Near", "near")
+	end
+	if exposure >= warningThreshold(config, "Watch", 0.1) then
+		return warningLevelName(config, "Watch", "watch")
+	end
+	return warningLevelName(config, "None", "none")
 end
 
 local function getVector3Position(value: any)
@@ -39,6 +89,12 @@ local function getVector3Position(value: any)
 	local y = value.Y
 	local z = value.Z
 	if type(x) ~= "number" or type(y) ~= "number" or type(z) ~= "number" then
+		return nil
+	end
+	if x ~= x or y ~= y or z ~= z then
+		return nil
+	end
+	if x == math.huge or x == -math.huge or y == math.huge or y == -math.huge or z == math.huge or z == -math.huge then
 		return nil
 	end
 
@@ -242,6 +298,11 @@ function TimedConditionStateLogic.ResolveTick(
 		fearPanicUntil = panicUntil,
 		fearNearestGiantUserId = nearestUserId,
 		fearNearestGiantDistance = nearestDistance,
+		giantProximityWarningLevel = TimedConditionStateLogic.ResolveGiantProximityWarningLevel(
+			config,
+			if nearestDistance ~= nil then fearTarget else 0,
+			panicActive and nearestDistance ~= nil
+		),
 		conditionSummary = "",
 		bleedActive = isActive(nextState.bleedUntil),
 		bleedUntil = nextState.bleedUntil,
@@ -273,6 +334,7 @@ function TimedConditionStateLogic.Snapshot(state: TimedConditionState?, now: num
 		fearPanicUntil = activeState.fearPanicUntil,
 		fearNearestGiantUserId = nil,
 		fearNearestGiantDistance = nil,
+		giantProximityWarningLevel = TimedConditionStateLogic.ResolveGiantProximityWarningLevel(nil, 0, false),
 		conditionSummary = "",
 		bleedActive = isActive(activeState.bleedUntil),
 		bleedUntil = activeState.bleedUntil,

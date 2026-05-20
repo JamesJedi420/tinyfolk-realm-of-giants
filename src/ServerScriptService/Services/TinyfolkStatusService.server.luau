@@ -9,6 +9,7 @@ local Config = Shared:WaitForChild("Config")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local TinyfolkStatusConfig = require(Config:WaitForChild("TinyfolkStatusConfig"))
 local TimedConditionStateLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TimedConditionStateLogic"))
+local RaidStatusProjection = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("RaidStatusProjection"))
 
 local TinyfolkStatusService = {}
 
@@ -98,8 +99,9 @@ local function applyAttributes(player: Player, snapshot: any)
 	player:SetAttribute(attributes.FearActive, snapshot.fearActive)
 	player:SetAttribute(attributes.FearPanic, snapshot.fearPanic)
 	player:SetAttribute(attributes.FearPanicUntil, snapshot.fearPanicUntil)
-	player:SetAttribute(attributes.FearNearestGiantUserId, snapshot.fearNearestGiantUserId)
-	player:SetAttribute(attributes.FearNearestGiantDistance, snapshot.fearNearestGiantDistance)
+	player:SetAttribute(attributes.FearNearestGiantUserId, nil)
+	player:SetAttribute(attributes.FearNearestGiantDistance, nil)
+	player:SetAttribute(attributes.GiantProximityWarningLevel, snapshot.giantProximityWarningLevel)
 	player:SetAttribute(attributes.ConditionSummary, snapshot.conditionSummary)
 	player:SetAttribute(attributes.BleedActive, snapshot.bleedActive)
 	player:SetAttribute(attributes.BleedUntil, snapshot.bleedUntil)
@@ -107,6 +109,86 @@ local function applyAttributes(player: Player, snapshot: any)
 	player:SetAttribute(attributes.StunUntil, snapshot.stunUntil)
 	player:SetAttribute(attributes.FluxActive, snapshot.fluxActive)
 	player:SetAttribute(attributes.FluxUntil, snapshot.fluxUntil)
+end
+
+local HUD_SOURCE_ATTRIBUTES = {
+	"Role",
+	"Escaped",
+	"DownedIsDowned",
+	"DownedExpiresAt",
+	"DownedSelfRecoveryProgress",
+	"CarriedState",
+	"CarriedByUserId",
+	"CaptureActive",
+	"CaptureCustodianUserId",
+	"CaptureExpiresAt",
+	"RescueContractActive",
+	"RescueContractTargetUserId",
+	"RescueContractRescuerUserId",
+	"RescueContractExpiresAt",
+	"PostRescueProtected",
+	"PostRescueProtectionExpiresAt",
+	"RescueAccelerationActive",
+	"RescueAccelerationExpiresAt",
+	"ScoreLastFeedbackKey",
+	"ScoreLastAwardedPoints",
+	"ScoreLastBucket",
+	"ScoreLastCategoryCapReached",
+}
+
+local HUD_STATUS_ATTRIBUTES = {
+	TinyfolkStatusConfig.Attributes.FearExposureRatio,
+	TinyfolkStatusConfig.Attributes.FearPanic,
+	TinyfolkStatusConfig.Attributes.GiantProximityWarningLevel,
+	TinyfolkStatusConfig.Attributes.BleedActive,
+	TinyfolkStatusConfig.Attributes.BleedUntil,
+	TinyfolkStatusConfig.Attributes.StunActive,
+	TinyfolkStatusConfig.Attributes.StunUntil,
+	TinyfolkStatusConfig.Attributes.FluxActive,
+	TinyfolkStatusConfig.Attributes.FluxUntil,
+}
+
+local function readHudAttributes(player: Player): any
+	local output: any = {}
+	for _, attributeName in ipairs(HUD_SOURCE_ATTRIBUTES) do
+		output[attributeName] = player:GetAttribute(attributeName)
+	end
+
+	for _, attributeName in ipairs(HUD_STATUS_ATTRIBUTES) do
+		output[attributeName] = player:GetAttribute(attributeName)
+	end
+
+	return output
+end
+
+local function getHudTeammates(player: Player): { any }
+	local teammates = {}
+	for _, otherPlayer in ipairs(Players:GetPlayers()) do
+		if otherPlayer ~= player and otherPlayer:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
+			table.insert(teammates, {
+				userId = otherPlayer.UserId,
+				role = RoleConfig.Roles.Tinyfolk,
+				attributes = readHudAttributes(otherPlayer),
+			})
+		end
+	end
+	return teammates
+end
+
+local function applyRaidHudProjection(player: Player, now: number)
+	local projection = RaidStatusProjection.BuildPlayerProjection(TinyfolkStatusConfig, {
+		now = now,
+		attributes = readHudAttributes(player),
+		teammates = getHudTeammates(player),
+	})
+	local attributes = TinyfolkStatusConfig.Attributes
+	player:SetAttribute(attributes.RaidHudSummary, projection.summary)
+	player:SetAttribute(attributes.RaidHudThreatLevel, projection.threatLevel)
+	player:SetAttribute(attributes.RaidHudCustodyState, projection.custodyState)
+	player:SetAttribute(attributes.RaidHudPersonalEffects, projection.personalEffects)
+	player:SetAttribute(attributes.RaidHudTeammateActivity, projection.teammateActivity)
+	player:SetAttribute(attributes.RaidHudScoreFeedback, projection.scoreFeedback)
+	player:SetAttribute(attributes.RaidHudUpdatedAt, now)
 end
 
 local function resolveTick(player: Player, now: number): any
@@ -124,6 +206,7 @@ local function resolveTick(player: Player, now: number): any
 	nextState.lastUpdatedAt = now
 	stateByUserId[player.UserId] = nextState
 	applyAttributes(player, snapshot)
+	applyRaidHudProjection(player, now)
 	return snapshot
 end
 

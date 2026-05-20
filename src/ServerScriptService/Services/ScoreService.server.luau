@@ -76,12 +76,31 @@ local function setLastReason(player: Player?, reason: string)
 	player:SetAttribute(ScoreConfig.StateAttributes.ScoreLastReason, reason)
 end
 
+local function applyLastFeedbackAttributes(player: Player?, transition: any)
+	if player == nil then
+		return
+	end
+
+	local attrs = ScoreConfig.StateAttributes
+	local record = transition.record
+	player:SetAttribute(attrs.ScoreLastFeedbackKey, transition.feedbackKey)
+	player:SetAttribute(attrs.ScoreLastCategoryCapReached, transition.categoryCapReached == true)
+	if record ~= nil then
+		player:SetAttribute(attrs.ScoreLastAwardedPoints, record.awardedPoints)
+		player:SetAttribute(attrs.ScoreLastBucket, record.bucket)
+	else
+		player:SetAttribute(attrs.ScoreLastAwardedPoints, 0)
+		player:SetAttribute(attrs.ScoreLastBucket, nil)
+	end
+end
+
 local function requestScoreEvent(actor: Player, eventId: any, at: number?, metadata: any?): any
 	local resolvedNow = if type(at) == "number" then at else now()
 
 	if type(eventId) ~= "string" then
 		setLastReason(actor, "invalid_event_id")
-		return { accepted = false, reason = "invalid_event_id", record = nil }
+		applyLastFeedbackAttributes(actor, { record = nil, categoryCapReached = false, feedbackKey = nil })
+		return { accepted = false, reason = "invalid_event_id", record = nil, categoryCapReached = false }
 	end
 
 	local transition = ScoreState.ResolveScoreEvent(state, {
@@ -94,6 +113,7 @@ local function requestScoreEvent(actor: Player, eventId: any, at: number?, metad
 
 	state = transition.state
 	setLastReason(actor, transition.reason)
+	applyLastFeedbackAttributes(actor, transition)
 	if transition.accepted then
 		applyScoreAttributes(actor)
 	end
@@ -102,6 +122,8 @@ local function requestScoreEvent(actor: Player, eventId: any, at: number?, metad
 		accepted = transition.accepted,
 		reason = transition.reason,
 		record = transition.record,
+		categoryCapReached = transition.categoryCapReached == true,
+		feedbackKey = transition.feedbackKey,
 	}
 end
 
@@ -142,6 +164,9 @@ _G._ScoreService_QueryAPI = {
 	end,
 	GetCategoryTotals = function(): any
 		return ScoreState.GetCategoryTotals(state)
+	end,
+	GetBucketTotals = function(): any
+		return ScoreState.GetBucketTotals(state)
 	end,
 	GetRecentScoreEvents = function(limit: number?): any
 		return ScoreState.GetRecentEvents(state, limit)

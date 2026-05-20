@@ -16,6 +16,9 @@ $testFiles = @(
     'tests\capture_service_runtime_entrypoint.spec.luau',
     'tests\score_state.spec.luau',
     'tests\score_service_runtime_entrypoint.spec.luau',
+    'tests\tinyfolk_giant_proximity_warning.spec.luau',
+    'tests\tinyfolk_raid_status_projection.spec.luau',
+    'tests\timed_condition_states_runtime_entrypoint.spec.luau',
     'tests\rescue_contract_state.spec.luau',
     'tests\rescue_contract_service_runtime_entrypoint.spec.luau',
     'tests\headless_match_simulation.spec.luau'

@@ -85,6 +85,7 @@ local function makeRemoteEvent(remoteName: string)
 	}
 
 	function remote.FireClient(_self: any, _player: any, _payload: any)
+		remote._LastClientPayload = _payload
 		return
 	end
 
@@ -164,8 +165,11 @@ do
 	local accepted = scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, { source = "runtime" })
 	assertTrue(accepted.accepted, "valid score event accepted")
 	assertEqual(accepted.reason, "accepted", "valid score reason")
+	assertEqual(accepted.record.bucket, "normal", "expanded record bucket")
+	assertEqual(accepted.record.feedbackKey, "score_escape_success", "expanded record feedback key")
 	local snapshot = scoreApi.GetPlayerScoreSnapshot(tinyfolk.UserId)
 	assertEqual(snapshot.total, 100, "snapshot total updated")
+	assertEqual(snapshot.buckets.normal.categories.objective, 100, "snapshot exposes bucket-separated total")
 end
 
 do
@@ -256,6 +260,10 @@ do
 	local attrs = tinyfolk:GetAttributes()
 	assertTrue(attrs["ScoreTotal"] == 100, "score total attribute set")
 	assertTrue(attrs["ScoreObjective"] == 100, "score category attribute set")
+	assertEqual(attrs["ScoreLastFeedbackKey"], "score_escape_success", "score feedback attribute set")
+	assertEqual(attrs["ScoreLastAwardedPoints"], 100, "score awarded-points attribute set")
+	assertEqual(attrs["ScoreLastBucket"], "normal", "score bucket attribute set")
+	assertEqual(attrs["ScoreLastCategoryCapReached"], false, "score cap attribute false")
 end
 
 do
@@ -288,6 +296,80 @@ do
 	local totals = scoreApi.GetCategoryTotals()
 	assertEqual(totals.objective, 100, "objective total 100")
 	assertEqual(totals.control, 90, "control total 90")
+end
+
+do
+	resetState()
+	local partial = scoreApi.RequestScoreEvent(tinyfolk.UserId, "objective_partial", 1, {
+		contributionRatio = 0.5,
+	})
+	assertTrue(partial.accepted, "service accepts proportional event")
+	assertEqual(partial.record.contributionRatio, 0.5, "service proportional contribution ratio")
+	assertEqual(partial.record.rawPoints, 30, "service proportional raw points")
+	assertEqual(partial.record.awardedPoints, 30, "service proportional awarded points")
+
+	local missing = scoreApi.RequestScoreEvent(tinyfolk.UserId, "objective_partial", 2, nil)
+	assertFalse(missing.accepted, "service rejects missing proportional metadata")
+	assertEqual(missing.reason, "missing_contribution", "service missing proportional reason")
+	assertEqual(missing.feedbackKey, "score_objective_partial", "service rejected proportional feedback key")
+end
+
+do
+	resetState()
+	for i = 1, 10 do
+		scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", i * 100, nil)
+	end
+
+	local bonus = scoreApi.RequestScoreEvent(tinyfolk.UserId, "tutorial_bonus", 2000, nil)
+	assertTrue(bonus.accepted, "service bonus bypasses normal cap")
+	assertEqual(bonus.record.bucket, "bonus", "service bonus record bucket")
+
+	local snapshot = scoreApi.GetPlayerScoreSnapshot(tinyfolk.UserId)
+	assertEqual(snapshot.categories.objective, 500, "service normal objective remains capped")
+	assertEqual(snapshot.buckets.bonus.categories.objective, 200, "service bonus bucket exposed")
+
+	local bucketTotals = scoreApi.GetBucketTotals()
+	assertEqual(bucketTotals.normal.categories.objective, 500, "service normal bucket total exposed")
+	assertEqual(bucketTotals.bonus.categories.objective, 200, "service bonus bucket total exposed")
+end
+
+do
+	resetState()
+	local requestRemote = remotesFolder._Children["ScoreEventRequest"]
+	local responseRemote = remotesFolder._Children["ScoreEventResponse"]
+
+	requestRemote._Handler(tinyfolk, {
+		eventId = "objective_partial",
+		now = 1,
+		metadata = { contributionRatio = 0.75 },
+	})
+
+	local payload = responseRemote._LastClientPayload
+	assertTrue(payload.accepted, "remote table payload accepted")
+	assertEqual(payload.record.eventId, "objective_partial", "remote table payload event id")
+	assertEqual(payload.record.contributionRatio, 0.75, "remote table payload metadata contribution")
+
+	requestRemote._Handler(tinyfolk, "escape_success")
+	local stringPayload = responseRemote._LastClientPayload
+	assertTrue(stringPayload.accepted, "remote string payload remains compatible")
+	assertEqual(stringPayload.record.eventId, "escape_success", "remote string payload event id")
+end
+
+do
+	resetState()
+	for i = 1, 10 do
+		scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", i * 100, nil)
+	end
+
+	local capped = scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1200, nil)
+	assertFalse(capped.accepted, "service capped normal category rejected")
+	assertEqual(capped.reason, "category_cap_reached", "service capped normal category reason")
+	assertEqual(capped.categoryCapReached, true, "service capped normal category flag")
+	assertEqual(capped.feedbackKey, "score_escape_success", "service capped normal category feedback")
+
+	local attrs = tinyfolk:GetAttributes()
+	assertEqual(attrs["ScoreLastCategoryCapReached"], true, "service capped attribute true")
+	assertEqual(attrs["ScoreLastFeedbackKey"], "score_escape_success", "service capped feedback attribute")
 end
 
 print("score_service_runtime_entrypoint: all checks passed")

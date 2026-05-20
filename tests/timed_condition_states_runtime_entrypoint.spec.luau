@@ -181,6 +181,11 @@ local function createFixture()
 		"TimedConditionStateLogic",
 		"../../ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic"
 	)
+	addChild(
+		statusFolder,
+		"RaidStatusProjection",
+		"../../ReplicatedStorage/Shared/TinyfolkStatus/RaidStatusProjection"
+	)
 
 	local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 	addChild(sharedFolder, "Config", configFolder)
@@ -235,6 +240,26 @@ do
 		"Exposure",
 		"fear exposure summary exposed"
 	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.RaidHudThreatLevel),
+		"medium",
+		"raid HUD threat bucket exposed"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.GiantProximityWarningLevel),
+		"near",
+		"coarse giant proximity warning exposed"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearNearestGiantUserId),
+		nil,
+		"nearest giant id is not exposed as an attribute"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearNearestGiantDistance),
+		nil,
+		"nearest giant distance is not exposed as an attribute"
+	)
 end
 
 do
@@ -247,6 +272,11 @@ do
 		"Exposure,Bleed,Stun",
 		"timed conditions contribute to summary"
 	)
+	assertTrue(
+		string.find(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.RaidHudPersonalEffects), "bleed", 1, true)
+			~= nil,
+		"raid HUD personal effects includes bleed"
+	)
 end
 
 do
@@ -258,6 +288,36 @@ do
 	assertTrue(
 		type(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanicUntil)) == "number",
 		"panic exposes until timestamp"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.RaidHudThreatLevel),
+		"high",
+		"raid HUD panic threat bucket exposed"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.GiantProximityWarningLevel),
+		"danger",
+		"panic projects danger proximity warning"
+	)
+end
+
+do
+	giant.Character = makeCharacter(makePosition(1, 0, 0), 0)
+	TinyfolkStatusService.ResolveNow(tinyfolk, 300)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.GiantProximityWarningLevel),
+		"none",
+		"dead giant clears proximity warning"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearNearestGiantUserId),
+		nil,
+		"dead giant does not leak stale nearest id"
+	)
+	assertEqual(
+		tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearNearestGiantDistance),
+		nil,
+		"dead giant does not leak stale nearest distance"
 	)
 end
 

@@ -9,6 +9,20 @@ TinyfolkStatusConfig.FearPanicDurationSeconds = 4
 TinyfolkStatusConfig.FearRampSeconds = 0.75
 TinyfolkStatusConfig.FearRecoverySeconds = 1.5
 
+TinyfolkStatusConfig.GiantProximityWarning = {
+	Levels = {
+		None = "none",
+		Watch = "watch",
+		Near = "near",
+		Danger = "danger",
+	},
+	ExposureThresholds = {
+		Watch = 0.1,
+		Near = 0.45,
+		Danger = 0.75,
+	},
+}
+
 TinyfolkStatusConfig.BleedDurationSeconds = 5
 TinyfolkStatusConfig.StunDurationSeconds = 2
 TinyfolkStatusConfig.FluxDurationSeconds = 6
@@ -23,6 +37,7 @@ TinyfolkStatusConfig.Attributes = {
 	FearPanicUntil = "TinyfolkFearPanicUntil",
 	FearNearestGiantUserId = "TinyfolkFearNearestGiantUserId",
 	FearNearestGiantDistance = "TinyfolkFearNearestGiantDistance",
+	GiantProximityWarningLevel = "TinyfolkGiantProximityWarningLevel",
 	ConditionSummary = "TinyfolkConditionSummary",
 	BleedActive = "TinyfolkBleedActive",
 	BleedUntil = "TinyfolkBleedUntil",
@@ -30,6 +45,41 @@ TinyfolkStatusConfig.Attributes = {
 	StunUntil = "TinyfolkStunUntil",
 	FluxActive = "TinyfolkFluxActive",
 	FluxUntil = "TinyfolkFluxUntil",
+	RaidHudSummary = "TinyfolkRaidHudSummary",
+	RaidHudThreatLevel = "TinyfolkRaidHudThreatLevel",
+	RaidHudCustodyState = "TinyfolkRaidHudCustodyState",
+	RaidHudPersonalEffects = "TinyfolkRaidHudPersonalEffects",
+	RaidHudTeammateActivity = "TinyfolkRaidHudTeammateActivity",
+	RaidHudScoreFeedback = "TinyfolkRaidHudScoreFeedback",
+	RaidHudUpdatedAt = "TinyfolkRaidHudUpdatedAt",
+}
+
+TinyfolkStatusConfig.RaidHud = {
+	ThreatLevels = {
+		None = "none",
+		Low = "low",
+		Medium = "medium",
+		High = "high",
+	},
+	ThreatExposureThresholds = {
+		Low = 0.1,
+		Medium = 0.45,
+		High = 0.75,
+	},
+	Categories = {
+		PersonalEffect = "personal_effect",
+		TeammateActivity = "teammate_activity",
+		Custody = "custody",
+		Threat = "threat",
+		ScoreFeedback = "score_feedback",
+		Escape = "escape",
+	},
+	Severity = {
+		Info = "info",
+		Positive = "positive",
+		Warning = "warning",
+		Critical = "critical",
+	},
 }
 
 return TinyfolkStatusConfig
