@@ -12,6 +12,7 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local EmergencyReinforcementConfig = require(Config:WaitForChild("EmergencyReinforcementConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
+local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
 local EmergencyReinforcementState = require(GiantRealm:WaitForChild("EmergencyReinforcementState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -30,6 +31,7 @@ local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local matchStartedAt = os.clock()
 local resolveStateTransitionForTests: ((any, any) -> any)? = nil
+local applyStateAttributes: () -> ()
 
 local function debugLog(message: string)
 	print(string.format("[EmergencyReinforcementService] %s", message))
@@ -376,6 +378,43 @@ local function buildSnapshot(at: number): any
 	}
 end
 
+local function buildPersistenceState(): any
+	return {
+		used = serviceState.used == true,
+		callStartedAt = serviceState.callStartedAt,
+		cooldownEndsAt = serviceState.cooldownEndsAt,
+		triggeredByUserId = serviceState.triggeredByUserId,
+		spawnedUserId = serviceState.spawnedUserId,
+		lastReason = serviceState.lastReason,
+		lastObjectiveId = serviceState.lastObjectiveId,
+	}
+end
+
+local function applyPersistenceState(persistedState: any): (boolean, string?)
+	local valid, reason = GiantRealmSaveSchema.ValidateEmergencyReinforcementRecord(persistedState)
+	if not valid then
+		return false, reason or "emergency_reinforcement_persistence_invalid"
+	end
+
+	if persistedState == nil then
+		serviceState = EmergencyReinforcementState.NewState()
+		applyStateAttributes()
+		return true, nil
+	end
+
+	serviceState = {
+		used = persistedState.used == true,
+		callStartedAt = persistedState.callStartedAt,
+		cooldownEndsAt = persistedState.cooldownEndsAt,
+		triggeredByUserId = persistedState.triggeredByUserId,
+		spawnedUserId = persistedState.spawnedUserId,
+		lastReason = persistedState.lastReason,
+		lastObjectiveId = persistedState.lastObjectiveId,
+	}
+	applyStateAttributes()
+	return true, nil
+end
+
 local function makeResponse(accepted: boolean, reason: string, at: number): any
 	return {
 		accepted = accepted,
@@ -384,7 +423,7 @@ local function makeResponse(accepted: boolean, reason: string, at: number): any
 	}
 end
 
-local function applyStateAttributes()
+function applyStateAttributes()
 	local stateHost = resolveNodeByPath(Workspace, { "Map" })
 	if stateHost == nil then
 		stateHost = Workspace
@@ -813,6 +852,12 @@ _G._EmergencyReinforcementService_QueryAPI = {
 	end,
 	GetStateSnapshot = function(at: number?): any
 		return buildSnapshot(resolveAt(at))
+	end,
+	BuildPersistenceState = function(): any
+		return buildPersistenceState()
+	end,
+	ApplyPersistenceState = function(persistedState: any): (boolean, string?)
+		return applyPersistenceState(persistedState)
 	end,
 	GetActiveTinyfolkCount = function(): number
 		return getActiveTinyfolkCount()

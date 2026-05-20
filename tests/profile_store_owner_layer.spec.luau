@@ -11,7 +11,9 @@ end
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -95,6 +97,7 @@ local requiredMethods = {
 	ReleasePlayerProfile = true,
 	LoadGiantRealmProfile = true,
 	SaveGiantRealmProfile = true,
+	ReleaseGiantRealmProfile = true,
 }
 
 ProfileStoreOwnerLayer.ResetForTests()
@@ -109,11 +112,26 @@ assertCreateError({
 	profileStoreModule = { New = function() end },
 	playerStoreName = "",
 	playerProfileTemplate = {},
+	giantRealmStoreName = "GiantRealmProfiles",
+	giantRealmProfileTemplate = {},
 }, "player_store_name_invalid", "invalid store name")
 assertCreateError({
 	profileStoreModule = { New = function() end },
 	playerStoreName = "PlayerProfiles",
 }, "player_profile_template_invalid", "invalid template")
+assertCreateError({
+	profileStoreModule = { New = function() end },
+	playerStoreName = "PlayerProfiles",
+	playerProfileTemplate = {},
+	giantRealmStoreName = "",
+	giantRealmProfileTemplate = {},
+}, "giant_realm_store_name_invalid", "invalid giant realm store name")
+assertCreateError({
+	profileStoreModule = { New = function() end },
+	playerStoreName = "PlayerProfiles",
+	playerProfileTemplate = {},
+	giantRealmStoreName = "GiantRealmProfiles",
+}, "giant_realm_profile_template_invalid", "invalid giant realm template")
 
 local fakeProfileStore = makeFakeProfileStoreModule(nil)
 local ownerLayer = ProfileStoreOwnerLayer.Create({
@@ -123,14 +141,22 @@ local ownerLayer = ProfileStoreOwnerLayer.Create({
 		schemaVersion = 1,
 		coins = 0,
 	},
+	giantRealmStoreName = "TinyfolkGiantRealmProfiles",
+	giantRealmProfileTemplate = {
+		schemaVersion = 1,
+		ownerUserId = 0,
+		placedStructures = {},
+	},
 })
 
 for methodName in pairs(requiredMethods) do
 	assertTrue(type(ownerLayer[methodName]) == "function", "owner layer exposes " .. methodName)
 end
-assertEqual(#fakeProfileStore.newCalls, 1, "ProfileStore.New called once")
+assertEqual(#fakeProfileStore.newCalls, 2, "ProfileStore.New called twice")
 assertEqual(fakeProfileStore.newCalls[1].storeName, "TinyfolkPlayerProfiles", "store name")
 assertEqual(fakeProfileStore.newCalls[1].template.schemaVersion, 1, "template schema")
+assertEqual(fakeProfileStore.newCalls[2].storeName, "TinyfolkGiantRealmProfiles", "giant realm store name")
+assertEqual(fakeProfileStore.newCalls[2].template.schemaVersion, 1, "giant realm template schema")
 
 local loadResult = ownerLayer.LoadPlayerProfile("PlayerProfile:9402", 9402)
 assertSuccess(loadResult, "LoadPlayerProfile", "PlayerProfile:9402", "load profile")
@@ -178,31 +204,42 @@ local failingOwnerLayer = ProfileStoreOwnerLayer.Create({
 	end),
 	playerStoreName = "TinyfolkPlayerProfiles",
 	playerProfileTemplate = {},
+	giantRealmStoreName = "TinyfolkGiantRealmProfiles",
+	giantRealmProfileTemplate = {},
 })
 local failedLoad = failingOwnerLayer.LoadPlayerProfile("PlayerProfile:1001", 1001)
 assertFailure(failedLoad, "LoadPlayerProfile", "profile_session_start_failed", "failed start session")
 assertEqual(failedLoad.retryable, true, "failed start session retryable")
 
 local giantLoad = ownerLayer.LoadGiantRealmProfile("GiantRealmProfile:9402", 9402)
-assertFailure(
-	giantLoad,
-	"LoadGiantRealmProfile",
-	"giant_realm_profiles_not_supported_in_this_slice",
-	"giant load unsupported"
-)
-local giantSave = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, {})
-assertFailure(
-	giantSave,
-	"SaveGiantRealmProfile",
-	"giant_realm_profiles_not_supported_in_this_slice",
-	"giant save unsupported"
-)
+assertSuccess(giantLoad, "LoadGiantRealmProfile", "GiantRealmProfile:9402", "giant load")
+assertTrue(type(giantLoad.data) == "table", "giant load returns data")
+
+local giantSaveRoot = {
+	schemaVersion = 1,
+	ownerUserId = 9402,
+	placedStructures = {},
+}
+local giantSave = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, giantSaveRoot)
+assertSuccess(giantSave, "SaveGiantRealmProfile", "GiantRealmProfile:9402", "giant save")
+assertTrue(giantSave.data ~= giantSaveRoot, "giant save clones root")
+
+local duplicateGiantLoad = ownerLayer.LoadGiantRealmProfile("GiantRealmProfile:9402", 9402)
+assertFailure(duplicateGiantLoad, "LoadGiantRealmProfile", "profile_session_already_active", "duplicate giant load")
+
+local giantRelease = ownerLayer.ReleaseGiantRealmProfile("GiantRealmProfile:9402", 9402)
+assertSuccess(giantRelease, "ReleaseGiantRealmProfile", "GiantRealmProfile:9402", "giant release")
+
+local giantSaveAfterRelease = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, giantSaveRoot)
+assertFailure(giantSaveAfterRelease, "SaveGiantRealmProfile", "profile_session_not_active", "giant save after release")
 
 ProfilePersistenceGateway.ResetForTests()
 ProfilePersistenceGateway.ConfigureOwnerLayer(ProfileStoreOwnerLayer.Create({
 	profileStoreModule = makeFakeProfileStoreModule(nil),
 	playerStoreName = "TinyfolkPlayerProfiles",
 	playerProfileTemplate = {},
+	giantRealmStoreName = "TinyfolkGiantRealmProfiles",
+	giantRealmProfileTemplate = {},
 }))
 local gatewayLoad = ProfilePersistenceGateway.LoadPlayerProfile(makePlayer(7777))
 assertSuccess(gatewayLoad, "LoadPlayerProfile", "PlayerProfile:7777", "gateway load")

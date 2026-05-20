@@ -28,6 +28,7 @@ Tinyfolk uses one server-only gateway and one profile-locking owner-layer path f
 - `ProfilePersistenceGateway` calls `ProfileStoreOwnerLayer`.
 - `ProfileStoreOwnerLayer` owns ProfileStore-shaped player and Giant realm sessions.
 - Giant realm live state persists only through `BuildSaveSnapshot` / `ApplySaveSnapshot`.
+- Emergency reinforcement call history persists as giant-realm save-root data rather than player-profile data.
 - Raw `DataStoreService` is not a gameplay-facing owner.
 
 ## Rejected Option Rationale
@@ -45,6 +46,9 @@ The custom/raw DataStore adapter is not the default because it would remove nati
 - [tests/profile_store_dependency_intake.spec.luau](../tests/profile_store_dependency_intake.spec.luau)
 - [tests/profile_persistence_lifecycle.spec.luau](../tests/profile_persistence_lifecycle.spec.luau)
 - [tests/role_service_runtime_entrypoint.spec.luau](../tests/role_service_runtime_entrypoint.spec.luau)
+- [tests/giant_realm_save_schema.spec.luau](../tests/giant_realm_save_schema.spec.luau)
+- [tests/giant_build_mode_service_runtime_entrypoint.spec.luau](../tests/giant_build_mode_service_runtime_entrypoint.spec.luau)
+- [tests/emergency_reinforcement_service_runtime_entrypoint.spec.luau](../tests/emergency_reinforcement_service_runtime_entrypoint.spec.luau)
 
 ## Deferred Work
 - Autosave policy.

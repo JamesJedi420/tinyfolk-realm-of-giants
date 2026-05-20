@@ -1,6 +1,6 @@
 --!strict
 
-local ProfilePersistenceGateway = {}
+local ProfilePersistenceGateway: any = {}
 
 export type GatewayResult = {
 	ok: boolean,
@@ -17,6 +17,7 @@ export type ProfileOwnerLayer = {
 	ReleasePlayerProfile: (profileKey: string, userId: number) -> GatewayResult,
 	LoadGiantRealmProfile: (profileKey: string, ownerUserId: number) -> GatewayResult,
 	SaveGiantRealmProfile: (profileKey: string, ownerUserId: number, saveRoot: any) -> GatewayResult,
+	ReleaseGiantRealmProfile: (profileKey: string, ownerUserId: number) -> GatewayResult,
 }
 
 local activePlayerProfileDataByUserId: { [number]: any } = {}
@@ -29,6 +30,7 @@ local function makeFailure(operation: string, reason: string, profileKey: string
 		reason = reason,
 		retryable = retryable,
 		profileKey = profileKey,
+		data = nil,
 	}
 end
 
@@ -36,18 +38,24 @@ local function makeSuccess(operation: string, profileKey: string?, data: any?): 
 	return {
 		ok = true,
 		operation = operation,
+		reason = nil,
+		retryable = nil,
 		profileKey = profileKey,
 		data = data,
 	}
 end
 
 local function isValidUserId(value: any): boolean
-	return type(value) == "number"
-		and value == value
-		and value ~= math.huge
-		and value ~= -math.huge
-		and value > 0
-		and value % 1 == 0
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	if value <= 0 or value % 1 ~= 0 then
+		return false
+	end
+	return true
 end
 
 local function getPlayerUserId(player: any): number?
@@ -85,7 +93,8 @@ local function copyDefaultPlayerProfileData(data: any): any
 	}
 end
 
-local function cloneTable(value: any): any
+local cloneTable: (value: any) -> any
+cloneTable = function(value: any): any
 	if type(value) ~= "table" then
 		return value
 	end
@@ -187,7 +196,9 @@ function ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player: any, up
 	if type(newData) ~= "table" then
 		return makeFailure(
 			"UpdateLoadedPlayerProfileData",
-			if type(updateReason) == "string" and updateReason ~= "" then updateReason else "profile_update_data_invalid",
+			if type(updateReason) == "string" and updateReason ~= ""
+				then updateReason
+				else "profile_update_data_invalid",
 			key,
 			false
 		)
@@ -253,12 +264,7 @@ function ProfilePersistenceGateway.SaveGiantRealmProfile(ownerUserId: any): Gate
 
 	local saveRoot, snapshotReason = queryApi.BuildSaveSnapshot(ownerUserId)
 	if saveRoot == nil then
-		return makeFailure(
-			"SaveGiantRealmProfile",
-			snapshotReason or "build_save_snapshot_failed",
-			key,
-			false
-		)
+		return makeFailure("SaveGiantRealmProfile", snapshotReason or "build_save_snapshot_failed", key, false)
 	end
 
 	local configuredOwnerLayer = getConfiguredOwnerLayer("SaveGiantRealmProfile", key)
@@ -303,6 +309,24 @@ function ProfilePersistenceGateway.LoadGiantRealmProfile(ownerUserId: any): Gate
 	end
 
 	return makeSuccess("LoadGiantRealmProfile", key, ownerResult.data)
+end
+
+function ProfilePersistenceGateway.ReleaseGiantRealmProfile(ownerUserId: any): GatewayResult
+	if not isValidUserId(ownerUserId) then
+		return makeFailure("ReleaseGiantRealmProfile", "invalid_owner_user_id", nil, false)
+	end
+
+	local key = giantRealmProfileKey(ownerUserId)
+	local configuredOwnerLayer = getConfiguredOwnerLayer("ReleaseGiantRealmProfile", key)
+	if configuredOwnerLayer == nil then
+		return makeFailure("ReleaseGiantRealmProfile", "owner_layer_not_configured", key, true)
+	end
+
+	if type(configuredOwnerLayer.ReleaseGiantRealmProfile) ~= "function" then
+		return makeFailure("ReleaseGiantRealmProfile", "release_giant_realm_profile_missing", key, false)
+	end
+
+	return configuredOwnerLayer.ReleaseGiantRealmProfile(key, ownerUserId)
 end
 
 return ProfilePersistenceGateway

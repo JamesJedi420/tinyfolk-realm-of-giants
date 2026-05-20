@@ -11,7 +11,9 @@ end
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -33,8 +35,7 @@ local function makeFakeProfileStoreModule(): any
 					schemaVersion = template.schemaVersion,
 				},
 			}
-			function profile:EndSession()
-			end
+			function profile:EndSession() end
 			return profile
 		end
 
@@ -50,13 +51,17 @@ local requiredOwnerMethods = {
 	ReleasePlayerProfile = true,
 	LoadGiantRealmProfile = true,
 	SaveGiantRealmProfile = true,
+	ReleaseGiantRealmProfile = true,
 }
 
 local thirdPartyPath = "src/ServerScriptService/Services/ThirdParty/ProfileStore.luau"
 local thirdPartySource = fs.readFile(thirdPartyPath)
 
 assertTrue(string.find(thirdPartySource, "ProfileStore", 1, true) ~= nil, "vendored ProfileStore source present")
-assertTrue(string.find(thirdPartySource, "StartSessionAsync", 1, true) ~= nil, "vendored ProfileStore session API present")
+assertTrue(
+	string.find(thirdPartySource, "StartSessionAsync", 1, true) ~= nil,
+	"vendored ProfileStore session API present"
+)
 
 local thirdPartyDocPath = "docs/THIRD_PARTY.md"
 local thirdPartyDoc = fs.readFile(thirdPartyDocPath)
@@ -74,7 +79,10 @@ assertTrue(string.find(thirdPartyDoc, thirdPartyPath, 1, true) ~= nil, "third-pa
 assertTrue(string.find(thirdPartyDoc, "Apache-2.0", 1, true) ~= nil, "third-party doc license")
 assertTrue(string.find(thirdPartyDoc, "2026-05-13", 1, true) ~= nil, "third-party doc retrieval date")
 assertTrue(string.find(thirdPartyDoc, "Local modifications: none", 1, true) ~= nil, "third-party doc modifications")
-assertTrue(string.find(thirdPartyDoc, "Gameplay code must not require this dependency directly", 1, true) ~= nil, "third-party doc gameplay restriction")
+assertTrue(
+	string.find(thirdPartyDoc, "Gameplay code must not require this dependency directly", 1, true) ~= nil,
+	"third-party doc gameplay restriction"
+)
 
 assertTrue(type(ProfileStoreOwnerLayer.CreateDefault) == "function", "CreateDefault exposed")
 
@@ -85,9 +93,15 @@ for methodName in pairs(requiredOwnerMethods) do
 	assertTrue(type(ownerLayer[methodName]) == "function", "CreateDefault owner exposes " .. methodName)
 end
 
-assertEqual(#fakeProfileStore.newCalls, 1, "CreateDefault calls ProfileStore.New once")
+assertEqual(#fakeProfileStore.newCalls, 2, "CreateDefault calls ProfileStore.New twice")
 assertEqual(fakeProfileStore.newCalls[1].storeName, "TinyfolkPlayerProfiles", "CreateDefault store name")
 assertEqual(fakeProfileStore.newCalls[1].template.schemaVersion, 1, "CreateDefault template schema")
+assertEqual(
+	fakeProfileStore.newCalls[2].storeName,
+	"TinyfolkGiantRealmProfiles",
+	"CreateDefault giant realm store name"
+)
+assertEqual(fakeProfileStore.newCalls[2].template.schemaVersion, 1, "CreateDefault giant realm template schema")
 
 local loadResult = ownerLayer.LoadPlayerProfile("PlayerProfile:1234", 1234)
 assertEqual(loadResult.ok, true, "CreateDefault owner load ok")

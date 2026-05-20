@@ -23,25 +23,54 @@ export type PlacedStructureSaveRecord = {
 	proposedOccupiedSpace: { OccupiedSpaceBoxRecord },
 }
 
+export type EmergencyReinforcementSaveRecord = {
+	used: boolean,
+	callStartedAt: number?,
+	cooldownEndsAt: number?,
+	triggeredByUserId: number?,
+	spawnedUserId: number?,
+	lastReason: string?,
+	lastObjectiveId: string?,
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
 	placedStructures: { PlacedStructureSaveRecord },
+	emergencyReinforcement: EmergencyReinforcementSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
-	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
 end
 
 local function isPositiveNumber(value: any): boolean
-	return isFiniteNumber(value) and value > 0
+	if not isFiniteNumber(value) then
+		return false
+	end
+	return value > 0
 end
 
 local function isVector3Data(value: any): boolean
-	return type(value) == "table"
-		and isFiniteNumber(value.x)
-		and isFiniteNumber(value.y)
-		and isFiniteNumber(value.z)
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isFiniteNumber(value.x) then
+		return false
+	end
+	if not isFiniteNumber(value.y) then
+		return false
+	end
+	if not isFiniteNumber(value.z) then
+		return false
+	end
+	return true
 end
 
 local function copyVector3Data(value: Vector3Data): Vector3Data
@@ -56,6 +85,7 @@ local function copyOccupiedSpace(source: { OccupiedSpaceBoxRecord }): { Occupied
 	local copied = {}
 	for _, box in ipairs(source) do
 		local copiedBox: OccupiedSpaceBoxRecord = {
+			tag = nil,
 			worldCenter = copyVector3Data(box.worldCenter),
 			halfExtents = copyVector3Data(box.halfExtents),
 		}
@@ -125,6 +155,37 @@ function GiantRealmSaveSchema.ValidatePlacedStructureRecord(record: any): (boole
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateEmergencyReinforcementRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "emergency_reinforcement_record_invalid"
+	end
+	if type(record.used) ~= "boolean" then
+		return false, "emergency_reinforcement_used_invalid"
+	end
+	if record.callStartedAt ~= nil and not isFiniteNumber(record.callStartedAt) then
+		return false, "emergency_reinforcement_call_started_at_invalid"
+	end
+	if record.cooldownEndsAt ~= nil and not isFiniteNumber(record.cooldownEndsAt) then
+		return false, "emergency_reinforcement_cooldown_ends_at_invalid"
+	end
+	if record.triggeredByUserId ~= nil and not isPositiveNumber(record.triggeredByUserId) then
+		return false, "emergency_reinforcement_triggered_by_user_id_invalid"
+	end
+	if record.spawnedUserId ~= nil and not isPositiveNumber(record.spawnedUserId) then
+		return false, "emergency_reinforcement_spawned_user_id_invalid"
+	end
+	if record.lastReason ~= nil and type(record.lastReason) ~= "string" then
+		return false, "emergency_reinforcement_last_reason_invalid"
+	end
+	if record.lastObjectiveId ~= nil and type(record.lastObjectiveId) ~= "string" then
+		return false, "emergency_reinforcement_last_objective_id_invalid"
+	end
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -146,6 +207,12 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 		end
 	end
 
+	local reinforcementValid, reinforcementReason =
+		GiantRealmSaveSchema.ValidateEmergencyReinforcementRecord(root.emergencyReinforcement)
+	if not reinforcementValid then
+		return false, reinforcementReason
+	end
+
 	return true, nil
 end
 
@@ -158,7 +225,9 @@ function GiantRealmSaveSchema.SerializePlacedStructureRecord(state: any): Placed
 	}
 end
 
-function GiantRealmSaveSchema.SerializePlacedStructuresById(statesById: { [string]: any }): { PlacedStructureSaveRecord }
+function GiantRealmSaveSchema.SerializePlacedStructuresById(
+	statesById: { [string]: any }
+): { PlacedStructureSaveRecord }
 	local structureIds = {}
 	for structureId in pairs(statesById) do
 		table.insert(structureIds, structureId)
@@ -172,12 +241,40 @@ function GiantRealmSaveSchema.SerializePlacedStructuresById(statesById: { [strin
 	return records
 end
 
-function GiantRealmSaveSchema.BuildSaveRoot(ownerUserId: number, statesById: { [string]: any }): GiantRealmSaveRoot
+function GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(state: any): EmergencyReinforcementSaveRecord?
+	if state == nil then
+		return nil
+	end
+
 	return {
+		used = state.used == true,
+		callStartedAt = state.callStartedAt,
+		cooldownEndsAt = state.cooldownEndsAt,
+		triggeredByUserId = state.triggeredByUserId,
+		spawnedUserId = state.spawnedUserId,
+		lastReason = state.lastReason,
+		lastObjectiveId = state.lastObjectiveId,
+	}
+end
+
+function GiantRealmSaveSchema.BuildSaveRoot(
+	ownerUserId: number,
+	statesById: { [string]: any },
+	emergencyReinforcementState: any?
+): GiantRealmSaveRoot
+	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
 		ownerUserId = ownerUserId,
 		placedStructures = GiantRealmSaveSchema.SerializePlacedStructuresById(statesById),
+		emergencyReinforcement = nil,
 	}
+
+	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
+	if reinforcementRecord ~= nil then
+		root.emergencyReinforcement = reinforcementRecord
+	end
+
+	return root
 end
 
 return GiantRealmSaveSchema

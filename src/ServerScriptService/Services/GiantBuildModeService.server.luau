@@ -31,7 +31,7 @@ type AcceptedStructurePlacementState = {
 	proposedOccupiedSpace: { StructureBoxInput },
 }
 
-local placedStructureById: { [string]: AcceptedStructurePlacementState } = {}
+local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
 local realmOwnerUserId: number? = nil
 
@@ -444,9 +444,16 @@ local function isAuthorizedRealmOwner(player: Player): boolean
 end
 
 local function boxesOverlap(a: StructureBoxInput, b: StructureBoxInput): boolean
-	return math.abs(a.worldCenter.x - b.worldCenter.x) < (a.halfExtents.x + b.halfExtents.x)
-		and math.abs(a.worldCenter.y - b.worldCenter.y) < (a.halfExtents.y + b.halfExtents.y)
-		and math.abs(a.worldCenter.z - b.worldCenter.z) < (a.halfExtents.z + b.halfExtents.z)
+	if math.abs(a.worldCenter.x - b.worldCenter.x) >= (a.halfExtents.x + b.halfExtents.x) then
+		return false
+	end
+	if math.abs(a.worldCenter.y - b.worldCenter.y) >= (a.halfExtents.y + b.halfExtents.y) then
+		return false
+	end
+	if math.abs(a.worldCenter.z - b.worldCenter.z) >= (a.halfExtents.z + b.halfExtents.z) then
+		return false
+	end
+	return true
 end
 
 local function getSortedPlacedStructureIds(): { string }
@@ -605,7 +612,9 @@ end
 local function GetAllPlacedStructures(): { [string]: AcceptedStructurePlacementState }
 	local result: { [string]: AcceptedStructurePlacementState } = {}
 	for structureId, state in pairs(placedStructureById) do
-		result[structureId] = state
+		if state ~= nil then
+			result[structureId] = state
+		end
 	end
 	return result
 end
@@ -618,11 +627,24 @@ local function IsStructurePlaced(structureId: string): boolean
 end
 
 local function isValidOwnerUserId(ownerUserId: any): boolean
-	return type(ownerUserId) == "number"
-		and ownerUserId == ownerUserId
-		and ownerUserId ~= math.huge
-		and ownerUserId ~= -math.huge
-		and ownerUserId > 0
+	if type(ownerUserId) ~= "number" then
+		return false
+	end
+	if ownerUserId ~= ownerUserId or ownerUserId == math.huge or ownerUserId == -math.huge then
+		return false
+	end
+	if ownerUserId <= 0 then
+		return false
+	end
+	return true
+end
+
+local function getEmergencyReinforcementQueryApi(): any
+	local globalValue = _G
+	if type(globalValue._EmergencyReinforcementService_QueryAPI) == "table" then
+		return globalValue._EmergencyReinforcementService_QueryAPI
+	end
+	return nil
 end
 
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
@@ -630,7 +652,17 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		return nil, "save_snapshot_owner_user_id_invalid"
 	end
 
-	local root = GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, GetAllPlacedStructures())
+	local emergencyReinforcementState = nil
+	local reinforcementQueryApi = getEmergencyReinforcementQueryApi()
+	if reinforcementQueryApi ~= nil then
+		if type(reinforcementQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "emergency_reinforcement_build_persistence_missing"
+		end
+
+		emergencyReinforcementState = reinforcementQueryApi.BuildPersistenceState()
+	end
+
+	local root = GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, GetAllPlacedStructures(), emergencyReinforcementState)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
 		return nil, reason or "save_snapshot_invalid"
@@ -654,6 +686,27 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local state: AcceptedStructurePlacementState = GiantRealmSaveSchema.SerializePlacedStructureRecord(record)
 		placedStructureById[state.structureId] = state
 		materializeAcceptedWorkspaceArtifact(state)
+	end
+
+	local reinforcementQueryApi = getEmergencyReinforcementQueryApi()
+	if root.emergencyReinforcement ~= nil then
+		if reinforcementQueryApi == nil then
+			return false, "emergency_reinforcement_query_api_missing"
+		end
+		if type(reinforcementQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "emergency_reinforcement_apply_persistence_missing"
+		end
+
+		local appliedReinforcement, reinforcementReason =
+			reinforcementQueryApi.ApplyPersistenceState(root.emergencyReinforcement)
+		if not appliedReinforcement then
+			return false, reinforcementReason or "emergency_reinforcement_apply_persistence_failed"
+		end
+	elseif reinforcementQueryApi ~= nil and type(reinforcementQueryApi.ApplyPersistenceState) == "function" then
+		local appliedReinforcement, reinforcementReason = reinforcementQueryApi.ApplyPersistenceState(nil)
+		if not appliedReinforcement then
+			return false, reinforcementReason or "emergency_reinforcement_apply_persistence_failed"
+		end
 	end
 
 	realmOwnerUserId = root.ownerUserId

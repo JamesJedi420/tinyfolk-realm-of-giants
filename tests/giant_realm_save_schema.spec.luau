@@ -61,6 +61,18 @@ local function makeSaveRoot()
 	}
 end
 
+local function makeEmergencyReinforcementRecord()
+	return {
+		used = true,
+		callStartedAt = 55,
+		cooldownEndsAt = 100,
+		triggeredByUserId = 1101,
+		spawnedUserId = 1103,
+		lastReason = "accepted",
+		lastObjectiveId = "CallCenter_A",
+	}
+end
+
 local function assertVector3Equal(actual, expected, label)
 	assertEqual(actual.x, expected.x, label .. " x")
 	assertEqual(actual.y, expected.y, label .. " y")
@@ -73,8 +85,16 @@ local function assertRecordMatchesState(record, state, label)
 	assertEqual(record.placedAt, state.placedAt, label .. " placedAt")
 	assertEqual(#record.proposedOccupiedSpace, #state.proposedOccupiedSpace, label .. " occupied count")
 	assertEqual(record.proposedOccupiedSpace[1].tag, state.proposedOccupiedSpace[1].tag, label .. " tag")
-	assertVector3Equal(record.proposedOccupiedSpace[1].worldCenter, state.proposedOccupiedSpace[1].worldCenter, label .. " worldCenter")
-	assertVector3Equal(record.proposedOccupiedSpace[1].halfExtents, state.proposedOccupiedSpace[1].halfExtents, label .. " halfExtents")
+	assertVector3Equal(
+		record.proposedOccupiedSpace[1].worldCenter,
+		state.proposedOccupiedSpace[1].worldCenter,
+		label .. " worldCenter"
+	)
+	assertVector3Equal(
+		record.proposedOccupiedSpace[1].halfExtents,
+		state.proposedOccupiedSpace[1].halfExtents,
+		label .. " halfExtents"
+	)
 end
 
 local function run()
@@ -138,6 +158,56 @@ local function run()
 
 	do
 		local root = makeSaveRoot()
+		root.emergencyReinforcement = makeEmergencyReinforcementRecord()
+		assertValid("valid save root with emergency reinforcement", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local serialized =
+			GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(makeEmergencyReinforcementRecord())
+		assertEqual(serialized.used, true, "serialized reinforcement used")
+		assertEqual(serialized.triggeredByUserId, 1101, "serialized reinforcement triggeredByUserId")
+		assertEqual(serialized.lastObjectiveId, "CallCenter_A", "serialized reinforcement lastObjectiveId")
+	end
+
+	do
+		local statesById = {
+			GiantStructure_Runtime_B = makePlacedStructureRecord("GiantStructure_Runtime_B"),
+			GiantStructure_Runtime_A = makePlacedStructureRecord("GiantStructure_Runtime_A"),
+		}
+
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, statesById, makeEmergencyReinforcementRecord())
+		assertTrue(type(root.emergencyReinforcement) == "table", "built root includes reinforcement record")
+		assertEqual(root.emergencyReinforcement.used, true, "built root reinforcement used")
+		assertEqual(root.emergencyReinforcement.spawnedUserId, 1103, "built root reinforcement spawned user")
+		assertValid("built root with reinforcement validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.emergencyReinforcement = {
+			used = "yes",
+		}
+		assertInvalid(
+			"emergency_reinforcement_used_invalid",
+			"invalid reinforcement used",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.emergencyReinforcement = makeEmergencyReinforcementRecord()
+		root.emergencyReinforcement.triggeredByUserId = 0
+		assertInvalid(
+			"emergency_reinforcement_triggered_by_user_id_invalid",
+			"invalid reinforcement triggeredByUserId",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
 		root.schemaVersion = 2
 		assertInvalid(
 			"save_root_schema_version_invalid",
@@ -149,11 +219,7 @@ local function run()
 	do
 		local root = makeSaveRoot()
 		root.ownerUserId = nil
-		assertInvalid(
-			"save_root_owner_user_id_invalid",
-			"missing owner",
-			GiantRealmSaveSchema.ValidateSaveRoot(root)
-		)
+		assertInvalid("save_root_owner_user_id_invalid", "missing owner", GiantRealmSaveSchema.ValidateSaveRoot(root))
 	end
 
 	do

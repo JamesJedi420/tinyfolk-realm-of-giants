@@ -255,6 +255,25 @@ local function assertStoredTotalsUnchanged(beforeSnapshot: any, label: string)
 	assertEqual(afterSnapshot.Stone.stored, beforeSnapshot.Stone.stored, label .. " stone unchanged")
 end
 
+_G._EmergencyReinforcementService_QueryAPI = {
+	BuildPersistenceState = function(): any
+		return {
+			used = true,
+			callStartedAt = 55,
+			cooldownEndsAt = 100,
+			triggeredByUserId = 1101,
+			spawnedUserId = 1103,
+			lastReason = "accepted",
+			lastObjectiveId = "CallCenter_A",
+		}
+	end,
+	_LastAppliedPersistenceState = nil,
+	ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+		_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState = _persistedState
+		return true, nil
+	end,
+}
+
 local serviceLoaded, serviceError = pcall(function()
 	require("../src/ServerScriptService/Services/GiantBuildModeService.server")
 end)
@@ -438,6 +457,9 @@ if saveRoot then
 	assertTrue(saveRootValid, "save snapshot validates against GiantRealmSaveSchema")
 	assertEqual(saveRootValidationReason, nil, "save snapshot validation has no reason")
 	assertEqual(#saveRoot.placedStructures, 2, "save snapshot includes accepted structure count")
+	assertTrue(type(saveRoot.emergencyReinforcement) == "table", "save snapshot includes reinforcement state")
+	assertEqual(saveRoot.emergencyReinforcement.used, true, "save snapshot reinforcement used")
+	assertEqual(saveRoot.emergencyReinforcement.triggeredByUserId, 1101, "save snapshot reinforcement requester")
 	assertEqual(
 		saveRoot.placedStructures[1].structureId,
 		acceptedStructureId,
@@ -643,6 +665,10 @@ assertEqual(applyRootReason, nil, "apply test root has no validation reason")
 local applyOk, applyReason = queryApi.ApplySaveSnapshot(applyRoot)
 assertTrue(applyOk, "valid save snapshot applies successfully")
 assertEqual(applyReason, nil, "valid save snapshot apply has no failure reason")
+assertTrue(
+	type(_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState) == "nil",
+	"apply without reinforcement record clears persistence state"
+)
 assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
 assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")
 assertTrue(
@@ -725,6 +751,29 @@ if snapshotAfterApply then
 		"post-apply save snapshot deterministic second"
 	)
 end
+
+local applyWithReinforcementRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = applyRoot.ownerUserId,
+	placedStructures = applyRoot.placedStructures,
+	emergencyReinforcement = {
+		used = true,
+		callStartedAt = 60,
+		cooldownEndsAt = 105,
+		triggeredByUserId = 2201,
+		spawnedUserId = 2203,
+		lastReason = "accepted",
+		lastObjectiveId = "CallCenter_A",
+	},
+}
+local applyWithReinforcementOk, applyWithReinforcementReason = queryApi.ApplySaveSnapshot(applyWithReinforcementRoot)
+assertTrue(applyWithReinforcementOk, "apply with reinforcement state succeeds")
+assertEqual(applyWithReinforcementReason, nil, "apply with reinforcement state has no reason")
+assertEqual(
+	_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState.triggeredByUserId,
+	2201,
+	"apply forwards reinforcement persistence state"
+)
 
 local invalidApplyRoot = {
 	schemaVersion = 999,

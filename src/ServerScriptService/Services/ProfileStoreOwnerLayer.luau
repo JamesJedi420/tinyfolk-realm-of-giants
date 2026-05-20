@@ -1,6 +1,6 @@
 --!strict
 
-local ProfileStoreOwnerLayer = {}
+local ProfileStoreOwnerLayer: any = {}
 
 type GatewayResult = {
 	ok: boolean,
@@ -15,6 +15,8 @@ export type CreateConfig = {
 	profileStoreModule: any,
 	playerStoreName: string,
 	playerProfileTemplate: any,
+	giantRealmStoreName: string,
+	giantRealmProfileTemplate: any,
 }
 
 export type ProfileOwnerLayer = {
@@ -23,6 +25,7 @@ export type ProfileOwnerLayer = {
 	ReleasePlayerProfile: (profileKey: string, userId: number) -> GatewayResult,
 	LoadGiantRealmProfile: (profileKey: string, ownerUserId: number) -> GatewayResult,
 	SaveGiantRealmProfile: (profileKey: string, ownerUserId: number, saveRoot: any) -> GatewayResult,
+	ReleaseGiantRealmProfile: (profileKey: string, ownerUserId: number) -> GatewayResult,
 }
 
 local function makeFailure(operation: string, reason: string, profileKey: string?, retryable: boolean?): GatewayResult
@@ -32,6 +35,7 @@ local function makeFailure(operation: string, reason: string, profileKey: string
 		reason = reason,
 		retryable = retryable,
 		profileKey = profileKey,
+		data = nil,
 	}
 end
 
@@ -39,29 +43,48 @@ local function makeSuccess(operation: string, profileKey: string?, data: any?): 
 	return {
 		ok = true,
 		operation = operation,
+		reason = nil,
+		retryable = nil,
 		profileKey = profileKey,
 		data = data,
 	}
 end
 
 local function isValidUserId(value: any): boolean
-	return type(value) == "number"
-		and value == value
-		and value ~= math.huge
-		and value ~= -math.huge
-		and value > 0
-		and value % 1 == 0
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	if value <= 0 or value % 1 ~= 0 then
+		return false
+	end
+	return true
 end
 
 local function isNonEmptyString(value: any): boolean
-	return type(value) == "string" and value ~= ""
+	if type(value) ~= "string" then
+		return false
+	end
+	return value ~= ""
 end
 
 local function isProfileObject(value: any): boolean
-	return type(value) == "table" and type(value.EndSession) == "function" and type(value.Data) == "table"
+	if type(value) ~= "table" then
+		return false
+	end
+	if type(value.EndSession) ~= "function" then
+		return false
+	end
+	if type(value.Data) ~= "table" then
+		return false
+	end
+	return true
 end
 
-local function cloneTable(value: any): any
+local cloneTable: (value: any) -> any
+cloneTable = function(value: any): any
 	if type(value) ~= "table" then
 		return value
 	end
@@ -89,6 +112,12 @@ local function validateCreateConfig(config: any): (boolean, string?)
 	if type(config.playerProfileTemplate) ~= "table" then
 		return false, "player_profile_template_invalid"
 	end
+	if not isNonEmptyString(config.giantRealmStoreName) then
+		return false, "giant_realm_store_name_invalid"
+	end
+	if type(config.giantRealmProfileTemplate) ~= "table" then
+		return false, "giant_realm_profile_template_invalid"
+	end
 	return true, nil
 end
 
@@ -110,8 +139,19 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 		error("player_store_start_session_missing")
 	end
 
+	local giantRealmStore =
+		config.profileStoreModule.New(config.giantRealmStoreName, cloneTable(config.giantRealmProfileTemplate))
+	if type(giantRealmStore) ~= "table" then
+		error("giant_realm_store_invalid")
+	end
+	if type(giantRealmStore.StartSessionAsync) ~= "function" then
+		error("giant_realm_store_start_session_missing")
+	end
+
 	local activeProfilesByUserId: { [number]: any } = {}
-	local activeUserIdByProfileKey: { [string]: number } = {}
+	local activeUserIdByProfileKey: { [string]: number? } = {}
+	local activeGiantRealmProfilesByUserId: { [number]: any } = {}
+	local activeGiantRealmUserIdByProfileKey: { [string]: number? } = {}
 
 	local ownerLayer = {}
 
@@ -178,22 +218,70 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 		return makeSuccess("ReleasePlayerProfile", profileKey, nil)
 	end
 
-	function ownerLayer.LoadGiantRealmProfile(profileKey: string, _ownerUserId: number): GatewayResult
-		return makeFailure(
-			"LoadGiantRealmProfile",
-			"giant_realm_profiles_not_supported_in_this_slice",
-			profileKey,
-			false
-		)
+	function ownerLayer.LoadGiantRealmProfile(profileKey: string, ownerUserId: number): GatewayResult
+		if not isNonEmptyString(profileKey) then
+			return makeFailure("LoadGiantRealmProfile", "profile_key_invalid", nil, false)
+		end
+		if not isValidUserId(ownerUserId) then
+			return makeFailure("LoadGiantRealmProfile", "invalid_owner_user_id", profileKey, false)
+		end
+		if
+			activeGiantRealmProfilesByUserId[ownerUserId] ~= nil
+			or activeGiantRealmUserIdByProfileKey[profileKey] ~= nil
+		then
+			return makeFailure("LoadGiantRealmProfile", "profile_session_already_active", profileKey, false)
+		end
+
+		local profile = giantRealmStore:StartSessionAsync(profileKey, {})
+		if not isProfileObject(profile) then
+			return makeFailure("LoadGiantRealmProfile", "profile_session_start_failed", profileKey, true)
+		end
+
+		activeGiantRealmProfilesByUserId[ownerUserId] = profile
+		activeGiantRealmUserIdByProfileKey[profileKey] = ownerUserId
+
+		return makeSuccess("LoadGiantRealmProfile", profileKey, profile.Data)
 	end
 
-	function ownerLayer.SaveGiantRealmProfile(profileKey: string, _ownerUserId: number, _saveRoot: any): GatewayResult
-		return makeFailure(
-			"SaveGiantRealmProfile",
-			"giant_realm_profiles_not_supported_in_this_slice",
-			profileKey,
-			false
-		)
+	function ownerLayer.SaveGiantRealmProfile(profileKey: string, ownerUserId: number, saveRoot: any): GatewayResult
+		if not isNonEmptyString(profileKey) then
+			return makeFailure("SaveGiantRealmProfile", "profile_key_invalid", nil, false)
+		end
+		if not isValidUserId(ownerUserId) then
+			return makeFailure("SaveGiantRealmProfile", "invalid_owner_user_id", profileKey, false)
+		end
+
+		local profile = activeGiantRealmProfilesByUserId[ownerUserId]
+		if not isProfileObject(profile) or activeGiantRealmUserIdByProfileKey[profileKey] ~= ownerUserId then
+			return makeFailure("SaveGiantRealmProfile", "profile_session_not_active", profileKey, false)
+		end
+		if type(saveRoot) ~= "table" then
+			return makeFailure("SaveGiantRealmProfile", "save_root_invalid", profileKey, false)
+		end
+
+		profile.Data = cloneTable(saveRoot)
+
+		return makeSuccess("SaveGiantRealmProfile", profileKey, profile.Data)
+	end
+
+	function ownerLayer.ReleaseGiantRealmProfile(profileKey: string, ownerUserId: number): GatewayResult
+		if not isNonEmptyString(profileKey) then
+			return makeFailure("ReleaseGiantRealmProfile", "profile_key_invalid", nil, false)
+		end
+		if not isValidUserId(ownerUserId) then
+			return makeFailure("ReleaseGiantRealmProfile", "invalid_owner_user_id", profileKey, false)
+		end
+
+		local profile = activeGiantRealmProfilesByUserId[ownerUserId]
+		if not isProfileObject(profile) or activeGiantRealmUserIdByProfileKey[profileKey] ~= ownerUserId then
+			return makeFailure("ReleaseGiantRealmProfile", "profile_session_not_active", profileKey, false)
+		end
+
+		profile:EndSession()
+		activeGiantRealmProfilesByUserId[ownerUserId] = nil
+		activeGiantRealmUserIdByProfileKey[profileKey] = nil
+
+		return makeSuccess("ReleaseGiantRealmProfile", profileKey, nil)
 	end
 
 	return ownerLayer :: ProfileOwnerLayer
@@ -210,6 +298,12 @@ function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): Profile
 		playerStoreName = "TinyfolkPlayerProfiles",
 		playerProfileTemplate = {
 			schemaVersion = 1,
+		},
+		giantRealmStoreName = "TinyfolkGiantRealmProfiles",
+		giantRealmProfileTemplate = {
+			schemaVersion = 1,
+			ownerUserId = 0,
+			placedStructures = {},
 		},
 	})
 end

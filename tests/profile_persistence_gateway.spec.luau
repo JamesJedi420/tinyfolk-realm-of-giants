@@ -10,7 +10,9 @@ end
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -56,6 +58,7 @@ local expectedApi = {
 	ReleasePlayerProfile = true,
 	LoadGiantRealmProfile = true,
 	SaveGiantRealmProfile = true,
+	ReleaseGiantRealmProfile = true,
 }
 
 for key, value in pairs(ProfilePersistenceGateway) do
@@ -165,10 +168,20 @@ function ownerLayer.SaveGiantRealmProfile(profileKey: string, ownerUserId: numbe
 	return makeOwnerResult("SaveGiantRealmProfile", profileKey, saveRoot)
 end
 
+function ownerLayer.ReleaseGiantRealmProfile(profileKey: string, ownerUserId: number): any
+	table.insert(calls, { method = "ReleaseGiantRealmProfile", profileKey = profileKey, ownerUserId = ownerUserId })
+	return makeOwnerResult("ReleaseGiantRealmProfile", profileKey, nil)
+end
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 local player = makePlayer(9402)
-assertSuccess(ProfilePersistenceGateway.LoadPlayerProfile(player), "LoadPlayerProfile", "PlayerProfile:9402", "load player")
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(player),
+	"LoadPlayerProfile",
+	"PlayerProfile:9402",
+	"load player"
+)
 assertEqual(calls[1].method, "LoadPlayerProfile", "load owner method")
 assertEqual(calls[1].profileKey, "PlayerProfile:9402", "load owner key")
 assertEqual(calls[1].userId, 9402, "load owner id")
@@ -226,14 +239,24 @@ assertFailure(
 	"updater error"
 )
 
-assertSuccess(ProfilePersistenceGateway.SavePlayerProfile(player), "SavePlayerProfile", "PlayerProfile:9402", "save player")
+assertSuccess(
+	ProfilePersistenceGateway.SavePlayerProfile(player),
+	"SavePlayerProfile",
+	"PlayerProfile:9402",
+	"save player"
+)
 assertEqual(calls[2].method, "SavePlayerProfile", "save owner method")
 assertEqual(calls[2].profileKey, "PlayerProfile:9402", "save owner key")
 assertEqual(calls[2].userId, 9402, "save owner id")
 assertEqual(calls[2].data.loaded, true, "save owner uses loaded data")
 assertEqual(calls[2].data.counters.coins, 25, "save owner uses updated active data")
 
-assertSuccess(ProfilePersistenceGateway.ReleasePlayerProfile(player), "ReleasePlayerProfile", "PlayerProfile:9402", "release player")
+assertSuccess(
+	ProfilePersistenceGateway.ReleasePlayerProfile(player),
+	"ReleasePlayerProfile",
+	"PlayerProfile:9402",
+	"release player"
+)
 assertEqual(calls[3].method, "ReleasePlayerProfile", "release owner method")
 assertEqual(calls[3].profileKey, "PlayerProfile:9402", "release owner key")
 assertEqual(calls[3].userId, 9402, "release owner id")
@@ -301,10 +324,17 @@ assertEqual(calls[2].ownerUserId, 9402, "load realm owner id")
 assertEqual(queryCalls[2].method, "ApplySaveSnapshot", "load realm apply method")
 assertTrue(queryCalls[2].saveRoot == loadRealm.data, "load realm applies owner save root")
 
+local releaseRealm = ProfilePersistenceGateway.ReleaseGiantRealmProfile(9402)
+assertSuccess(releaseRealm, "ReleaseGiantRealmProfile", "GiantRealmProfile:9402", "release realm")
+assertEqual(calls[3].method, "ReleaseGiantRealmProfile", "release realm owner method")
+assertEqual(calls[3].profileKey, "GiantRealmProfile:9402", "release realm owner key")
+assertEqual(calls[3].ownerUserId, 9402, "release realm owner id")
+
 ProfilePersistenceGateway.ConfigureOwnerLayer({
 	LoadPlayerProfile = ownerLayer.LoadPlayerProfile,
 	SavePlayerProfile = ownerLayer.SavePlayerProfile,
 	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
 	LoadGiantRealmProfile = function(profileKey: string, _ownerUserId: number): any
 		return {
 			ok = false,
@@ -342,6 +372,7 @@ ProfilePersistenceGateway.ConfigureOwnerLayer({
 	LoadPlayerProfile = ownerLayer.LoadPlayerProfile,
 	SavePlayerProfile = ownerLayer.SavePlayerProfile,
 	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
 	LoadGiantRealmProfile = function(profileKey: string, _ownerUserId: number): any
 		return makeOwnerResult("LoadGiantRealmProfile", profileKey, nil)
 	end,

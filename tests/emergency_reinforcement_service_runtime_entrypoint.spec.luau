@@ -169,6 +169,7 @@ addChild(
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
+addChild(giantRealmFolder, "GiantRealmSaveSchema", "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
 addChild(
 	giantRealmFolder,
 	"EmergencyReinforcementState",
@@ -283,6 +284,9 @@ reinforcementApi.GetStateSnapshot = function(at: any): any
 	assertSnapshotSchema(snapshot, "GetStateSnapshot contract")
 	return snapshot
 end
+
+assertTrue(type(reinforcementApi.BuildPersistenceState) == "function", "service exposes BuildPersistenceState")
+assertTrue(type(reinforcementApi.ApplyPersistenceState) == "function", "service exposes ApplyPersistenceState")
 
 local debugRequestRemote: any = remotesFolder._Children["EmergencyReinforcementDebugStateRequest"]
 local debugResponseRemote: any = remotesFolder._Children["EmergencyReinforcementDebugStateResponse"]
@@ -863,6 +867,45 @@ do
 		reason = "accepted",
 		tokenState = nil,
 	}
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+
+	local accepted = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+	assertTrue(accepted.accepted, "persistence setup request accepted")
+
+	local persistedState = reinforcementApi.BuildPersistenceState()
+	assertEqual(type(persistedState), "table", "build persistence returns table")
+	assertEqual(persistedState.used, true, "build persistence captures used")
+	assertEqual(persistedState.triggeredByUserId, requester.UserId, "build persistence captures requester")
+	assertEqual(persistedState.spawnedUserId, candidate.UserId, "build persistence captures spawned user")
+
+	reinforcementApi.ResetForTests(0)
+	local applied, applyReason = reinforcementApi.ApplyPersistenceState(persistedState)
+	assertTrue(applied, "apply persistence accepts valid state")
+	assertEqual(applyReason, nil, "apply persistence valid state has no reason")
+
+	local restoredSnapshot = reinforcementApi.GetStateSnapshot(100)
+	assertTrue(restoredSnapshot.used, "apply persistence restores used")
+	assertEqual(restoredSnapshot.triggeredByUserId, requester.UserId, "apply persistence restores requester")
+	assertEqual(restoredSnapshot.spawnedUserId, candidate.UserId, "apply persistence restores spawned user")
+	assertEqual(restoredSnapshot.lastObjectiveId, "CallCenter_A", "apply persistence restores objective id")
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+
+	local applied, applyReason = reinforcementApi.ApplyPersistenceState({
+		used = "bad",
+	})
+	assertFalse(applied, "apply persistence rejects malformed state")
+	assertEqual(applyReason, "emergency_reinforcement_used_invalid", "apply persistence malformed reason")
+	assertFalse(reinforcementApi.GetStateSnapshot(100).used, "malformed persistence does not mutate state")
 end
 
 print("emergency_reinforcement_service_runtime_entrypoint: all checks passed")
