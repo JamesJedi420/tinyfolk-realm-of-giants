@@ -276,7 +276,11 @@ do
 	local missingTarget = rescueApi.RequestRescueContract(rescuer.UserId, 999999, 250.1)
 	assertFalse(missingTarget.accepted, "missing target rejects")
 	assertEqual(missingTarget.reason, "target_not_found", "missing target reason")
-	assertEqual(rescuer:GetAttribute("RescueContractLastReason"), "target_not_found", "missing target projects rescuer last reason")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractLastReason"),
+		"target_not_found",
+		"missing target projects rescuer last reason"
+	)
 end
 
 do

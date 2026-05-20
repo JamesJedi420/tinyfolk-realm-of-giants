@@ -10,6 +10,14 @@ local function assertEqual(actual: any, expected: any, label: string)
 	print(string.format("PASS [%s]", label))
 end
 
+local function assertTrue(condition: boolean, label: string)
+	assertEqual(condition, true, label)
+end
+
+local function assertFalse(condition: boolean, label: string)
+	assertEqual(condition, false, label)
+end
+
 local routeAttributes: { [string]: any } = {
 	ThroughGapReachAllowed = true,
 	RouteType = "TraversalGap",
@@ -49,9 +57,30 @@ local mapFolder: any = {
 	ClassName = "Folder",
 }
 
+local tinyfolkReturnPoint: any = {
+	Name = "TinyfolkReturnPoint",
+	ClassName = "Part",
+	Position = { x = 0, y = 2, z = -50 },
+	CFrame = { Position = { x = 0, y = 2, z = -50 } },
+}
+
+local tinyfolkWorldFolder: any = {
+	ClassName = "Folder",
+}
+
+function tinyfolkWorldFolder:FindFirstChild(childName: string): any
+	if childName == "TinyfolkReturnPoint" then
+		return tinyfolkReturnPoint
+	end
+	return nil
+end
+
 function mapFolder:FindFirstChild(childName: string): any
 	if childName == "EscapeRoutes" then
 		return escapeRoutesFolder
+	end
+	if childName == "TinyfolkWorld" then
+		return tinyfolkWorldFolder
 	end
 	return nil
 end
@@ -113,6 +142,17 @@ local replicatedStorageService: any = {
 									TraversalGapBlockExpiresAtAttribute = "TraversalGapBlockExpiresAt",
 									TraversalGapBlockedByUserIdAttribute = "TraversalGapBlockedByUserId",
 									TraversalGapBlockExemptAttribute = "TraversalGapBlockExempt",
+									FinalExitManagedAttribute = "FinalExitManaged",
+									FinalExitPhaseAttribute = "FinalExitPhase",
+									FinalExitPoweredEndsAtAttribute = "FinalExitPoweredEndsAt",
+									FinalExitOpeningEndsAtAttribute = "FinalExitOpeningEndsAt",
+									FinalExitBlockedEndsAtAttribute = "FinalExitBlockedEndsAt",
+									FinalExitResolvedAtAttribute = "FinalExitResolvedAt",
+									FinalExitBlockedByUserIdAttribute = "FinalExitBlockedByUserId",
+									FinalExitPoweredDurationSeconds = 1,
+									FinalExitOpeningDurationSeconds = 1,
+									FinalExitBlockedDurationSeconds = 2,
+									FinalExitReopenDurationSeconds = 1,
 									SupportedThroughGapRouteTypes = { TraversalGap = true },
 								}
 							end
@@ -146,6 +186,7 @@ local crossingHooks: { string } = {}
 local downedByUserId: { [number]: boolean } = {}
 local carriedByUserId: { [number]: boolean } = {}
 local carrierEncumberedByUserId: { [number]: boolean } = {}
+local objectiveThresholdMet = false
 _G._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		return downedByUserId[userId] == true
@@ -166,6 +207,21 @@ _G._GrabService_QueryAPI = {
 			return { accepted = false, reason = "carrier_encumbered" }
 		end
 		return { accepted = true, reason = "accepted" }
+	end,
+}
+_G._RealmObjectiveService_QueryAPI = {
+	IsEscapeObjectiveThresholdMet = function(): boolean
+		return objectiveThresholdMet == true
+	end,
+}
+local transportDepartureOutcome: any = {
+	accepted = false,
+	reason = "transport_not_departed",
+	outcome = nil,
+}
+_G._TransportEscapeService_QueryAPI = {
+	ResolveTransportDepartureOutcome = function(_endpointId: string, _candidateTinyfolkUserIds: { number }): any
+		return transportDepartureOutcome
 	end,
 }
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
@@ -193,12 +249,262 @@ local function resetRouteDefaults()
 	routeAttributes.TraversalGapBlockActiveEndsAt = nil
 	routeAttributes.TraversalGapBlockExpiresAt = nil
 	routeAttributes.TraversalGapBlockedByUserId = nil
+	routeAttributes.FinalExitManaged = true
+	routeAttributes.FinalExitPhase = "Dormant"
+	routeAttributes.FinalExitPoweredEndsAt = nil
+	routeAttributes.FinalExitOpeningEndsAt = nil
+	routeAttributes.FinalExitBlockedEndsAt = nil
+	routeAttributes.FinalExitResolvedAt = nil
+	routeAttributes.FinalExitBlockedByUserId = nil
 	currentTime = 100
 	crossingHooks = {}
 	downedByUserId = {}
 	carriedByUserId = {}
 	carrierEncumberedByUserId = {}
+	objectiveThresholdMet = false
 	EscapeService.ResetTraversalGapBlocksForTests()
+	EscapeService.ResetEscapeAttemptStateForTests()
+	EscapeService.ResetFinalExitForTests()
+end
+
+local function advanceFinalExitToOpen(routeId: string?)
+	local targetRouteId = if type(routeId) == "string" then routeId else "EscapeRoute_A"
+	objectiveThresholdMet = true
+	EscapeService.RefreshFinalExitStateForTests(targetRouteId)
+	currentTime = 102
+	EscapeService.RefreshFinalExitStateForTests(targetRouteId)
+	currentTime = 105
+	return EscapeService.RefreshFinalExitStateForTests(targetRouteId)
+end
+
+do
+	resetRouteDefaults()
+	local dormantTinyfolk = MockPlayer.new(70, "DormantTinyfolk", { role = "Tinyfolk" })
+	local dormantAttempt = EscapeService.requestEscapeAttempt(dormantTinyfolk, "EscapeRoute_A")
+	assertEqual(dormantAttempt.accepted, false, "dormant final exit rejects route escape")
+	assertEqual(dormantAttempt.reason, "final_exit_dormant", "dormant final exit reason")
+
+	objectiveThresholdMet = true
+	local poweredTinyfolk = MockPlayer.new(71, "PoweredTinyfolk", { role = "Tinyfolk" })
+	local poweredAttempt = EscapeService.requestEscapeAttempt(poweredTinyfolk, "EscapeRoute_A")
+	assertEqual(poweredAttempt.accepted, false, "powered final exit rejects route escape")
+	assertEqual(poweredAttempt.reason, "final_exit_powered", "powered final exit reason")
+	assertEqual(routeAttributes.FinalExitPhase, "Powered", "powered phase projected to route attributes")
+
+	currentTime = 102
+	local openingTinyfolk = MockPlayer.new(72, "OpeningTinyfolk", { role = "Tinyfolk" })
+	local openingAttempt = EscapeService.requestEscapeAttempt(openingTinyfolk, "EscapeRoute_A")
+	assertEqual(openingAttempt.accepted, false, "opening final exit rejects route escape")
+	assertEqual(openingAttempt.reason, "final_exit_opening", "opening final exit reason")
+	assertEqual(routeAttributes.FinalExitPhase, "Opening", "opening phase projected to route attributes")
+
+	currentTime = 105
+	local openTinyfolk = MockPlayer.new(73, "OpenTinyfolk", { role = "Tinyfolk" })
+	local openAttempt = EscapeService.requestEscapeAttempt(openTinyfolk, "EscapeRoute_A")
+	assertEqual(openAttempt.accepted, true, "open final exit accepts route escape")
+	assertEqual(routeAttributes.FinalExitPhase, "Resolved", "successful escape resolves final exit")
+	assertEqual(routeAttributes.FinalExitResolvedAt, 105, "resolved timestamp projected to route attributes")
+
+	local resolvedTinyfolk = MockPlayer.new(74, "ResolvedTinyfolk", { role = "Tinyfolk" })
+	local resolvedAttempt = EscapeService.requestEscapeAttempt(resolvedTinyfolk, "EscapeRoute_A")
+	assertEqual(resolvedAttempt.accepted, false, "resolved final exit rejects later route escape")
+	assertEqual(resolvedAttempt.reason, "final_exit_resolved", "resolved final exit reason")
+end
+
+do
+	resetRouteDefaults()
+	local originalObjectiveApi = _G._RealmObjectiveService_QueryAPI
+	_G._RealmObjectiveService_QueryAPI = {
+		IsEscapeObjectiveThresholdMet = function(): boolean
+			error("objective query fault")
+			return false
+		end,
+	}
+
+	local tinyfolk = MockPlayer.new(77, "FaultyObjectiveTinyfolk", { role = "Tinyfolk" })
+	local attempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(attempt.accepted, false, "objective query error does not crash escape attempt")
+	assertEqual(attempt.reason, "final_exit_dormant", "objective query error falls back to dormant gate")
+
+	_G._RealmObjectiveService_QueryAPI = originalObjectiveApi
+end
+
+do
+	resetRouteDefaults()
+	advanceFinalExitToOpen("EscapeRoute_A")
+	local giant = MockPlayer.new(75, "BlockingGiant", { role = "Giant" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	assertEqual(block.accepted, true, "blocking final exit setup accepted")
+	assertEqual(routeAttributes.FinalExitPhase, "Open", "startup block leaves final exit open before active block")
+
+	currentTime = 106
+	local blockedSnapshot = EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
+	assertEqual(blockedSnapshot.phase, "Blocked", "active traversal block pushes final exit to blocked")
+	assertEqual(routeAttributes.FinalExitBlockedByUserId, 75, "blocked final exit tracks Giant user id")
+
+	local tinyfolk = MockPlayer.new(76, "BlockedTinyfolk", { role = "Tinyfolk" })
+	local blockedAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(blockedAttempt.accepted, false, "blocked final exit rejects route escape")
+	assertEqual(blockedAttempt.reason, "final_exit_blocked", "blocked final exit reason")
+
+	currentTime = 110
+	local reopeningSnapshot = EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
+	assertEqual(reopeningSnapshot.phase, "Opening", "blocked final exit re-enters opening after block window")
+
+	currentTime = 112
+	local reopenedSnapshot = EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
+	assertEqual(reopenedSnapshot.phase, "Open", "reopening final exit returns to open")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
+	routeAttributes.FinalExitManaged = false
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "shared hub safe-zone rejects direct escape")
+	assertEqual(result.reason, "shared_hub_no_capture", "shared hub safe-zone escape reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "RealmExit"
+	routeAttributes.FinalExitManaged = false
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "realm exit safe-zone rejects direct escape")
+	assertEqual(result.reason, "realm_exit_protected", "realm exit safe-zone escape reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "RealmEntry"
+	routeAttributes.SafeZoneProtectionEndsAt = 101
+	routeAttributes.FinalExitManaged = false
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local activeProtectionResult = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(activeProtectionResult.accepted, false, "realm entry active protection rejects direct escape")
+	assertEqual(activeProtectionResult.reason, "realm_entry_protected", "realm entry active escape reason")
+
+	currentTime = 102
+	local expiredProtectionResult = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(expiredProtectionResult.accepted, true, "realm entry expired protection allows direct escape")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "InvalidSafeZoneType"
+	routeAttributes.FinalExitManaged = false
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "unknown safe-zone type rejects direct escape")
+	assertEqual(result.reason, "safe_zone_type_unknown", "unknown safe-zone escape reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = nil
+	routeAttributes.FinalExitManaged = false
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "missing safe-zone type rejects direct escape")
+	assertEqual(result.reason, "safe_zone_type_missing", "missing safe-zone type escape reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
+	objectiveThresholdMet = true
+	local player = MockPlayer.new(1, "TinyfolkPlayer", { role = "Tinyfolk" })
+
+	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
+	assertEqual(result.accepted, false, "safe-zone gate takes precedence over final-exit gate")
+	assertEqual(result.reason, "shared_hub_no_capture", "safe-zone precedence reason is preserved")
+end
+
+do
+	resetRouteDefaults()
+	local boardedTinyfolk = MockPlayer.new(31, "TinyfolkBoarded", { role = "Tinyfolk" })
+	local unboardedTinyfolk = MockPlayer.new(32, "TinyfolkUnboarded", { role = "Tinyfolk" })
+	unboardedTinyfolk:SetAttribute("Escaped", true)
+	playersByUserId[31] = boardedTinyfolk
+	playersByUserId[32] = unboardedTinyfolk
+
+	transportDepartureOutcome = {
+		accepted = true,
+		reason = "accepted",
+		outcome = {
+			canResolve = true,
+			boardedEscapedUserIds = { 31 },
+			unboardedRemainingUserIds = { 32 },
+		},
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 31, 32 })
+	assertTrue(result.accepted, "transport departure resolution accepted")
+	assertEqual(boardedTinyfolk:GetAttribute("Escaped"), true, "boarded tinyfolk marked escaped")
+	assertEqual(unboardedTinyfolk:GetAttribute("Escaped"), false, "unboarded tinyfolk remains not escaped")
+	assertTrue(unboardedTinyfolk.Character.LastPivotCFrame ~= nil, "unboarded tinyfolk moved to return point")
+	assertEqual(
+		unboardedTinyfolk.Character.LastPivotCFrame.Position.z,
+		-50,
+		"unboarded tinyfolk relocated to configured return point"
+	)
+	assertEqual(#result.escapedUserIds, 1, "transport resolution escaped user count")
+	assertEqual(#result.safeReturnedUserIds, 1, "transport resolution safe-return count")
+	assertEqual(#result.unresolvedUserIds, 0, "transport resolution leaves no unresolved users")
+end
+
+do
+	resetRouteDefaults()
+	advanceFinalExitToOpen("EscapeRoute_A")
+	local boardedTinyfolk = MockPlayer.new(41, "TransportFinalExitTinyfolk", { role = "Tinyfolk" })
+	playersByUserId[41] = boardedTinyfolk
+
+	transportDepartureOutcome = {
+		accepted = true,
+		reason = "accepted",
+		outcome = {
+			canResolve = true,
+			routeId = "EscapeRoute_A",
+			boardedEscapedUserIds = { 41 },
+			unboardedRemainingUserIds = {},
+		},
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 41 })
+	assertTrue(result.accepted, "transport final-exit convergence accepted")
+	assertEqual(result.resolvedTransportFinalExit, true, "transport departure resolves final-exit route")
+	assertEqual(routeAttributes.FinalExitPhase, "Resolved", "transport departure marks final-exit as resolved")
+
+	local lateTinyfolk = MockPlayer.new(42, "LateTransportTinyfolk", { role = "Tinyfolk" })
+	local lateAttempt = EscapeService.requestEscapeAttempt(lateTinyfolk, "EscapeRoute_A")
+	assertEqual(lateAttempt.accepted, false, "resolved final-exit rejects post-transport route escape")
+	assertEqual(lateAttempt.reason, "final_exit_resolved", "post-transport route rejection reason")
+end
+
+do
+	resetRouteDefaults()
+	transportDepartureOutcome = {
+		accepted = false,
+		reason = "transport_not_departed",
+		outcome = nil,
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 31, 32 })
+	assertFalse(result.accepted, "transport not departed resolution rejected")
+	assertEqual(result.reason, "transport_not_departed", "transport not departed rejection reason")
 end
 
 local function makeRequest(overrides: any?): any
@@ -573,8 +879,9 @@ do
 	resetRouteDefaults()
 	local giant = MockPlayer.new(1, "GiantPlayer")
 	local tinyfolk = MockPlayer.new(20, "TinyfolkPlayer", { role = "Tinyfolk" })
+	advanceFinalExitToOpen("EscapeRoute_A")
 	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
-	currentTime = 100.5
+	currentTime = 105.5
 	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 
 	assertEqual(block.accepted, true, "Startup escape setup block accepted")
@@ -587,13 +894,14 @@ do
 	resetRouteDefaults()
 	local giant = MockPlayer.new(1, "GiantPlayer")
 	local tinyfolk = MockPlayer.new(21, "TinyfolkPlayer", { role = "Tinyfolk" })
+	advanceFinalExitToOpen("EscapeRoute_A")
 	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
-	currentTime = 101
+	currentTime = 106
 	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 
 	assertEqual(block.accepted, true, "Active escape rejection setup block accepted")
 	assertEqual(escape.accepted, false, "Active block rejects Tinyfolk escape attempt")
-	assertEqual(escape.reason, "traversal_gap_block_active", "Active escape rejection reason")
+	assertEqual(escape.reason, "final_exit_blocked", "Active escape rejection reason")
 	assertEqual(#crossingHooks, 0, "Active block does not fire route-crossing hook")
 end
 
@@ -642,12 +950,14 @@ do
 	routeAttributes.TraversalGapBlockExempt = true
 	local giant = MockPlayer.new(1, "GiantPlayer")
 	local tinyfolk = MockPlayer.new(23, "TinyfolkPlayer", { role = "Tinyfolk" })
+	advanceFinalExitToOpen("EscapeRoute_A")
 	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
-	currentTime = 101
+	currentTime = 106
 	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 
 	assertEqual(block.accepted, true, "exempt route setup block accepted")
-	assertEqual(escape.accepted, true, "explicit route exemption allows Active block traversal")
+	assertEqual(escape.accepted, false, "final exit block interrupts exempt traversal")
+	assertEqual(escape.reason, "final_exit_blocked", "final exit block takes precedence over traversal exemption")
 end
 
 do
@@ -688,15 +998,17 @@ end
 do
 	resetRouteDefaults()
 	local giant = MockPlayer.new(1, "GiantPlayer")
+	advanceFinalExitToOpen("EscapeRoute_A")
 	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
 	local debugState = EscapeService.getDebugState(giant, "EscapeRoute_A")
 
 	assertEqual(block.accepted, true, "debug block setup accepted")
 	assertEqual(debugState.routeId, "EscapeRoute_A", "debug includes route id")
 	assertEqual(debugState.blockState, "Startup", "debug includes block state")
-	assertEqual(debugState.blockStartupEndsAt, 101, "debug includes startup end")
-	assertEqual(debugState.blockActiveEndsAt, 105, "debug includes active end")
-	assertEqual(debugState.blockExpiresAt, 105, "debug includes expiration")
+	assertEqual(debugState.finalExitPhase, "Open", "debug includes final exit phase")
+	assertEqual(debugState.blockStartupEndsAt, 106, "debug includes startup end")
+	assertEqual(debugState.blockActiveEndsAt, 110, "debug includes active end")
+	assertEqual(debugState.blockExpiresAt, 110, "debug includes expiration")
 	assertEqual(debugState.blockedByUserId, 1, "debug includes blocker user id")
 	assertEqual(debugState.blockExempt, false, "debug includes exemption flag")
 end
@@ -705,8 +1017,10 @@ do
 	resetRouteDefaults()
 	local giant = MockPlayer.new(1, "GiantPlayer")
 	local tinyfolk = MockPlayer.new(22, "TinyfolkPlayer", { role = "Tinyfolk" })
+	advanceFinalExitToOpen("EscapeRoute_A")
 	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
-	currentTime = 106
+	currentTime = 112
+	EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
 	local escape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 
 	assertEqual(block.accepted, true, "expired escape setup block accepted")

@@ -29,6 +29,7 @@ local serviceState = EmergencyReinforcementState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local matchStartedAt = os.clock()
+local resolveStateTransitionForTests: ((any, any) -> any)? = nil
 
 local function debugLog(message: string)
 	print(string.format("[EmergencyReinforcementService] %s", message))
@@ -40,6 +41,184 @@ end
 
 local function now(): number
 	return os.clock()
+end
+
+local function isFiniteNonNegativeNumber(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return value >= 0
+end
+
+local function isValidPositiveInteger(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	if value % 1 ~= 0 then
+		return false
+	end
+	return value > 0
+end
+
+local function resolveAt(at: any): number
+	if isFiniteNonNegativeNumber(at) then
+		return at
+	end
+	return now()
+end
+
+local function resolveStateTransition(state: any, input: any): any
+	if type(resolveStateTransitionForTests) == "function" then
+		return resolveStateTransitionForTests(state, input)
+	end
+	return EmergencyReinforcementState.ResolveRequest(state, input)
+end
+
+local function getObjectiveTokenServiceQueryApi(): any
+	local globalValue = _G
+	if type(globalValue._RealmObjectiveService_QueryAPI) == "table" then
+		return globalValue._RealmObjectiveService_QueryAPI
+	end
+	return nil
+end
+
+local function requestConsumeEmergencyToken(requesterUserId: number, objectiveId: string, at: number): any
+	local objectiveTokenApi = getObjectiveTokenServiceQueryApi()
+	if objectiveTokenApi == nil or type(objectiveTokenApi.RequestConsumeEmergencyToken) ~= "function" then
+		return {
+			accepted = true,
+			reason = "accepted",
+			tokenState = nil,
+		}
+	end
+
+	local result = objectiveTokenApi.RequestConsumeEmergencyToken(requesterUserId, objectiveId, at)
+	if type(result) ~= "table" then
+		return {
+			accepted = false,
+			reason = "token_consume_failed",
+			tokenState = nil,
+		}
+	end
+
+	return result
+end
+
+local function requestEmergencyTokenSnapshot(objectiveId: string, at: number): any
+	local objectiveTokenApi = getObjectiveTokenServiceQueryApi()
+	if objectiveTokenApi == nil or type(objectiveTokenApi.GetEmergencyTokenSnapshot) ~= "function" then
+		return {
+			accepted = true,
+			reason = "accepted",
+			tokenState = nil,
+		}
+	end
+
+	local result = objectiveTokenApi.GetEmergencyTokenSnapshot(objectiveId, at)
+	if type(result) ~= "table" then
+		return {
+			accepted = false,
+			reason = "token_snapshot_failed",
+			tokenState = nil,
+		}
+	end
+
+	if type(result.accepted) == "boolean" and result.accepted ~= true then
+		return {
+			accepted = false,
+			reason = if type(result.reason) == "string" then result.reason else "token_snapshot_failed",
+			tokenState = result.tokenState,
+		}
+	end
+
+	local tokenState = if type(result.tokenState) == "table" then result.tokenState else nil
+	if tokenState ~= nil then
+		local lifecycleState = tokenState.lifecycleState
+		if type(lifecycleState) == "string" and lifecycleState ~= "active" then
+			return {
+				accepted = false,
+				reason = "token_lifecycle_inactive",
+				tokenState = tokenState,
+			}
+		end
+
+		if tokenState.revoked == true then
+			return {
+				accepted = false,
+				reason = "token_revoked",
+				tokenState = tokenState,
+			}
+		end
+
+		local remainingTokens = tokenState.remainingTokens
+		if type(remainingTokens) == "number" and remainingTokens <= 0 then
+			return {
+				accepted = false,
+				reason = "token_unavailable",
+				tokenState = tokenState,
+			}
+		end
+
+		local nextAvailableAt = tokenState.nextAvailableAt
+		if isFiniteNonNegativeNumber(nextAvailableAt) and at < (nextAvailableAt :: number) then
+			return {
+				accepted = false,
+				reason = "token_not_ready",
+				tokenState = tokenState,
+			}
+		end
+
+		local expiresAt = tokenState.expiresAt
+		if isFiniteNonNegativeNumber(expiresAt) and at >= (expiresAt :: number) then
+			return {
+				accepted = false,
+				reason = "token_expired",
+				tokenState = tokenState,
+			}
+		end
+
+		local scheduleWindows = tokenState.scheduleWindows
+		if type(scheduleWindows) == "table" then
+			local hasActiveWindow = false
+			for _, window in ipairs(scheduleWindows) do
+				if type(window) == "table" then
+					local windowAny: any = window
+					local startsAt = windowAny.startsAt
+					local endsAt = windowAny.endsAt
+					local validStart = isFiniteNonNegativeNumber(startsAt)
+					local validEnd = endsAt == nil or isFiniteNonNegativeNumber(endsAt)
+					if validStart and validEnd then
+						local startValue = startsAt :: number
+						local endValue = endsAt :: any
+						if at >= startValue and (endValue == nil or at <= (endValue :: number)) then
+							hasActiveWindow = true
+							break
+						end
+					end
+				end
+			end
+
+			if not hasActiveWindow then
+				return {
+					accepted = false,
+					reason = "token_not_scheduled",
+					tokenState = tokenState,
+				}
+			end
+		end
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		tokenState = tokenState,
+	}
 end
 
 local function ensureRemotesFolder(): Folder
@@ -194,6 +373,14 @@ local function buildSnapshot(at: number): any
 		activeTinyfolkThreshold = threshold,
 		readinessReason = readinessReason,
 		matchStartedAt = matchStartedAt,
+	}
+end
+
+local function makeResponse(accepted: boolean, reason: string, at: number): any
+	return {
+		accepted = accepted,
+		reason = reason,
+		snapshot = buildSnapshot(at),
 	}
 end
 
@@ -433,31 +620,19 @@ local function initializeReinforcementPlayer(candidate: Player, spawnPart: BaseP
 end
 
 local function requestReinforcement(player: Player, payload: any, at: number?): any
-	local resolvedNow = if type(at) == "number" then at else now()
+	local resolvedNow = resolveAt(at)
 	if not isPlayerAlive(player) then
 		serviceState.lastReason = "requester_not_alive"
 		applyStateAttributes()
-		return {
-			accepted = false,
-			reason = "requester_not_alive",
-			snapshot = buildSnapshot(resolvedNow),
-		}
+		return makeResponse(false, "requester_not_alive", resolvedNow)
 	end
 
 	if isCoolingDown(player.UserId, resolvedNow) then
-		return {
-			accepted = false,
-			reason = "request_cooldown",
-			snapshot = buildSnapshot(resolvedNow),
-		}
+		return makeResponse(false, "request_cooldown", resolvedNow)
 	end
 
 	if isRejectCoolingDown(player.UserId, resolvedNow) then
-		return {
-			accepted = false,
-			reason = "request_cooldown",
-			snapshot = buildSnapshot(resolvedNow),
-		}
+		return makeResponse(false, "request_cooldown", resolvedNow)
 	end
 
 	local objectiveId = nil
@@ -483,30 +658,98 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 
 	local candidateUserId = if candidate ~= nil then (candidate :: any).UserId else nil
 
-	local transition = EmergencyReinforcementState.ResolveRequest(serviceState, {
-		now = resolvedNow,
-		matchStartedAt = matchStartedAt,
-		requesterRole = player:GetAttribute(ROLE_ATTRIBUTE),
-		requesterUserId = player.UserId,
-		activeTinyfolkCount = getActiveTinyfolkCount(),
-		activeTinyfolkThreshold = EmergencyReinforcementConfig.ActiveTinyfolkThreshold,
-		minMatchElapsedSeconds = EmergencyReinforcementConfig.MinMatchElapsedSeconds,
-		objectiveId = objectiveId,
-		expectedObjectiveId = EmergencyReinforcementConfig.CallCenterObjectiveId,
-		objectiveInRange = inRange,
-		hasSpawnPart = spawnPart ~= nil,
-		spawnProtected = spawnDecision.protected == true,
-		candidateUserId = candidateUserId,
-		callCooldownSeconds = EmergencyReinforcementConfig.CallCooldownSeconds,
-	})
+	local transitionOk, transitionOrError = pcall(function()
+		return resolveStateTransition(serviceState, {
+			now = resolvedNow,
+			matchStartedAt = matchStartedAt,
+			requesterRole = player:GetAttribute(ROLE_ATTRIBUTE),
+			requesterUserId = player.UserId,
+			activeTinyfolkCount = getActiveTinyfolkCount(),
+			activeTinyfolkThreshold = EmergencyReinforcementConfig.ActiveTinyfolkThreshold,
+			minMatchElapsedSeconds = EmergencyReinforcementConfig.MinMatchElapsedSeconds,
+			objectiveId = objectiveId,
+			expectedObjectiveId = EmergencyReinforcementConfig.CallCenterObjectiveId,
+			objectiveInRange = inRange,
+			hasSpawnPart = spawnPart ~= nil,
+			spawnProtected = spawnDecision.protected == true,
+			candidateUserId = candidateUserId,
+			callCooldownSeconds = EmergencyReinforcementConfig.CallCooldownSeconds,
+		})
+	end)
+
+	if not transitionOk or type(transitionOrError) ~= "table" then
+		serviceState.lastReason = "state_transition_failed"
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		return makeResponse(false, "state_transition_failed", resolvedNow)
+	end
+
+	local transitionAny: any = transitionOrError
+	if type(transitionAny.accepted) ~= "boolean" or type(transitionAny.reason) ~= "string" then
+		serviceState.lastReason = "state_transition_failed"
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		return makeResponse(false, "state_transition_failed", resolvedNow)
+	end
+
+	local transition = transitionAny
+
+	if not transition.accepted then
+		serviceState = transition.state
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, transition.reason))
+		return makeResponse(false, transition.reason, resolvedNow)
+	end
+
+	local tokenSnapshotOk, tokenSnapshotResultOrError = pcall(function()
+		return requestEmergencyTokenSnapshot(objectiveId or "", resolvedNow)
+	end)
+
+	if not tokenSnapshotOk or type(tokenSnapshotResultOrError) ~= "table" then
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=token_snapshot_failed", player.UserId))
+		return makeResponse(false, "token_snapshot_failed", resolvedNow)
+	end
+
+	local tokenSnapshotResult = tokenSnapshotResultOrError
+	if tokenSnapshotResult.accepted ~= true then
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		local snapshotReason = if type(tokenSnapshotResult.reason) == "string"
+			then tokenSnapshotResult.reason
+			else "token_snapshot_failed"
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, snapshotReason))
+		return makeResponse(false, snapshotReason, resolvedNow)
+	end
+
+	local tokenConsumeOk, tokenConsumeResultOrError = pcall(function()
+		return requestConsumeEmergencyToken(player.UserId, objectiveId or "", resolvedNow)
+	end)
+
+	if not tokenConsumeOk or type(tokenConsumeResultOrError) ~= "table" then
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=token_consume_failed", player.UserId))
+		return makeResponse(false, "token_consume_failed", resolvedNow)
+	end
+
+	local tokenConsumeResult = tokenConsumeResultOrError
+	if tokenConsumeResult.accepted ~= true then
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		local tokenReason = if type(tokenConsumeResult.reason) == "string"
+			then tokenConsumeResult.reason
+			else "token_consume_failed"
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, tokenReason))
+		return makeResponse(false, tokenReason, resolvedNow)
+	end
 
 	serviceState = transition.state
-	if transition.accepted then
-		markRequest(player.UserId, resolvedNow)
-	else
-		markRejectedRequest(player.UserId, resolvedNow)
-	end
-	if transition.accepted and candidate ~= nil and spawnPart ~= nil then
+	markRequest(player.UserId, resolvedNow)
+
+	if candidate ~= nil and spawnPart ~= nil then
 		local resolvedCandidate = candidate :: Player
 		initializeReinforcementPlayer(resolvedCandidate, spawnPart)
 		debugLog(
@@ -518,16 +761,18 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 			)
 		)
 	else
-		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, transition.reason))
+		serviceState.lastReason = "reinforcement_spawn_failed"
+		debugWarn(
+			string.format("Rejected reinforcement callerUserId=%d reason=reinforcement_spawn_failed", player.UserId)
+		)
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		return makeResponse(false, "reinforcement_spawn_failed", resolvedNow)
 	end
 
 	applyStateAttributes()
 
-	return {
-		accepted = transition.accepted,
-		reason = transition.reason,
-		snapshot = buildSnapshot(resolvedNow),
-	}
+	return makeResponse(true, "accepted", resolvedNow)
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -554,36 +799,45 @@ applyStateAttributes()
 
 _G._EmergencyReinforcementService_QueryAPI = {
 	RequestReinforcement = function(requesterUserId: number, payload: any, at: number?): any
+		local resolvedAt = resolveAt(at)
+		if not isValidPositiveInteger(requesterUserId) then
+			return makeResponse(false, "requester_user_id_invalid", resolvedAt)
+		end
+
 		local requester = getPlayerByUserId(requesterUserId)
 		if requester == nil then
-			return {
-				accepted = false,
-				reason = "requester_not_found",
-				snapshot = buildSnapshot(if type(at) == "number" then at else now()),
-			}
+			return makeResponse(false, "requester_not_found", resolvedAt)
 		end
 
 		return requestReinforcement(requester, payload, at)
 	end,
 	GetStateSnapshot = function(at: number?): any
-		return buildSnapshot(if type(at) == "number" then at else now())
+		return buildSnapshot(resolveAt(at))
 	end,
 	GetActiveTinyfolkCount = function(): number
 		return getActiveTinyfolkCount()
 	end,
 	IsCallAvailable = function(at: number?): boolean
-		return buildSnapshot(if type(at) == "number" then at else now()).available == true
+		return buildSnapshot(resolveAt(at)).available == true
 	end,
 	ResetForTests = function(newMatchStartedAt: number?)
 		serviceState = EmergencyReinforcementState.NewState()
 		lastRequestAtByUserId = {}
 		lastRejectedRequestAtByUserId = {}
+		resolveStateTransitionForTests = nil
 		if type(newMatchStartedAt) == "number" then
 			matchStartedAt = newMatchStartedAt
 		else
 			matchStartedAt = now()
 		end
 		applyStateAttributes()
+	end,
+	SetStateTransitionResolverForTests = function(resolver: any)
+		if type(resolver) == "function" then
+			resolveStateTransitionForTests = resolver :: (any, any) -> any
+		else
+			resolveStateTransitionForTests = nil
+		end
 	end,
 }
 

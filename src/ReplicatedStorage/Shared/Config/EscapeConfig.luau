@@ -33,6 +33,19 @@ EscapeConfig.TraversalGapBlockActiveEndsAtAttribute = "TraversalGapBlockActiveEn
 EscapeConfig.TraversalGapBlockExpiresAtAttribute = "TraversalGapBlockExpiresAt" -- Block expiration time
 EscapeConfig.TraversalGapBlockedByUserIdAttribute = "TraversalGapBlockedByUserId" -- UserId of blocking Giant
 EscapeConfig.TraversalGapBlockExemptAttribute = "TraversalGapBlockExempt" -- If true, route is exempt from block
+EscapeConfig.FinalExitManagedAttribute = "FinalExitManaged" -- If true, route participates in the final-exit clock
+EscapeConfig.FinalExitPhaseAttribute = "FinalExitPhase" -- Final-exit phase enum projected by EscapeService
+EscapeConfig.FinalExitPoweredEndsAtAttribute = "FinalExitPoweredEndsAt" -- Powered phase end timestamp
+EscapeConfig.FinalExitOpeningEndsAtAttribute = "FinalExitOpeningEndsAt" -- Opening phase end timestamp
+EscapeConfig.FinalExitBlockedEndsAtAttribute = "FinalExitBlockedEndsAt" -- Blocked phase end timestamp
+EscapeConfig.FinalExitResolvedAtAttribute = "FinalExitResolvedAt" -- Resolved phase timestamp
+EscapeConfig.FinalExitBlockedByUserIdAttribute = "FinalExitBlockedByUserId" -- UserId that triggered final-exit block
+
+-- Final exit raid-escalation timings
+EscapeConfig.FinalExitPoweredDurationSeconds = 2 -- Delay between objective threshold and opening start
+EscapeConfig.FinalExitOpeningDurationSeconds = 3 -- Opening wind-up before route becomes escape-ready
+EscapeConfig.FinalExitBlockedDurationSeconds = 4 -- How long a Giant interruption keeps the exit blocked
+EscapeConfig.FinalExitReopenDurationSeconds = 2 -- Reopening wind-up after a block expires
 
 EscapeConfig.SafeZoneTypes = {
 	SharedHub = "SharedHub",

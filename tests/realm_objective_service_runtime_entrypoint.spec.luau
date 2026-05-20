@@ -149,4 +149,11 @@ playersList = {
 local scaledDownSnapshot = queryApi.GetObjectiveSnapshot()
 assertEqual(scaledDownSnapshot.requiredCompletions, 1, "required completions recompute when active tinyfolk changes")
 
+workspaceService._Children["Map"] = nil
+queryApi.ResetForTests()
+local missingPathSnapshot = queryApi.GetObjectiveSnapshot()
+assertEqual(missingPathSnapshot.totalSiteCount, 0, "missing objectives path yields empty objective snapshot")
+assertEqual(missingPathSnapshot.requiredCompletions, 0, "missing objectives path yields zero required completions")
+assertFalse(missingPathSnapshot.escapeReady, "missing objectives path cannot report escape ready")
+
 print("realm_objective_service_runtime_entrypoint: all checks passed")

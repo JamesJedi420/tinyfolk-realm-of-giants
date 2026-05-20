@@ -67,6 +67,52 @@ end
 
 do
 	local state = EmergencyReinforcementState.NewState()
+	local result = EmergencyReinforcementState.ResolveRequest(state, makeInput({ now = 0 / 0 }))
+
+	assertFalse(result.accepted, "request rejects invalid now")
+	assertEqual(result.reason, "invalid_now", "invalid now reason")
+end
+
+do
+	local state = EmergencyReinforcementState.NewState()
+	local result = EmergencyReinforcementState.ResolveRequest(state, makeInput({ matchStartedAt = "bad" }))
+
+	assertFalse(result.accepted, "request rejects invalid match start")
+	assertEqual(result.reason, "invalid_match_started_at", "invalid match start reason")
+end
+
+do
+	local state = EmergencyReinforcementState.NewState()
+	local result = EmergencyReinforcementState.ResolveRequest(state, makeInput({ activeTinyfolkThreshold = "two" }))
+
+	assertFalse(result.accepted, "request rejects invalid threshold")
+	assertEqual(result.reason, "invalid_active_tinyfolk_threshold", "invalid threshold reason")
+end
+
+do
+	local state = EmergencyReinforcementState.NewState()
+	local result = EmergencyReinforcementState.ResolveRequest(state, makeInput({ callCooldownSeconds = -1 }))
+
+	assertFalse(result.accepted, "request rejects invalid call cooldown")
+	assertEqual(result.reason, "invalid_call_cooldown", "invalid call cooldown reason")
+end
+
+do
+	local state = EmergencyReinforcementState.NewState()
+	local missingInput = makeInput()
+	missingInput.candidateUserId = nil
+	local missing = EmergencyReinforcementState.ResolveRequest(state, missingInput)
+
+	assertFalse(missing.accepted, "request rejects missing candidate user")
+	assertEqual(missing.reason, "reinforcement_candidate_missing", "missing candidate reason")
+
+	local invalid = EmergencyReinforcementState.ResolveRequest(state, makeInput({ candidateUserId = 2.5 }))
+	assertFalse(invalid.accepted, "request rejects invalid candidate user id")
+	assertEqual(invalid.reason, "reinforcement_candidate_invalid", "invalid candidate reason")
+end
+
+do
+	local state = EmergencyReinforcementState.NewState()
 	local result = EmergencyReinforcementState.ResolveRequest(
 		state,
 		makeInput({

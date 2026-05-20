@@ -59,6 +59,29 @@ local function validNow(now: any): boolean
 	return now >= 0
 end
 
+local function validNonNegativeNumber(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return value >= 0
+end
+
+local function validPositiveInteger(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	if value % 1 ~= 0 then
+		return false
+	end
+	return value > 0
+end
+
 function EmergencyReinforcementState.NewState(): ReinforcementState
 	return {
 		used = false,
@@ -77,6 +100,36 @@ function EmergencyReinforcementState.ResolveRequest(state: ReinforcementState, i
 	if not validNow(input.now) then
 		nextState.lastReason = "invalid_now"
 		return { accepted = false, reason = "invalid_now", state = nextState }
+	end
+
+	if not validNonNegativeNumber(input.matchStartedAt) then
+		nextState.lastReason = "invalid_match_started_at"
+		return { accepted = false, reason = "invalid_match_started_at", state = nextState }
+	end
+
+	if not validPositiveInteger(input.requesterUserId) then
+		nextState.lastReason = "requester_user_id_invalid"
+		return { accepted = false, reason = "requester_user_id_invalid", state = nextState }
+	end
+
+	if not validNonNegativeNumber(input.activeTinyfolkCount) then
+		nextState.lastReason = "invalid_active_tinyfolk_count"
+		return { accepted = false, reason = "invalid_active_tinyfolk_count", state = nextState }
+	end
+
+	if not validNonNegativeNumber(input.activeTinyfolkThreshold) then
+		nextState.lastReason = "invalid_active_tinyfolk_threshold"
+		return { accepted = false, reason = "invalid_active_tinyfolk_threshold", state = nextState }
+	end
+
+	if not validNonNegativeNumber(input.minMatchElapsedSeconds) then
+		nextState.lastReason = "invalid_min_match_elapsed"
+		return { accepted = false, reason = "invalid_min_match_elapsed", state = nextState }
+	end
+
+	if not validNonNegativeNumber(input.callCooldownSeconds) then
+		nextState.lastReason = "invalid_call_cooldown"
+		return { accepted = false, reason = "invalid_call_cooldown", state = nextState }
 	end
 
 	if nextState.used == true then
@@ -120,14 +173,19 @@ function EmergencyReinforcementState.ResolveRequest(state: ReinforcementState, i
 		return { accepted = false, reason = "reinforcement_spawn_protected", state = nextState }
 	end
 
-	if type(input.candidateUserId) ~= "number" then
+	if input.candidateUserId == nil then
 		nextState.lastReason = "reinforcement_candidate_missing"
 		return { accepted = false, reason = "reinforcement_candidate_missing", state = nextState }
 	end
 
+	if not validPositiveInteger(input.candidateUserId) then
+		nextState.lastReason = "reinforcement_candidate_invalid"
+		return { accepted = false, reason = "reinforcement_candidate_invalid", state = nextState }
+	end
+
 	nextState.used = true
 	nextState.callStartedAt = input.now
-	nextState.cooldownEndsAt = input.now + input.callCooldownSeconds
+	nextState.cooldownEndsAt = input.now + math.max(0, input.callCooldownSeconds)
 	nextState.triggeredByUserId = input.requesterUserId
 	nextState.spawnedUserId = input.candidateUserId
 	nextState.lastReason = "accepted"

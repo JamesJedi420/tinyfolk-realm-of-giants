@@ -100,6 +100,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"TraversalGapBlockState",
 		"../../ReplicatedStorage/Shared/GiantRealm/TraversalGapBlockState"
 	)
+	local FinalExitState =
+		resolveDependency(GiantRealm, "FinalExitState", "../../ReplicatedStorage/Shared/GiantRealm/FinalExitState")
 
 	local TinyfolkMovementTraitService: any = nil
 	if options ~= nil and type(options.tinyfolkMovementTraitService) == "table" then
@@ -121,6 +123,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local escapedTinyfolkByUserId: { [number]: boolean? } = {}
 	local lastRequestAtByUserId: { [number]: number? } = {}
 	local traversalGapBlockByRouteId: { [string]: any? } = {}
+	local finalExitStateByRouteId: { [string]: any? } = {}
 	local lastBlockRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
@@ -374,6 +377,72 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return string.match(part.Name, "^" .. EscapeConfig.EscapeRouteNamePrefix) ~= nil
 	end
 
+	local function buildFinalExitConfig(routeId: string): any
+		return {
+			RouteId = routeId,
+			PoweredDurationSeconds = EscapeConfig.FinalExitPoweredDurationSeconds,
+			OpeningDurationSeconds = EscapeConfig.FinalExitOpeningDurationSeconds,
+			BlockedDurationSeconds = EscapeConfig.FinalExitBlockedDurationSeconds,
+			ReopenDurationSeconds = EscapeConfig.FinalExitReopenDurationSeconds,
+		}
+	end
+
+	local function isFinalExitManaged(routePart: BasePart): boolean
+		return routePart:GetAttribute(EscapeConfig.FinalExitManagedAttribute) ~= false
+	end
+
+	local function finalExitRejectReason(phase: string?): string
+		if phase == FinalExitState.Phases.Powered then
+			return "final_exit_powered"
+		end
+		if phase == FinalExitState.Phases.Opening then
+			return "final_exit_opening"
+		end
+		if phase == FinalExitState.Phases.Blocked then
+			return "final_exit_blocked"
+		end
+		if phase == FinalExitState.Phases.Resolved then
+			return "final_exit_resolved"
+		end
+		return "final_exit_dormant"
+	end
+
+	local function applyFinalExitAttributes(routePart: BasePart, snapshot: any?)
+		if snapshot == nil then
+			routePart:SetAttribute(EscapeConfig.FinalExitPhaseAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FinalExitPoweredEndsAtAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FinalExitOpeningEndsAtAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FinalExitBlockedEndsAtAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FinalExitResolvedAtAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FinalExitBlockedByUserIdAttribute, nil)
+			routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+			return
+		end
+
+		routePart:SetAttribute(EscapeConfig.FinalExitPhaseAttribute, snapshot.phase)
+		routePart:SetAttribute(EscapeConfig.FinalExitPoweredEndsAtAttribute, snapshot.poweredEndsAt)
+		routePart:SetAttribute(EscapeConfig.FinalExitOpeningEndsAtAttribute, snapshot.openingEndsAt)
+		routePart:SetAttribute(EscapeConfig.FinalExitBlockedEndsAtAttribute, snapshot.blockedEndsAt)
+		routePart:SetAttribute(EscapeConfig.FinalExitResolvedAtAttribute, snapshot.resolvedAt)
+		routePart:SetAttribute(EscapeConfig.FinalExitBlockedByUserIdAttribute, snapshot.blockedByUserId)
+		routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, snapshot.isEscapeOpen == true)
+	end
+
+	local function ensureFinalExitState(routeId: string, routePart: BasePart): any?
+		if not isFinalExitManaged(routePart) then
+			finalExitStateByRouteId[routeId] = nil
+			applyFinalExitAttributes(routePart, nil)
+			return nil
+		end
+
+		local state = finalExitStateByRouteId[routeId]
+		if state == nil then
+			state = FinalExitState.NewState(buildFinalExitConfig(routeId))
+			finalExitStateByRouteId[routeId] = state
+		end
+		return state
+	end
+
 	local function registerEscapeRoutePart(part: BasePart)
 		local routeId = part.Name
 		if escapeRouteById[routeId] then
@@ -382,6 +451,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		escapeRouteById[routeId] = part
+
+		if part:GetAttribute(EscapeConfig.FinalExitManagedAttribute) == nil then
+			part:SetAttribute(EscapeConfig.FinalExitManagedAttribute, true)
+		end
 
 		if part:GetAttribute(EscapeConfig.ThroughGapReachAllowedAttribute) == nil then
 			part:SetAttribute(EscapeConfig.ThroughGapReachAllowedAttribute, false)
@@ -396,6 +469,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		part:SetAttribute(EscapeConfig.TraversalGapBlockedByUserIdAttribute, nil)
 		if part:GetAttribute(EscapeConfig.TraversalGapBlockExemptAttribute) == nil then
 			part:SetAttribute(EscapeConfig.TraversalGapBlockExemptAttribute, false)
+		end
+
+		local finalExitState = ensureFinalExitState(routeId, part)
+		if finalExitState ~= nil then
+			applyFinalExitAttributes(part, FinalExitState.GetSnapshot(finalExitState))
+		else
+			applyFinalExitAttributes(part, nil)
 		end
 	end
 
@@ -446,6 +526,30 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return queryApi
 	end
 
+	local function getTransportServiceQueryApi(): any?
+		local globalValue: any = _G
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._TransportEscapeService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
+	local function getObjectiveServiceQueryApi(): any?
+		local globalValue: any = _G
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._RealmObjectiveService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
 	local function getPlayerByUserId(userId: number): any?
 		if Players == nil or type(Players.GetPlayerByUserId) ~= "function" then
 			return nil
@@ -469,6 +573,98 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		return nil
+	end
+
+	local function findTinyfolkReturnPoint(): any?
+		if Workspace == nil then
+			return nil
+		end
+
+		local current: any = Workspace
+		for _, childName in EscapeConfig.TinyfolkWorldFolderPath do
+			if type(current.FindFirstChild) ~= "function" then
+				return nil
+			end
+			local nextNode = current:FindFirstChild(childName)
+			if nextNode == nil then
+				return nil
+			end
+			current = nextNode
+		end
+
+		if type(current.FindFirstChild) ~= "function" then
+			return nil
+		end
+
+		return current:FindFirstChild(EscapeConfig.TinyfolkReturnPointName)
+	end
+
+	local function resolveReturnPointPivot(returnPoint: any): any?
+		if returnPoint == nil then
+			return nil
+		end
+		if (returnPoint :: any).CFrame ~= nil then
+			return (returnPoint :: any).CFrame
+		end
+		if (returnPoint :: any).Position ~= nil then
+			if type(CFrame) == "table" and type((CFrame :: any).new) == "function" then
+				local ok, created = pcall(function()
+					return (CFrame :: any).new((returnPoint :: any).Position)
+				end)
+				if ok then
+					return created
+				end
+			end
+			return { Position = (returnPoint :: any).Position }
+		end
+		return nil
+	end
+
+	local function relocatePlayerToTinyfolkReturn(player: any): boolean
+		if player == nil or player.Character == nil then
+			return false
+		end
+		if type((player.Character :: any).PivotTo) ~= "function" then
+			return false
+		end
+
+		local returnPoint = findTinyfolkReturnPoint()
+		local targetPivot = resolveReturnPointPivot(returnPoint)
+		if targetPivot == nil then
+			return false
+		end
+
+		local ok = pcall(function()
+			(player.Character :: any):PivotTo(targetPivot)
+		end)
+		return ok
+	end
+
+	local function markPlayerEscaped(player: any, sourceId: string?): boolean
+		if player == nil or type(player.UserId) ~= "number" then
+			return false
+		end
+
+		if escapedTinyfolkByUserId[player.UserId] == true then
+			if type(player.SetAttribute) == "function" then
+				player:SetAttribute(ESCAPED_ATTRIBUTE, true)
+			end
+			return false
+		end
+
+		escapedTinyfolkByUserId[player.UserId] = true
+		if type(player.SetAttribute) == "function" then
+			player:SetAttribute(ESCAPED_ATTRIBUTE, true)
+		end
+
+		local scoreApi = getScoreServiceQueryApi()
+		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
+			scoreApi.RequestScoreEvent(player.UserId, "escape_success", now(), {
+				routeId = if type(sourceId) == "string" then sourceId else "transport_endpoint",
+			})
+		end
+
+		return true
 	end
 
 	local function resolveLineOfSightCheck(request: any): ((Vector3, Vector3) -> boolean)?
@@ -534,6 +730,61 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return cleanupExpiredBlock(routeId, routePart, now())
 	end
 
+	local function refreshFinalExitState(routeId: string, routePart: BasePart): any?
+		local finalExitState = ensureFinalExitState(routeId, routePart)
+		if finalExitState == nil then
+			return nil
+		end
+
+		local config = buildFinalExitConfig(routeId)
+		local objectiveQueryApi = getObjectiveServiceQueryApi()
+		local thresholdMet = false
+		if objectiveQueryApi ~= nil and type(objectiveQueryApi.IsEscapeObjectiveThresholdMet) == "function" then
+			local thresholdOk, thresholdResult = pcall(function()
+				return objectiveQueryApi.IsEscapeObjectiveThresholdMet()
+			end)
+			if thresholdOk and thresholdResult == true then
+				thresholdMet = true
+			end
+		end
+		if finalExitState.phase == FinalExitState.Phases.Dormant and thresholdMet == true then
+			local activation = FinalExitState.MarkObjectiveThresholdMet(finalExitState, config, now())
+			if activation.accepted == true then
+				finalExitState = activation.state
+				finalExitStateByRouteId[routeId] = finalExitState
+			end
+		end
+
+		while true do
+			local resolved = FinalExitState.ResolveTime(finalExitState, config, now())
+			if resolved.accepted ~= true then
+				break
+			end
+			finalExitState = resolved.state
+			finalExitStateByRouteId[routeId] = finalExitState
+		end
+
+		local blockSnapshot = getBlockSnapshot(routeId, routePart)
+		if
+			blockSnapshot.state == TraversalGapBlockState.States.Active
+			and (
+				finalExitState.phase == FinalExitState.Phases.Open
+				or finalExitState.phase == FinalExitState.Phases.Opening
+			)
+		then
+			local blocked =
+				FinalExitState.ApplyBlockInterruption(finalExitState, config, blockSnapshot.blockedByUserId, now())
+			if blocked.accepted == true then
+				finalExitState = blocked.state
+				finalExitStateByRouteId[routeId] = finalExitState
+			end
+		end
+
+		local snapshot = FinalExitState.GetSnapshot(finalExitState)
+		applyFinalExitAttributes(routePart, snapshot)
+		return snapshot
+	end
+
 	local function routeRejectsTraversal(routeId: string, routePart: BasePart): boolean
 		local currentTime = now()
 		local snapshot = cleanupExpiredBlock(routeId, routePart, currentTime)
@@ -546,6 +797,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local function buildRouteDebugPayload(routeId: string, routePart: BasePart, userId: number?): any
 		local snapshot = getBlockSnapshot(routeId, routePart)
+		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		local payload: any = {
 			routeId = routeId,
 			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE),
@@ -556,6 +808,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			blockExpiresAt = snapshot.expiresAt,
 			blockedByUserId = snapshot.blockedByUserId,
 			blockExempt = routeHasBlockExemption(routePart),
+			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
+			finalExitPoweredEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.poweredEndsAt else nil,
+			finalExitOpeningEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.openingEndsAt else nil,
+			finalExitBlockedEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.blockedEndsAt else nil,
+			finalExitResolvedAt = if finalExitSnapshot ~= nil then finalExitSnapshot.resolvedAt else nil,
 		}
 
 		if userId ~= nil then
@@ -600,7 +857,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			local carryInteraction =
 				grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "traversalGapBlock")
 			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
-				return { accepted = false, reason = tostring(carryInteraction.reason or "carrier_encumbered") }
+				local carryInteractionAny = carryInteraction :: any
+				return {
+					accepted = false,
+					reason = tostring(carryInteractionAny.reason or "carrier_encumbered"),
+				}
 			end
 		end
 
@@ -731,12 +992,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "route_out_of_range" }
 		end
 
+		local routeSafeZoneDecision = evaluateSafeZoneProtection(
+			routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
+			routePart:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+			routePart:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+		)
+		if routeSafeZoneDecision.protected == true then
+			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
+		end
+
+		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
+		if finalExitSnapshot ~= nil and finalExitSnapshot.isEscapeOpen ~= true then
+			return {
+				accepted = false,
+				reason = finalExitRejectReason(finalExitSnapshot.phase),
+			}
+		end
+
 		if routeRejectsTraversal(routeId, routePart) then
 			return { accepted = false, reason = "traversal_gap_block_active" }
 		end
 
-		escapedTinyfolkByUserId[player.UserId] = true
-		player:SetAttribute(ESCAPED_ATTRIBUTE, true)
+		if finalExitStateByRouteId[routeId] ~= nil then
+			local resolvedTransition =
+				FinalExitState.ResolveEscape(finalExitStateByRouteId[routeId], player.UserId, now())
+			if resolvedTransition.accepted ~= true then
+				return { accepted = false, reason = "final_exit_resolution_failed" }
+			end
+			finalExitStateByRouteId[routeId] = resolvedTransition.state
+			applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(resolvedTransition.state))
+		end
+
+		markPlayerEscaped(player, routeId)
 
 		local successfulEscapes = routePart:GetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE)
 		if type(successfulEscapes) ~= "number" then
@@ -745,12 +1032,103 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		routePart:SetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE, successfulEscapes + 1)
 		trySendToTinyfolkMovementTraitService(player, routeId)
 
-		local scoreApi = getScoreServiceQueryApi()
-		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
-			scoreApi.RequestScoreEvent(player.UserId, "escape_success", now(), { routeId = routeId })
+		return { accepted = true, reason = "accepted" }
+	end
+
+	function service.resolveTransportDeparture(endpointId: string, candidateTinyfolkUserIds: { number }): any
+		if type(endpointId) ~= "string" or string.len(endpointId) <= 0 then
+			return { accepted = false, reason = "endpoint_id_invalid" }
+		end
+		if type(candidateTinyfolkUserIds) ~= "table" then
+			return { accepted = false, reason = "candidate_user_ids_invalid" }
 		end
 
-		return { accepted = true, reason = "accepted" }
+		local transportQueryApi = getTransportServiceQueryApi()
+		if transportQueryApi == nil or type(transportQueryApi.ResolveTransportDepartureOutcome) ~= "function" then
+			return { accepted = false, reason = "transport_query_unavailable" }
+		end
+
+		local transportResult = transportQueryApi.ResolveTransportDepartureOutcome(endpointId, candidateTinyfolkUserIds)
+		if type(transportResult) ~= "table" then
+			return { accepted = false, reason = "transport_outcome_invalid" }
+		end
+		if transportResult.accepted ~= true or type(transportResult.outcome) ~= "table" then
+			return {
+				accepted = false,
+				reason = tostring(transportResult.reason or "transport_not_departed"),
+				outcome = transportResult.outcome,
+			}
+		end
+
+		local boardedEscapedUserIds = transportResult.outcome.boardedEscapedUserIds
+		local unboardedRemainingUserIds = transportResult.outcome.unboardedRemainingUserIds
+		local escapedUserIds: { number } = {}
+		local safeReturnedUserIds: { number } = {}
+		local unresolvedUserIds: { number } = {}
+
+		if type(boardedEscapedUserIds) == "table" then
+			for _, userId in ipairs(boardedEscapedUserIds) do
+				if type(userId) == "number" then
+					local player = getPlayerByUserId(userId)
+					if player ~= nil and isTinyfolk(player) then
+						if markPlayerEscaped(player, endpointId) then
+							table.insert(escapedUserIds, userId)
+						end
+					end
+				end
+			end
+		end
+
+		if type(unboardedRemainingUserIds) == "table" then
+			for _, userId in ipairs(unboardedRemainingUserIds) do
+				if type(userId) == "number" then
+					local player = getPlayerByUserId(userId)
+					if player ~= nil and isTinyfolk(player) then
+						escapedTinyfolkByUserId[userId] = false
+						if type(player.SetAttribute) == "function" then
+							player:SetAttribute(ESCAPED_ATTRIBUTE, false)
+						end
+
+						if relocatePlayerToTinyfolkReturn(player) then
+							table.insert(safeReturnedUserIds, userId)
+						else
+							table.insert(unresolvedUserIds, userId)
+						end
+					end
+				end
+			end
+		end
+
+		local transportRouteId = transportResult.outcome.routeId
+		local resolvedTransportFinalExit = false
+		if type(transportRouteId) == "string" and string.len(transportRouteId) > 0 and #escapedUserIds > 0 then
+			local routePart = resolveRoutePart(transportRouteId)
+			if routePart ~= nil then
+				local finalExitSnapshot = refreshFinalExitState(transportRouteId, routePart)
+				if finalExitSnapshot ~= nil and finalExitSnapshot.phase == FinalExitState.Phases.Open then
+					local resolvedTransition = FinalExitState.ResolveEscape(
+						finalExitStateByRouteId[transportRouteId],
+						escapedUserIds[1],
+						now()
+					)
+					if resolvedTransition.accepted == true then
+						finalExitStateByRouteId[transportRouteId] = resolvedTransition.state
+						applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(resolvedTransition.state))
+						resolvedTransportFinalExit = true
+					end
+				end
+			end
+		end
+
+		return {
+			accepted = true,
+			reason = "accepted",
+			escapedUserIds = escapedUserIds,
+			safeReturnedUserIds = safeReturnedUserIds,
+			unresolvedUserIds = unresolvedUserIds,
+			resolvedTransportFinalExit = resolvedTransportFinalExit,
+			outcome = transportResult.outcome,
+		}
 	end
 
 	function service.getDebugState(player: any, routeId: any?): any
@@ -783,6 +1161,37 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		safeZoneAbuseStateByUserId = {}
 		for routeId, routePart in escapeRouteById do
 			applyBlockAttributes(routePart, TraversalGapBlockState.Snapshot(nil, now()))
+		end
+	end
+
+	function service.ResetEscapeAttemptStateForTests()
+		escapedTinyfolkByUserId = {}
+	end
+
+	function service.getFinalExitSnapshot(routeId: any): any
+		if type(routeId) ~= "string" then
+			return nil
+		end
+		local routePart = resolveRoutePart(routeId)
+		if routePart == nil then
+			return nil
+		end
+		return refreshFinalExitState(routeId, routePart)
+	end
+
+	function service.RefreshFinalExitStateForTests(routeId: any): any
+		return service.getFinalExitSnapshot(routeId)
+	end
+
+	function service.ResetFinalExitForTests()
+		finalExitStateByRouteId = {}
+		for routeId, routePart in escapeRouteById do
+			local finalExitState = ensureFinalExitState(routeId, routePart)
+			if finalExitState ~= nil then
+				applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(finalExitState))
+			else
+				applyFinalExitAttributes(routePart, nil)
+			end
 		end
 	end
 
@@ -1022,6 +1431,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	end
 
 	service.initialize = initialize
+
+	_G._EscapeService_QueryAPI = {
+		ResolveTransportDeparture = function(endpointId: string, candidateTinyfolkUserIds: { number }): any
+			return service.resolveTransportDeparture(endpointId, candidateTinyfolkUserIds)
+		end,
+		GetFinalExitSnapshot = function(routeId: string): any
+			return service.getFinalExitSnapshot(routeId)
+		end,
+	}
 
 	if options == nil or options.autoInitialize ~= false then
 		local ok, errorOrNil = pcall(initialize)

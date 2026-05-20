@@ -36,6 +36,13 @@ local function createEscapeServiceFixture()
 		TraversalGapBlockActiveEndsAt = nil,
 		TraversalGapBlockExpiresAt = nil,
 		TraversalGapBlockedByUserId = nil,
+		FinalExitManaged = false,
+		FinalExitPhase = nil,
+		FinalExitPoweredEndsAt = nil,
+		FinalExitOpeningEndsAt = nil,
+		FinalExitBlockedEndsAt = nil,
+		FinalExitResolvedAt = nil,
+		FinalExitBlockedByUserId = nil,
 	}
 
 	local routePart: any = {
@@ -138,6 +145,17 @@ local function createEscapeServiceFixture()
 										TraversalGapBlockExpiresAtAttribute = "TraversalGapBlockExpiresAt",
 										TraversalGapBlockedByUserIdAttribute = "TraversalGapBlockedByUserId",
 										TraversalGapBlockExemptAttribute = "TraversalGapBlockExempt",
+										FinalExitManagedAttribute = "FinalExitManaged",
+										FinalExitPhaseAttribute = "FinalExitPhase",
+										FinalExitPoweredEndsAtAttribute = "FinalExitPoweredEndsAt",
+										FinalExitOpeningEndsAtAttribute = "FinalExitOpeningEndsAt",
+										FinalExitBlockedEndsAtAttribute = "FinalExitBlockedEndsAt",
+										FinalExitResolvedAtAttribute = "FinalExitResolvedAt",
+										FinalExitBlockedByUserIdAttribute = "FinalExitBlockedByUserId",
+										FinalExitPoweredDurationSeconds = 2,
+										FinalExitOpeningDurationSeconds = 3,
+										FinalExitBlockedDurationSeconds = 4,
+										FinalExitReopenDurationSeconds = 2,
 										SupportedThroughGapRouteTypes = { TraversalGap = true },
 									}
 								end
@@ -173,6 +191,68 @@ local function createEscapeServiceFixture()
 	end
 
 	local currentTime = 100
+	local objectiveState: any = {
+		requiredCompletions = 1,
+		completedCount = 0,
+		registeredSiteIds = {
+			ObjectiveSite_A = true,
+		},
+		completedSiteIds = {},
+	}
+	local scoreEvents: { any } = {}
+	_G._ScoreService_QueryAPI = {
+		RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
+			table.insert(scoreEvents, {
+				userId = userId,
+				eventId = eventId,
+				at = at,
+				metadata = metadata,
+			})
+			return { accepted = true, reason = "accepted" }
+		end,
+	}
+	_G._RealmObjectiveService_QueryAPI = {
+		IsEscapeObjectiveThresholdMet = function(): boolean
+			return objectiveState.completedCount >= objectiveState.requiredCompletions
+		end,
+		RecordObjectiveCompletion = function(siteId: string, _completedByUserId: number?, _at: number?): any
+			if type(siteId) ~= "string" or objectiveState.registeredSiteIds[siteId] ~= true then
+				return {
+					accepted = false,
+					reason = "site_not_found",
+				}
+			end
+			if objectiveState.completedSiteIds[siteId] == true then
+				return {
+					accepted = false,
+					reason = "already_completed",
+				}
+			end
+			objectiveState.completedSiteIds[siteId] = true
+			objectiveState.completedCount += 1
+			return {
+				accepted = true,
+				reason = "accepted",
+			}
+		end,
+		RegisterObjectiveSiteForTests = function(siteId: string): any
+			if type(siteId) ~= "string" or siteId == "" then
+				return {
+					accepted = false,
+					reason = "site_id_invalid",
+				}
+			end
+			objectiveState.registeredSiteIds[siteId] = true
+			return {
+				accepted = true,
+				reason = "accepted",
+			}
+		end,
+		ResetForTests = function()
+			objectiveState.completedCount = 0
+			objectiveState.completedSiteIds = {}
+		end,
+	}
 	local EscapeServiceFactory = require("../src/ServerScriptService/Services/EscapeService.server")
 	local escapeService = EscapeServiceFactory(mockGame, {
 		autoInitialize = true,
@@ -193,6 +273,293 @@ local function createEscapeServiceFixture()
 		playersByUserId = playersByUserId,
 		setNow = function(nextNow: number)
 			currentTime = nextNow
+		end,
+		completeObjective = function(siteId: string, completedByUserId: number?, at: number?): any
+			return _G._RealmObjectiveService_QueryAPI.RecordObjectiveCompletion(siteId, completedByUserId, at)
+		end,
+	}
+end
+
+local function createTransportEscapeIntegrationFixture()
+	local routeAttributes: { [string]: any } = {
+		ThroughGapReachAllowed = true,
+		RouteType = "TraversalGap",
+		InSafeZone = false,
+		SafeZoneType = nil,
+		SafeZoneProtectionEndsAt = nil,
+		TraversalGapBlockExempt = false,
+		TraversalGapBlockState = "Idle",
+		TraversalGapBlockStartupEndsAt = nil,
+		TraversalGapBlockActiveEndsAt = nil,
+		TraversalGapBlockExpiresAt = nil,
+		TraversalGapBlockedByUserId = nil,
+	}
+
+	local routePart: any = {
+		Name = "EscapeRoute_A",
+		ClassName = "BasePart",
+		Position = { x = 0, y = 0, z = 0 },
+	}
+
+	function routePart:IsA(className: string): boolean
+		return className == "BasePart"
+	end
+
+	function routePart:GetAttribute(attributeName: string): any
+		return routeAttributes[attributeName]
+	end
+
+	function routePart:SetAttribute(attributeName: string, value: any)
+		routeAttributes[attributeName] = value
+	end
+
+	local escapeRoutesFolder: any = {
+		ClassName = "Folder",
+	}
+
+	function escapeRoutesFolder:FindFirstChild(childName: string): any
+		if childName == "EscapeRoute_A" then
+			return routePart
+		end
+		return nil
+	end
+
+	function escapeRoutesFolder:GetDescendants(): { any }
+		return { routePart }
+	end
+
+	local transportEndpointAttributes: { [string]: any } = {
+		TransportEndpointId = "Transport_Main",
+		TransportRequiredComponents = { "Fuel", "Wheel" },
+		TransportCapacity = 2,
+		TransportOperatorRequired = true,
+		TransportStartupDurationSeconds = 3,
+		TransportLaunchDurationSeconds = 2,
+		TransportMaxStartupInterruptions = 1,
+	}
+
+	local transportEndpointPart: any = {
+		Name = "TransportEndpoint_Main",
+		ClassName = "BasePart",
+	}
+
+	function transportEndpointPart:GetAttribute(attributeName: string): any
+		return transportEndpointAttributes[attributeName]
+	end
+
+	function transportEndpointPart:SetAttribute(attributeName: string, value: any)
+		transportEndpointAttributes[attributeName] = value
+	end
+
+	local transportEndpointsFolder: any = {
+		ClassName = "Folder",
+	}
+
+	function transportEndpointsFolder:GetChildren(): { any }
+		return { transportEndpointPart }
+	end
+
+	local tinyfolkReturnPoint: any = {
+		Name = "TinyfolkReturnPoint",
+		ClassName = "Part",
+		Position = { x = 0, y = 2, z = -75 },
+		CFrame = { Position = { x = 0, y = 2, z = -75 } },
+	}
+
+	local tinyfolkWorldFolder: any = {
+		ClassName = "Folder",
+	}
+
+	function tinyfolkWorldFolder:FindFirstChild(childName: string): any
+		if childName == "TinyfolkReturnPoint" then
+			return tinyfolkReturnPoint
+		end
+		return nil
+	end
+
+	local mapFolder: any = {
+		ClassName = "Folder",
+	}
+
+	function mapFolder:FindFirstChild(childName: string): any
+		if childName == "EscapeRoutes" then
+			return escapeRoutesFolder
+		end
+		if childName == "TransportEndpoints" then
+			return transportEndpointsFolder
+		end
+		if childName == "TinyfolkWorld" then
+			return tinyfolkWorldFolder
+		end
+		return nil
+	end
+
+	local workspaceService: any = {
+		ClassName = "Workspace",
+	}
+
+	function workspaceService:FindFirstChild(childName: string): any
+		if childName == "Map" then
+			return mapFolder
+		end
+		return nil
+	end
+
+	local playersByUserId: { [number]: any } = {}
+	local playersService: any = {}
+	function playersService:GetPlayers(): { any }
+		local players = {}
+		for _, player in pairs(playersByUserId) do
+			table.insert(players, player)
+		end
+		table.sort(players, function(a: any, b: any)
+			return a.UserId < b.UserId
+		end)
+		return players
+	end
+	playersService.GetPlayerByUserId = function(userId: number)
+		return playersByUserId[userId]
+	end
+
+	local replicatedStorageService: any = {
+		WaitForChild = function(_name: string)
+			return {
+				WaitForChild = function(childName: string)
+					if childName == "Config" then
+						return {
+							WaitForChild = function(configName: string)
+								if configName == "RoleConfig" then
+									return { Roles = { Giant = "Giant", Tinyfolk = "Tinyfolk" } }
+								end
+								if configName == "EscapeConfig" then
+									return {
+										EscapeRouteNamePrefix = "EscapeRoute",
+										TriggerRadiusStuds = 10,
+										RequestCooldownSeconds = 0,
+										ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed",
+										RouteTypeAttribute = "RouteType",
+										CrossingPhaseAttribute = "CrossingPhase",
+										RequiredCrossingPhase = "MidCrossing",
+										SafeZoneAttribute = "InSafeZone",
+										SafeZoneTypeAttribute = "SafeZoneType",
+										SafeZoneProtectionEndsAtAttribute = "SafeZoneProtectionEndsAt",
+										SafeZoneTypes = {
+											SharedHub = "SharedHub",
+											RealmEntry = "RealmEntry",
+											RealmExit = "RealmExit",
+										},
+										TinyfolkWorldFolderPath = { "Map", "TinyfolkWorld" },
+										TinyfolkReturnPointName = "TinyfolkReturnPoint",
+										SafeZoneAbuseWindowSeconds = 2,
+										SafeZoneAbuseThreshold = 3,
+										SafeZoneAbuseLockoutSeconds = 1,
+										TraversalGapBlockStartupSeconds = 1,
+										TraversalGapBlockActiveSeconds = 4,
+										TraversalGapBlockRequestCooldownSeconds = 0,
+										TraversalGapBlockStateAttribute = "TraversalGapBlockState",
+										TraversalGapBlockStartupEndsAtAttribute = "TraversalGapBlockStartupEndsAt",
+										TraversalGapBlockActiveEndsAtAttribute = "TraversalGapBlockActiveEndsAt",
+										TraversalGapBlockExpiresAtAttribute = "TraversalGapBlockExpiresAt",
+										TraversalGapBlockedByUserIdAttribute = "TraversalGapBlockedByUserId",
+										TraversalGapBlockExemptAttribute = "TraversalGapBlockExempt",
+										SupportedThroughGapRouteTypes = { TraversalGap = true },
+									}
+								end
+								return nil
+							end,
+						}
+					end
+					if childName == "GiantRealm" then
+						return {
+							WaitForChild = function(_configName: string)
+								return nil
+							end,
+						}
+					end
+					return nil
+				end,
+			}
+		end,
+	}
+
+	local mockGame: any = {}
+	mockGame.GetService = function(serviceName: string)
+		if serviceName == "Players" then
+			return playersService
+		end
+		if serviceName == "ReplicatedStorage" then
+			return replicatedStorageService
+		end
+		if serviceName == "Workspace" then
+			return workspaceService
+		end
+		return nil
+	end
+
+	local currentTime = 100
+	local objectiveThresholdMet = false
+	local scoreEvents: { any } = {}
+	_G._ScoreService_QueryAPI = {
+		RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
+			table.insert(scoreEvents, {
+				userId = userId,
+				eventId = eventId,
+				at = at,
+				metadata = metadata,
+			})
+			return { accepted = true, reason = "accepted" }
+		end,
+	}
+	_G._RealmObjectiveService_QueryAPI = {
+		IsEscapeObjectiveThresholdMet = function(): boolean
+			return objectiveThresholdMet == true
+		end,
+	}
+	local EscapeServiceFactory = require("../src/ServerScriptService/Services/EscapeService.server")
+	local escapeService = EscapeServiceFactory(mockGame, {
+		autoInitialize = true,
+		clock = function()
+			return currentTime
+		end,
+		disableBlockExpirationSchedule = true,
+		tinyfolkMovementTraitService = {
+			OnValidRouteCrossing = function(_player: any, _routeId: string)
+				return
+			end,
+		},
+	})
+
+	local TransportEscapeServiceFactory = require("../src/ServerScriptService/Services/TransportEscapeService.server")
+	TransportEscapeServiceFactory(mockGame, {
+		autoInitialize = true,
+		clock = function()
+			return currentTime
+		end,
+	})
+
+	return {
+		escapeService = escapeService,
+		transportQueryApi = _G._TransportEscapeService_QueryAPI,
+		playersByUserId = playersByUserId,
+		routeAttributes = routeAttributes,
+		scoreEvents = scoreEvents,
+		setNow = function(nextNow: number)
+			currentTime = nextNow
+		end,
+		setObjectiveThresholdMet = function(isMet: boolean)
+			objectiveThresholdMet = isMet == true
+		end,
+		refreshFinalExit = function(routeId: string?): any
+			return _G._EscapeService_QueryAPI.GetFinalExitSnapshot(if routeId ~= nil then routeId else "EscapeRoute_A")
+		end,
+		openFinalExit = function(routeId: string?)
+			local targetRouteId = if routeId ~= nil then routeId else "EscapeRoute_A"
+			objectiveThresholdMet = true
+			_G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
+			currentTime = 102
+			_G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
+			currentTime = 105
+			return _G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
 		end,
 	}
 end
@@ -290,7 +657,61 @@ end
 
 do
 	local fixture = createEscapeServiceFixture()
+	fixture.routeAttributes.FinalExitManaged = true
+
+	local sim = MatchSimulation.new({ seed = 151, escapeService = fixture.escapeService })
+	local tinyfolk = sim:addPlayer(12, "FinalExitTinyfolk", { role = "Tinyfolk", crossingPhase = "MidCrossing" })
+	fixture.playersByUserId[12] = tinyfolk
+
+	sim:queueAction(1, "attemptEscape", {
+		userId = 12,
+		routeId = "EscapeRoute_A",
+	})
+	sim:advanceTick()
+
+	local initialResults = sim:getResults()
+	assertEqual(initialResults[2].result.accepted, false, "managed final exit rejects dormant escape in headless flow")
+	assertEqual(initialResults[2].result.reason, "final_exit_dormant", "managed final exit dormant reason")
+
+	local objectiveResult = fixture.completeObjective("ObjectiveSite_A", 12, 100)
+	assertEqual(objectiveResult.accepted, true, "objective completion accepted in headless fixture")
+	assertEqual(objectiveResult.reason, "accepted", "objective completion reason")
+
+	fixture.setNow(100)
+	sim:queueAction(2, "attemptEscape", {
+		userId = 12,
+		routeId = "EscapeRoute_A",
+	})
+	sim:advanceTick()
+	local poweredResults = sim:getResults()
+	assertEqual(poweredResults[3].result.accepted, false, "managed final exit rejects powered escape in headless flow")
+	assertEqual(poweredResults[3].result.reason, "final_exit_powered", "managed final exit powered reason")
+
+	fixture.setNow(102)
+	sim:queueAction(3, "attemptEscape", {
+		userId = 12,
+		routeId = "EscapeRoute_A",
+	})
+	sim:advanceTick()
+	local openingResults = sim:getResults()
+	assertEqual(openingResults[4].result.accepted, false, "managed final exit rejects opening escape in headless flow")
+	assertEqual(openingResults[4].result.reason, "final_exit_opening", "managed final exit opening reason")
+
+	fixture.setNow(105)
+	sim:queueAction(4, "attemptEscape", {
+		userId = 12,
+		routeId = "EscapeRoute_A",
+	})
+	sim:advanceTick()
+	local openResults = sim:getResults()
+	assertEqual(openResults[5].result.accepted, true, "managed final exit accepts escape once open")
+	assertEqual(tinyfolk:GetAttribute("Escaped"), true, "headless open final exit marks Tinyfolk escaped")
+end
+
+do
+	local fixture = createEscapeServiceFixture()
 	fixture.routeAttributes.InSafeZone = true
+	fixture.routeAttributes.SafeZoneType = "SharedHub"
 	local sim = MatchSimulation.new({ seed = 202, escapeService = fixture.escapeService })
 	local giant = sim:addPlayer(3, "SafeZoneGiant", { role = "Giant" })
 	local tinyfolk = sim:addPlayer(4, "SafeZoneTinyfolk", { role = "Tinyfolk", crossingPhase = "MidCrossing" })
@@ -316,12 +737,8 @@ do
 
 	local results = sim:getResults()
 	assertEqual(results[3].result.accepted, false, "safe-zone rejects through-gap reach")
-	assertEqual(
-		results[4].result.accepted,
-		true,
-		"safe-zone route does not reject direct escape attempt in current service"
-	)
-	assertEqual(results[4].result.reason, "accepted", "escape attempt reason is accepted on current service path")
+	assertEqual(results[4].result.accepted, false, "safe-zone route rejects direct escape attempt")
+	assertEqual(results[4].result.reason, "shared_hub_no_capture", "escape attempt reason is safe-zone protected")
 	assertEqual(giant:GetAttribute("Role"), "Giant", "safe-zone flow does not mutate role")
 end
 
@@ -679,6 +1096,125 @@ do
 	assertEqual(results[7].result.snapshot.state, "Released", "headless counterplay release exposed")
 	assertEqual(results[7].result.carrierLoadSnapshot.slotsUsed, 0, "headless release clears carrier load")
 	assertEqual(results[7].result.snapshot.releaseReason, "counterplay_completed", "headless release reason exposed")
+end
+
+do
+	for runIndex = 1, 2 do
+		local fixture = createTransportEscapeIntegrationFixture()
+		local sim = MatchSimulation.new({ seed = 900 + runIndex, escapeService = fixture.escapeService })
+		local boardedOperator = sim:addPlayer(7100 + (runIndex * 10), "BoardedOperator", { role = "Tinyfolk" })
+		local boardedPassenger = sim:addPlayer(7101 + (runIndex * 10), "BoardedPassenger", { role = "Tinyfolk" })
+		local unboardedParticipant =
+			sim:addPlayer(7102 + (runIndex * 10), "UnboardedParticipant", { role = "Tinyfolk" })
+		local bystanderTinyfolk = sim:addPlayer(7103 + (runIndex * 10), "BystanderTinyfolk", { role = "Tinyfolk" })
+		sim:addPlayer(7104 + (runIndex * 10), "PressureGiant", { role = "Giant" })
+
+		fixture.playersByUserId[boardedOperator.UserId] = boardedOperator
+		fixture.playersByUserId[boardedPassenger.UserId] = boardedPassenger
+		fixture.playersByUserId[unboardedParticipant.UserId] = unboardedParticipant
+		fixture.playersByUserId[bystanderTinyfolk.UserId] = bystanderTinyfolk
+
+		fixture.setNow(100)
+		local transportApi = fixture.transportQueryApi
+		local fuelDelivered =
+			transportApi.RecordTransportComponentDelivered("Transport_Main", "Fuel", boardedOperator.UserId, 100)
+		local wheelInstalled =
+			transportApi.RecordTransportComponentInstalled("Transport_Main", "Wheel", unboardedParticipant.UserId, 101)
+		assertTrue(fuelDelivered.accepted, "repeated match fuel delivery accepted")
+		assertTrue(wheelInstalled.accepted, "repeated match wheel install accepted")
+
+		assertTrue(
+			transportApi.BoardTransportPassenger("Transport_Main", boardedOperator.UserId, true).accepted,
+			"repeated match operator boarding accepted"
+		)
+		assertTrue(
+			transportApi.BoardTransportPassenger("Transport_Main", unboardedParticipant.UserId, false).accepted,
+			"repeated match transient passenger boarding accepted"
+		)
+		assertTrue(
+			transportApi.UnboardTransportPassenger("Transport_Main", unboardedParticipant.UserId).accepted,
+			"repeated match transient passenger unboarding accepted"
+		)
+		assertTrue(
+			transportApi.BoardTransportPassenger("Transport_Main", boardedPassenger.UserId, false).accepted,
+			"repeated match final passenger boarding accepted"
+		)
+
+		local started = transportApi.StartTransportStartup("Transport_Main", boardedOperator.UserId, 110)
+		assertTrue(started.accepted, "repeated match startup accepted")
+		local launched = transportApi.TickTransportEndpoint("Transport_Main", 113)
+		assertEqual(launched.reason, "launch_started", "repeated match launch transition")
+		local departed = transportApi.TickTransportEndpoint("Transport_Main", 115)
+		assertEqual(departed.reason, "departed", "repeated match departure transition")
+		assertTrue(type(departed.escapeResolution) == "table", "repeated match departure includes escape resolution")
+		assertEqual(departed.escapeResolution.accepted, true, "repeated match departure resolution accepted")
+		assertEqual(#departed.escapeResolution.escapedUserIds, 2, "repeated match escaped boarded count")
+		assertEqual(#departed.escapeResolution.safeReturnedUserIds, 1, "repeated match safe-return unboarded count")
+
+		assertEqual(boardedOperator:GetAttribute("Escaped"), true, "repeated match boarded operator escaped")
+		assertEqual(boardedPassenger:GetAttribute("Escaped"), true, "repeated match boarded passenger escaped")
+		assertEqual(
+			unboardedParticipant:GetAttribute("Escaped"),
+			false,
+			"repeated match unboarded participant not escaped"
+		)
+		assertTrue(
+			unboardedParticipant.Character.LastPivotCFrame ~= nil,
+			"repeated match unboarded participant safely relocated"
+		)
+		assertTrue(
+			bystanderTinyfolk.Character.LastPivotCFrame == nil,
+			"repeated match unrelated bystander is not incorrectly relocated"
+		)
+	end
+end
+
+do
+	local fixture = createTransportEscapeIntegrationFixture()
+	local sim = MatchSimulation.new({ seed = 950, escapeService = fixture.escapeService })
+	local boardedOperator = sim:addPlayer(8001, "ReconnectOperator", { role = "Tinyfolk" })
+	local removedBoarded = sim:addPlayer(8002, "RemovedBoarded", { role = "Tinyfolk" })
+	local unboardedTinyfolk = sim:addPlayer(8003, "ReconnectUnboarded", { role = "Tinyfolk" })
+
+	fixture.playersByUserId[boardedOperator.UserId] = boardedOperator
+	fixture.playersByUserId[removedBoarded.UserId] = removedBoarded
+	fixture.playersByUserId[unboardedTinyfolk.UserId] = unboardedTinyfolk
+
+	local transportApi = fixture.transportQueryApi
+	transportApi.RecordTransportComponentDelivered("Transport_Main", "Fuel", boardedOperator.UserId, 100)
+	transportApi.RecordTransportComponentInstalled("Transport_Main", "Wheel", removedBoarded.UserId, 101)
+	transportApi.BoardTransportPassenger("Transport_Main", boardedOperator.UserId, true)
+	transportApi.BoardTransportPassenger("Transport_Main", unboardedTinyfolk.UserId, false)
+	transportApi.UnboardTransportPassenger("Transport_Main", unboardedTinyfolk.UserId)
+	transportApi.BoardTransportPassenger("Transport_Main", removedBoarded.UserId, false)
+
+	-- Simulate departure with one boarded Tinyfolk removed from roster before launch resolves.
+	fixture.playersByUserId[removedBoarded.UserId] = nil
+	sim.players[removedBoarded.UserId] = nil
+
+	transportApi.StartTransportStartup("Transport_Main", boardedOperator.UserId, 110)
+	transportApi.TickTransportEndpoint("Transport_Main", 113)
+	local departedWhileRemoved = transportApi.TickTransportEndpoint("Transport_Main", 115)
+	assertTrue(departedWhileRemoved.accepted, "removal edge departed transition accepted")
+	assertEqual(#departedWhileRemoved.escapeResolution.escapedUserIds, 1, "removal edge escapes only present boarded")
+	assertEqual(#departedWhileRemoved.escapeResolution.safeReturnedUserIds, 1, "removal edge safe-returns unboarded")
+
+	-- Simulate reconnect and force explicit reconciliation call for the departed endpoint.
+	local reconnectedBoarded = sim:addPlayer(8002, "RemovedBoardedReconnect", { role = "Tinyfolk" })
+	fixture.playersByUserId[reconnectedBoarded.UserId] = reconnectedBoarded
+	local reconciled = fixture.escapeService.resolveTransportDeparture(
+		"Transport_Main",
+		{ boardedOperator.UserId, reconnectedBoarded.UserId, unboardedTinyfolk.UserId }
+	)
+	assertTrue(reconciled.accepted, "reconnect edge explicit reconciliation accepted")
+	assertEqual(
+		reconnectedBoarded:GetAttribute("Escaped"),
+		true,
+		"reconnect edge boarded tinyfolk escaped after reconciliation"
+	)
+	assertEqual(unboardedTinyfolk:GetAttribute("Escaped"), false, "reconnect edge unboarded remains non-escaped")
+	assertEqual(#reconciled.escapedUserIds, 1, "reconnect edge reconciliation only newly escapes reconnect")
+	assertEqual(#fixture.scoreEvents, 2, "reconnect edge does not duplicate escape score for already escaped boarder")
 end
 
 print("headless_match_simulation: all checks passed")

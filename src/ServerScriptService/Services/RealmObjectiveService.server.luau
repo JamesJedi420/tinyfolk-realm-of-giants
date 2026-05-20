@@ -25,10 +25,21 @@ end
 local function getPathNode(root: any, path: { string }): any?
 	local current = root
 	for _, segment in ipairs(path) do
-		if current == nil or type(current.WaitForChild) ~= "function" then
+		if current == nil then
 			return nil
 		end
-		current = current:WaitForChild(segment)
+
+		if type(current.FindFirstChild) == "function" then
+			current = current:FindFirstChild(segment)
+		elseif type(current.WaitForChild) == "function" then
+			current = current:WaitForChild(segment, 0)
+		else
+			return nil
+		end
+
+		if current == nil then
+			return nil
+		end
 	end
 	return current
 end
