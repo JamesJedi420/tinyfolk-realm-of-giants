@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local REMOTES_FOLDER_NAME = "Remotes"
-local REQUEST_REMOTE_NAME = "EmergencyReinforcementRequest"
 local RESPONSE_REMOTE_NAME = "EmergencyReinforcementResponse"
 local DEBUG_REQUEST_REMOTE_NAME = "EmergencyReinforcementDebugStateRequest"
 local DEBUG_RESPONSE_REMOTE_NAME = "EmergencyReinforcementDebugStateResponse"
@@ -20,7 +19,6 @@ local Config = Shared:WaitForChild("Config")
 local EmergencyReinforcementConfig = require(Config:WaitForChild("EmergencyReinforcementConfig"))
 
 local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
-local requestRemote = remotesFolder:WaitForChild(REQUEST_REMOTE_NAME) :: RemoteEvent
 local responseRemote = remotesFolder:WaitForChild(RESPONSE_REMOTE_NAME) :: RemoteEvent
 local debugRequestRemote = remotesFolder:WaitForChild(DEBUG_REQUEST_REMOTE_NAME) :: RemoteEvent
 local debugResponseRemote = remotesFolder:WaitForChild(DEBUG_RESPONSE_REMOTE_NAME) :: RemoteEvent
@@ -69,6 +67,11 @@ local function formatSeconds(seconds: number): string
 	local minutes = math.floor(clamped / 60)
 	local remainderSeconds = clamped % 60
 	return string.format("%02d:%02d", minutes, remainderSeconds)
+end
+
+local existingGui = playerGui:FindFirstChild("EmergencyReinforcementHud")
+if existingGui ~= nil and existingGui:IsA("ScreenGui") then
+	existingGui:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
@@ -169,6 +172,8 @@ local function updateHud()
 	elseif isAvailable then
 		statusLabel.Text = "Status: Ready"
 		statusLabel.TextColor3 = Color3.fromRGB(130, 214, 132)
+		-- Avoid stale rejection messaging when a fresh snapshot reports ready.
+		latestReason = nil
 	elseif cooldownEndsAt ~= nil and cooldownEndsAt > nowAt then
 		statusLabel.Text = string.format("Status: Cooldown %s", formatSeconds(cooldownEndsAt - nowAt))
 		statusLabel.TextColor3 = Color3.fromRGB(240, 200, 116)
@@ -228,7 +233,9 @@ end)
 
 task.spawn(function()
 	while true do
-		debugRequestRemote:FireServer(nil)
+		if localPlayer:GetAttribute("Role") == "Tinyfolk" then
+			debugRequestRemote:FireServer(nil)
+		end
 		task.wait(SNAPSHOT_POLL_INTERVAL_SECONDS)
 	end
 end)
