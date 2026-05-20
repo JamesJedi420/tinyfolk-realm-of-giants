@@ -547,25 +547,26 @@ assertEqual(
 assertEqual(realmLoadCallCountByUserId[2004], 1, "realm save failure setup loads realm")
 assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), 2004, "second loaded Giant becomes active realm owner")
 
-playerRemoving:Fire(playerUpdateOk)
-assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
-assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
+playerRemoving:Fire(playerRealmSaveFail)
+assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
+assertEqual(realmReleaseCallCountByUserId[2004], 1, "save failure Giant still releases realm")
 assertEqual(
 	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
-	2004,
-	"removing non-active loaded Giant preserves active realm owner"
+	2001,
+	"removing active Giant falls back to remaining loaded realm owner"
 )
+assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), 2001, "active realm owner projection falls back")
+assertTrue(sawWarnContaining("Giant realm save failed userId=2004"), "realm save failure warning emitted")
 
 playerRemoving:Fire(playerRealmLoadFail)
 assertEqual(realmSaveCallCountByUserId[2003], nil, "removing failed-load Giant does not save realm")
 assertEqual(realmReleaseCallCountByUserId[2003], nil, "removing failed-load Giant does not release realm")
 
-playerRemoving:Fire(playerRealmSaveFail)
-assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
-assertEqual(realmReleaseCallCountByUserId[2004], 1, "save failure Giant still releases realm")
+playerRemoving:Fire(playerUpdateOk)
+assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
+assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
 assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), nil, "removing active Giant clears active realm owner")
 assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), nil, "active realm owner projection clears")
-assertTrue(sawWarnContaining("Giant realm save failed userId=2004"), "realm save failure warning emitted")
 
 bindToCloseCallbacks[1]()
 assertEqual(realmSaveCallCountByUserId[2001], 1, "shutdown does not resave removed Giant")

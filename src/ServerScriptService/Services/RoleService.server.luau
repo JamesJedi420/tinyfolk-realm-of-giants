@@ -457,6 +457,16 @@ local function projectActiveGiantRealmOwner()
 	end
 end
 
+local function findLoadedGiantRealmOwnerUserId(): number?
+	for _, player in Players:GetPlayers() do
+		if loadedGiantRealmOwnerUserIds[player.UserId] then
+			return player.UserId
+		end
+	end
+
+	return nil
+end
+
 local function loadGiantRealmForPlayer(player: Player)
 	if loadedGiantRealmOwnerUserIds[player.UserId] then
 		return
@@ -509,7 +519,7 @@ local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
 	loadedGiantRealmOwnerUserIds[player.UserId] = nil
 	cleanedGiantRealmOwnerUserIds[player.UserId] = true
 	if activeGiantRealmOwnerUserId == player.UserId then
-		activeGiantRealmOwnerUserId = nil
+		activeGiantRealmOwnerUserId = findLoadedGiantRealmOwnerUserId()
 		projectActiveGiantRealmOwner()
 	end
 end
