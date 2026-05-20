@@ -5,6 +5,9 @@ local RescueContractState = {}
 export type RescueContract = {
 	rescuerUserId: number,
 	targetUserId: number,
+	targetRealmOwnerUserId: number,
+	entryRouteId: string,
+	entryRouteKind: string,
 	startedAt: number,
 	expiresAt: number,
 	isAccelerated: boolean,
@@ -27,6 +30,9 @@ export type RequestInput = {
 	targetCarried: boolean,
 	targetProtected: boolean,
 	inRange: boolean,
+	targetRealmOwnerUserId: number?,
+	entryRouteId: string?,
+	entryRouteKind: string?,
 	rescueWindowSeconds: number,
 	accelerationActive: boolean?,
 	accelerationWindowBonusSeconds: number?,
@@ -65,6 +71,17 @@ local function validNow(now: any): boolean
 	return now >= 0
 end
 
+local function validPositiveInteger(value: any): boolean
+	if not validNumber(value) then
+		return false
+	end
+	return value > 0 and value % 1 == 0
+end
+
+local function validNonEmptyString(value: any): boolean
+	return type(value) == "string" and value ~= ""
+end
+
 local function cloneState(state: State): State
 	local contractsByRescuer: { [number]: RescueContract? } = {}
 	for rescuerUserId, contract in pairs(state.contractsByRescuer) do
@@ -72,6 +89,9 @@ local function cloneState(state: State): State
 			contractsByRescuer[rescuerUserId] = {
 				rescuerUserId = contract.rescuerUserId,
 				targetUserId = contract.targetUserId,
+				targetRealmOwnerUserId = contract.targetRealmOwnerUserId,
+				entryRouteId = contract.entryRouteId,
+				entryRouteKind = contract.entryRouteKind,
 				startedAt = contract.startedAt,
 				expiresAt = contract.expiresAt,
 				isAccelerated = contract.isAccelerated,
@@ -179,6 +199,21 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 		return { accepted = false, reason = "target_out_of_range", state = nextState, contract = nil }
 	end
 
+	if not validPositiveInteger(input.targetRealmOwnerUserId) then
+		nextState.lastReason = "target_realm_owner_user_id_invalid"
+		return { accepted = false, reason = "target_realm_owner_user_id_invalid", state = nextState, contract = nil }
+	end
+
+	if not validNonEmptyString(input.entryRouteId) then
+		nextState.lastReason = "rescue_entry_route_id_invalid"
+		return { accepted = false, reason = "rescue_entry_route_id_invalid", state = nextState, contract = nil }
+	end
+
+	if not validNonEmptyString(input.entryRouteKind) then
+		nextState.lastReason = "rescue_entry_route_kind_invalid"
+		return { accepted = false, reason = "rescue_entry_route_kind_invalid", state = nextState, contract = nil }
+	end
+
 	if nextState.contractsByRescuer[input.rescuerUserId] ~= nil then
 		nextState.lastReason = "rescuer_contract_active"
 		return { accepted = false, reason = "rescuer_contract_active", state = nextState, contract = nil }
@@ -225,6 +260,9 @@ function RescueContractState.ResolveRequest(state: State, input: RequestInput): 
 	local contract: RescueContract = {
 		rescuerUserId = input.rescuerUserId,
 		targetUserId = input.targetUserId,
+		targetRealmOwnerUserId = input.targetRealmOwnerUserId :: number,
+		entryRouteId = input.entryRouteId :: string,
+		entryRouteKind = input.entryRouteKind :: string,
 		startedAt = input.now,
 		expiresAt = input.now + rescueWindowSeconds,
 		isAccelerated = isAccelerated,
@@ -286,6 +324,9 @@ function RescueContractState.GetContracts(state: State): { RescueContract }
 			table.insert(contracts, {
 				rescuerUserId = contract.rescuerUserId,
 				targetUserId = contract.targetUserId,
+				targetRealmOwnerUserId = contract.targetRealmOwnerUserId,
+				entryRouteId = contract.entryRouteId,
+				entryRouteKind = contract.entryRouteKind,
 				startedAt = contract.startedAt,
 				expiresAt = contract.expiresAt,
 				isAccelerated = contract.isAccelerated,

@@ -245,6 +245,20 @@ local function getScoreServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getEscapeServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._EscapeService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function evaluateTargetSafeZoneProtection(target: Player, at: number): boolean
 	local safeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
 	local safeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
@@ -358,6 +372,66 @@ local function getCarriedState(target: Player): boolean
 	return false
 end
 
+local function readTargetRealmOwnerUserId(target: Player): number?
+	local attributeName = RescueContractConfig.TargetRealmOwnerUserIdAttribute
+	if type(attributeName) == "string" and attributeName ~= "" then
+		local value = target:GetAttribute(attributeName)
+		if type(value) == "number" and value > 0 and value % 1 == 0 then
+			return value
+		end
+	end
+
+	local fallbackValue = target:GetAttribute("RealmOwnerUserId")
+	if type(fallbackValue) == "number" and fallbackValue > 0 and fallbackValue % 1 == 0 then
+		return fallbackValue
+	end
+
+	return nil
+end
+
+local function resolveRescueEntryRoute(targetUserId: number, targetRealmOwnerUserId: number): (boolean, string, string?, string?)
+	local escapeQueryApi = getEscapeServiceQueryApi()
+	if escapeQueryApi == nil or type(escapeQueryApi.ResolveRescueEntryRoute) ~= "function" then
+		return false, "rescue_entry_route_missing", nil, nil
+	end
+
+	local ok, result = pcall(function()
+		return escapeQueryApi.ResolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
+	end)
+	if not ok then
+		return false, "rescue_entry_route_failed", nil, nil
+	end
+
+	if type(result) == "string" and result ~= "" then
+		return true, "accepted", result, RescueContractConfig.RescueEntryRouteKind
+	end
+
+	if type(result) ~= "table" then
+		return false, "rescue_entry_route_missing", nil, nil
+	end
+
+	local resultTable = result :: any
+	if resultTable.accepted ~= true then
+		local reason = if type(resultTable.reason) == "string" and resultTable.reason ~= ""
+			then resultTable.reason
+			else "rescue_entry_route_missing"
+		return false, reason, nil, nil
+	end
+
+	if type(resultTable.routeId) ~= "string" or resultTable.routeId == "" then
+		return false, "rescue_entry_route_id_invalid", nil, nil
+	end
+
+	local routeKind = if type(resultTable.routeKind) == "string" and resultTable.routeKind ~= ""
+		then resultTable.routeKind
+		else RescueContractConfig.RescueEntryRouteKind
+	if type(routeKind) ~= "string" or routeKind == "" then
+		return false, "rescue_entry_route_kind_invalid", nil, nil
+	end
+
+	return true, "accepted", resultTable.routeId, routeKind
+end
+
 local function applyContractAttributesFromState()
 	local attrs = RescueContractConfig.StateAttributes
 
@@ -365,6 +439,9 @@ local function applyContractAttributesFromState()
 		player:SetAttribute(attrs.RescueActive, false)
 		player:SetAttribute(attrs.RescueTargetUserId, nil)
 		player:SetAttribute(attrs.RescueRescuerUserId, nil)
+		player:SetAttribute(attrs.RescueTargetRealmOwnerUserId, nil)
+		player:SetAttribute(attrs.RescueEntryRouteId, nil)
+		player:SetAttribute(attrs.RescueEntryRouteKind, nil)
 		player:SetAttribute(attrs.RescueExpiresAt, nil)
 	end
 
@@ -374,6 +451,9 @@ local function applyContractAttributesFromState()
 		if rescuer ~= nil then
 			rescuer:SetAttribute(attrs.RescueActive, true)
 			rescuer:SetAttribute(attrs.RescueTargetUserId, contract.targetUserId)
+			rescuer:SetAttribute(attrs.RescueTargetRealmOwnerUserId, contract.targetRealmOwnerUserId)
+			rescuer:SetAttribute(attrs.RescueEntryRouteId, contract.entryRouteId)
+			rescuer:SetAttribute(attrs.RescueEntryRouteKind, contract.entryRouteKind)
 			rescuer:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
 		end
 
@@ -381,6 +461,9 @@ local function applyContractAttributesFromState()
 		if target ~= nil then
 			target:SetAttribute(attrs.RescueActive, true)
 			target:SetAttribute(attrs.RescueRescuerUserId, contract.rescuerUserId)
+			target:SetAttribute(attrs.RescueTargetRealmOwnerUserId, contract.targetRealmOwnerUserId)
+			target:SetAttribute(attrs.RescueEntryRouteId, contract.entryRouteId)
+			target:SetAttribute(attrs.RescueEntryRouteKind, contract.entryRouteKind)
 			target:SetAttribute(attrs.RescueExpiresAt, contract.expiresAt)
 		end
 	end
@@ -437,7 +520,7 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 	end
 
 	local accelerationActive = isRescueAccelerationActive(rescuer, resolvedNow)
-	local transition = RescueContractState.ResolveRequest(state, {
+	local requestInput: any = {
 		now = resolvedNow,
 		rescuerUserId = rescuer.UserId,
 		targetUserId = targetUserId,
@@ -448,10 +531,48 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		targetCarried = getCarriedState(target),
 		targetProtected = evaluateTargetSafeZoneProtection(target, resolvedNow),
 		inRange = isInRange(rescuer, target),
+		targetRealmOwnerUserId = 1,
+		entryRouteId = "__preflight_rescue_entry_route__",
+		entryRouteKind = "__preflight_rescue_entry_route__",
 		rescueWindowSeconds = RescueContractConfig.RescueWindowSeconds,
 		accelerationActive = accelerationActive,
 		accelerationWindowBonusSeconds = RescueContractConfig.RescueAccelerationWindowBonusSeconds,
-	})
+	}
+
+	local preflight = RescueContractState.ResolveRequest(state, requestInput)
+	if not preflight.accepted then
+		state = preflight.state
+		setRescueLastReason(rescuer, preflight.reason)
+		setRescueLastReason(target, preflight.reason)
+		markRejectedRequest(rescuer.UserId, resolvedNow)
+		applyContractAttributesFromState()
+		return {
+			accepted = false,
+			reason = preflight.reason,
+		}
+	end
+
+	local targetRealmOwnerUserId = readTargetRealmOwnerUserId(target)
+	if targetRealmOwnerUserId == nil then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, "target_realm_owner_user_id_invalid")
+		setRescueLastReason(target, "target_realm_owner_user_id_invalid")
+		return { accepted = false, reason = "target_realm_owner_user_id_invalid" }
+	end
+
+	local routeAccepted, routeReason, entryRouteId, entryRouteKind =
+		resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
+	if not routeAccepted then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, routeReason)
+		setRescueLastReason(target, routeReason)
+		return { accepted = false, reason = routeReason }
+	end
+
+	requestInput.targetRealmOwnerUserId = targetRealmOwnerUserId
+	requestInput.entryRouteId = entryRouteId
+	requestInput.entryRouteKind = entryRouteKind
+	local transition = RescueContractState.ResolveRequest(state, requestInput)
 
 	state = transition.state
 	setRescueLastReason(rescuer, transition.reason)
@@ -499,7 +620,13 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 		grantRescueAcceleration(rescuer, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
-			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, { targetUserId = targetUserId })
+			local contract = transition.contract
+			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, {
+				targetUserId = targetUserId,
+				targetRealmOwnerUserId = if contract ~= nil then contract.targetRealmOwnerUserId else nil,
+				entryRouteId = if contract ~= nil then contract.entryRouteId else nil,
+				entryRouteKind = if contract ~= nil then contract.entryRouteKind else nil,
+			})
 		end
 	end
 

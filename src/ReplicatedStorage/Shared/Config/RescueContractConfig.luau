@@ -9,11 +9,17 @@ RescueContractConfig.TriggerRadiusStuds = 14
 RescueContractConfig.PostRescueProtectionSeconds = 4
 RescueContractConfig.RescueAccelerationDurationSeconds = 20
 RescueContractConfig.RescueAccelerationWindowBonusSeconds = 3
+RescueContractConfig.TargetRealmOwnerUserIdAttribute = "GiantRealmOwnerUserId"
+RescueContractConfig.RescueEntryRouteAttribute = "RescueEntryRoute"
+RescueContractConfig.RescueEntryRouteKind = "RescueEntry"
 
 RescueContractConfig.StateAttributes = {
 	RescueActive = "RescueContractActive",
 	RescueTargetUserId = "RescueContractTargetUserId",
 	RescueRescuerUserId = "RescueContractRescuerUserId",
+	RescueTargetRealmOwnerUserId = "RescueContractTargetRealmOwnerUserId",
+	RescueEntryRouteId = "RescueContractEntryRouteId",
+	RescueEntryRouteKind = "RescueContractEntryRouteKind",
 	RescueExpiresAt = "RescueContractExpiresAt",
 	RescueLastReason = "RescueContractLastReason",
 	PostRescueProtected = "PostRescueProtected",

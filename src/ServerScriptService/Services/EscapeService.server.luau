@@ -87,6 +87,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		else nil
 
 	local EscapeConfig = resolveDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
+	local RescueContractConfig =
+		resolveDependency(Config, "RescueContractConfig", "../../ReplicatedStorage/Shared/Config/RescueContractConfig")
 	local RoleConfig = resolveDependency(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 	local ThroughGapValidation = resolveDependency(
 		GiantRealm,
@@ -1179,6 +1181,61 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return refreshFinalExitState(routeId, routePart)
 	end
 
+	function service.resolveRescueEntryRoute(_targetUserId: any, targetRealmOwnerUserId: any): any
+		if
+			type(targetRealmOwnerUserId) ~= "number"
+			or targetRealmOwnerUserId <= 0
+			or targetRealmOwnerUserId % 1 ~= 0
+		then
+			return { accepted = false, reason = "target_realm_owner_user_id_invalid" }
+		end
+
+		registerEscapeRoutesFromWorkspace()
+
+		local rescueRouteIds: { string } = {}
+		local rescueEntryAttribute = RescueContractConfig.RescueEntryRouteAttribute
+		local rescueEntryRouteKind = RescueContractConfig.RescueEntryRouteKind
+		for routeId, routePart in escapeRouteById do
+			local isRescueRoute = false
+			if type(rescueEntryAttribute) == "string" and rescueEntryAttribute ~= "" then
+				isRescueRoute = routePart:GetAttribute(rescueEntryAttribute) == true
+			end
+			if not isRescueRoute then
+				isRescueRoute = routePart:GetAttribute(EscapeConfig.RouteTypeAttribute) == rescueEntryRouteKind
+			end
+
+			if isRescueRoute then
+				table.insert(rescueRouteIds, routeId)
+			end
+		end
+
+		table.sort(rescueRouteIds)
+
+		for _, routeId in ipairs(rescueRouteIds) do
+			local routePart = escapeRouteById[routeId]
+			if routePart ~= nil then
+				local routeOwnerUserId = routePart:GetAttribute(RescueContractConfig.TargetRealmOwnerUserIdAttribute)
+				local ownerMatches = routeOwnerUserId == nil or routeOwnerUserId == targetRealmOwnerUserId
+				local safeZoneDecision = evaluateSafeZoneProtection(
+					routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
+					routePart:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+					routePart:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+				)
+
+				if ownerMatches and safeZoneDecision.protected ~= true then
+					return {
+						accepted = true,
+						reason = "accepted",
+						routeId = routeId,
+						routeKind = RescueContractConfig.RescueEntryRouteKind,
+					}
+				end
+			end
+		end
+
+		return { accepted = false, reason = "rescue_entry_route_missing" }
+	end
+
 	function service.RefreshFinalExitStateForTests(routeId: any): any
 		return service.getFinalExitSnapshot(routeId)
 	end
@@ -1438,6 +1495,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		GetFinalExitSnapshot = function(routeId: string): any
 			return service.getFinalExitSnapshot(routeId)
+		end,
+		ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
+			return service.resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
 		end,
 	}
 

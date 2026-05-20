@@ -141,6 +141,9 @@ local targetThree = MockPlayer.new(2105, "TargetTinyfolkThree", {
 target:SetAttribute("DownedIsDowned", true)
 targetTwo:SetAttribute("DownedIsDowned", true)
 targetThree:SetAttribute("DownedIsDowned", true)
+target:SetAttribute("GiantRealmOwnerUserId", 9001)
+targetTwo:SetAttribute("GiantRealmOwnerUserId", 9002)
+targetThree:SetAttribute("GiantRealmOwnerUserId", 9003)
 
 local playersList: { any } = { rescuer, target, targetTwo, rescuerTwo, targetThree }
 local playersService: any = {
@@ -197,6 +200,39 @@ _G._RoleService_QueryAPI = {
 	end,
 }
 
+local rescueRouteMode = "accepted"
+local routeRequests: { any } = {}
+_G._EscapeService_QueryAPI = {
+	ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
+		table.insert(routeRequests, { targetUserId = targetUserId, targetRealmOwnerUserId = targetRealmOwnerUserId })
+		if rescueRouteMode == "missing" then
+			return { accepted = false, reason = "rescue_entry_route_missing" }
+		end
+		if rescueRouteMode == "invalid_route_id" then
+			return { accepted = true, routeId = "", routeKind = "RescueEntry" }
+		end
+		return {
+			accepted = true,
+			reason = "accepted",
+			routeId = string.format("RescueEntryRoute_%d", targetRealmOwnerUserId),
+			routeKind = "RescueEntry",
+		}
+	end,
+}
+
+local scoreRequests: { any } = {}
+_G._ScoreService_QueryAPI = {
+	RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
+		table.insert(scoreRequests, {
+			userId = userId,
+			eventId = eventId,
+			at = at,
+			metadata = metadata,
+		})
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+
 require("../src/ServerScriptService/Services/RescueContractService.server")
 
 local rescueApi: any = _G._RescueContractService_QueryAPI
@@ -239,7 +275,13 @@ local function resetState()
 	targetThree:SetAttribute("InSafeZone", false)
 	targetThree:SetAttribute("SafeZoneType", nil)
 	targetThree:SetAttribute("SafeZoneProtectionEndsAt", nil)
+	target:SetAttribute("GiantRealmOwnerUserId", 9001)
+	targetTwo:SetAttribute("GiantRealmOwnerUserId", 9002)
+	targetThree:SetAttribute("GiantRealmOwnerUserId", 9003)
 	restrictedRescuerUserId = nil
+	rescueRouteMode = "accepted"
+	routeRequests = {}
+	scoreRequests = {}
 end
 
 do
@@ -250,6 +292,51 @@ do
 	assertEqual(accepted.reason, "accepted", "request accepted reason")
 	assertEqual(accepted.contract.rescuerUserId, rescuer.UserId, "accepted contract stores rescuer")
 	assertEqual(accepted.contract.targetUserId, target.UserId, "accepted contract stores target")
+	assertEqual(accepted.contract.targetRealmOwnerUserId, 9001, "accepted contract stores target realm")
+	assertEqual(accepted.contract.entryRouteId, "RescueEntryRoute_9001", "accepted contract stores entry route")
+	assertEqual(accepted.contract.entryRouteKind, "RescueEntry", "accepted contract stores entry route kind")
+	assertEqual(routeRequests[1].targetUserId, target.UserId, "route resolver receives target")
+	assertEqual(routeRequests[1].targetRealmOwnerUserId, 9001, "route resolver receives target realm")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractTargetRealmOwnerUserId"),
+		9001,
+		"rescuer attribute stores target realm"
+	)
+	assertEqual(
+		rescuer:GetAttribute("RescueContractEntryRouteId"),
+		"RescueEntryRoute_9001",
+		"rescuer attribute stores entry route"
+	)
+	assertEqual(target:GetAttribute("RescueContractEntryRouteKind"), "RescueEntry", "target attribute stores route kind")
+end
+
+do
+	resetState()
+	target:SetAttribute("GiantRealmOwnerUserId", nil)
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 110)
+	assertFalse(rejected.accepted, "missing target realm rejects")
+	assertEqual(rejected.reason, "target_realm_owner_user_id_invalid", "missing target realm reason")
+	assertEqual(#routeRequests, 0, "missing target realm does not resolve route")
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 110.1), nil, "missing realm does not create contract")
+end
+
+do
+	resetState()
+	rescueRouteMode = "missing"
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 120)
+	assertFalse(rejected.accepted, "missing rescue entry route rejects")
+	assertEqual(rejected.reason, "rescue_entry_route_missing", "missing route reason")
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 120.1), nil, "missing route does not create contract")
+	assertEqual(rescuer:GetAttribute("RescueContractLastReason"), "rescue_entry_route_missing", "missing route reason projects")
+end
+
+do
+	resetState()
+	rescueRouteMode = "invalid_route_id"
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 130)
+	assertFalse(rejected.accepted, "invalid rescue entry route rejects")
+	assertEqual(rejected.reason, "rescue_entry_route_id_invalid", "invalid route reason")
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 130.1), nil, "invalid route does not create contract")
 end
 
 do
@@ -326,6 +413,12 @@ do
 		type(rescuer:GetAttribute("RescueAccelerationExpiresAt")) == "number",
 		"completion sets rescuer acceleration expiry"
 	)
+	assertEqual(#scoreRequests, 1, "completion emits one score request")
+	assertEqual(scoreRequests[1].eventId, "rescue_complete", "completion score event id")
+	assertEqual(scoreRequests[1].metadata.targetUserId, target.UserId, "completion score metadata target")
+	assertEqual(scoreRequests[1].metadata.targetRealmOwnerUserId, 9001, "completion score metadata target realm")
+	assertEqual(scoreRequests[1].metadata.entryRouteId, "RescueEntryRoute_9001", "completion score metadata route")
+	assertEqual(scoreRequests[1].metadata.entryRouteKind, "RescueEntry", "completion score metadata route kind")
 end
 
 do

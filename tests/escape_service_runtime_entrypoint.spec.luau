@@ -156,6 +156,14 @@ local replicatedStorageService: any = {
 									SupportedThroughGapRouteTypes = { TraversalGap = true },
 								}
 							end
+							if configName == "RescueContractConfig" then
+								return {
+									RequestCooldownSeconds = 0.2,
+									TargetRealmOwnerUserIdAttribute = "GiantRealmOwnerUserId",
+									RescueEntryRouteAttribute = "RescueEntryRoute",
+									RescueEntryRouteKind = "RescueEntry",
+								}
+							end
 							return nil
 						end,
 					}
@@ -249,6 +257,8 @@ local function resetRouteDefaults()
 	routeAttributes.TraversalGapBlockActiveEndsAt = nil
 	routeAttributes.TraversalGapBlockExpiresAt = nil
 	routeAttributes.TraversalGapBlockedByUserId = nil
+	routeAttributes.RescueEntryRoute = false
+	routeAttributes.GiantRealmOwnerUserId = nil
 	routeAttributes.FinalExitManaged = true
 	routeAttributes.FinalExitPhase = "Dormant"
 	routeAttributes.FinalExitPoweredEndsAt = nil
@@ -275,6 +285,28 @@ local function advanceFinalExitToOpen(routeId: string?)
 	EscapeService.RefreshFinalExitStateForTests(targetRouteId)
 	currentTime = 105
 	return EscapeService.RefreshFinalExitStateForTests(targetRouteId)
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.RescueEntryRoute = true
+	routeAttributes.GiantRealmOwnerUserId = 9402
+
+	local resolved = EscapeService.resolveRescueEntryRoute(1101, 9402)
+	assertEqual(resolved.accepted, true, "rescue entry route resolver accepts matching realm route")
+	assertEqual(resolved.routeId, "EscapeRoute_A", "rescue entry route resolver returns route id")
+	assertEqual(resolved.routeKind, "RescueEntry", "rescue entry route resolver returns route kind")
+
+	local mismatch = EscapeService.resolveRescueEntryRoute(1101, 9403)
+	assertEqual(mismatch.accepted, false, "rescue entry route resolver rejects owner mismatch")
+	assertEqual(mismatch.reason, "rescue_entry_route_missing", "rescue entry owner mismatch reason")
+
+	routeAttributes.GiantRealmOwnerUserId = 9402
+	routeAttributes.InSafeZone = true
+	routeAttributes.SafeZoneType = "SharedHub"
+	local protected = _G._EscapeService_QueryAPI.ResolveRescueEntryRoute(1101, 9402)
+	assertEqual(protected.accepted, false, "query rescue entry route rejects protected route")
+	assertEqual(protected.reason, "rescue_entry_route_missing", "protected rescue entry route reason")
 end
 
 do

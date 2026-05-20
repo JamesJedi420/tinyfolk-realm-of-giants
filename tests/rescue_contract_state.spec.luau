@@ -35,6 +35,9 @@ local function makeRequestInput(overrides: any?): any
 		targetCarried = false,
 		targetProtected = false,
 		inRange = true,
+		targetRealmOwnerUserId = 9001,
+		entryRouteId = "RescueEntryRoute_A",
+		entryRouteKind = "RescueEntry",
 		rescueWindowSeconds = 12,
 	}
 
@@ -112,6 +115,9 @@ do
 	assertEqual(accepted.reason, "accepted", "accepted reason")
 	assertEqual(accepted.contract.rescuerUserId, 1, "accepted contract stores rescuer")
 	assertEqual(accepted.contract.targetUserId, 2, "accepted contract stores target")
+	assertEqual(accepted.contract.targetRealmOwnerUserId, 9001, "accepted contract stores realm owner")
+	assertEqual(accepted.contract.entryRouteId, "RescueEntryRoute_A", "accepted contract stores entry route")
+	assertEqual(accepted.contract.entryRouteKind, "RescueEntry", "accepted contract stores entry route kind")
 
 	local second = RescueContractState.ResolveRequest(accepted.state, makeRequestInput({ now = 101 }))
 	assertFalse(second.accepted, "rescuer cannot hold multiple contracts")
@@ -125,6 +131,25 @@ do
 	assertTrue(complete.accepted, "complete resolves active contract")
 	assertEqual(complete.reason, "rescued", "complete reason")
 	assertEqual(RescueContractState.GetRescuerContract(complete.state, 1), nil, "contract removed after completion")
+end
+
+do
+	local state = RescueContractState.NewState()
+	local invalidRealm = RescueContractState.ResolveRequest(state, makeRequestInput({ targetRealmOwnerUserId = 0 }))
+	assertFalse(invalidRealm.accepted, "invalid target realm rejects")
+	assertEqual(
+		invalidRealm.reason,
+		"target_realm_owner_user_id_invalid",
+		"invalid target realm rejection reason"
+	)
+
+	local invalidRouteId = RescueContractState.ResolveRequest(state, makeRequestInput({ entryRouteId = "" }))
+	assertFalse(invalidRouteId.accepted, "invalid entry route id rejects")
+	assertEqual(invalidRouteId.reason, "rescue_entry_route_id_invalid", "invalid entry route id reason")
+
+	local invalidRouteKind = RescueContractState.ResolveRequest(state, makeRequestInput({ entryRouteKind = "" }))
+	assertFalse(invalidRouteKind.accepted, "invalid entry route kind rejects")
+	assertEqual(invalidRouteKind.reason, "rescue_entry_route_kind_invalid", "invalid entry route kind reason")
 end
 
 do

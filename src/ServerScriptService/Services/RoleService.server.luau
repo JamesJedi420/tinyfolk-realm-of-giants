@@ -51,10 +51,12 @@ local TINYFOLK_SPAWN_NAME = "TinyfolkSpawn"
 local GIANT_SPAWN_NAME = "GiantSpawn"
 local PROFILE_ROLE_PREFERENCE_KEY = "rolePreference"
 local PROFILE_PREFERRED_ROLE_KEY = "preferredRole"
+local GIANT_REALM_OWNER_USER_ID_ATTRIBUTE = "GiantRealmOwnerUserId"
 
 local lastRoleChangeAtByUserId: { [number]: number? } = {}
 local loadedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
 local cleanedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
+local activeGiantRealmOwnerUserId: number? = nil
 local downedStates: { [number]: any } = {}
 
 Players.CharacterAutoLoads = false
@@ -449,6 +451,12 @@ local function persistPreferredRole(player: Player, roleName: string)
 	end
 end
 
+local function projectActiveGiantRealmOwner()
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute(GIANT_REALM_OWNER_USER_ID_ATTRIBUTE, activeGiantRealmOwnerUserId)
+	end
+end
+
 local function loadGiantRealmForPlayer(player: Player)
 	if loadedGiantRealmOwnerUserIds[player.UserId] then
 		return
@@ -464,6 +472,8 @@ local function loadGiantRealmForPlayer(player: Player)
 
 	loadedGiantRealmOwnerUserIds[player.UserId] = true
 	cleanedGiantRealmOwnerUserIds[player.UserId] = nil
+	activeGiantRealmOwnerUserId = player.UserId
+	projectActiveGiantRealmOwner()
 	debugLog(string.format("Loaded Giant realm profile userId=%d", player.UserId))
 end
 
@@ -498,6 +508,10 @@ local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
 
 	loadedGiantRealmOwnerUserIds[player.UserId] = nil
 	cleanedGiantRealmOwnerUserIds[player.UserId] = true
+	if activeGiantRealmOwnerUserId == player.UserId then
+		activeGiantRealmOwnerUserId = nil
+		projectActiveGiantRealmOwner()
+	end
 end
 
 local remotesFolder = ensureRemotesFolder()
@@ -543,6 +557,7 @@ end
 
 local function setupPlayer(player: Player)
 	initializePlayerRoleSelection(player)
+	player:SetAttribute(GIANT_REALM_OWNER_USER_ID_ATTRIBUTE, activeGiantRealmOwnerUserId)
 	setDownedAttributes(player, DownedState.Snapshot(DownedState.New(downedNow())))
 
 	player.CharacterAdded:Connect(function(character)
@@ -608,6 +623,8 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 	persistPreferredRole(player, roleName)
 	if roleName == RoleConfig.Roles.Giant then
 		loadGiantRealmForPlayer(player)
+	else
+		projectActiveGiantRealmOwner()
 	end
 	debugLog(string.format("Accepted role select for %s -> %s (locked)", player.Name, roleName))
 	player:LoadCharacter()
@@ -730,6 +747,9 @@ _G._RoleService_QueryAPI = {
 	end,
 	GetDownedSnapshot = function(userId: number): any
 		return RoleService.getDownedSnapshot(userId)
+	end,
+	GetActiveGiantRealmOwnerUserId = function(): number?
+		return activeGiantRealmOwnerUserId
 	end,
 }
 

@@ -494,6 +494,12 @@ assertEqual(playerUpdateOk.loadCharacterCount, 1, "accepted role respawns player
 assertEqual(updateCallCountByUserId[2001], 1, "accepted role updates profile via gateway")
 assertEqual(realmLoadCallCountByUserId[2001], 1, "accepted Giant role loads realm profile")
 assertEqual(
+	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
+	2001,
+	"accepted Giant role projects active realm owner query"
+)
+assertEqual(playerNoStored:GetAttribute("GiantRealmOwnerUserId"), 2001, "active realm owner projects to Tinyfolk")
+assertEqual(
 	profileDataByUserId[2001].rolePreference.preferredRole,
 	RoleConfig.Roles.Giant,
 	"accepted role persists preferredRole"
@@ -510,6 +516,11 @@ assertEqual(playerUpdateFail:GetAttribute("Role"), RoleConfig.Roles.Tinyfolk, "u
 assertEqual(playerUpdateFail.loadCharacterCount, 1, "update failure still respawns player")
 assertEqual(updateCallCountByUserId[2002], nil, "failed update does not mutate profile snapshot")
 assertEqual(realmLoadCallCountByUserId[2002], nil, "accepted Tinyfolk role does not load realm profile")
+assertEqual(
+	playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"),
+	2001,
+	"Tinyfolk role keeps projected active realm owner"
+)
 assertTrue(sawWarnContaining("Role preference update failed userId=2002"), "update failure warning emitted")
 
 roleChangeRemote:FireServer(playerRealmLoadFail, RoleConfig.Roles.Giant)
@@ -520,6 +531,11 @@ assertEqual(
 )
 assertEqual(playerRealmLoadFail.loadCharacterCount, 1, "realm load failure still respawns player")
 assertEqual(realmLoadCallCountByUserId[2003], 1, "realm load failure attempted once")
+assertEqual(
+	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
+	2001,
+	"failed realm load does not replace active realm owner"
+)
 assertTrue(sawWarnContaining("Giant realm load failed userId=2003"), "realm load failure warning emitted")
 
 roleChangeRemote:FireServer(playerRealmSaveFail, RoleConfig.Roles.Giant)
@@ -529,10 +545,16 @@ assertEqual(
 	"realm save failure setup sets Giant role"
 )
 assertEqual(realmLoadCallCountByUserId[2004], 1, "realm save failure setup loads realm")
+assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), 2004, "second loaded Giant becomes active realm owner")
 
 playerRemoving:Fire(playerUpdateOk)
 assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
 assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
+assertEqual(
+	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
+	2004,
+	"removing non-active loaded Giant preserves active realm owner"
+)
 
 playerRemoving:Fire(playerRealmLoadFail)
 assertEqual(realmSaveCallCountByUserId[2003], nil, "removing failed-load Giant does not save realm")
@@ -541,6 +563,8 @@ assertEqual(realmReleaseCallCountByUserId[2003], nil, "removing failed-load Gian
 playerRemoving:Fire(playerRealmSaveFail)
 assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
 assertEqual(realmReleaseCallCountByUserId[2004], 1, "save failure Giant still releases realm")
+assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), nil, "removing active Giant clears active realm owner")
+assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), nil, "active realm owner projection clears")
 assertTrue(sawWarnContaining("Giant realm save failed userId=2004"), "realm save failure warning emitted")
 
 bindToCloseCallbacks[1]()
