@@ -119,6 +119,8 @@ local replicatedStorageService: any = {
 									EscapeRouteNamePrefix = "EscapeRoute",
 									TriggerRadiusStuds = 10,
 									RequestCooldownSeconds = 5,
+									DashTriggerRadiusStuds = 15,
+									DashCooldownSeconds = 0.2,
 									ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed",
 									RouteTypeAttribute = "RouteType",
 									TinyfolkOnlyRouteAttribute = "TinyfolkOnlyRoute",
@@ -865,6 +867,31 @@ do
 	assertEqual(routeAttributes.TraversalGapBlockActiveEndsAt, 105, "valid block exposes active end")
 	assertEqual(routeAttributes.TraversalGapBlockExpiresAt, 105, "valid block exposes expiration")
 	assertEqual(routeAttributes.TraversalGapBlockedByUserId, 1, "valid block exposes blocker user id")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "DashGiant", { positionZ = 12 })
+
+	local result = EscapeService.requestDash(player, "EscapeRoute_A")
+	assertEqual(result.accepted, true, "dash accepts within dash trigger radius")
+	assertEqual(result.reason, "accepted", "dash accepted reason")
+end
+
+do
+	resetRouteDefaults()
+	local player = MockPlayer.new(1, "DashCooldownGiant")
+
+	local first = EscapeService.requestDash(player, "EscapeRoute_A")
+	local second = EscapeService.requestDash(player, "EscapeRoute_A")
+	assertEqual(first.accepted, true, "first dash accepted")
+	assertEqual(second.accepted, false, "second dash rejected by cooldown")
+	assertEqual(second.reason, "dash_cooldown", "dash cooldown reason")
+
+	currentTime = 100.25
+	local afterCooldown = EscapeService.requestDash(player, "EscapeRoute_A")
+	assertEqual(afterCooldown.accepted, false, "dash cooldown expires before block state")
+	assertEqual(afterCooldown.reason, "block_startup", "post-cooldown dash defers to block state")
 end
 
 do

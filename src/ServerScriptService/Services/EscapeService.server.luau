@@ -126,7 +126,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local lastRequestAtByUserId: { [number]: number? } = {}
 	local traversalGapBlockByRouteId: { [string]: any? } = {}
 	local finalExitStateByRouteId: { [string]: any? } = {}
-	local lastBlockRequestAtByUserId: { [number]: number? } = {}
+	local lastDashRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
 	local function getScoreServiceQueryApi(): any?
@@ -204,17 +204,17 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return os.clock()
 	end
 
-	local function isBlockRequestCoolingDown(userId: number): boolean
-		local last = lastBlockRequestAtByUserId[userId]
+	local function isDashCoolingDown(userId: number): boolean
+		local last = lastDashRequestAtByUserId[userId]
 		if last == nil then
 			return false
 		end
 
-		return (now() - last) < EscapeConfig.TraversalGapBlockRequestCooldownSeconds
+		return (now() - last) < EscapeConfig.DashCooldownSeconds
 	end
 
-	local function markBlockRequest(userId: number)
-		lastBlockRequestAtByUserId[userId] = now()
+	local function markDashRequest(userId: number)
+		lastDashRequestAtByUserId[userId] = now()
 	end
 
 	local function isSafeZoneAbuseLocked(userId: number, currentTime: number): boolean
@@ -911,7 +911,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local service: any = {}
 
-	function service.requestTraversalGapBlock(player: any, routeId: any): any
+	local function requestBlockWithSettings(player: any, routeId: any, triggerRadius: number): any
 		if type(routeId) ~= "string" then
 			return { accepted = false, reason = "route_id_invalid" }
 		end
@@ -985,7 +985,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if distance == nil then
 			return { accepted = false, reason = "distance_unavailable" }
 		end
-		if distance > EscapeConfig.TriggerRadiusStuds then
+		if distance > triggerRadius then
 			return { accepted = false, reason = "caller_out_of_range" }
 		end
 
@@ -1024,6 +1024,30 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		return result
+	end
+
+	function service.requestDash(player: any, routeId: any): any
+		if type(routeId) ~= "string" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+
+		if player == nil or type(player.UserId) ~= "number" then
+			return { accepted = false, reason = "caller_user_id_invalid" }
+		end
+		if isDashCoolingDown(player.UserId) then
+			return { accepted = false, reason = "dash_cooldown" }
+		end
+
+		local result = requestBlockWithSettings(player, routeId, EscapeConfig.DashTriggerRadiusStuds)
+		if result.accepted == true then
+			markDashRequest(player.UserId)
+		end
+
+		return result
+	end
+
+	function service.requestTraversalGapBlock(player: any, routeId: any): any
+		return requestBlockWithSettings(player, routeId, EscapeConfig.TriggerRadiusStuds)
 	end
 
 	function service.requestEscapeAttempt(player: any, routeId: any): any
@@ -1248,9 +1272,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	function service.ResetTraversalGapBlocksForTests()
 		traversalGapBlockByRouteId = {}
-		lastBlockRequestAtByUserId = {}
+		lastDashRequestAtByUserId = {}
 		safeZoneAbuseStateByUserId = {}
-		for routeId, routePart in escapeRouteById do
+		for _, routePart in escapeRouteById do
 			applyBlockAttributes(routePart, TraversalGapBlockState.Snapshot(nil, now()))
 		end
 	end
@@ -1552,16 +1576,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end)
 
 		traversalGapBlockRequestRemoteEvent.OnServerEvent:Connect(function(player: Player, payload: unknown)
-			if isBlockRequestCoolingDown(player.UserId) then
-				return
-			end
-			markBlockRequest(player.UserId)
-
 			if type(payload) ~= "string" then
 				return
 			end
 
-			service.requestTraversalGapBlock(player, payload)
+			service.requestDash(player, payload)
 		end)
 
 		escapeDebugRequestRemoteEvent.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -1601,7 +1620,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		then
 			Players.PlayerRemoving:Connect(function(player: Player)
 				lastRequestAtByUserId[player.UserId] = nil
-				lastBlockRequestAtByUserId[player.UserId] = nil
+				lastDashRequestAtByUserId[player.UserId] = nil
 				safeZoneAbuseStateByUserId[player.UserId] = nil
 				escapedTinyfolkByUserId[player.UserId] = nil
 			end)
@@ -1613,6 +1632,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	service.initialize = initialize
 
 	_G._EscapeService_QueryAPI = {
+		RequestDash = function(player: any, routeId: string): any
+			return service.requestDash(player, routeId)
+		end,
 		ResolveTransportDeparture = function(endpointId: string, candidateTinyfolkUserIds: { number }): any
 			return service.resolveTransportDeparture(endpointId, candidateTinyfolkUserIds)
 		end,

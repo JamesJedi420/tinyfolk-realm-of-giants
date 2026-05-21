@@ -13,6 +13,8 @@ EscapeConfig.TinyfolkWorldFolderPath = { "Map", "TinyfolkWorld" } -- Path to Tin
 -- Escape/interaction radii and cooldowns
 EscapeConfig.TriggerRadiusStuds = 10 -- Max distance for escape/block/through-gap attempts
 EscapeConfig.RequestCooldownSeconds = 0.15 -- Cooldown for escape attempts
+EscapeConfig.DashTriggerRadiusStuds = 15 -- Max distance for dash attempts
+EscapeConfig.DashCooldownSeconds = 0.2 -- Cooldown for dash attempts
 
 -- Traversal gap block timing/cooldown
 EscapeConfig.TraversalGapBlockStartupSeconds = 1 -- Startup phase duration (Tinyfolk can still cross)
