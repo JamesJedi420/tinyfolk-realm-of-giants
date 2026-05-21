@@ -53,12 +53,12 @@ The custom/raw DataStore adapter is not the default because it would remove nati
 ## Deferred Work
 - Autosave policy.
 - Schema migration utilities.
-- Rescue/handoff persistence.
 - Cross-server handoff.
 - Multi-realm support.
 
 ## Implemented Since Decision
 - Shrine persistence is now implemented as giant-realm save-root data through the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` path.
+- Rescue/handoff persistence is now implemented as giant-realm save-root data through the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` path.
 
 ## Contradiction Check
 No gameplay system should write directly to raw `DataStoreService`. The required no-match search excludes owner-layer, bootstrap, and vendored dependency paths, so any result there would indicate a boundary violation rather than an allowed persistence implementation detail.
