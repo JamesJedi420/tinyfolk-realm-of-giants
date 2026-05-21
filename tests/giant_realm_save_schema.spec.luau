@@ -73,6 +73,29 @@ local function makeEmergencyReinforcementRecord()
 	}
 end
 
+local function makeShrinePersistenceRecord()
+	return {
+		shrines = {
+			{
+				shrineId = "Shrine_B",
+				isActive = false,
+				essenceTotal = 12,
+				tickCount = 4,
+				lastTickAt = 90,
+				activatedByUserId = nil,
+			},
+			{
+				shrineId = "Shrine_A",
+				isActive = true,
+				essenceTotal = 33,
+				tickCount = 11,
+				lastTickAt = 120,
+				activatedByUserId = 7201,
+			},
+		},
+	}
+end
+
 local function assertVector3Equal(actual, expected, label)
 	assertEqual(actual.x, expected.x, label .. " x")
 	assertEqual(actual.y, expected.y, label .. " y")
@@ -163,6 +186,12 @@ local function run()
 	end
 
 	do
+		local root = makeSaveRoot()
+		root.shrinePersistence = makeShrinePersistenceRecord()
+		assertValid("valid save root with shrine persistence", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local serialized =
 			GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(makeEmergencyReinforcementRecord())
 		assertEqual(serialized.used, true, "serialized reinforcement used")
@@ -184,6 +213,27 @@ local function run()
 	end
 
 	do
+		local serialized = GiantRealmSaveSchema.SerializeShrinePersistenceRecord(makeShrinePersistenceRecord())
+		assertEqual(#serialized.shrines, 2, "serialized shrine persistence count")
+		assertEqual(serialized.shrines[1].shrineId, "Shrine_A", "serialized shrine order first")
+		assertEqual(serialized.shrines[2].shrineId, "Shrine_B", "serialized shrine order second")
+		assertEqual(serialized.shrines[1].activatedByUserId, 7201, "serialized shrine activatedByUserId")
+	end
+
+	do
+		local statesById = {
+			GiantStructure_Runtime_B = makePlacedStructureRecord("GiantStructure_Runtime_B"),
+			GiantStructure_Runtime_A = makePlacedStructureRecord("GiantStructure_Runtime_A"),
+		}
+
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, statesById, nil, makeShrinePersistenceRecord())
+		assertTrue(type(root.shrinePersistence) == "table", "built root includes shrine persistence")
+		assertEqual(root.shrinePersistence.shrines[1].shrineId, "Shrine_A", "built root shrine order first")
+		assertEqual(root.shrinePersistence.shrines[2].shrineId, "Shrine_B", "built root shrine order second")
+		assertValid("built root with shrine persistence validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local root = makeSaveRoot()
 		root.emergencyReinforcement = {
 			used = "yes",
@@ -191,6 +241,38 @@ local function run()
 		assertInvalid(
 			"emergency_reinforcement_used_invalid",
 			"invalid reinforcement used",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.shrinePersistence = {
+			shrines = {
+				{
+					shrineId = "Shrine_A",
+					isActive = true,
+					essenceTotal = 10,
+					tickCount = 2,
+					lastTickAt = 20,
+					activatedByUserId = nil,
+				},
+			},
+		}
+		assertInvalid(
+			"shrine_activated_by_user_id_missing index=1",
+			"invalid shrine activatedByUserId missing",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.shrinePersistence = makeShrinePersistenceRecord()
+		root.shrinePersistence.shrines[2].shrineId = "Shrine_B"
+		assertInvalid(
+			"shrine_id_duplicate index=2",
+			"invalid shrine duplicate id",
 			GiantRealmSaveSchema.ValidateSaveRoot(root)
 		)
 	end

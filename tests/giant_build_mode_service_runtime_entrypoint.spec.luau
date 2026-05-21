@@ -3,6 +3,7 @@
 local GiantBuildModeConfig = require("../src/ReplicatedStorage/Shared/Config/GiantBuildModeConfig")
 local GiantStructureCatalog = require("../src/ReplicatedStorage/Shared/Config/GiantStructureCatalog")
 local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
+local globalEnv: any = getfenv()
 
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
@@ -213,7 +214,7 @@ local function makeAlivePlayer(userId: number)
 		Health = 100,
 	}
 	local character = {
-		FindFirstChildOfClass = function(self: any, className: string): any
+		FindFirstChildOfClass = function(_self: any, className: string): any
 			if className == "Humanoid" then
 				return humanoid
 			end
@@ -255,7 +256,7 @@ local function assertStoredTotalsUnchanged(beforeSnapshot: any, label: string)
 	assertEqual(afterSnapshot.Stone.stored, beforeSnapshot.Stone.stored, label .. " stone unchanged")
 end
 
-_G._EmergencyReinforcementService_QueryAPI = {
+globalEnv._EmergencyReinforcementService_QueryAPI = {
 	BuildPersistenceState = function(): any
 		return {
 			used = true,
@@ -269,7 +270,37 @@ _G._EmergencyReinforcementService_QueryAPI = {
 	end,
 	_LastAppliedPersistenceState = nil,
 	ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
-		_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState = _persistedState
+		globalEnv._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState = _persistedState
+		return true, nil
+	end,
+}
+
+globalEnv._ShrineService_QueryAPI = {
+	BuildPersistenceState = function(): any
+		return {
+			shrines = {
+				{
+					shrineId = "Shrine_B",
+					isActive = false,
+					essenceTotal = 15,
+					tickCount = 5,
+					lastTickAt = 99,
+					activatedByUserId = nil,
+				},
+				{
+					shrineId = "Shrine_A",
+					isActive = true,
+					essenceTotal = 40,
+					tickCount = 10,
+					lastTickAt = 120,
+					activatedByUserId = 7201,
+				},
+			},
+		}
+	end,
+	_LastAppliedPersistenceState = nil,
+	ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+		globalEnv._ShrineService_QueryAPI._LastAppliedPersistenceState = _persistedState
 		return true, nil
 	end,
 }
@@ -311,7 +342,7 @@ assertEqual(
 assertTrue(giantPlacementRemote._Handler ~= nil, "service binds GiantStructurePlacementRequest OnServerEvent")
 assertTrue(constructionBuildRemote._Handler == nil, "service does not bind ConstructionBuildRequest")
 
-local registry = _G._GiantBuildModeService_Registry
+local registry = globalEnv._GiantBuildModeService_Registry
 assertTrue(type(registry) == "table", "registry export is available")
 
 -- Rejected malformed payload must not mutate registry or world artifacts.
@@ -404,7 +435,7 @@ assertStoredTotals(
 	"accepted placement debits exact structure cost"
 )
 
-local queryApi = _G._GiantBuildModeService_QueryAPI
+local queryApi = globalEnv._GiantBuildModeService_QueryAPI
 assertTrue(type(queryApi) == "table", "query API export is available")
 assertTrue(type(queryApi.GetPlacedStructure) == "function", "query API exposes GetPlacedStructure")
 assertTrue(type(queryApi.GetAllPlacedStructures) == "function", "query API exposes GetAllPlacedStructures")
@@ -458,6 +489,9 @@ if saveRoot then
 	assertEqual(saveRootValidationReason, nil, "save snapshot validation has no reason")
 	assertEqual(#saveRoot.placedStructures, 2, "save snapshot includes accepted structure count")
 	assertTrue(type(saveRoot.emergencyReinforcement) == "table", "save snapshot includes reinforcement state")
+	assertTrue(type(saveRoot.shrinePersistence) == "table", "save snapshot includes shrine persistence")
+	assertEqual(saveRoot.shrinePersistence.shrines[1].shrineId, "Shrine_A", "save snapshot shrine order first")
+	assertEqual(saveRoot.shrinePersistence.shrines[2].shrineId, "Shrine_B", "save snapshot shrine order second")
 	assertEqual(saveRoot.emergencyReinforcement.used, true, "save snapshot reinforcement used")
 	assertEqual(saveRoot.emergencyReinforcement.triggeredByUserId, 1101, "save snapshot reinforcement requester")
 	assertEqual(
@@ -622,7 +656,7 @@ local stringOwnerRoot, stringOwnerReason = queryApi.BuildSaveSnapshot("9402")
 assertEqual(stringOwnerRoot, nil, "save snapshot string owner returns nil root")
 assertEqual(stringOwnerReason, "save_snapshot_owner_user_id_invalid", "save snapshot string owner reason")
 
-local registryBeforeApply = _G._GiantBuildModeService_Registry
+local registryBeforeApply = globalEnv._GiantBuildModeService_Registry
 assertTrue(registryBeforeApply == registry, "apply setup registry reference starts stable")
 
 local appliedStructureA = "GiantStructure_Applied_A"
@@ -666,10 +700,14 @@ local applyOk, applyReason = queryApi.ApplySaveSnapshot(applyRoot)
 assertTrue(applyOk, "valid save snapshot applies successfully")
 assertEqual(applyReason, nil, "valid save snapshot apply has no failure reason")
 assertTrue(
-	type(_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState) == "nil",
+	type(globalEnv._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState) == "nil",
 	"apply without reinforcement record clears persistence state"
 )
-assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
+assertTrue(
+	type(globalEnv._ShrineService_QueryAPI._LastAppliedPersistenceState) == "nil",
+	"apply without shrine record clears persistence state"
+)
+assertTrue(globalEnv._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
 assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")
 assertTrue(
 	queryApi.GetPlacedStructure(nonOverlappingStructureId) == nil,
@@ -770,10 +808,49 @@ local applyWithReinforcementOk, applyWithReinforcementReason = queryApi.ApplySav
 assertTrue(applyWithReinforcementOk, "apply with reinforcement state succeeds")
 assertEqual(applyWithReinforcementReason, nil, "apply with reinforcement state has no reason")
 assertEqual(
-	_G._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState.triggeredByUserId,
+	globalEnv._EmergencyReinforcementService_QueryAPI._LastAppliedPersistenceState.triggeredByUserId,
 	2201,
 	"apply forwards reinforcement persistence state"
 )
+
+local applyWithShrineRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = applyRoot.ownerUserId,
+	placedStructures = applyRoot.placedStructures,
+	shrinePersistence = {
+		shrines = {
+			{
+				shrineId = "Shrine_A",
+				isActive = true,
+				essenceTotal = 20,
+				tickCount = 8,
+				lastTickAt = 200,
+				activatedByUserId = 7202,
+			},
+		},
+	},
+}
+local applyWithShrineOk, applyWithShrineReason = queryApi.ApplySaveSnapshot(applyWithShrineRoot)
+assertTrue(applyWithShrineOk, "apply with shrine state succeeds")
+assertEqual(applyWithShrineReason, nil, "apply with shrine state has no reason")
+assertEqual(
+	globalEnv._ShrineService_QueryAPI._LastAppliedPersistenceState.shrines[1].shrineId,
+	"Shrine_A",
+	"apply forwards shrine persistence state"
+)
+
+local originalShrineApplyPersistence = globalEnv._ShrineService_QueryAPI.ApplyPersistenceState
+globalEnv._ShrineService_QueryAPI.ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+	return false, "shrine_apply_failed_for_test"
+end
+
+local failedShrineApplyOk, failedShrineApplyReason = queryApi.ApplySaveSnapshot(applyWithShrineRoot)
+assertTrue(not failedShrineApplyOk, "failed shrine apply rejects snapshot apply")
+assertEqual(failedShrineApplyReason, "shrine_apply_failed_for_test", "failed shrine apply reason")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "failed shrine apply preserves applied structure A")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "failed shrine apply preserves applied structure B")
+
+globalEnv._ShrineService_QueryAPI.ApplyPersistenceState = originalShrineApplyPersistence
 
 local invalidApplyRoot = {
 	schemaVersion = 999,
@@ -783,7 +860,10 @@ local invalidApplyRoot = {
 local invalidApplyOk, invalidApplyReason = queryApi.ApplySaveSnapshot(invalidApplyRoot)
 assertTrue(not invalidApplyOk, "invalid save snapshot apply rejects")
 assertEqual(invalidApplyReason, "save_root_schema_version_invalid", "invalid save snapshot apply reason")
-assertTrue(_G._GiantBuildModeService_Registry == registryBeforeApply, "invalid apply preserves registry reference")
+assertTrue(
+	globalEnv._GiantBuildModeService_Registry == registryBeforeApply,
+	"invalid apply preserves registry reference"
+)
 assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "invalid apply preserves applied structure A")
 assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "invalid apply preserves applied structure B")
 assertTrue(
@@ -849,7 +929,7 @@ do
 
 	-- player_not_alive
 	local deadPlayer = makeAlivePlayer(9502)
-	deadPlayer.Character.FindFirstChildOfClass = function(self, className)
+	deadPlayer.Character.FindFirstChildOfClass = function(_self, className)
 		if className == "Humanoid" then
 			return { Health = 0 }
 		end

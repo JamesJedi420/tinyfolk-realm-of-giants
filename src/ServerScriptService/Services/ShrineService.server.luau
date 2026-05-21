@@ -27,6 +27,7 @@ local ATTRIBUTE_LAST_TICK_AT = "LastTickAt"
 local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
 local SHRINE_FOLDER_PATH = { "Map", "Stations" }
+local globalEnv: any = getfenv()
 
 type ShrineState = {
 	shrineId: string,
@@ -42,6 +43,45 @@ type ShrineState = {
 local shrineStateById: { [string]: ShrineState } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
 local taskStateByShrineId: { [string]: any } = {}
+
+type ShrinePersistenceRecord = {
+	shrineId: string,
+	isActive: boolean,
+	essenceTotal: number,
+	tickCount: number,
+	lastTickAt: number,
+	activatedByUserId: number?,
+}
+
+type ShrinePersistenceState = {
+	shrines: { ShrinePersistenceRecord },
+}
+
+local function isFiniteNumber(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
+end
+
+local function isWholeNumber(value: any): boolean
+	if not isFiniteNumber(value) then
+		return false
+	end
+
+	return value % 1 == 0
+end
+
+local function isPositiveUserId(value: any): boolean
+	if not isWholeNumber(value) then
+		return false
+	end
+
+	return value > 0
+end
 
 local function debugLog(message: string)
 	print(string.format("[ShrineService] %s", message))
@@ -215,6 +255,124 @@ local function deactivateShrine(state: ShrineState, reason: string)
 	debugLog(
 		string.format("Shrine deactivated id=%s reason=%s essenceTotal=%d", state.shrineId, reason, state.essenceTotal)
 	)
+end
+
+local function buildPersistenceState(): ShrinePersistenceState
+	local shrineIds = {}
+	for shrineId in shrineStateById do
+		table.insert(shrineIds, shrineId)
+	end
+	table.sort(shrineIds)
+
+	local shrines = {}
+	for _, shrineId in ipairs(shrineIds) do
+		local state = shrineStateById[shrineId]
+		table.insert(shrines, {
+			shrineId = shrineId,
+			isActive = state.isActive == true,
+			essenceTotal = state.essenceTotal,
+			tickCount = state.tickCount,
+			lastTickAt = state.lastTickAt,
+			activatedByUserId = state.activatedByUserId,
+		})
+	end
+
+	return {
+		shrines = shrines,
+	}
+end
+
+local function resetShrineStateForPersistence(state: ShrineState)
+	state.isActive = false
+	state.essenceTotal = 0
+	state.tickCount = 0
+	state.lastTickAt = 0
+	state.activatedByUserId = nil
+	state.accumulatorSeconds = 0
+	applyDebugAttributes(state)
+end
+
+local function validatePersistenceRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "shrine_persistence_record_invalid"
+	end
+	if type(record.shrineId) ~= "string" or record.shrineId == "" then
+		return false, "shrine_persistence_record_shrine_id_invalid"
+	end
+	if type(record.isActive) ~= "boolean" then
+		return false, "shrine_persistence_record_is_active_invalid"
+	end
+	if not isFiniteNumber(record.essenceTotal) or record.essenceTotal < 0 then
+		return false, "shrine_persistence_record_essence_total_invalid"
+	end
+	if record.essenceTotal > ShrineConfig.MaxEssenceTotal then
+		return false, "shrine_persistence_record_essence_total_out_of_bounds"
+	end
+	if not isWholeNumber(record.tickCount) or record.tickCount < 0 then
+		return false, "shrine_persistence_record_tick_count_invalid"
+	end
+	if not isFiniteNumber(record.lastTickAt) or record.lastTickAt < 0 then
+		return false, "shrine_persistence_record_last_tick_at_invalid"
+	end
+	if record.activatedByUserId ~= nil and not isPositiveUserId(record.activatedByUserId) then
+		return false, "shrine_persistence_record_activated_by_user_id_invalid"
+	end
+	if record.isActive == true and record.activatedByUserId == nil then
+		return false, "shrine_persistence_record_activated_by_user_id_missing"
+	end
+
+	return true, nil
+end
+
+local function applyPersistenceState(persistedState: any): (boolean, string?)
+	if persistedState == nil then
+		for _, state in shrineStateById do
+			resetShrineStateForPersistence(state)
+		end
+		return true, nil
+	end
+
+	if type(persistedState) ~= "table" then
+		return false, "shrine_persistence_invalid"
+	end
+	if type(persistedState.shrines) ~= "table" then
+		return false, "shrine_persistence_shrines_invalid"
+	end
+
+	local recordsByShrineId: { [string]: ShrinePersistenceRecord } = {}
+	for index, record in ipairs(persistedState.shrines) do
+		local valid, reason = validatePersistenceRecord(record)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "shrine_persistence_record_invalid", index)
+		end
+
+		local shrineId = record.shrineId
+		if recordsByShrineId[shrineId] ~= nil then
+			return false, string.format("shrine_persistence_record_duplicate index=%d", index)
+		end
+		if shrineStateById[shrineId] == nil then
+			return false, string.format("shrine_persistence_record_unknown_shrine index=%d", index)
+		end
+
+		recordsByShrineId[shrineId] = record
+	end
+
+	for shrineId, state in shrineStateById do
+		local record = recordsByShrineId[shrineId]
+		if record == nil then
+			resetShrineStateForPersistence(state)
+		else
+			state.isActive = record.isActive
+			state.essenceTotal = math.max(0, math.min(record.essenceTotal, ShrineConfig.MaxEssenceTotal))
+			state.tickCount = record.tickCount
+			state.lastTickAt = record.lastTickAt
+			state.activatedByUserId = record.activatedByUserId
+			state.accumulatorSeconds = 0
+			applyDebugAttributes(state)
+		end
+	end
+
+	return true, nil
 end
 
 local function applyTaskAttributes(player: Player, taskSnapshot: any)
@@ -544,6 +702,11 @@ end)
 
 debugLog("ShrineService initialized")
 
+globalEnv._ShrineService_QueryAPI = {
+	BuildPersistenceState = buildPersistenceState,
+	ApplyPersistenceState = applyPersistenceState,
+}
+
 -- Test-only exports for runtime proof slices.
-_G._ShrineService_ShrineState = shrineStateById
-_G._ShrineService_TaskState = taskStateByShrineId
+globalEnv._ShrineService_ShrineState = shrineStateById
+globalEnv._ShrineService_TaskState = taskStateByShrineId

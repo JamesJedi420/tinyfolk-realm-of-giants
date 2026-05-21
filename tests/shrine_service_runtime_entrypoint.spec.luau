@@ -15,6 +15,7 @@ local function assertEqual(actual: any, expected: any, label: string)
 end
 
 local warns: { string } = {}
+local globalEnv: any = getfenv()
 local originalWarn = warn
 warn = function(...: any)
 	local packed: any = table.pack(...)
@@ -308,8 +309,13 @@ end
 
 assertTrue(activateRemote._Handler ~= nil, "shrine service binds ShrineActivateRequest handler")
 
-local shrineStateById = _G._ShrineService_ShrineState
+local shrineStateById = globalEnv._ShrineService_ShrineState
 assertTrue(type(shrineStateById) == "table", "shrine state export present")
+
+local shrineQueryApi = globalEnv._ShrineService_QueryAPI
+assertTrue(type(shrineQueryApi) == "table", "shrine query API export present")
+assertTrue(type(shrineQueryApi.BuildPersistenceState) == "function", "shrine query API exposes build persistence")
+assertTrue(type(shrineQueryApi.ApplyPersistenceState) == "function", "shrine query API exposes apply persistence")
 
 activateRemote:FireServer(legacyPlayer, "Shrine_B")
 assertEqual(shrineStateById["Shrine_B"].isActive, true, "legacy string payload still activates shrine")
@@ -439,5 +445,69 @@ assertEqual(
 	"regressing",
 	"QTE failure applies disruption regression penalty"
 )
+
+local persistenceSnapshot = shrineQueryApi.BuildPersistenceState()
+assertTrue(type(persistenceSnapshot) == "table", "persistence snapshot is table")
+assertEqual(#persistenceSnapshot.shrines, 3, "persistence snapshot includes shrine count")
+assertEqual(persistenceSnapshot.shrines[1].shrineId, "Shrine_A", "persistence snapshot deterministic order A")
+assertEqual(persistenceSnapshot.shrines[2].shrineId, "Shrine_B", "persistence snapshot deterministic order B")
+assertEqual(persistenceSnapshot.shrines[3].shrineId, "Shrine_C", "persistence snapshot deterministic order C")
+
+local malformedApplyOk, malformedApplyReason = shrineQueryApi.ApplyPersistenceState("bad")
+assertTrue(not malformedApplyOk, "malformed persistence apply rejects")
+assertEqual(malformedApplyReason, "shrine_persistence_invalid", "malformed persistence apply reason")
+
+local unknownApplyOk, unknownApplyReason = shrineQueryApi.ApplyPersistenceState({
+	shrines = {
+		{
+			shrineId = "Shrine_Unknown",
+			isActive = false,
+			essenceTotal = 0,
+			tickCount = 0,
+			lastTickAt = 0,
+			activatedByUserId = nil,
+		},
+	},
+})
+assertTrue(not unknownApplyOk, "unknown shrine persistence apply rejects")
+assertEqual(
+	unknownApplyReason,
+	"shrine_persistence_record_unknown_shrine index=1",
+	"unknown shrine persistence apply reason"
+)
+
+local applyOk, applyReason = shrineQueryApi.ApplyPersistenceState({
+	shrines = {
+		{
+			shrineId = "Shrine_A",
+			isActive = true,
+			essenceTotal = 27,
+			tickCount = 9,
+			lastTickAt = 301,
+			activatedByUserId = legacyPlayer.UserId,
+		},
+		{
+			shrineId = "Shrine_C",
+			isActive = false,
+			essenceTotal = 4,
+			tickCount = 2,
+			lastTickAt = 250,
+			activatedByUserId = nil,
+		},
+	},
+})
+assertTrue(applyOk, "valid shrine persistence apply succeeds")
+assertEqual(applyReason, nil, "valid shrine persistence apply reason")
+assertEqual(shrineStateById["Shrine_A"].isActive, true, "persistence apply restores active shrine")
+assertEqual(shrineStateById["Shrine_A"].essenceTotal, 27, "persistence apply restores essence total")
+assertEqual(shrineStateById["Shrine_A"].tickCount, 9, "persistence apply restores tick count")
+assertEqual(shrineStateById["Shrine_A"].activatedByUserId, legacyPlayer.UserId, "persistence apply restores owner")
+assertEqual(shrineStateById["Shrine_B"].essenceTotal, 0, "persistence apply resets missing shrine")
+
+local clearOk, clearReason = shrineQueryApi.ApplyPersistenceState(nil)
+assertTrue(clearOk, "nil shrine persistence apply succeeds")
+assertEqual(clearReason, nil, "nil shrine persistence apply reason")
+assertEqual(shrineStateById["Shrine_A"].isActive, false, "nil persistence apply clears active state")
+assertEqual(shrineStateById["Shrine_A"].essenceTotal, 0, "nil persistence apply clears essence")
 
 print("shrine_service_runtime_entrypoint: all checks passed")

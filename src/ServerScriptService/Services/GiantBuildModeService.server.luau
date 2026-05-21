@@ -34,6 +34,7 @@ type AcceptedStructurePlacementState = {
 local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
 local realmOwnerUserId: number? = nil
+local globalEnv: any = getfenv()
 
 local function debugLog(message: string)
 	print(string.format("[GiantBuildModeService] %s", message))
@@ -640,9 +641,17 @@ local function isValidOwnerUserId(ownerUserId: any): boolean
 end
 
 local function getEmergencyReinforcementQueryApi(): any
-	local globalValue = _G
+	local globalValue = globalEnv
 	if type(globalValue._EmergencyReinforcementService_QueryAPI) == "table" then
 		return globalValue._EmergencyReinforcementService_QueryAPI
+	end
+	return nil
+end
+
+local function getShrineQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._ShrineService_QueryAPI) == "table" then
+		return globalValue._ShrineService_QueryAPI
 	end
 	return nil
 end
@@ -662,7 +671,22 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		emergencyReinforcementState = reinforcementQueryApi.BuildPersistenceState()
 	end
 
-	local root = GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, GetAllPlacedStructures(), emergencyReinforcementState)
+	local shrinePersistenceState = nil
+	local shrineQueryApi = getShrineQueryApi()
+	if shrineQueryApi ~= nil then
+		if type(shrineQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "shrine_build_persistence_missing"
+		end
+
+		shrinePersistenceState = shrineQueryApi.BuildPersistenceState()
+	end
+
+	local root = GiantRealmSaveSchema.BuildSaveRoot(
+		ownerUserId,
+		GetAllPlacedStructures(),
+		emergencyReinforcementState,
+		shrinePersistenceState
+	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
 		return nil, reason or "save_snapshot_invalid"
@@ -675,17 +699,6 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
 		return false, reason or "save_root_invalid"
-	end
-
-	for structureId in pairs(placedStructureById) do
-		placedStructureById[structureId] = nil
-	end
-	clearGiantStructureArtifacts()
-
-	for _, record in ipairs(root.placedStructures) do
-		local state: AcceptedStructurePlacementState = GiantRealmSaveSchema.SerializePlacedStructureRecord(record)
-		placedStructureById[state.structureId] = state
-		materializeAcceptedWorkspaceArtifact(state)
 	end
 
 	local reinforcementQueryApi = getEmergencyReinforcementQueryApi()
@@ -709,12 +722,43 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		end
 	end
 
+	local shrineQueryApi = getShrineQueryApi()
+	if root.shrinePersistence ~= nil then
+		if shrineQueryApi == nil then
+			return false, "shrine_query_api_missing"
+		end
+		if type(shrineQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "shrine_apply_persistence_missing"
+		end
+
+		local appliedShrine, shrineReason = shrineQueryApi.ApplyPersistenceState(root.shrinePersistence)
+		if not appliedShrine then
+			return false, shrineReason or "shrine_apply_persistence_failed"
+		end
+	elseif shrineQueryApi ~= nil and type(shrineQueryApi.ApplyPersistenceState) == "function" then
+		local appliedShrine, shrineReason = shrineQueryApi.ApplyPersistenceState(nil)
+		if not appliedShrine then
+			return false, shrineReason or "shrine_apply_persistence_failed"
+		end
+	end
+
+	for structureId in pairs(placedStructureById) do
+		placedStructureById[structureId] = nil
+	end
+	clearGiantStructureArtifacts()
+
+	for _, record in ipairs(root.placedStructures) do
+		local state: AcceptedStructurePlacementState = GiantRealmSaveSchema.SerializePlacedStructureRecord(record)
+		placedStructureById[state.structureId] = state
+		materializeAcceptedWorkspaceArtifact(state)
+	end
+
 	realmOwnerUserId = root.ownerUserId
 
 	return true, nil
 end
 
-_G._GiantBuildModeService_QueryAPI = {
+globalEnv._GiantBuildModeService_QueryAPI = {
 	GetPlacedStructure = GetPlacedStructure,
 	GetAllPlacedStructures = GetAllPlacedStructures,
 	IsStructurePlaced = IsStructurePlaced,
@@ -722,7 +766,7 @@ _G._GiantBuildModeService_QueryAPI = {
 	ApplySaveSnapshot = ApplySaveSnapshot,
 }
 
-_G._GiantBuildModeService_Registry = placedStructureById
+globalEnv._GiantBuildModeService_Registry = placedStructureById
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
