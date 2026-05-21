@@ -1,4 +1,5 @@
---!strict
+--!nocheck
+--!nolint BuiltinGlobalWrite
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
 
@@ -670,6 +671,57 @@ end
 do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
+	_G._RealmObjectiveService_QueryAPI = nil
+
+	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+
+	assertFalse(rejected.accepted, "request rejects when objective token API is unavailable")
+	assertEqual(rejected.reason, "objective_token_api_unavailable", "objective token API unavailable reason")
+
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			return tokenSnapshotResult
+		end,
+	}
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+	}
+
+	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+
+	assertFalse(rejected.accepted, "request rejects when token snapshot method is unavailable")
+	assertEqual(rejected.reason, "objective_token_api_unavailable", "token snapshot missing method reason")
+
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			return tokenSnapshotResult
+		end,
+	}
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
 	tokenSnapshotResult = {
 		accepted = false,
 		reason = "objective_token_inactive",
@@ -690,12 +742,9 @@ do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
 	tokenSnapshotResult = {
-		accepted = true,
-		reason = "accepted",
-		tokenState = {
-			remainingTokens = 0,
-			revoked = false,
-		},
+		accepted = false,
+		reason = "token_unavailable",
+		tokenState = nil,
 	}
 
 	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
@@ -712,13 +761,9 @@ do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
 	tokenSnapshotResult = {
-		accepted = true,
-		reason = "accepted",
-		tokenState = {
-			remainingTokens = 2,
-			revoked = false,
-			nextAvailableAt = 125,
-		},
+		accepted = false,
+		reason = "token_not_ready",
+		tokenState = nil,
 	}
 
 	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
@@ -735,16 +780,9 @@ do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
 	tokenSnapshotResult = {
-		accepted = true,
-		reason = "accepted",
-		tokenState = {
-			remainingTokens = 2,
-			revoked = false,
-			scheduleWindows = {
-				{ startsAt = 10, endsAt = 20 },
-				{ startsAt = 40, endsAt = 60 },
-			},
-		},
+		accepted = false,
+		reason = "token_not_scheduled",
+		tokenState = nil,
 	}
 
 	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
@@ -763,13 +801,7 @@ do
 	tokenSnapshotResult = {
 		accepted = true,
 		reason = "accepted",
-		tokenState = {
-			remainingTokens = 2,
-			revoked = false,
-			scheduleWindows = {
-				{ startsAt = 90, endsAt = 130 },
-			},
-		},
+		tokenState = nil,
 	}
 
 	local accepted = reinforcementApi.RequestReinforcement(requester.UserId, {

@@ -42,6 +42,7 @@ local function reasonLabel(reason: string?): string
 		reinforcement_candidate_missing = "No eligible reinforcement candidate",
 		reinforcement_candidate_invalid = "Candidate data invalid",
 		reinforcement_already_used = "Reinforcement already used",
+		objective_token_api_unavailable = "Objective token service unavailable",
 		token_snapshot_failed = "Objective token check failed",
 		token_lifecycle_inactive = "Objective token inactive",
 		token_revoked = "Objective token revoked",

@@ -22,6 +22,7 @@ EscapeConfig.TraversalGapBlockRequestCooldownSeconds = 0.25 -- Cooldown for bloc
 -- Attribute names for route/escape/capture validation
 EscapeConfig.ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed" -- If true, route allows through-gap reach
 EscapeConfig.RouteTypeAttribute = "RouteType" -- Type of route (e.g., TraversalGap)
+EscapeConfig.TinyfolkOnlyRouteAttribute = "TinyfolkOnlyRoute" -- If true, only Tinyfolk may traverse/access the route
 EscapeConfig.CrossingPhaseAttribute = "CrossingPhase" -- Phase of Tinyfolk crossing
 EscapeConfig.RequiredCrossingPhase = "MidCrossing" -- Required phase for valid crossing
 EscapeConfig.SafeZoneAttribute = "InSafeZone" -- If true, route/target is in a safe zone (no capture/block allowed)

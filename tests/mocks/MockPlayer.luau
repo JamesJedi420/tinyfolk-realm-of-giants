@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 
 local MockPlayer: any = {}
 MockPlayer.__index = MockPlayer

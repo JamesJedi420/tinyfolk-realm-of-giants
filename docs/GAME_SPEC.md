@@ -28,6 +28,9 @@ Use these markers consistently in design and implementation discussions:
 - Stored Wood/Stone totals are the current usable realm totals.
 - Prototype construction spending uses stored Wood/Stone only.
 - Produced and InTransit material totals are not spendable for construction.
+- Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
+- Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.
+- Escape route metadata is server-readable; current prototype route access is Tinyfolk-only, excludes Giants from route traversal queries, and exposes only objective-safe route state to objective consumers.
 - Prototype map and interaction surfaces for playtest validation.
 
 ## Long-Term World Model Direction

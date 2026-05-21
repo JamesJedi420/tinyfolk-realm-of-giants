@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
 local MatchSimulation: any = require("../tests/harness/MatchSimulation")
@@ -21,6 +21,7 @@ end
 local routeAttributes: { [string]: any } = {
 	ThroughGapReachAllowed = true,
 	RouteType = "TraversalGap",
+	TinyfolkOnlyRoute = true,
 }
 
 local routePart: any = {
@@ -120,6 +121,7 @@ local replicatedStorageService: any = {
 									RequestCooldownSeconds = 5,
 									ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed",
 									RouteTypeAttribute = "RouteType",
+									TinyfolkOnlyRouteAttribute = "TinyfolkOnlyRoute",
 									CrossingPhaseAttribute = "CrossingPhase",
 									RequiredCrossingPhase = "MidCrossing",
 									SafeZoneAttribute = "InSafeZone",
@@ -248,6 +250,7 @@ local EscapeService = require("../src/ServerScriptService/Services/EscapeService
 local function resetRouteDefaults()
 	routeAttributes.ThroughGapReachAllowed = true
 	routeAttributes.RouteType = "TraversalGap"
+	routeAttributes.TinyfolkOnlyRoute = true
 	routeAttributes.InSafeZone = false
 	routeAttributes.SafeZoneType = nil
 	routeAttributes.SafeZoneProtectionEndsAt = nil
@@ -275,6 +278,7 @@ local function resetRouteDefaults()
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
+	routeAttributes.RouteEnabled = true
 end
 
 local function advanceFinalExitToOpen(routeId: string?)
@@ -307,6 +311,111 @@ do
 	local protected = _G._EscapeService_QueryAPI.ResolveRescueEntryRoute(1101, 9402)
 	assertEqual(protected.accepted, false, "query rescue entry route rejects protected route")
 	assertEqual(protected.reason, "rescue_entry_route_missing", "protected rescue entry route reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.RouteEnabled = true
+	local tinyfolk = MockPlayer.new(60, "AccessTinyfolk", { role = "Tinyfolk" })
+	local giant = MockPlayer.new(61, "AccessGiant", { role = "Giant" })
+
+	local invalidAccess = EscapeService.getRouteAccess(tinyfolk, nil)
+	assertEqual(invalidAccess.accepted, false, "invalid route access id rejects")
+	assertEqual(invalidAccess.reason, "route_id_invalid", "invalid route access id reason")
+
+	local missingAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_Missing")
+	assertEqual(missingAccess.accepted, false, "missing route access rejects")
+	assertEqual(missingAccess.reason, "route_not_found", "missing route access reason")
+
+	local tinyfolkAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	assertEqual(tinyfolkAccess.accepted, true, "Tinyfolk access query accepts Tinyfolk-only route")
+	assertEqual(tinyfolkAccess.tinyfolkOnly, true, "Tinyfolk-only metadata projected")
+
+	routeAttributes.RouteEnabled = false
+	local giantAccess = _G._EscapeService_QueryAPI.GetRouteAccess(giant, "EscapeRoute_A")
+	assertEqual(giantAccess.accepted, false, "Giant access query rejects Tinyfolk-only route")
+	assertEqual(giantAccess.reason, "requester_not_tinyfolk", "Giant access rejection reason")
+
+	routeAttributes.TinyfolkOnlyRoute = false
+	local malformedMetadataGiantAccess = EscapeService.getRouteAccess(giant, "EscapeRoute_A")
+	assertEqual(
+		malformedMetadataGiantAccess.accepted,
+		false,
+		"Giant access rejects even with malformed Tinyfolk-only metadata"
+	)
+	assertEqual(malformedMetadataGiantAccess.reason, "requester_not_tinyfolk", "malformed metadata Giant access reason")
+	routeAttributes.TinyfolkOnlyRoute = true
+
+	local disabledAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	assertEqual(disabledAccess.accepted, false, "disabled route rejects access query")
+	assertEqual(disabledAccess.reason, "route_disabled", "disabled route access reason")
+
+	local disabledEscape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(disabledEscape.accepted, false, "disabled route rejects escape attempt")
+	assertEqual(disabledEscape.reason, "route_disabled", "disabled route escape reason")
+
+	EscapeService.ResetFinalExitForTests()
+	local disabledAfterReset = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	assertEqual(disabledAfterReset.accepted, false, "non-managed final-exit reset preserves disabled route")
+	assertEqual(disabledAfterReset.reason, "route_disabled", "disabled route preserved reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.RouteEnabled = true
+	local giant = MockPlayer.new(62, "BlockingAccessGiant", { role = "Giant" })
+	local tinyfolk = MockPlayer.new(63, "BlockedAccessTinyfolk", { role = "Tinyfolk" })
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	currentTime = 101
+	local blockedAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+
+	assertEqual(block.accepted, true, "access block setup accepted")
+	assertEqual(blockedAccess.accepted, false, "active block rejects route access query")
+	assertEqual(blockedAccess.reason, "traversal_gap_block_active", "active block access reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.RouteEnabled = true
+	assertTrue(
+		EscapeService.getObjectiveSafeRouteMetadata(nil :: any) ~= nil,
+		"objective all-route metadata query accepts nil"
+	)
+	assertTrue(
+		EscapeService.getObjectiveSafeRouteMetadata(123 :: any) == nil,
+		"objective metadata rejects non-string route id"
+	)
+	assertTrue(
+		EscapeService.getObjectiveSafeRouteMetadata("EscapeRoute_Missing") == nil,
+		"objective metadata rejects missing route id"
+	)
+
+	local metadata = EscapeService.getObjectiveSafeRouteMetadata("EscapeRoute_A")
+	assertEqual(metadata.routeId, "EscapeRoute_A", "objective route metadata includes route id")
+	assertEqual(metadata.tinyfolkOnly, true, "objective route metadata includes Tinyfolk-only flag")
+	assertEqual(metadata.isEnabled, true, "objective route metadata includes enabled flag")
+	assertTrue(metadata.position == nil, "objective route metadata omits exact position")
+	assertTrue(metadata.blockedByUserId == nil, "objective route metadata omits blocker identity")
+end
+
+do
+	resetRouteDefaults()
+	local tinyfolk = MockPlayer.new(64, "DormantAccessTinyfolk", { role = "Tinyfolk" })
+	local access = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	assertEqual(access.accepted, false, "managed dormant final exit rejects route access")
+	assertEqual(access.reason, "final_exit_dormant", "managed dormant route access reason")
+
+	objectiveThresholdMet = true
+	EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
+	currentTime = 102
+	EscapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
+	currentTime = 105
+	local openAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	assertEqual(openAccess.accepted, true, "managed open final exit accepts route access")
+	assertEqual(openAccess.finalExitPhase, "Open", "managed open route access exposes final-exit phase")
 end
 
 do

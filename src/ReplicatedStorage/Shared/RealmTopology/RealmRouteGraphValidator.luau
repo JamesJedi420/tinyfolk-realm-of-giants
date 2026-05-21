@@ -12,6 +12,9 @@ export type RouteEdge = RealmTopologyValidator.RouteEdge
 export type RealmRouteGraphConfig = {
 	-- Prefix used to identify tinyfolk spawn parts in descriptor.spawns.
 	tinyfolkSpawnPrefix: string,
+	requireTinyfolkOnlyRouteMetadata: boolean?,
+	tinyfolkOnlyRouteAttribute: string?,
+	routeEnabledAttribute: string?,
 }
 
 export type CheckResult = {
@@ -129,6 +132,66 @@ local function checkEdgeConsistency(descriptor: RealmDescriptor): CheckResult
 	}
 end
 
+local function getRouteAttribute(route: any, attributeName: string): any
+	local attributes = route.attributes
+	if type(attributes) == "table" then
+		local attributeValue = attributes[attributeName]
+		if attributeValue ~= nil then
+			return attributeValue
+		end
+	end
+	return route[attributeName]
+end
+
+local function nonEmptyStringOrFallback(value: any, fallback: string): string
+	if type(value) == "string" and value ~= "" then
+		return value
+	end
+	return fallback
+end
+
+local function checkTinyfolkOnlyRouteMetadata(descriptor: RealmDescriptor, config: RealmRouteGraphConfig): CheckResult
+	if config.requireTinyfolkOnlyRouteMetadata ~= true then
+		return { id = "route_graph_tinyfolk_only_metadata", passed = true }
+	end
+
+	local tinyfolkOnlyAttribute = nonEmptyStringOrFallback(config.tinyfolkOnlyRouteAttribute, "TinyfolkOnlyRoute")
+	local routeEnabledAttribute = nonEmptyStringOrFallback(config.routeEnabledAttribute, "RouteEnabled")
+	local seenByName: { [string]: boolean } = {}
+	local violations: { string } = {}
+
+	for _, route in descriptor.escapeRoutes do
+		local routeAny: any = route
+		local routeName = routeAny.name
+		if type(routeName) ~= "string" or routeName == "" then
+			table.insert(violations, "route id missing")
+			routeName = "<missing>"
+		end
+
+		if seenByName[routeName] == true then
+			table.insert(violations, string.format("%s duplicate route id", routeName))
+		end
+		seenByName[routeName] = true
+
+		if getRouteAttribute(routeAny, tinyfolkOnlyAttribute) ~= true then
+			table.insert(violations, string.format("%s missing %s=true", routeName, tinyfolkOnlyAttribute))
+		end
+		if getRouteAttribute(routeAny, routeEnabledAttribute) == false then
+			table.insert(violations, string.format("%s is disabled", routeName))
+		end
+	end
+
+	if #violations == 0 then
+		return { id = "route_graph_tinyfolk_only_metadata", passed = true }
+	end
+
+	return {
+		id = "route_graph_tinyfolk_only_metadata",
+		passed = false,
+		reason = table.concat(violations, "; "),
+	}
+end
+
 function RealmRouteGraphValidator.ValidateRouteGraph(
 	descriptor: RealmDescriptor,
 	config: RealmRouteGraphConfig
@@ -137,6 +200,7 @@ function RealmRouteGraphValidator.ValidateRouteGraph(
 		checkSpawnRegistration(descriptor, config),
 		checkEscapeRegistration(descriptor),
 		checkEdgeConsistency(descriptor),
+		checkTinyfolkOnlyRouteMetadata(descriptor, config),
 	}
 
 	local allPassed = true

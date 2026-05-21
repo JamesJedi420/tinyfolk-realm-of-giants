@@ -94,8 +94,8 @@ local function requestConsumeEmergencyToken(requesterUserId: number, objectiveId
 	local objectiveTokenApi = getObjectiveTokenServiceQueryApi()
 	if objectiveTokenApi == nil or type(objectiveTokenApi.RequestConsumeEmergencyToken) ~= "function" then
 		return {
-			accepted = true,
-			reason = "accepted",
+			accepted = false,
+			reason = "objective_token_api_unavailable",
 			tokenState = nil,
 		}
 	end
@@ -116,8 +116,8 @@ local function requestEmergencyTokenSnapshot(objectiveId: string, at: number): a
 	local objectiveTokenApi = getObjectiveTokenServiceQueryApi()
 	if objectiveTokenApi == nil or type(objectiveTokenApi.GetEmergencyTokenSnapshot) ~= "function" then
 		return {
-			accepted = true,
-			reason = "accepted",
+			accepted = false,
+			reason = "objective_token_api_unavailable",
 			tokenState = nil,
 		}
 	end
@@ -139,87 +139,10 @@ local function requestEmergencyTokenSnapshot(objectiveId: string, at: number): a
 		}
 	end
 
-	local tokenState = if type(result.tokenState) == "table" then result.tokenState else nil
-	if tokenState ~= nil then
-		local lifecycleState = tokenState.lifecycleState
-		if type(lifecycleState) == "string" and lifecycleState ~= "active" then
-			return {
-				accepted = false,
-				reason = "token_lifecycle_inactive",
-				tokenState = tokenState,
-			}
-		end
-
-		if tokenState.revoked == true then
-			return {
-				accepted = false,
-				reason = "token_revoked",
-				tokenState = tokenState,
-			}
-		end
-
-		local remainingTokens = tokenState.remainingTokens
-		if type(remainingTokens) == "number" and remainingTokens <= 0 then
-			return {
-				accepted = false,
-				reason = "token_unavailable",
-				tokenState = tokenState,
-			}
-		end
-
-		local nextAvailableAt = tokenState.nextAvailableAt
-		if isFiniteNonNegativeNumber(nextAvailableAt) and at < (nextAvailableAt :: number) then
-			return {
-				accepted = false,
-				reason = "token_not_ready",
-				tokenState = tokenState,
-			}
-		end
-
-		local expiresAt = tokenState.expiresAt
-		if isFiniteNonNegativeNumber(expiresAt) and at >= (expiresAt :: number) then
-			return {
-				accepted = false,
-				reason = "token_expired",
-				tokenState = tokenState,
-			}
-		end
-
-		local scheduleWindows = tokenState.scheduleWindows
-		if type(scheduleWindows) == "table" then
-			local hasActiveWindow = false
-			for _, window in ipairs(scheduleWindows) do
-				if type(window) == "table" then
-					local windowAny: any = window
-					local startsAt = windowAny.startsAt
-					local endsAt = windowAny.endsAt
-					local validStart = isFiniteNonNegativeNumber(startsAt)
-					local validEnd = endsAt == nil or isFiniteNonNegativeNumber(endsAt)
-					if validStart and validEnd then
-						local startValue = startsAt :: number
-						local endValue = endsAt :: any
-						if at >= startValue and (endValue == nil or at <= (endValue :: number)) then
-							hasActiveWindow = true
-							break
-						end
-					end
-				end
-			end
-
-			if not hasActiveWindow then
-				return {
-					accepted = false,
-					reason = "token_not_scheduled",
-					tokenState = tokenState,
-				}
-			end
-		end
-	end
-
 	return {
 		accepted = true,
 		reason = "accepted",
-		tokenState = tokenState,
+		tokenState = if type(result.tokenState) == "table" then result.tokenState else nil,
 	}
 end
 
@@ -428,18 +351,19 @@ function applyStateAttributes()
 	if stateHost == nil then
 		stateHost = Workspace
 	end
+	local stateHostAny: any = stateHost
 
 	local snapshot = buildSnapshot(now())
 	local attrs = EmergencyReinforcementConfig.StateAttributes
-	stateHost:SetAttribute(attrs.Available, snapshot.available)
-	stateHost:SetAttribute(attrs.Used, snapshot.used)
-	stateHost:SetAttribute(attrs.CooldownEndsAt, snapshot.cooldownEndsAt)
-	stateHost:SetAttribute(attrs.CallStartedAt, snapshot.callStartedAt)
-	stateHost:SetAttribute(attrs.TriggeredByUserId, snapshot.triggeredByUserId)
-	stateHost:SetAttribute(attrs.SpawnedUserId, snapshot.spawnedUserId)
-	stateHost:SetAttribute(attrs.LastReason, snapshot.lastReason)
-	stateHost:SetAttribute(attrs.ActiveTinyfolkCount, snapshot.activeTinyfolkCount)
-	stateHost:SetAttribute(attrs.ReadinessReason, snapshot.readinessReason)
+	stateHostAny:SetAttribute(attrs.Available, snapshot.available)
+	stateHostAny:SetAttribute(attrs.Used, snapshot.used)
+	stateHostAny:SetAttribute(attrs.CooldownEndsAt, snapshot.cooldownEndsAt)
+	stateHostAny:SetAttribute(attrs.CallStartedAt, snapshot.callStartedAt)
+	stateHostAny:SetAttribute(attrs.TriggeredByUserId, snapshot.triggeredByUserId)
+	stateHostAny:SetAttribute(attrs.SpawnedUserId, snapshot.spawnedUserId)
+	stateHostAny:SetAttribute(attrs.LastReason, snapshot.lastReason)
+	stateHostAny:SetAttribute(attrs.ActiveTinyfolkCount, snapshot.activeTinyfolkCount)
+	stateHostAny:SetAttribute(attrs.ReadinessReason, snapshot.readinessReason)
 end
 
 resolveObjectivePart = function(objectiveId: string): BasePart?
@@ -497,7 +421,7 @@ local function objectiveInRange(player: Player, objectivePart: BasePart): boolea
 		return false
 	end
 
-	local delta = (root.Position - objectivePart.Position)
+	local delta = ((root.Position :: any) - (objectivePart.Position :: any))
 	if delta == nil then
 		return false
 	end

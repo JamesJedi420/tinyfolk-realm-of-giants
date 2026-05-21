@@ -11,6 +11,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1
 
 Headless Luau test scripts require `lune` to be installed and available on `PATH`.
 
+## Run lint and typecheck validation
+
+From the repo root, run:
+
+```powershell
+.\scripts\run-validation.ps1
+```
+
+This command runs StyLua, Selene, and luau-lsp with repository configuration (`stylua.toml`, `selene.toml`) and Roblox definitions (`types/roblox-definitions.d.luau`).
+
+For touched-file validation only:
+
+```powershell
+.\scripts\run-validation.ps1 -ChangedOnly
+```
+
+To fail on Selene warnings as well:
+
+```powershell
+.\scripts\run-validation.ps1 -AllowSeleneWarnings:$false
+```
+
 ## Install Lune (Windows)
 
 Run:

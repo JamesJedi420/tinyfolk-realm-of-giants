@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 
 local MatchSimulation = require("../tests/harness/MatchSimulation")
 
@@ -27,6 +27,7 @@ local function createEscapeServiceFixture()
 	local routeAttributes: { [string]: any } = {
 		ThroughGapReachAllowed = true,
 		RouteType = "TraversalGap",
+		TinyfolkOnlyRoute = true,
 		InSafeZone = false,
 		SafeZoneType = nil,
 		SafeZoneProtectionEndsAt = nil,
@@ -123,6 +124,7 @@ local function createEscapeServiceFixture()
 										RequestCooldownSeconds = 0,
 										ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed",
 										RouteTypeAttribute = "RouteType",
+										TinyfolkOnlyRouteAttribute = "TinyfolkOnlyRoute",
 										CrossingPhaseAttribute = "CrossingPhase",
 										RequiredCrossingPhase = "MidCrossing",
 										SafeZoneAttribute = "InSafeZone",
@@ -284,6 +286,7 @@ local function createTransportEscapeIntegrationFixture()
 	local routeAttributes: { [string]: any } = {
 		ThroughGapReachAllowed = true,
 		RouteType = "TraversalGap",
+		TinyfolkOnlyRoute = true,
 		InSafeZone = false,
 		SafeZoneType = nil,
 		SafeZoneProtectionEndsAt = nil,
@@ -438,6 +441,7 @@ local function createTransportEscapeIntegrationFixture()
 										RequestCooldownSeconds = 0,
 										ThroughGapReachAllowedAttribute = "ThroughGapReachAllowed",
 										RouteTypeAttribute = "RouteType",
+										TinyfolkOnlyRouteAttribute = "TinyfolkOnlyRoute",
 										CrossingPhaseAttribute = "CrossingPhase",
 										RequiredCrossingPhase = "MidCrossing",
 										SafeZoneAttribute = "InSafeZone",

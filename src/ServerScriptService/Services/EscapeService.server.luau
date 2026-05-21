@@ -417,7 +417,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			routePart:SetAttribute(EscapeConfig.FinalExitBlockedEndsAtAttribute, nil)
 			routePart:SetAttribute(EscapeConfig.FinalExitResolvedAtAttribute, nil)
 			routePart:SetAttribute(EscapeConfig.FinalExitBlockedByUserIdAttribute, nil)
-			routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+			if routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == nil then
+				routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+			end
 			return
 		end
 
@@ -447,6 +449,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local function registerEscapeRoutePart(part: BasePart)
 		local routeId = part.Name
+		if escapeRouteById[routeId] == part then
+			return
+		end
 		if escapeRouteById[routeId] then
 			debugWarn(string.format("Duplicate escape route id ignored: %s", routeId))
 			return
@@ -461,8 +466,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if part:GetAttribute(EscapeConfig.ThroughGapReachAllowedAttribute) == nil then
 			part:SetAttribute(EscapeConfig.ThroughGapReachAllowedAttribute, false)
 		end
+		if part:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == nil then
+			part:SetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute, true)
+		end
 
-		part:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+		if part:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == nil then
+			part:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+		end
 		part:SetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE, 0)
 		part:SetAttribute(EscapeConfig.TraversalGapBlockStateAttribute, TraversalGapBlockState.States.Idle)
 		part:SetAttribute(EscapeConfig.TraversalGapBlockStartupEndsAtAttribute, nil)
@@ -789,12 +799,86 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local function routeRejectsTraversal(routeId: string, routePart: BasePart): boolean
 		local currentTime = now()
-		local snapshot = cleanupExpiredBlock(routeId, routePart, currentTime)
+		cleanupExpiredBlock(routeId, routePart, currentTime)
 		return TraversalGapBlockState.ShouldRejectTraversal(
 			traversalGapBlockByRouteId[routeId],
 			currentTime,
 			routeHasBlockExemption(routePart)
 		)
+	end
+
+	local function getPlayerRole(player: any): string?
+		if player == nil or type(player.GetAttribute) ~= "function" then
+			return nil
+		end
+		local role = player:GetAttribute("Role")
+		return if type(role) == "string" then role else nil
+	end
+
+	local function buildRouteAccessPayload(routeId: string, routePart: BasePart, player: any?): any
+		local role = getPlayerRole(player)
+		local tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true
+		if role ~= RoleConfig.Roles.Tinyfolk then
+			return {
+				accepted = false,
+				reason = "requester_not_tinyfolk",
+				routeId = routeId,
+				role = role,
+				tinyfolkOnly = tinyfolkOnly,
+				isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false,
+				blockState = routePart:GetAttribute(EscapeConfig.TraversalGapBlockStateAttribute),
+				blockExempt = routeHasBlockExemption(routePart),
+				finalExitPhase = routePart:GetAttribute(EscapeConfig.FinalExitPhaseAttribute),
+			}
+		end
+
+		local finalExitSnapshot = nil
+		if isFinalExitManaged(routePart) then
+			finalExitSnapshot = refreshFinalExitState(routeId, routePart)
+		end
+		local isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false
+		local snapshot = getBlockSnapshot(routeId, routePart)
+		local isBlocked = snapshot.state == TraversalGapBlockState.States.Active
+			and not routeHasBlockExemption(routePart)
+
+		local accepted = true
+		local reason = "accepted"
+		if finalExitSnapshot ~= nil and finalExitSnapshot.isEscapeOpen ~= true then
+			accepted = false
+			reason = finalExitRejectReason(finalExitSnapshot.phase)
+		elseif not isEnabled then
+			accepted = false
+			reason = "route_disabled"
+		elseif isBlocked then
+			accepted = false
+			reason = "traversal_gap_block_active"
+		end
+
+		return {
+			accepted = accepted,
+			reason = reason,
+			routeId = routeId,
+			role = role,
+			tinyfolkOnly = tinyfolkOnly,
+			isEnabled = isEnabled,
+			blockState = snapshot.state,
+			blockExempt = routeHasBlockExemption(routePart),
+			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
+		}
+	end
+
+	local function buildObjectiveSafeRouteMetadata(routeId: string, routePart: BasePart): any
+		local snapshot = getBlockSnapshot(routeId, routePart)
+		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
+		return {
+			routeId = routeId,
+			tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true,
+			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false,
+			routeType = routePart:GetAttribute(EscapeConfig.RouteTypeAttribute),
+			blockState = snapshot.state,
+			blockExempt = routeHasBlockExemption(routePart),
+			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
+		}
 	end
 
 	local function buildRouteDebugPayload(routeId: string, routePart: BasePart, userId: number?): any
@@ -803,6 +887,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local payload: any = {
 			routeId = routeId,
 			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE),
+			tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true,
 			successfulEscapes = routePart:GetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE),
 			blockState = snapshot.state,
 			blockStartupEndsAt = snapshot.startupEndsAt,
@@ -1003,6 +1088,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
 		end
 
+		if not isFinalExitManaged(routePart) and routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == false then
+			return { accepted = false, reason = "route_disabled" }
+		end
+
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		if finalExitSnapshot ~= nil and finalExitSnapshot.isEscapeOpen ~= true then
 			return {
@@ -1179,6 +1268,40 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return nil
 		end
 		return refreshFinalExitState(routeId, routePart)
+	end
+
+	function service.getRouteAccess(player: any, routeId: any): any
+		if type(routeId) ~= "string" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+		local routePart = resolveRoutePart(routeId)
+		if routePart == nil then
+			return { accepted = false, reason = "route_not_found" }
+		end
+		return buildRouteAccessPayload(routeId, routePart, player)
+	end
+
+	function service.getObjectiveSafeRouteMetadata(routeId: any?): any
+		registerEscapeRoutesFromWorkspace()
+		if routeId ~= nil then
+			if type(routeId) ~= "string" then
+				return nil
+			end
+			local routePart = resolveRoutePart(routeId)
+			if routePart == nil then
+				return nil
+			end
+			return buildObjectiveSafeRouteMetadata(routeId, routePart)
+		end
+
+		local routes = {}
+		for registeredRouteId, routePart in escapeRouteById do
+			table.insert(routes, buildObjectiveSafeRouteMetadata(registeredRouteId, routePart))
+		end
+		table.sort(routes, function(a: any, b: any)
+			return tostring(a.routeId) < tostring(b.routeId)
+		end)
+		return routes
 	end
 
 	function service.resolveRescueEntryRoute(_targetUserId: any, targetRealmOwnerUserId: any): any
@@ -1495,6 +1618,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		GetFinalExitSnapshot = function(routeId: string): any
 			return service.getFinalExitSnapshot(routeId)
+		end,
+		GetRouteAccess = function(player: any, routeId: string): any
+			return service.getRouteAccess(player, routeId)
+		end,
+		GetObjectiveSafeRouteMetadata = function(routeId: string?): any
+			return service.getObjectiveSafeRouteMetadata(routeId)
 		end,
 		ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
 			return service.resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
