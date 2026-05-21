@@ -71,11 +71,13 @@ if ($ChangedOnly) {
         'src/ServerScriptService/Services/ProfilePersistenceLifecycle.server.luau'
         'src/ServerScriptService/Services/GiantBuildModeService.server.luau'
         'src/ServerScriptService/Services/ShrineService.server.luau'
+        'src/ServerScriptService/Services/RescueContractService.server.luau'
         'src/ServerScriptService/Services/ResourceFlowState.luau'
         'tests/profile_persistence_lifecycle.spec.luau'
         'tests/giant_build_mode_service_runtime_entrypoint.spec.luau'
         'tests/giant_realm_save_schema.spec.luau'
         'tests/shrine_service_runtime_entrypoint.spec.luau'
+        'tests/rescue_contract_service_runtime_entrypoint.spec.luau'
         'src/ServerScriptService/Services/ThirdParty/ProfileStore.luau'
         'tests/harness/MatchSimulation.luau'
     )

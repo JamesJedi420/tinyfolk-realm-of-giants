@@ -12,6 +12,7 @@ local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig")
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
+local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local REQUEST_REMOTE_NAME = "RescueContractRequest"
@@ -19,6 +20,7 @@ local RESPONSE_REMOTE_NAME = "RescueContractResponse"
 local COMPLETE_REMOTE_NAME = "RescueContractCompleteRequest"
 
 local ROLE_ATTRIBUTE = "Role"
+local globalEnv: any = getfenv()
 
 local state = RescueContractState.NewState()
 local rescueQueueState = RescueContractQueueState.NewState()
@@ -207,7 +209,7 @@ local function getHumanoidRootPart(player: Player): BasePart?
 end
 
 local function getRoleServiceQueryApi(): any?
-	local globalValue: any = _G
+	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
 		return nil
 	end
@@ -221,7 +223,7 @@ local function getRoleServiceQueryApi(): any?
 end
 
 local function getGrabServiceQueryApi(): any?
-	local globalValue: any = _G
+	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
 		return nil
 	end
@@ -235,7 +237,7 @@ local function getGrabServiceQueryApi(): any?
 end
 
 local function getScoreServiceQueryApi(): any?
-	local globalValue: any = _G
+	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
 		return nil
 	end
@@ -249,7 +251,7 @@ local function getScoreServiceQueryApi(): any?
 end
 
 local function getEscapeServiceQueryApi(): any?
-	local globalValue: any = _G
+	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
 		return nil
 	end
@@ -263,7 +265,7 @@ local function getEscapeServiceQueryApi(): any?
 end
 
 local function getRescueHandoffQueryApi(): any?
-	local globalValue: any = _G
+	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
 		return nil
 	end
@@ -874,6 +876,114 @@ local function listRescueQueueEntriesForHub(limit: any, at: number?): { any }
 	return limited
 end
 
+local function buildPersistenceState(): any
+	local contracts = RescueContractState.GetContracts(state)
+	local queueEntries: { any } = {}
+	for _, entry in pairs(rescueQueueState.entriesById) do
+		table.insert(queueEntries, {
+			queueEntryId = entry.queueEntryId,
+			capturedUserId = entry.capturedUserId,
+			realmId = entry.realmId,
+			sessionId = entry.sessionId,
+			rewardHint = entry.rewardHint,
+			dangerRating = entry.dangerRating,
+			expiration = entry.expiration,
+			rescuerUserId = entry.rescuerUserId,
+			targetRealmOwnerUserId = entry.targetRealmOwnerUserId,
+			entryRouteId = entry.entryRouteId,
+			entryRouteKind = entry.entryRouteKind,
+			createdAt = entry.createdAt,
+			status = entry.status,
+			acceptedAt = entry.acceptedAt,
+			acceptedByUserId = entry.acceptedByUserId,
+			resolvedAt = entry.resolvedAt,
+			resolvedReason = entry.resolvedReason,
+		})
+	end
+
+	return {
+		contracts = contracts,
+		queueEntries = queueEntries,
+	}
+end
+
+local function applyPersistenceState(persistedState: any): (boolean, string?)
+	local valid, reason = GiantRealmSaveSchema.ValidateRescuePersistenceRecord(persistedState)
+	if not valid then
+		return false, reason or "rescue_persistence_invalid"
+	end
+
+	lastRequestAtByUserId = {}
+	lastRejectedRequestAtByUserId = {}
+	rescueAccelerationExpiresAtByUserId = {}
+	nextQueueSequence = 0
+
+	for _, player in Players:GetPlayers() do
+		clearRescueAcceleration(player)
+		clearPostRescueProtection(player)
+	end
+
+	if persistedState == nil then
+		state = RescueContractState.NewState()
+		rescueQueueState = RescueContractQueueState.NewState()
+		applyContractAttributesFromState()
+		return true, nil
+	end
+
+	local nextContractsByRescuer: { [number]: any } = {}
+	local nextRescuerByTarget: { [number]: number } = {}
+	for _, contract in ipairs(persistedState.contracts) do
+		local copiedContract = {
+			rescuerUserId = contract.rescuerUserId,
+			targetUserId = contract.targetUserId,
+			targetRealmOwnerUserId = contract.targetRealmOwnerUserId,
+			entryRouteId = contract.entryRouteId,
+			entryRouteKind = contract.entryRouteKind,
+			startedAt = contract.startedAt,
+			expiresAt = contract.expiresAt,
+			isAccelerated = contract.isAccelerated == true,
+		}
+		nextContractsByRescuer[copiedContract.rescuerUserId] = copiedContract
+		nextRescuerByTarget[copiedContract.targetUserId] = copiedContract.rescuerUserId
+	end
+
+	state = {
+		contractsByRescuer = nextContractsByRescuer,
+		rescuerByTarget = nextRescuerByTarget,
+		lastReason = nil,
+	}
+
+	local nextEntriesById: { [string]: any } = {}
+	for _, entry in ipairs(persistedState.queueEntries) do
+		nextEntriesById[entry.queueEntryId] = {
+			queueEntryId = entry.queueEntryId,
+			capturedUserId = entry.capturedUserId,
+			realmId = entry.realmId,
+			sessionId = entry.sessionId,
+			rewardHint = entry.rewardHint,
+			dangerRating = entry.dangerRating,
+			expiration = entry.expiration,
+			rescuerUserId = entry.rescuerUserId,
+			targetRealmOwnerUserId = entry.targetRealmOwnerUserId,
+			entryRouteId = entry.entryRouteId,
+			entryRouteKind = entry.entryRouteKind,
+			createdAt = entry.createdAt,
+			status = entry.status,
+			acceptedAt = entry.acceptedAt,
+			acceptedByUserId = entry.acceptedByUserId,
+			resolvedAt = entry.resolvedAt,
+			resolvedReason = entry.resolvedReason,
+		}
+	end
+
+	rescueQueueState = {
+		entriesById = nextEntriesById,
+	}
+
+	applyContractAttributesFromState()
+	return true, nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 local requestRemote = ensureRemoteEvent(remotesFolder, REQUEST_REMOTE_NAME)
 local responseRemote = ensureRemoteEvent(remotesFolder, RESPONSE_REMOTE_NAME)
@@ -914,7 +1024,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	applyContractAttributesFromState()
 end)
 
-_G._RescueContractService_QueryAPI = {
+globalEnv._RescueContractService_QueryAPI = {
 	RequestRescueContract = function(rescuerUserId: number, targetUserId: number, at: number?): any
 		local rescuer = getPlayerByUserId(rescuerUserId)
 		if rescuer == nil then
@@ -953,6 +1063,12 @@ _G._RescueContractService_QueryAPI = {
 		end
 		return RescueContractQueueState.GetPendingEntries(rescueQueueState)
 	end,
+	BuildPersistenceState = function(): any
+		return buildPersistenceState()
+	end,
+	ApplyPersistenceState = function(persistedState: any): (boolean, string?)
+		return applyPersistenceState(persistedState)
+	end,
 	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
 		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
 	end,
@@ -971,7 +1087,7 @@ _G._RescueContractService_QueryAPI = {
 	end,
 }
 
-_G._RescueContractHubSurface_QueryAPI = {
+globalEnv._RescueContractHubSurface_QueryAPI = {
 	GetPendingRescueQueueEntries = function(limit: any, at: number?): { any }
 		return listRescueQueueEntriesForHub(limit, at)
 	end,

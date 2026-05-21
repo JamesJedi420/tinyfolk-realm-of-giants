@@ -96,6 +96,73 @@ local function makeShrinePersistenceRecord()
 	}
 end
 
+local function makeRescuePersistenceRecord()
+	return {
+		contracts = {
+			{
+				rescuerUserId = 9404,
+				targetUserId = 9409,
+				targetRealmOwnerUserId = 9402,
+				entryRouteId = "RescueRoute_B",
+				entryRouteKind = "RealmEntry",
+				startedAt = 90,
+				expiresAt = 125,
+				isAccelerated = false,
+			},
+			{
+				rescuerUserId = 9401,
+				targetUserId = 9408,
+				targetRealmOwnerUserId = 9402,
+				entryRouteId = "RescueRoute_A",
+				entryRouteKind = "RealmEntry",
+				startedAt = 80,
+				expiresAt = 130,
+				isAccelerated = true,
+			},
+		},
+		queueEntries = {
+			{
+				queueEntryId = "RQ_02",
+				capturedUserId = 7402,
+				realmId = "Realm_A",
+				sessionId = "Session_A",
+				rewardHint = "high",
+				dangerRating = 0.8,
+				expiration = 220,
+				rescuerUserId = 9404,
+				targetRealmOwnerUserId = 9402,
+				entryRouteId = "RescueRoute_B",
+				entryRouteKind = "RealmEntry",
+				createdAt = 110,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+			{
+				queueEntryId = "RQ_01",
+				capturedUserId = 7401,
+				realmId = "Realm_A",
+				sessionId = "Session_A",
+				rewardHint = "medium",
+				dangerRating = 0.4,
+				expiration = 210,
+				rescuerUserId = 9401,
+				targetRealmOwnerUserId = 9402,
+				entryRouteId = "RescueRoute_A",
+				entryRouteKind = "RealmEntry",
+				createdAt = 100,
+				status = "accepted",
+				acceptedAt = 105,
+				acceptedByUserId = 9401,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	}
+end
+
 local function assertVector3Equal(actual, expected, label)
 	assertEqual(actual.x, expected.x, label .. " x")
 	assertEqual(actual.y, expected.y, label .. " y")
@@ -192,6 +259,12 @@ local function run()
 	end
 
 	do
+		local root = makeSaveRoot()
+		root.rescuePersistence = makeRescuePersistenceRecord()
+		assertValid("valid save root with rescue persistence", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local serialized =
 			GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(makeEmergencyReinforcementRecord())
 		assertEqual(serialized.used, true, "serialized reinforcement used")
@@ -234,6 +307,29 @@ local function run()
 	end
 
 	do
+		local serialized = GiantRealmSaveSchema.SerializeRescuePersistenceRecord(makeRescuePersistenceRecord())
+		assertEqual(#serialized.contracts, 2, "serialized rescue contract count")
+		assertEqual(serialized.contracts[1].rescuerUserId, 9401, "serialized rescue contract order first")
+		assertEqual(serialized.contracts[2].rescuerUserId, 9404, "serialized rescue contract order second")
+		assertEqual(#serialized.queueEntries, 2, "serialized rescue queue count")
+		assertEqual(serialized.queueEntries[1].queueEntryId, "RQ_01", "serialized rescue queue order first")
+		assertEqual(serialized.queueEntries[2].queueEntryId, "RQ_02", "serialized rescue queue order second")
+	end
+
+	do
+		local statesById = {
+			GiantStructure_Runtime_B = makePlacedStructureRecord("GiantStructure_Runtime_B"),
+			GiantStructure_Runtime_A = makePlacedStructureRecord("GiantStructure_Runtime_A"),
+		}
+
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, statesById, nil, nil, makeRescuePersistenceRecord())
+		assertTrue(type(root.rescuePersistence) == "table", "built root includes rescue persistence")
+		assertEqual(root.rescuePersistence.contracts[1].rescuerUserId, 9401, "built root rescue contract first")
+		assertEqual(root.rescuePersistence.queueEntries[1].queueEntryId, "RQ_01", "built root rescue queue first")
+		assertValid("built root with rescue persistence validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local root = makeSaveRoot()
 		root.emergencyReinforcement = {
 			used = "yes",
@@ -273,6 +369,17 @@ local function run()
 		assertInvalid(
 			"shrine_id_duplicate index=2",
 			"invalid shrine duplicate id",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.rescuePersistence = makeRescuePersistenceRecord()
+		root.rescuePersistence.queueEntries[2].queueEntryId = "RQ_02"
+		assertInvalid(
+			"rescue_queue_entry_id_duplicate index=2",
+			"invalid rescue queue duplicate id",
 			GiantRealmSaveSchema.ValidateSaveRoot(root)
 		)
 	end

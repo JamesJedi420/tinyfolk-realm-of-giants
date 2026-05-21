@@ -656,6 +656,14 @@ local function getShrineQueryApi(): any
 	return nil
 end
 
+local function getRescueContractQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._RescueContractService_QueryAPI) == "table" then
+		return globalValue._RescueContractService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -681,11 +689,22 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		shrinePersistenceState = shrineQueryApi.BuildPersistenceState()
 	end
 
+	local rescuePersistenceState = nil
+	local rescueContractQueryApi = getRescueContractQueryApi()
+	if rescueContractQueryApi ~= nil then
+		if type(rescueContractQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "rescue_build_persistence_missing"
+		end
+
+		rescuePersistenceState = rescueContractQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetAllPlacedStructures(),
 		emergencyReinforcementState,
-		shrinePersistenceState
+		shrinePersistenceState,
+		rescuePersistenceState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -739,6 +758,26 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedShrine, shrineReason = shrineQueryApi.ApplyPersistenceState(nil)
 		if not appliedShrine then
 			return false, shrineReason or "shrine_apply_persistence_failed"
+		end
+	end
+
+	local rescueContractQueryApi = getRescueContractQueryApi()
+	if root.rescuePersistence ~= nil then
+		if rescueContractQueryApi == nil then
+			return false, "rescue_query_api_missing"
+		end
+		if type(rescueContractQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "rescue_apply_persistence_missing"
+		end
+
+		local appliedRescue, rescueReason = rescueContractQueryApi.ApplyPersistenceState(root.rescuePersistence)
+		if not appliedRescue then
+			return false, rescueReason or "rescue_apply_persistence_failed"
+		end
+	elseif rescueContractQueryApi ~= nil and type(rescueContractQueryApi.ApplyPersistenceState) == "function" then
+		local appliedRescue, rescueReason = rescueContractQueryApi.ApplyPersistenceState(nil)
+		if not appliedRescue then
+			return false, rescueReason or "rescue_apply_persistence_failed"
 		end
 	end
 

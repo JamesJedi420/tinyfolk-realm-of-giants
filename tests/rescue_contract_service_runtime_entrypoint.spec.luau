@@ -1,6 +1,7 @@
 --!strict
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
+local globalEnv: any = getfenv()
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -109,6 +110,7 @@ addChild(
 	"RescueContractQueueState",
 	"../../ReplicatedStorage/Shared/GiantRealm/RescueContractQueueState"
 )
+addChild(giantRealmFolder, "GiantRealmSaveSchema", "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -178,14 +180,14 @@ end
 
 game = fakeGame
 
-_G._GrabService_QueryAPI = {
+globalEnv._GrabService_QueryAPI = {
 	IsPlayerCarried = function(_userId: number): boolean
 		return false
 	end,
 }
 
 local restrictedRescuerUserId: number? = nil
-_G._RoleService_QueryAPI = {
+globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		for _, player in ipairs(playersList) do
 			if player.UserId == userId then
@@ -207,7 +209,7 @@ _G._RoleService_QueryAPI = {
 
 local rescueRouteMode = "accepted"
 local routeRequests: { any } = {}
-_G._EscapeService_QueryAPI = {
+globalEnv._EscapeService_QueryAPI = {
 	ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
 		table.insert(routeRequests, { targetUserId = targetUserId, targetRealmOwnerUserId = targetRealmOwnerUserId })
 		if rescueRouteMode == "missing" then
@@ -226,7 +228,7 @@ _G._EscapeService_QueryAPI = {
 }
 
 local scoreRequests: { any } = {}
-_G._ScoreService_QueryAPI = {
+globalEnv._ScoreService_QueryAPI = {
 	RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
 		table.insert(scoreRequests, {
 			userId = userId,
@@ -241,11 +243,11 @@ _G._ScoreService_QueryAPI = {
 local handoffRequests: { any } = {}
 local handoffShouldReject = false
 local handoffExpiryProbeAt: number? = nil
-_G._RescueHandoffService_QueryAPI = {
+globalEnv._RescueHandoffService_QueryAPI = {
 	CreateHandoffLock = function(payload: any): any
 		table.insert(handoffRequests, payload)
 		if type(handoffExpiryProbeAt) == "number" then
-			local rescueQueryApi: any = _G._RescueContractService_QueryAPI
+			local rescueQueryApi: any = globalEnv._RescueContractService_QueryAPI
 			if
 				type(rescueQueryApi) == "table"
 				and type((rescueQueryApi :: any).GetRescueQueueEntries) == "function"
@@ -262,10 +264,12 @@ _G._RescueHandoffService_QueryAPI = {
 
 require("../src/ServerScriptService/Services/RescueContractService.server")
 
-local rescueApi: any = _G._RescueContractService_QueryAPI
+local rescueApi: any = globalEnv._RescueContractService_QueryAPI
 assertTrue(type(rescueApi) == "table", "service exposes query API")
+assertTrue(type(rescueApi.BuildPersistenceState) == "function", "service exposes BuildPersistenceState")
+assertTrue(type(rescueApi.ApplyPersistenceState) == "function", "service exposes ApplyPersistenceState")
 
-local hubSurfaceApi: any = _G._RescueContractHubSurface_QueryAPI
+local hubSurfaceApi: any = globalEnv._RescueContractHubSurface_QueryAPI
 assertTrue(type(hubSurfaceApi) == "table", "service exposes hub surface API")
 
 local function setRole(player: any, role: string)
@@ -319,6 +323,104 @@ end
 
 do
 	resetState()
+	local applyOk, applyReason = rescueApi.ApplyPersistenceState({
+		contracts = {
+			{
+				rescuerUserId = rescuer.UserId,
+				targetUserId = target.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				startedAt = 90,
+				expiresAt = 120,
+				isAccelerated = false,
+			},
+		},
+		queueEntries = {
+			{
+				queueEntryId = "PersistedQueue_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 120,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertTrue(applyOk, "apply persistence accepts valid state")
+	assertEqual(applyReason, nil, "apply persistence valid state reason")
+
+	local persistedContract = rescueApi.GetRescuerContract(rescuer.UserId, 90.1)
+	assertTrue(persistedContract ~= nil, "apply persistence restores rescuer contract")
+	if persistedContract ~= nil then
+		assertEqual(persistedContract.targetUserId, target.UserId, "apply persistence contract target")
+	end
+
+	local persistedQueue = rescueApi.GetRescueQueueEntries(90.1)
+	assertEqual(#persistedQueue, 1, "apply persistence restores pending queue entry")
+	assertEqual(persistedQueue[1].queueEntryId, "PersistedQueue_1", "apply persistence queue entry id")
+
+	local builtPersistence = rescueApi.BuildPersistenceState()
+	assertEqual(#builtPersistence.contracts, 1, "build persistence includes restored contract")
+	assertEqual(#builtPersistence.queueEntries, 1, "build persistence includes restored queue entry")
+	assertEqual(builtPersistence.contracts[1].rescuerUserId, rescuer.UserId, "build persistence contract rescuer")
+	assertEqual(builtPersistence.queueEntries[1].queueEntryId, "PersistedQueue_1", "build persistence queue entry")
+
+	local clearOk, clearReason = rescueApi.ApplyPersistenceState(nil)
+	assertTrue(clearOk, "apply nil persistence succeeds")
+	assertEqual(clearReason, nil, "apply nil persistence reason")
+	assertEqual(rescueApi.GetRescuerContract(rescuer.UserId, 90.2), nil, "apply nil clears rescuer contract")
+	assertEqual(#rescueApi.GetRescueQueueEntries(90.2), 0, "apply nil clears pending queue entries")
+
+	local invalidOk, invalidReason = rescueApi.ApplyPersistenceState({
+		contracts = {
+			{
+				rescuerUserId = rescuer.UserId,
+				targetUserId = target.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				startedAt = 90,
+				expiresAt = 120,
+				isAccelerated = false,
+			},
+		},
+		queueEntries = {
+			{
+				queueEntryId = "PersistedQueue_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 120,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "accepted",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertFalse(invalidOk, "apply persistence rejects malformed state")
+	assertEqual(invalidReason, "rescue_queue_accepted_at_missing index=1", "apply persistence malformed reason")
+
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 100)
 
 	assertTrue(accepted.accepted, "request accepted in valid baseline")

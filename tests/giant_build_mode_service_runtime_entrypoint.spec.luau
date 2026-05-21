@@ -305,6 +305,80 @@ globalEnv._ShrineService_QueryAPI = {
 	end,
 }
 
+globalEnv._RescueContractService_QueryAPI = {
+	BuildPersistenceState = function(): any
+		return {
+			contracts = {
+				{
+					rescuerUserId = 9404,
+					targetUserId = 9409,
+					targetRealmOwnerUserId = 9402,
+					entryRouteId = "RescueRoute_B",
+					entryRouteKind = "RealmEntry",
+					startedAt = 90,
+					expiresAt = 125,
+					isAccelerated = false,
+				},
+				{
+					rescuerUserId = 9401,
+					targetUserId = 9408,
+					targetRealmOwnerUserId = 9402,
+					entryRouteId = "RescueRoute_A",
+					entryRouteKind = "RealmEntry",
+					startedAt = 80,
+					expiresAt = 130,
+					isAccelerated = true,
+				},
+			},
+			queueEntries = {
+				{
+					queueEntryId = "RQ_02",
+					capturedUserId = 7402,
+					realmId = "Realm_A",
+					sessionId = "Session_A",
+					rewardHint = "high",
+					dangerRating = 0.8,
+					expiration = 220,
+					rescuerUserId = 9404,
+					targetRealmOwnerUserId = 9402,
+					entryRouteId = "RescueRoute_B",
+					entryRouteKind = "RealmEntry",
+					createdAt = 110,
+					status = "pending",
+					acceptedAt = nil,
+					acceptedByUserId = nil,
+					resolvedAt = nil,
+					resolvedReason = nil,
+				},
+				{
+					queueEntryId = "RQ_01",
+					capturedUserId = 7401,
+					realmId = "Realm_A",
+					sessionId = "Session_A",
+					rewardHint = "medium",
+					dangerRating = 0.4,
+					expiration = 210,
+					rescuerUserId = 9401,
+					targetRealmOwnerUserId = 9402,
+					entryRouteId = "RescueRoute_A",
+					entryRouteKind = "RealmEntry",
+					createdAt = 100,
+					status = "accepted",
+					acceptedAt = 105,
+					acceptedByUserId = 9401,
+					resolvedAt = nil,
+					resolvedReason = nil,
+				},
+			},
+		}
+	end,
+	_LastAppliedPersistenceState = nil,
+	ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+		globalEnv._RescueContractService_QueryAPI._LastAppliedPersistenceState = _persistedState
+		return true, nil
+	end,
+}
+
 local serviceLoaded, serviceError = pcall(function()
 	require("../src/ServerScriptService/Services/GiantBuildModeService.server")
 end)
@@ -490,8 +564,29 @@ if saveRoot then
 	assertEqual(#saveRoot.placedStructures, 2, "save snapshot includes accepted structure count")
 	assertTrue(type(saveRoot.emergencyReinforcement) == "table", "save snapshot includes reinforcement state")
 	assertTrue(type(saveRoot.shrinePersistence) == "table", "save snapshot includes shrine persistence")
+	assertTrue(type(saveRoot.rescuePersistence) == "table", "save snapshot includes rescue persistence")
 	assertEqual(saveRoot.shrinePersistence.shrines[1].shrineId, "Shrine_A", "save snapshot shrine order first")
 	assertEqual(saveRoot.shrinePersistence.shrines[2].shrineId, "Shrine_B", "save snapshot shrine order second")
+	assertEqual(
+		saveRoot.rescuePersistence.contracts[1].rescuerUserId,
+		9401,
+		"save snapshot rescue contract order first"
+	)
+	assertEqual(
+		saveRoot.rescuePersistence.contracts[2].rescuerUserId,
+		9404,
+		"save snapshot rescue contract order second"
+	)
+	assertEqual(
+		saveRoot.rescuePersistence.queueEntries[1].queueEntryId,
+		"RQ_01",
+		"save snapshot rescue queue order first"
+	)
+	assertEqual(
+		saveRoot.rescuePersistence.queueEntries[2].queueEntryId,
+		"RQ_02",
+		"save snapshot rescue queue order second"
+	)
 	assertEqual(saveRoot.emergencyReinforcement.used, true, "save snapshot reinforcement used")
 	assertEqual(saveRoot.emergencyReinforcement.triggeredByUserId, 1101, "save snapshot reinforcement requester")
 	assertEqual(
@@ -707,6 +802,10 @@ assertTrue(
 	type(globalEnv._ShrineService_QueryAPI._LastAppliedPersistenceState) == "nil",
 	"apply without shrine record clears persistence state"
 )
+assertTrue(
+	type(globalEnv._RescueContractService_QueryAPI._LastAppliedPersistenceState) == "nil",
+	"apply without rescue record clears persistence state"
+)
 assertTrue(globalEnv._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
 assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")
 assertTrue(
@@ -839,6 +938,55 @@ assertEqual(
 	"apply forwards shrine persistence state"
 )
 
+local applyWithRescueRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = applyRoot.ownerUserId,
+	placedStructures = applyRoot.placedStructures,
+	rescuePersistence = {
+		contracts = {
+			{
+				rescuerUserId = 9501,
+				targetUserId = 9502,
+				targetRealmOwnerUserId = applyRoot.ownerUserId,
+				entryRouteId = "RescueRoute_A",
+				entryRouteKind = "RealmEntry",
+				startedAt = 500,
+				expiresAt = 560,
+				isAccelerated = true,
+			},
+		},
+		queueEntries = {
+			{
+				queueEntryId = "RQ_03",
+				capturedUserId = 9502,
+				realmId = "Realm_A",
+				sessionId = "Session_A",
+				rewardHint = "high",
+				dangerRating = 0.9,
+				expiration = 580,
+				rescuerUserId = 9501,
+				targetRealmOwnerUserId = applyRoot.ownerUserId,
+				entryRouteId = "RescueRoute_A",
+				entryRouteKind = "RealmEntry",
+				createdAt = 500,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	},
+}
+local applyWithRescueOk, applyWithRescueReason = queryApi.ApplySaveSnapshot(applyWithRescueRoot)
+assertTrue(applyWithRescueOk, "apply with rescue state succeeds")
+assertEqual(applyWithRescueReason, nil, "apply with rescue state has no reason")
+assertEqual(
+	globalEnv._RescueContractService_QueryAPI._LastAppliedPersistenceState.contracts[1].rescuerUserId,
+	9501,
+	"apply forwards rescue persistence state"
+)
+
 local originalShrineApplyPersistence = globalEnv._ShrineService_QueryAPI.ApplyPersistenceState
 globalEnv._ShrineService_QueryAPI.ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
 	return false, "shrine_apply_failed_for_test"
@@ -851,6 +999,19 @@ assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "failed shrine apply p
 assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "failed shrine apply preserves applied structure B")
 
 globalEnv._ShrineService_QueryAPI.ApplyPersistenceState = originalShrineApplyPersistence
+
+local originalRescueApplyPersistence = globalEnv._RescueContractService_QueryAPI.ApplyPersistenceState
+globalEnv._RescueContractService_QueryAPI.ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+	return false, "rescue_apply_failed_for_test"
+end
+
+local failedRescueApplyOk, failedRescueApplyReason = queryApi.ApplySaveSnapshot(applyWithRescueRoot)
+assertTrue(not failedRescueApplyOk, "failed rescue apply rejects snapshot apply")
+assertEqual(failedRescueApplyReason, "rescue_apply_failed_for_test", "failed rescue apply reason")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "failed rescue apply preserves applied structure A")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "failed rescue apply preserves applied structure B")
+
+globalEnv._RescueContractService_QueryAPI.ApplyPersistenceState = originalRescueApplyPersistence
 
 local invalidApplyRoot = {
 	schemaVersion = 999,
