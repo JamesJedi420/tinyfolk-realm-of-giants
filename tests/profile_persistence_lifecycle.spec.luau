@@ -1,6 +1,7 @@
 --!strict
 
 local ProfilePersistenceLifecycle = require("../src/ServerScriptService/Services/ProfilePersistenceLifecycle")
+local globalEnv: any = getfenv()
 
 local function assertTrue(value: boolean, label: string)
 	if not value then
@@ -10,7 +11,9 @@ end
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -115,7 +118,90 @@ local function makeGateway(overrides: any?): any
 		return resultFor("ReleasePlayerProfile", player)
 	end
 
+	function gateway.SaveGiantRealmProfile(ownerUserId: number): any
+		table.insert(gateway.calls, {
+			method = "SaveGiantRealmProfile",
+			ownerUserId = ownerUserId,
+		})
+		if overrides ~= nil and type(overrides.SaveGiantRealmProfile) == "function" then
+			return overrides.SaveGiantRealmProfile(ownerUserId)
+		end
+
+		return {
+			ok = true,
+			operation = "SaveGiantRealmProfile",
+			profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		}
+	end
+
 	return gateway
+end
+
+local function makeAutosaveScheduler()
+	local queue: { any } = {}
+	local cancelCount = 0
+	local scheduler = {
+		queue = queue,
+		cancelCount = function()
+			return cancelCount
+		end,
+	}
+
+	function scheduler.schedule(delaySeconds: number, callback: () -> ()): any
+		local token = {
+			delaySeconds = delaySeconds,
+			callback = callback,
+			cancelled = false,
+		}
+		table.insert(queue, token)
+		return token
+	end
+
+	function scheduler.cancel(token: any)
+		if token ~= nil then
+			token.cancelled = true
+			cancelCount += 1
+		end
+	end
+
+	function scheduler.runNext(): boolean
+		for index, token in ipairs(queue) do
+			table.remove(queue, index)
+			if token.cancelled ~= true then
+				token.callback()
+				return true
+			end
+		end
+
+		return false
+	end
+
+	function scheduler.runNextByDelay(delaySeconds: number): boolean
+		for index, token in ipairs(queue) do
+			if token.delaySeconds == delaySeconds then
+				table.remove(queue, index)
+				if token.cancelled ~= true then
+					token.callback()
+					return true
+				end
+			end
+		end
+
+		return false
+	end
+
+	return scheduler
+end
+
+local function countQueuedTokensByDelay(scheduler: any, delaySeconds: number): number
+	local count = 0
+	for _, token in ipairs(scheduler.queue) do
+		if token.cancelled ~= true and token.delaySeconds == delaySeconds then
+			count += 1
+		end
+	end
+
+	return count
 end
 
 local function makeLogger()
@@ -142,9 +228,21 @@ local ownerLayer = {}
 
 ProfilePersistenceLifecycle.ResetForTests()
 assertEqual(ProfilePersistenceLifecycle.Start(nil).ok, false, "missing config fails")
-assertEqual(ProfilePersistenceLifecycle.Start({ ownerLayer = ownerLayer, players = makePlayers({}) }).reason, "gateway_missing", "missing gateway")
-assertEqual(ProfilePersistenceLifecycle.Start({ gateway = makeGateway(), players = makePlayers({}) }).reason, "owner_layer_missing", "missing owner")
-assertEqual(ProfilePersistenceLifecycle.Start({ gateway = makeGateway(), ownerLayer = ownerLayer }).reason, "players_service_missing", "missing players")
+assertEqual(
+	ProfilePersistenceLifecycle.Start({ ownerLayer = ownerLayer, players = makePlayers({}) }).reason,
+	"gateway_missing",
+	"missing gateway"
+)
+assertEqual(
+	ProfilePersistenceLifecycle.Start({ gateway = makeGateway(), players = makePlayers({}) }).reason,
+	"owner_layer_missing",
+	"missing owner"
+)
+assertEqual(
+	ProfilePersistenceLifecycle.Start({ gateway = makeGateway(), ownerLayer = ownerLayer }).reason,
+	"players_service_missing",
+	"missing players"
+)
 
 ProfilePersistenceLifecycle.ResetForTests()
 local playerA = makePlayer(101)
@@ -160,6 +258,7 @@ local startResult = ProfilePersistenceLifecycle.Start({
 	players = players,
 	game = runtimeGame,
 	logger = logger,
+	autosaveEnabled = false,
 })
 
 assertEqual(startResult.ok, true, "start ok")
@@ -181,7 +280,10 @@ assertEqual(countCalls(gateway, "ConfigureOwnerLayer"), 1, "duplicate start does
 
 players.PlayerAdded:Fire(playerA)
 assertEqual(countCalls(gateway, "LoadPlayerProfile"), 2, "duplicate join does not double-load")
-assertTrue(string.find(logger.lines[#logger.lines], "player_already_tracked", 1, true) ~= nil, "duplicate join logs warning")
+assertTrue(
+	string.find(logger.lines[#logger.lines], "player_already_tracked", 1, true) ~= nil,
+	"duplicate join logs warning"
+)
 
 local playerC = makePlayer(303)
 table.insert(players.players, playerC)
@@ -233,13 +335,17 @@ ProfilePersistenceLifecycle.Start({
 	players = failurePlayers,
 	game = makeRuntimeGame(),
 	logger = failureLogger,
+	autosaveEnabled = false,
 })
 
 local playerD = makePlayer(404)
 failurePlayers.PlayerAdded:Fire(playerD)
 assertEqual(countCalls(failureGateway, "LoadPlayerProfile"), 1, "failed load attempted")
 assertTrue(string.find(failureLogger.lines[1], "phase=load", 1, true) ~= nil, "load failure logs phase")
-assertTrue(string.find(failureLogger.lines[1], "profile_session_start_failed", 1, true) ~= nil, "load failure logs reason")
+assertTrue(
+	string.find(failureLogger.lines[1], "profile_session_start_failed", 1, true) ~= nil,
+	"load failure logs reason"
+)
 
 failurePlayers.PlayerRemoving:Fire(playerD)
 assertEqual(countCalls(failureGateway, "SavePlayerProfile"), 1, "removing after failed load saves")
@@ -249,5 +355,196 @@ assertTrue(string.find(failureLogger.lines[2], "phase=save", 1, true) ~= nil, "s
 local invalidPlayer: any = {}
 failurePlayers.PlayerAdded:Fire(invalidPlayer)
 assertEqual(countCalls(failureGateway, "LoadPlayerProfile"), 2, "invalid player passed to gateway")
+
+ProfilePersistenceLifecycle.ResetForTests()
+local autosaveLogger = makeLogger()
+local autosavePlayers = makePlayers({ makePlayer(501), makePlayer(502) })
+local autosaveGame = makeRuntimeGame()
+local autosavePlayerAttemptsByUserId: { [number]: number } = {}
+local autosaveGateway = makeGateway({
+	SavePlayerProfile = function(player: any): any
+		autosavePlayerAttemptsByUserId[player.UserId] = (autosavePlayerAttemptsByUserId[player.UserId] or 0) + 1
+
+		if player.UserId == 502 then
+			if autosavePlayerAttemptsByUserId[player.UserId] >= 2 then
+				return {
+					ok = true,
+					operation = "SavePlayerProfile",
+					profileKey = "PlayerProfile:502",
+				}
+			end
+
+			return {
+				ok = false,
+				operation = "SavePlayerProfile",
+				reason = "autosave_player_failure",
+				retryable = true,
+				profileKey = "PlayerProfile:502",
+			}
+		end
+
+		return {
+			ok = true,
+			operation = "SavePlayerProfile",
+			profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		}
+	end,
+	SaveGiantRealmProfile = function(ownerUserId: number): any
+		if ownerUserId == 9001 then
+			return {
+				ok = false,
+				operation = "SaveGiantRealmProfile",
+				reason = "autosave_realm_failure",
+				retryable = true,
+				profileKey = "GiantRealmProfile:9001",
+			}
+		end
+
+		return {
+			ok = true,
+			operation = "SaveGiantRealmProfile",
+			profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		}
+	end,
+})
+local autosaveScheduler = makeAutosaveScheduler()
+
+globalEnv._RoleService_QueryAPI = {
+	GetActiveGiantRealmOwnerUserId = function(): number?
+		return 9001
+	end,
+}
+
+local autosaveStartResult = ProfilePersistenceLifecycle.Start({
+	gateway = autosaveGateway,
+	ownerLayer = ownerLayer,
+	players = autosavePlayers,
+	game = autosaveGame,
+	logger = autosaveLogger,
+	autosaveEnabled = true,
+	autosaveScheduler = autosaveScheduler,
+	autosaveIntervalSeconds = 10,
+	autosaveRetryInitialDelaySeconds = 3,
+	autosaveRetryMaxDelaySeconds = 6,
+	autosaveRetryMaxAttempts = 2,
+})
+
+assertEqual(autosaveStartResult.ok, true, "autosave start ok")
+assertEqual(#autosaveScheduler.queue, 1, "autosave schedules first cycle")
+assertEqual(autosaveScheduler.queue[1].delaySeconds, 10, "autosave interval propagated")
+assertEqual(countCalls(autosaveGateway, "SavePlayerProfile"), 0, "autosave does not fire immediately")
+
+autosaveScheduler.runNext()
+assertEqual(countCalls(autosaveGateway, "SavePlayerProfile"), 2, "autosave cycle saves tracked players")
+assertEqual(countCalls(autosaveGateway, "SaveGiantRealmProfile"), 1, "autosave cycle saves giant realm")
+assertEqual(#autosaveScheduler.queue, 3, "autosave queues retries and next cycle")
+assertEqual(countQueuedTokensByDelay(autosaveScheduler, 3), 2, "autosave queues two initial retries")
+assertEqual(countQueuedTokensByDelay(autosaveScheduler, 10), 1, "autosave reschedules next cycle")
+assertTrue(
+	string.find(autosaveLogger.lines[1], "phase=autosave_player", 1, true) ~= nil,
+	"autosave player failure logged"
+)
+assertTrue(
+	string.find(autosaveLogger.lines[2], "phase=autosave_giant_realm", 1, true) ~= nil,
+	"autosave giant failure logged"
+)
+
+assertEqual(autosaveScheduler.runNextByDelay(3), true, "player retry runs")
+assertEqual(countCalls(autosaveGateway, "SavePlayerProfile"), 3, "player retry save succeeds")
+assertEqual(countQueuedTokensByDelay(autosaveScheduler, 3), 1, "player retry clears after success")
+
+assertEqual(autosaveScheduler.runNextByDelay(3), true, "giant retry first attempt runs")
+assertEqual(countCalls(autosaveGateway, "SaveGiantRealmProfile"), 2, "giant retry first attempt saved")
+assertEqual(countQueuedTokensByDelay(autosaveScheduler, 6), 1, "giant retry backoff delay applied")
+
+assertEqual(autosaveScheduler.runNextByDelay(6), true, "giant retry second attempt runs")
+assertEqual(countCalls(autosaveGateway, "SaveGiantRealmProfile"), 3, "giant retry second attempt saved")
+assertEqual(countQueuedTokensByDelay(autosaveScheduler, 6), 0, "giant retry does not exceed max attempts")
+assertTrue(
+	string.find(autosaveLogger.lines[#autosaveLogger.lines], "phase=autosave_giant_realm_retry_exhausted", 1, true)
+		~= nil,
+	"giant retry exhaustion logged"
+)
+
+autosaveGame.bindToCloseCallbacks[1]()
+assertEqual(autosaveScheduler.cancelCount(), 1, "shutdown cancels pending autosave callback")
+assertEqual(countCalls(autosaveGateway, "SavePlayerProfile"), 5, "shutdown still saves tracked players")
+assertEqual(countCalls(autosaveGateway, "ReleasePlayerProfile"), 2, "shutdown still releases tracked players")
+
+ProfilePersistenceLifecycle.ResetForTests()
+local cleanupLogger = makeLogger()
+local cleanupPlayers = makePlayers({ makePlayer(701) })
+local cleanupGame = makeRuntimeGame()
+local cleanupScheduler = makeAutosaveScheduler()
+local cleanupGiantOwnerUserId = 9101
+local cleanupGateway = makeGateway({
+	SavePlayerProfile = function(player: any): any
+		if player.UserId == 701 then
+			return {
+				ok = false,
+				operation = "SavePlayerProfile",
+				reason = "cleanup_player_retryable_failure",
+				retryable = true,
+				profileKey = "PlayerProfile:701",
+			}
+		end
+
+		return {
+			ok = true,
+			operation = "SavePlayerProfile",
+			profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		}
+	end,
+	SaveGiantRealmProfile = function(ownerUserId: number): any
+		if ownerUserId == 9101 then
+			return {
+				ok = false,
+				operation = "SaveGiantRealmProfile",
+				reason = "cleanup_giant_retryable_failure",
+				retryable = true,
+				profileKey = "GiantRealmProfile:9101",
+			}
+		end
+
+		return {
+			ok = true,
+			operation = "SaveGiantRealmProfile",
+			profileKey = "GiantRealmProfile:" .. tostring(ownerUserId),
+		}
+	end,
+})
+
+globalEnv._RoleService_QueryAPI = {
+	GetActiveGiantRealmOwnerUserId = function(): number?
+		return cleanupGiantOwnerUserId
+	end,
+}
+
+local cleanupStartResult = ProfilePersistenceLifecycle.Start({
+	gateway = cleanupGateway,
+	ownerLayer = ownerLayer,
+	players = cleanupPlayers,
+	game = cleanupGame,
+	logger = cleanupLogger,
+	autosaveEnabled = true,
+	autosaveScheduler = cleanupScheduler,
+	autosaveIntervalSeconds = 10,
+	autosaveRetryInitialDelaySeconds = 3,
+	autosaveRetryMaxDelaySeconds = 6,
+	autosaveRetryMaxAttempts = 2,
+})
+
+assertEqual(cleanupStartResult.ok, true, "cleanup start ok")
+cleanupScheduler.runNext()
+assertEqual(countQueuedTokensByDelay(cleanupScheduler, 3), 2, "cleanup cycle queues player and giant retries")
+
+cleanupPlayers.PlayerRemoving:Fire(cleanupPlayers.players[1])
+assertEqual(countQueuedTokensByDelay(cleanupScheduler, 3), 1, "player removal clears pending player retry")
+
+cleanupGiantOwnerUserId = 9102
+assertEqual(cleanupScheduler.runNextByDelay(10), true, "next autosave cycle runs")
+assertEqual(countQueuedTokensByDelay(cleanupScheduler, 3), 0, "owner switch clears stale giant retry")
+
+globalEnv._RoleService_QueryAPI = nil
 
 print("profile_persistence_lifecycle: all checks passed")

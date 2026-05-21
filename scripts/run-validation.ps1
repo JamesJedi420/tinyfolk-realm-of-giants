@@ -68,6 +68,9 @@ if ($ChangedOnly) {
         'src/ServerScriptService/Services/TinyfolkMovementTraitService.luau'
         'src/ServerScriptService/Services/EscapeService.server.luau'
         'src/ServerScriptService/Services/TransportEscapeService.server.luau'
+        'src/ServerScriptService/Services/ProfilePersistenceLifecycle.server.luau'
+        'tests/profile_persistence_lifecycle.spec.luau'
+        'src/ServerScriptService/Services/ThirdParty/ProfileStore.luau'
         'tests/harness/MatchSimulation.luau'
     )
 
