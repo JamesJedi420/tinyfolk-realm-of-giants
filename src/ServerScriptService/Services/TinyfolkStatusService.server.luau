@@ -10,16 +10,16 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local TinyfolkStatusConfig = require(Config:WaitForChild("TinyfolkStatusConfig"))
 local TimedConditionStateLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TimedConditionStateLogic"))
 local RaidStatusProjection = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("RaidStatusProjection"))
+local TrailPressureLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TrailPressureLogic"))
 
 local TinyfolkStatusService = {}
+local globalEnv: any = getfenv()
 
 type TimedConditionState = any
+type TrailState = any
 
 local stateByUserId: { [number]: TimedConditionState? } = {}
-
-local function debugLog(message: string)
-	print(string.format("[TinyfolkStatusService] %s", message))
-end
+local trailStateByUserId: { [number]: TrailState? } = {}
 
 local function getHumanoid(player: Player): Humanoid?
 	local character = player.Character
@@ -75,6 +75,17 @@ local function getPlayerPosition(player: Player): any?
 	return (root :: any).Position
 end
 
+local function getHidingQueryApi(): any?
+	local api = rawget(globalEnv, "_TinyfolkHiding_QueryAPI")
+	if type(api) ~= "table" then
+		return nil
+	end
+	if type(api.IsPlayerHiding) ~= "function" then
+		return nil
+	end
+	return api
+end
+
 local function getFearSourcesForPlayer(player: Player): { any }
 	local fearSources = {}
 	for _, otherPlayer in ipairs(Players:GetPlayers()) do
@@ -90,6 +101,44 @@ local function getFearSourcesForPlayer(player: Player): { any }
 		end
 	end
 	return fearSources
+end
+
+local function resolveTrailSnapshot(userId: number, now: number): any
+	local trailState = trailStateByUserId[userId]
+	return TrailPressureLogic.BuildSnapshot(trailState, TinyfolkStatusConfig, now)
+end
+
+local function clearPlayerState(userId: number)
+	stateByUserId[userId] = nil
+	trailStateByUserId[userId] = nil
+end
+
+local function updateTrailState(
+	player: Player,
+	now: number,
+	isTinyfolk: boolean,
+	hasAliveHumanoid: boolean,
+	root: BasePart?
+)
+	if not isTinyfolk then
+		trailStateByUserId[player.UserId] = nil
+		return
+	end
+
+	local hidingQueryApi = getHidingQueryApi()
+	local isHiding = false
+	if hidingQueryApi ~= nil then
+		local ok, result = pcall(hidingQueryApi.IsPlayerHiding, player.UserId)
+		if ok and result == true then
+			isHiding = true
+		end
+	end
+	trailStateByUserId[player.UserId] =
+		TrailPressureLogic.ResolveSample(trailStateByUserId[player.UserId], TinyfolkStatusConfig, {
+			now = now,
+			position = if root ~= nil then (root :: any).Position else nil,
+			shouldEmit = hasAliveHumanoid and root ~= nil and not isHiding,
+		})
 end
 
 local function applyAttributes(player: Player, snapshot: any)
@@ -195,11 +244,14 @@ local function resolveTick(player: Player, now: number): any
 	local state = getOrCreateState(player.UserId)
 	local humanoid = getHumanoid(player)
 	local root = getHumanoidRootPart(player)
+	local isTinyfolk = player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
+	local hasAliveHumanoid = isAlive(humanoid)
+	updateTrailState(player, now, isTinyfolk, hasAliveHumanoid, root)
 	local nextState, snapshot = TimedConditionStateLogic.ResolveTick(state, TinyfolkStatusConfig, {
 		now = now,
 		position = if root ~= nil then (root :: any).Position else nil,
-		isTinyfolk = player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk,
-		hasAliveHumanoid = isAlive(humanoid),
+		isTinyfolk = isTinyfolk,
+		hasAliveHumanoid = hasAliveHumanoid,
 		hasRootPart = root ~= nil,
 		nearbyFearSources = getFearSourcesForPlayer(player),
 	})
@@ -242,27 +294,61 @@ function TinyfolkStatusService.GetSnapshot(player: Player): any
 	return TimedConditionStateLogic.Snapshot(state, os.clock())
 end
 
+function TinyfolkStatusService.GetTrailSnapshot(player: Player, now: number?): any
+	local currentNow = if type(now) == "number" then now else os.clock()
+	return resolveTrailSnapshot(player.UserId, currentNow)
+end
+
 function TinyfolkStatusService.ResolveNow(player: Player, now: number)
 	return resolveTick(player, now)
 end
 
 function TinyfolkStatusService.ResetForTests()
 	stateByUserId = {}
+	trailStateByUserId = {}
 end
 
+globalEnv._TinyfolkStatusService_QueryAPI = {
+	GetTrailSnapshot = function(userId: number, now: number?)
+		local currentNow = if type(now) == "number" then now else os.clock()
+		return resolveTrailSnapshot(userId, currentNow)
+	end,
+	GetAllTrailSnapshots = function(now: number?)
+		local currentNow = if type(now) == "number" then now else os.clock()
+		local output = {}
+		for userId in pairs(trailStateByUserId) do
+			output[userId] = resolveTrailSnapshot(userId, currentNow)
+		end
+		return output
+	end,
+}
+
 Players.PlayerRemoving:Connect(function(player: Player)
-	stateByUserId[player.UserId] = nil
+	clearPlayerState(player.UserId)
 end)
 
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
+	local connectedTinyfolkUserIds: { [number]: boolean } = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
+			connectedTinyfolkUserIds[player.UserId] = true
 			resolveTick(player, now)
+		else
+			clearPlayerState(player.UserId)
+		end
+	end
+
+	for userId in pairs(stateByUserId) do
+		if connectedTinyfolkUserIds[userId] ~= true then
+			clearPlayerState(userId)
+		end
+	end
+	for userId in pairs(trailStateByUserId) do
+		if connectedTinyfolkUserIds[userId] ~= true then
+			clearPlayerState(userId)
 		end
 	end
 end)
-
-debugLog("TinyfolkStatusService initialized")
 
 return TinyfolkStatusService

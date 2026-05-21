@@ -71,6 +71,7 @@ local function getService(gameRef: any, serviceName: string): any
 end
 
 local function createEscapeService(runtimeGame: any?, options: any?)
+	local globalEnv: any = getfenv()
 	local gameRef = runtimeGame or game
 	local Players = getService(gameRef, "Players")
 	local ReplicatedStorage = getService(gameRef, "ReplicatedStorage")
@@ -130,7 +131,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
 	local function getScoreServiceQueryApi(): any?
-		local globalValue: any = _G
+		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
 			return nil
 		end
@@ -491,6 +492,22 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 	end
 
+	local function isRoutePartStillRegistered(routePart: BasePart): boolean
+		if routePart == nil then
+			return false
+		end
+
+		local current: any = routePart
+		while current ~= nil do
+			if current == Workspace then
+				return true
+			end
+			current = current.Parent
+		end
+
+		return false
+	end
+
 	local function registerEscapeRoutesFromWorkspace()
 		local routesRoot = findEscapeRoutesRoot()
 		if not routesRoot then
@@ -511,11 +528,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if type(TinyfolkMovementTraitService.OnValidRouteCrossing) ~= "function" then
 			return
 		end
-		TinyfolkMovementTraitService.OnValidRouteCrossing(player, routeId)
+		pcall(function()
+			TinyfolkMovementTraitService.OnValidRouteCrossing(player, routeId)
+		end)
 	end
 
 	local function getRoleServiceQueryApi(): any?
-		local globalValue: any = _G
+		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
 			return nil
 		end
@@ -527,7 +546,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	end
 
 	local function getGrabServiceQueryApi(): any?
-		local globalValue: any = _G
+		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
 			return nil
 		end
@@ -539,7 +558,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	end
 
 	local function getTransportServiceQueryApi(): any?
-		local globalValue: any = _G
+		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
 			return nil
 		end
@@ -551,7 +570,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	end
 
 	local function getObjectiveServiceQueryApi(): any?
-		local globalValue: any = _G
+		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
 			return nil
 		end
@@ -671,9 +690,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
-			scoreApi.RequestScoreEvent(player.UserId, "escape_success", now(), {
-				routeId = if type(sourceId) == "string" then sourceId else "transport_endpoint",
-			})
+			pcall(function()
+				scoreApi.RequestScoreEvent(player.UserId, "escape_success", now(), {
+					routeId = if type(sourceId) == "string" then sourceId else "transport_endpoint",
+				})
+			end)
 		end
 
 		return true
@@ -706,8 +727,14 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local function resolveRoutePart(routeId: string): BasePart?
 		local routePart = escapeRouteById[routeId]
-		if routePart ~= nil then
+		if routePart ~= nil and isRoutePartStillRegistered(routePart) then
 			return routePart
+		end
+
+		if routePart ~= nil then
+			escapeRouteById[routeId] = nil
+			traversalGapBlockByRouteId[routeId] = nil
+			finalExitStateByRouteId[routeId] = nil
 		end
 
 		registerEscapeRoutesFromWorkspace()
@@ -936,13 +963,23 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local grabServiceQueryApi = getGrabServiceQueryApi()
 		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
-			if grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
+			local isCarriedOk, isCarried = pcall(function()
+				return grabServiceQueryApi.IsPlayerCarried(player.UserId)
+			end)
+			if not isCarriedOk then
+				return { accepted = false, reason = "grab_query_fault" }
+			end
+			if isCarried == true then
 				return { accepted = false, reason = "actor_carried" }
 			end
 		end
 		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function" then
-			local carryInteraction =
-				grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "traversalGapBlock")
+			local carryInteractionOk, carryInteraction = pcall(function()
+				return grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "traversalGapBlock")
+			end)
+			if not carryInteractionOk then
+				return { accepted = false, reason = "grab_query_fault" }
+			end
 			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
 				local carryInteractionAny = carryInteraction :: any
 				return {
@@ -1065,20 +1102,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local roleServiceQueryApi = getRoleServiceQueryApi()
 		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.IsPlayerDowned) == "function" then
-			if roleServiceQueryApi.IsPlayerDowned(player.UserId) == true then
+			local downedOk, downed = pcall(function()
+				return roleServiceQueryApi.IsPlayerDowned(player.UserId)
+			end)
+			if not downedOk then
+				return { accepted = false, reason = "role_query_fault" }
+			end
+			if downed == true then
 				return { accepted = false, reason = "actor_downed" }
 			end
 		end
 
 		local grabServiceQueryApi = getGrabServiceQueryApi()
 		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
-			if grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
+			local carriedOk, isCarried = pcall(function()
+				return grabServiceQueryApi.IsPlayerCarried(player.UserId)
+			end)
+			if not carriedOk then
+				return { accepted = false, reason = "grab_query_fault" }
+			end
+			if isCarried == true then
 				return { accepted = false, reason = "actor_carried" }
 			end
 		end
 
 		if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.CanPlayerPerformInteraction) == "function" then
-			if roleServiceQueryApi.CanPlayerPerformInteraction(player.UserId, "escapeAttempt") ~= true then
+			local interactionOk, interactionAllowed = pcall(function()
+				return roleServiceQueryApi.CanPlayerPerformInteraction(player.UserId, "escapeAttempt")
+			end)
+			if not interactionOk then
+				return { accepted = false, reason = "role_query_fault" }
+			end
+			if interactionAllowed ~= true then
 				return { accepted = false, reason = "actor_interaction_restricted" }
 			end
 		end
@@ -1158,12 +1213,24 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "candidate_user_ids_invalid" }
 		end
 
+		local candidateByUserId: { [number]: boolean } = {}
+		for _, userId in ipairs(candidateTinyfolkUserIds) do
+			if type(userId) == "number" and userId > 0 and userId % 1 == 0 then
+				candidateByUserId[userId] = true
+			end
+		end
+
 		local transportQueryApi = getTransportServiceQueryApi()
 		if transportQueryApi == nil or type(transportQueryApi.ResolveTransportDepartureOutcome) ~= "function" then
 			return { accepted = false, reason = "transport_query_unavailable" }
 		end
 
-		local transportResult = transportQueryApi.ResolveTransportDepartureOutcome(endpointId, candidateTinyfolkUserIds)
+		local transportResultOk, transportResult = pcall(function()
+			return transportQueryApi.ResolveTransportDepartureOutcome(endpointId, candidateTinyfolkUserIds)
+		end)
+		if not transportResultOk then
+			return { accepted = false, reason = "transport_query_fault" }
+		end
 		if type(transportResult) ~= "table" then
 			return { accepted = false, reason = "transport_outcome_invalid" }
 		end
@@ -1180,10 +1247,17 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local escapedUserIds: { number } = {}
 		local safeReturnedUserIds: { number } = {}
 		local unresolvedUserIds: { number } = {}
+		local boardedByUserId: { [number]: boolean } = {}
+		local unboardedProcessedByUserId: { [number]: boolean } = {}
 
 		if type(boardedEscapedUserIds) == "table" then
 			for _, userId in ipairs(boardedEscapedUserIds) do
-				if type(userId) == "number" then
+				if
+					type(userId) == "number"
+					and candidateByUserId[userId] == true
+					and boardedByUserId[userId] ~= true
+				then
+					boardedByUserId[userId] = true
 					local player = getPlayerByUserId(userId)
 					if player ~= nil and isTinyfolk(player) then
 						if markPlayerEscaped(player, endpointId) then
@@ -1196,7 +1270,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		if type(unboardedRemainingUserIds) == "table" then
 			for _, userId in ipairs(unboardedRemainingUserIds) do
-				if type(userId) == "number" then
+				if
+					type(userId) == "number"
+					and candidateByUserId[userId] == true
+					and boardedByUserId[userId] ~= true
+					and unboardedProcessedByUserId[userId] ~= true
+				then
+					unboardedProcessedByUserId[userId] = true
 					local player = getPlayerByUserId(userId)
 					if player ~= nil and isTinyfolk(player) then
 						escapedTinyfolkByUserId[userId] = false
@@ -1260,8 +1340,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		local snapshot = {}
-		for registeredRouteId, routePart in escapeRouteById do
-			table.insert(snapshot, buildRouteDebugPayload(registeredRouteId, routePart, nil))
+		for registeredRouteId in escapeRouteById do
+			local routePart = resolveRoutePart(registeredRouteId)
+			if routePart ~= nil then
+				table.insert(snapshot, buildRouteDebugPayload(registeredRouteId, routePart, nil))
+			end
 		end
 
 		return {
@@ -1319,8 +1402,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		local routes = {}
-		for registeredRouteId, routePart in escapeRouteById do
-			table.insert(routes, buildObjectiveSafeRouteMetadata(registeredRouteId, routePart))
+		for registeredRouteId in escapeRouteById do
+			local routePart = resolveRoutePart(registeredRouteId)
+			if routePart ~= nil then
+				table.insert(routes, buildObjectiveSafeRouteMetadata(registeredRouteId, routePart))
+			end
 		end
 		table.sort(routes, function(a: any, b: any)
 			return tostring(a.routeId) < tostring(b.routeId)
@@ -1342,7 +1428,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local rescueRouteIds: { string } = {}
 		local rescueEntryAttribute = RescueContractConfig.RescueEntryRouteAttribute
 		local rescueEntryRouteKind = RescueContractConfig.RescueEntryRouteKind
-		for routeId, routePart in escapeRouteById do
+		for routeId in escapeRouteById do
+			local routePart = resolveRoutePart(routeId)
+			if routePart == nil then
+				continue
+			end
 			local isRescueRoute = false
 			if type(rescueEntryAttribute) == "string" and rescueEntryAttribute ~= "" then
 				isRescueRoute = routePart:GetAttribute(rescueEntryAttribute) == true
@@ -1359,7 +1449,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		table.sort(rescueRouteIds)
 
 		for _, routeId in ipairs(rescueRouteIds) do
-			local routePart = escapeRouteById[routeId]
+			local routePart = resolveRoutePart(routeId)
 			if routePart ~= nil then
 				local routeOwnerUserId = routePart:GetAttribute(RescueContractConfig.TargetRealmOwnerUserIdAttribute)
 				local ownerMatches = routeOwnerUserId == nil or routeOwnerUserId == targetRealmOwnerUserId
@@ -1406,11 +1496,27 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local grabServiceQueryApi = getGrabServiceQueryApi()
 		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
-			if type(player.UserId) == "number" and grabServiceQueryApi.IsPlayerCarried(player.UserId) == true then
-				return false
+			if type(player.UserId) == "number" then
+				local callerCarriedOk, callerCarried = pcall(function()
+					return grabServiceQueryApi.IsPlayerCarried(player.UserId)
+				end)
+				if not callerCarriedOk then
+					return false
+				end
+				if callerCarried == true then
+					return false
+				end
 			end
-			if type(target.UserId) == "number" and grabServiceQueryApi.IsPlayerCarried(target.UserId) == true then
-				return false
+			if type(target.UserId) == "number" then
+				local targetCarriedOk, targetCarried = pcall(function()
+					return grabServiceQueryApi.IsPlayerCarried(target.UserId)
+				end)
+				if not targetCarriedOk then
+					return false
+				end
+				if targetCarried == true then
+					return false
+				end
 			end
 		end
 		if
@@ -1418,8 +1524,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			and type(grabServiceQueryApi.CanGiantPerformCarryInteraction) == "function"
 			and type(player.UserId) == "number"
 		then
-			local carryInteraction =
-				grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "throughGapReach")
+			local carryInteractionOk, carryInteraction = pcall(function()
+				return grabServiceQueryApi.CanGiantPerformCarryInteraction(player.UserId, "throughGapReach")
+			end)
+			if not carryInteractionOk then
+				return false
+			end
 			if type(carryInteraction) == "table" and carryInteraction.accepted ~= true then
 				return false
 			end
@@ -1590,12 +1700,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 			local requestedRouteId = payload :: string?
 			if requestedRouteId ~= nil then
-				local routePart = escapeRouteById[requestedRouteId]
-				if routePart == nil then
+				local debugState = service.getDebugState(player, requestedRouteId)
+				if debugState == nil then
 					return
 				end
 
-				escapeDebugResponseRemoteEvent:FireClient(player, service.getDebugState(player, requestedRouteId))
+				escapeDebugResponseRemoteEvent:FireClient(player, debugState)
 				return
 			end
 
@@ -1631,7 +1741,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	service.initialize = initialize
 
-	_G._EscapeService_QueryAPI = {
+	globalEnv._EscapeService_QueryAPI = {
 		RequestDash = function(player: any, routeId: string): any
 			return service.requestDash(player, routeId)
 		end,

@@ -51,6 +51,20 @@ From the repo root, run:
 
 If `lune` is still not found right after install, open a new terminal so PATH updates are picked up.
 
+## Warning/Tracking/Stealth focused regression
+
+For the bounded warning, hiding, and trail-pressure slice, run:
+
+```powershell
+lune run tests/timed_condition_states_runtime_entrypoint.spec.luau
+lune run tests/tinyfolk_raid_status_projection.spec.luau
+lune run tests/tinyfolk_hiding_service_runtime_entrypoint.spec.luau
+lune run tests/tinyfolk_giant_proximity_warning.spec.luau
+lune run tests/trail_pressure_logic.spec.luau
+```
+
+Use this focused group before broader integration runs when the change is limited to Tinyfolk status, warning projection, hiding suppression, or trail pressure behavior.
+
 ## Studio/runtime validation boundary
 
 Studio Play Solo and Test -> Start runtime evidence currently requires manual interaction in Roblox Studio and manual Output capture.

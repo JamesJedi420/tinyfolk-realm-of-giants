@@ -2,6 +2,7 @@
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
 local MatchSimulation: any = require("../tests/harness/MatchSimulation")
+local globalEnv = getfenv()
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -51,7 +52,10 @@ function escapeRoutesFolder:FindFirstChild(_childName: string): any
 end
 
 function escapeRoutesFolder:GetDescendants(): { any }
-	return { routePart }
+	if globalEnv._routePartPresent == true then
+		return { routePart }
+	end
+	return {}
 end
 
 local mapFolder: any = {
@@ -89,6 +93,12 @@ end
 local workspaceService: any = {
 	ClassName = "Workspace",
 }
+
+escapeRoutesFolder.Parent = mapFolder
+mapFolder.Parent = workspaceService
+routePart.Parent = escapeRoutesFolder
+
+globalEnv._routePartPresent = true
 
 function workspaceService:FindFirstChild(childName: string): any
 	if childName == "Map" then
@@ -192,36 +202,53 @@ MockGame.GetService = function(serviceName: string)
 	return nil
 end
 
-_G.game = MockGame
+globalEnv.game = MockGame
 local currentTime = 100
 local crossingHooks: { string } = {}
 local downedByUserId: { [number]: boolean } = {}
 local carriedByUserId: { [number]: boolean } = {}
 local carrierEncumberedByUserId: { [number]: boolean } = {}
 local objectiveThresholdMet = false
-_G._RoleService_QueryAPI = {
+local roleQueryFault = false
+local grabQueryFault = false
+local transportQueryFault = false
+local scoreQueryFault = false
+local movementHookFault = false
+globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
+		if roleQueryFault == true then
+			error("role query fault")
+		end
 		return downedByUserId[userId] == true
 	end,
 	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
+		if roleQueryFault == true then
+			error("role query fault")
+		end
 		if downedByUserId[userId] == true and interactionName == "escapeAttempt" then
 			return false
 		end
 		return true
 	end,
 }
-_G._GrabService_QueryAPI = {
+globalEnv._GrabService_QueryAPI = {
 	IsPlayerCarried = function(userId: number): boolean
+		if grabQueryFault == true then
+			error("grab query fault")
+		end
 		return carriedByUserId[userId] == true
 	end,
 	CanGiantPerformCarryInteraction = function(userId: number, _interactionName: string): any
+		if grabQueryFault == true then
+			error("grab query fault")
+		end
 		if carrierEncumberedByUserId[userId] == true then
 			return { accepted = false, reason = "carrier_encumbered" }
 		end
 		return { accepted = true, reason = "accepted" }
 	end,
 }
-_G._RealmObjectiveService_QueryAPI = {
+globalEnv._RealmObjectiveService_QueryAPI = {
 	IsEscapeObjectiveThresholdMet = function(): boolean
 		return objectiveThresholdMet == true
 	end,
@@ -231,9 +258,20 @@ local transportDepartureOutcome: any = {
 	reason = "transport_not_departed",
 	outcome = nil,
 }
-_G._TransportEscapeService_QueryAPI = {
+globalEnv._TransportEscapeService_QueryAPI = {
 	ResolveTransportDepartureOutcome = function(_endpointId: string, _candidateTinyfolkUserIds: { number }): any
+		if transportQueryFault == true then
+			error("transport query fault")
+		end
 		return transportDepartureOutcome
+	end,
+}
+globalEnv._ScoreService_QueryAPI = {
+	RequestScoreEvent = function(_userId: number, _eventId: string, _at: number, _metadata: any)
+		if scoreQueryFault == true then
+			error("score query fault")
+		end
+		return { accepted = true, reason = "accepted" }
 	end,
 }
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
@@ -244,6 +282,9 @@ local EscapeService = require("../src/ServerScriptService/Services/EscapeService
 	disableBlockExpirationSchedule = true,
 	tinyfolkMovementTraitService = {
 		OnValidRouteCrossing = function(_player: any, routeId: string)
+			if movementHookFault == true then
+				error("movement hook fault")
+			end
 			table.insert(crossingHooks, routeId)
 		end,
 	},
@@ -277,6 +318,11 @@ local function resetRouteDefaults()
 	carriedByUserId = {}
 	carrierEncumberedByUserId = {}
 	objectiveThresholdMet = false
+	roleQueryFault = false
+	grabQueryFault = false
+	transportQueryFault = false
+	scoreQueryFault = false
+	movementHookFault = false
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
@@ -310,9 +356,17 @@ do
 	routeAttributes.GiantRealmOwnerUserId = 9402
 	routeAttributes.InSafeZone = true
 	routeAttributes.SafeZoneType = "SharedHub"
-	local protected = _G._EscapeService_QueryAPI.ResolveRescueEntryRoute(1101, 9402)
+	local protected = globalEnv._EscapeService_QueryAPI.ResolveRescueEntryRoute(1101, 9402)
 	assertEqual(protected.accepted, false, "query rescue entry route rejects protected route")
 	assertEqual(protected.reason, "rescue_entry_route_missing", "protected rescue entry route reason")
+
+	globalEnv._routePartPresent = false
+	routePart.Parent = nil
+	local removed = EscapeService.resolveRescueEntryRoute(1101, 9402)
+	assertEqual(removed.accepted, false, "removed rescue entry route rejects stale cache lookup")
+	assertEqual(removed.reason, "rescue_entry_route_missing", "removed rescue entry route reason")
+	globalEnv._routePartPresent = true
+	routePart.Parent = escapeRoutesFolder
 end
 
 do
@@ -335,7 +389,7 @@ do
 	assertEqual(tinyfolkAccess.tinyfolkOnly, true, "Tinyfolk-only metadata projected")
 
 	routeAttributes.RouteEnabled = false
-	local giantAccess = _G._EscapeService_QueryAPI.GetRouteAccess(giant, "EscapeRoute_A")
+	local giantAccess = globalEnv._EscapeService_QueryAPI.GetRouteAccess(giant, "EscapeRoute_A")
 	assertEqual(giantAccess.accepted, false, "Giant access query rejects Tinyfolk-only route")
 	assertEqual(giantAccess.reason, "requester_not_tinyfolk", "Giant access rejection reason")
 
@@ -456,8 +510,36 @@ end
 
 do
 	resetRouteDefaults()
-	local originalObjectiveApi = _G._RealmObjectiveService_QueryAPI
-	_G._RealmObjectiveService_QueryAPI = {
+	roleQueryFault = true
+	routeAttributes.FinalExitManaged = false
+	local tinyfolk = MockPlayer.new(78, "FaultyRoleTinyfolk", { role = "Tinyfolk" })
+	local roleFaultAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(roleFaultAttempt.accepted, false, "role query error does not crash escape attempt")
+	assertEqual(roleFaultAttempt.reason, "role_query_fault", "role query fault reason")
+end
+
+do
+	resetRouteDefaults()
+	grabQueryFault = true
+	routeAttributes.FinalExitManaged = false
+	local tinyfolk = MockPlayer.new(79, "FaultyGrabTinyfolk", { role = "Tinyfolk" })
+	local grabFaultAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(grabFaultAttempt.accepted, false, "grab query error does not crash escape attempt")
+	assertEqual(grabFaultAttempt.reason, "grab_query_fault", "grab query fault reason")
+end
+
+do
+	resetRouteDefaults()
+	transportQueryFault = true
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 31, 32 })
+	assertFalse(result.accepted, "transport query error does not crash departure resolution")
+	assertEqual(result.reason, "transport_query_fault", "transport query fault reason")
+end
+
+do
+	resetRouteDefaults()
+	local originalObjectiveApi = globalEnv._RealmObjectiveService_QueryAPI
+	globalEnv._RealmObjectiveService_QueryAPI = {
 		IsEscapeObjectiveThresholdMet = function(): boolean
 			error("objective query fault")
 			return false
@@ -469,7 +551,7 @@ do
 	assertEqual(attempt.accepted, false, "objective query error does not crash escape attempt")
 	assertEqual(attempt.reason, "final_exit_dormant", "objective query error falls back to dormant gate")
 
-	_G._RealmObjectiveService_QueryAPI = originalObjectiveApi
+	globalEnv._RealmObjectiveService_QueryAPI = originalObjectiveApi
 end
 
 do
@@ -566,6 +648,26 @@ end
 
 do
 	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	scoreQueryFault = true
+	local tinyfolk = MockPlayer.new(80, "FaultyScoreTinyfolk", { role = "Tinyfolk" })
+	local result = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(result.accepted, true, "score query fault does not crash escape acceptance")
+	assertEqual(result.reason, "accepted", "score query fault keeps accepted reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	movementHookFault = true
+	local tinyfolk = MockPlayer.new(81, "FaultyMovementHookTinyfolk", { role = "Tinyfolk" })
+	local result = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(result.accepted, true, "movement hook fault does not crash escape acceptance")
+	assertEqual(result.reason, "accepted", "movement hook fault keeps accepted reason")
+end
+
+do
+	resetRouteDefaults()
 	routeAttributes.InSafeZone = true
 	routeAttributes.SafeZoneType = "SharedHub"
 	objectiveThresholdMet = true
@@ -607,6 +709,69 @@ do
 	assertEqual(#result.escapedUserIds, 1, "transport resolution escaped user count")
 	assertEqual(#result.safeReturnedUserIds, 1, "transport resolution safe-return count")
 	assertEqual(#result.unresolvedUserIds, 0, "transport resolution leaves no unresolved users")
+end
+
+do
+	resetRouteDefaults()
+	local overlappingTinyfolk = MockPlayer.new(33, "TinyfolkOverlapping", { role = "Tinyfolk" })
+	playersByUserId[33] = overlappingTinyfolk
+
+	transportDepartureOutcome = {
+		accepted = true,
+		reason = "accepted",
+		outcome = {
+			canResolve = true,
+			boardedEscapedUserIds = { 33, 33 },
+			unboardedRemainingUserIds = { 33, 33 },
+		},
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 33 })
+	assertTrue(result.accepted, "transport overlap resolution accepted")
+	assertEqual(overlappingTinyfolk:GetAttribute("Escaped"), true, "boarded outcome wins over unboarded overlap")
+	assertEqual(#result.escapedUserIds, 1, "transport overlap escaped ids deduplicated")
+	assertEqual(#result.safeReturnedUserIds, 0, "transport overlap does not relocate boarded tinyfolk")
+	assertEqual(#result.unresolvedUserIds, 0, "transport overlap leaves no unresolved users")
+end
+
+do
+	resetRouteDefaults()
+	local candidateTinyfolk = MockPlayer.new(34, "TinyfolkCandidate", { role = "Tinyfolk" })
+	local staleTinyfolk = MockPlayer.new(35, "TinyfolkStale", { role = "Tinyfolk" })
+	staleTinyfolk:SetAttribute("Escaped", true)
+	playersByUserId[34] = candidateTinyfolk
+	playersByUserId[35] = staleTinyfolk
+
+	transportDepartureOutcome = {
+		accepted = true,
+		reason = "accepted",
+		outcome = {
+			canResolve = true,
+			boardedEscapedUserIds = { 35 },
+			unboardedRemainingUserIds = { 35 },
+		},
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 34 })
+	assertTrue(result.accepted, "transport stale-id resolution accepted")
+	assertEqual(#result.escapedUserIds, 0, "transport stale boarded ids ignored")
+	assertEqual(#result.safeReturnedUserIds, 0, "transport stale unboarded ids ignored")
+	assertEqual(staleTinyfolk:GetAttribute("Escaped"), true, "transport stale ids do not mutate non-candidate state")
+	assertEqual(candidateTinyfolk:GetAttribute("Escaped"), nil, "candidate state unchanged when absent from outcome")
+end
+
+do
+	resetRouteDefaults()
+	globalEnv._routePartPresent = false
+	routePart.Parent = nil
+	local metadataAfterRemoval = EscapeService.getObjectiveSafeRouteMetadata(nil :: any)
+	local accessAfterRemoval =
+		EscapeService.getRouteAccess(MockPlayer.new(90, "RemovedRouteTinyfolk", { role = "Tinyfolk" }), "EscapeRoute_A")
+	assertEqual(#metadataAfterRemoval, 0, "removed route omitted from objective route metadata")
+	assertEqual(accessAfterRemoval.accepted, false, "removed route rejects access after cache invalidation")
+	assertEqual(accessAfterRemoval.reason, "route_not_found", "removed route lookup reason")
+	globalEnv._routePartPresent = true
+	routePart.Parent = escapeRoutesFolder
 end
 
 do

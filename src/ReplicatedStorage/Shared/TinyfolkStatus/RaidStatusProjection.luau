@@ -292,21 +292,37 @@ local function addScoreFeedback(config: any, entriesById: { [string]: Entry }, o
 	})
 end
 
-local function addThreatEntry(
-	config: any,
-	entriesById: { [string]: Entry },
-	order: { string },
-	threatLevel: string,
-	exposureRatio: number?
-)
-	if threatLevel == "none" then
+local function threatLevelName(config: any, key: string, fallback: string): string
+	local levels = getHud(config).ThreatLevels or {}
+	local value = levels[key]
+	if type(value) == "string" and value ~= "" then
+		return value
+	end
+	return fallback
+end
+
+local function warningLevelName(config: any, key: string, fallback: string): string
+	local warningConfig = if type(config) == "table" and type(config.GiantProximityWarning) == "table"
+		then config.GiantProximityWarning
+		else {}
+	local levels = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
+	local value = levels[key]
+	if type(value) == "string" and value ~= "" then
+		return value
+	end
+	return fallback
+end
+
+local function addThreatEntry(config: any, entriesById: { [string]: Entry }, order: { string }, threatLevel: string)
+	if threatLevel == threatLevelName(config, "None", "none") then
 		return
 	end
 
+	local highLevel = threatLevelName(config, "High", "high")
 	addOrRefresh(entriesById, order, {
 		id = "threat_" .. threatLevel,
 		category = categoryName(config, "Threat", "threat"),
-		severity = if threatLevel == "high"
+		severity = if threatLevel == highLevel
 			then severityName(config, "Critical", "critical")
 			else severityName(config, "Warning", "warning"),
 		labelKey = "raid_status_threat_" .. threatLevel,
@@ -354,16 +370,19 @@ local function addGiantProximityWarningEntry(
 	order: { string },
 	warningLevel: string
 )
-	if warningLevel == "none" then
+	local noneLevel = warningLevelName(config, "None", "none")
+	if warningLevel == noneLevel then
 		return
 	end
+	local dangerLevel = warningLevelName(config, "Danger", "danger")
+	local watchLevel = warningLevelName(config, "Watch", "watch")
 
 	addOrRefresh(entriesById, order, {
 		id = "giant_proximity_warning_" .. warningLevel,
 		category = categoryName(config, "Threat", "threat"),
-		severity = if warningLevel == "danger"
+		severity = if warningLevel == dangerLevel
 			then severityName(config, "Critical", "critical")
-			elseif warningLevel == "watch" then severityName(config, "Info", "info")
+			elseif warningLevel == watchLevel then severityName(config, "Info", "info")
 			else severityName(config, "Warning", "warning"),
 		labelKey = "raid_status_giant_proximity_" .. warningLevel,
 		privacy = "opposing_role_redacted",
@@ -527,8 +546,9 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 			elseif threatLevel == (threatLevels.High or "high") then "danger"
 			else "none"
 	end
-	addThreatEntry(projectionConfig, entriesById, order, threatLevel, exposureRatio)
-	addGiantProximityWarningEntry(projectionConfig, entriesById, order, warningLevel)
+	local resolvedWarningLevel = warningLevel or "none"
+	addThreatEntry(projectionConfig, entriesById, order, threatLevel)
+	addGiantProximityWarningEntry(projectionConfig, entriesById, order, resolvedWarningLevel)
 	addScoreFeedback(projectionConfig, entriesById, order, attrs)
 
 	local teammates = if type(input) == "table" and type(input.teammates) == "table" then input.teammates else {}
@@ -541,7 +561,7 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 		entries = entries,
 		summary = serializeEntries(entries),
 		threatLevel = threatLevel,
-		giantProximityWarningLevel = warningLevel,
+		giantProximityWarningLevel = resolvedWarningLevel,
 		custodyState = custodyState,
 		personalEffects = serializeEntries((function()
 			local filtered: { Entry } = {}

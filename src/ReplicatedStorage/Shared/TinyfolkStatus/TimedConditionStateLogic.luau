@@ -80,7 +80,9 @@ function TimedConditionStateLogic.ResolveGiantProximityWarningLevel(
 	return warningLevelName(config, "None", "none")
 end
 
-local function getVector3Position(value: any)
+type PositionXYZ = { x: number, y: number, z: number }
+
+local function getVector3Position(value: any): PositionXYZ?
 	if value == nil then
 		return nil
 	end
@@ -98,26 +100,19 @@ local function getVector3Position(value: any)
 		return nil
 	end
 
-	return x, y, z
+	return { x = x, y = y, z = z }
 end
 
 local function distanceBetween(a: any, b: any): number?
-	local aPositionX, aPositionY, aPositionZ = getVector3Position(a)
-	local bPositionX, bPositionY, bPositionZ = getVector3Position(b)
-	if
-		aPositionX == nil
-		or aPositionY == nil
-		or aPositionZ == nil
-		or bPositionX == nil
-		or bPositionY == nil
-		or bPositionZ == nil
-	then
+	local aPosition = getVector3Position(a)
+	local bPosition = getVector3Position(b)
+	if aPosition == nil or bPosition == nil then
 		return nil
 	end
 
-	local dx = (aPositionX :: number) - (bPositionX :: number)
-	local dy = (aPositionY :: number) - (bPositionY :: number)
-	local dz = (aPositionZ :: number) - (bPositionZ :: number)
+	local dx = aPosition.x - bPosition.x
+	local dy = aPosition.y - bPosition.y
+	local dz = aPosition.z - bPosition.z
 	return math.sqrt(dx * dx + dy * dy + dz * dz)
 end
 
@@ -128,19 +123,6 @@ local function normalizeConditionName(conditionName: any): string?
 	local lowered = string.lower(conditionName)
 	if lowered == "bleed" or lowered == "stun" or lowered == "flux" then
 		return lowered
-	end
-	return nil
-end
-
-local function getConditionUntil(state: TimedConditionState, conditionName: string): number?
-	if conditionName == "bleed" then
-		return state.bleedUntil
-	end
-	if conditionName == "stun" then
-		return state.stunUntil
-	end
-	if conditionName == "flux" then
-		return state.fluxUntil
 	end
 	return nil
 end

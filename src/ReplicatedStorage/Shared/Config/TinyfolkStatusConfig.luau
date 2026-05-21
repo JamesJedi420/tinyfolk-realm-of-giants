@@ -28,6 +28,10 @@ TinyfolkStatusConfig.StunDurationSeconds = 2
 TinyfolkStatusConfig.FluxDurationSeconds = 6
 
 TinyfolkStatusConfig.MaxTimedConditionDurationSeconds = 30
+TinyfolkStatusConfig.TrailLifetimeSeconds = 6
+TinyfolkStatusConfig.TrailMaxPoints = 6
+TinyfolkStatusConfig.TrailSampleMinDistanceStuds = 4
+TinyfolkStatusConfig.TrailSampleMinIntervalSeconds = 0.25
 
 TinyfolkStatusConfig.Attributes = {
 	FearExposure = "TinyfolkFearExposure",

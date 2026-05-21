@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
@@ -21,7 +21,7 @@ local function assertEqual(actual: any, expected: any, label: string)
 	print(string.format("PASS [%s]", label))
 end
 
-local heartbeatCallbacks: { () -> () } = {}
+local globalEnv: any = getfenv()
 
 local function makeSignal()
 	local callbacks: { (...any) -> () } = {}
@@ -181,11 +181,8 @@ local function createFixture()
 		"TimedConditionStateLogic",
 		"../../ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic"
 	)
-	addChild(
-		statusFolder,
-		"RaidStatusProjection",
-		"../../ReplicatedStorage/Shared/TinyfolkStatus/RaidStatusProjection"
-	)
+	addChild(statusFolder, "RaidStatusProjection", "../../ReplicatedStorage/Shared/TinyfolkStatus/RaidStatusProjection")
+	addChild(statusFolder, "TrailPressureLogic", "../../ReplicatedStorage/Shared/TinyfolkStatus/TrailPressureLogic")
 
 	local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 	addChild(sharedFolder, "Config", configFolder)
@@ -212,17 +209,19 @@ local function createFixture()
 		return nil
 	end
 
-	game = fakeGame
+	globalEnv.game = fakeGame
 
 	return tinyfolk, giant, runService
 end
 
 local tinyfolk, giant, runService = createFixture()
+local runServiceAny = runService :: any
 
 local TinyfolkStatusConfig = require("../src/ReplicatedStorage/Shared/Config/TinyfolkStatusConfig")
 local TinyfolkStatusService = require("../src/ServerScriptService/Services/TinyfolkStatusService.server")
 
 TinyfolkStatusService.ResetForTests()
+globalEnv._TinyfolkHiding_QueryAPI = nil
 
 do
 	TinyfolkStatusService.ResolveNow(tinyfolk, 100)
@@ -282,7 +281,7 @@ end
 do
 	giant.Character = makeCharacter(makePosition(1, 0, 0), 100)
 	for _ = 1, 2 do
-		(runService :: any).Heartbeat:Fire()
+		runServiceAny.Heartbeat:Fire()
 	end
 	assertTrue(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanic), "near giant sustains panic state")
 	assertTrue(
@@ -319,6 +318,56 @@ do
 		nil,
 		"dead giant does not leak stale nearest distance"
 	)
+end
+
+do
+	TinyfolkStatusService.ResetForTests()
+	tinyfolk.Character = makeCharacter(makePosition(0, 0, 0), 100)
+	TinyfolkStatusService.ResolveNow(tinyfolk, 400)
+	local firstTrailSnapshot = TinyfolkStatusService.GetTrailSnapshot(tinyfolk, 400)
+	assertEqual(firstTrailSnapshot.sampleCount, 1, "first trail sample recorded")
+	assertFalse(firstTrailSnapshot.hasPressure, "single trail sample has no segment pressure")
+
+	tinyfolk.Character = makeCharacter(makePosition(6, 0, 0), 100)
+	TinyfolkStatusService.ResolveNow(tinyfolk, 401)
+	local secondTrailSnapshot = TinyfolkStatusService.GetTrailSnapshot(tinyfolk, 401)
+	assertEqual(secondTrailSnapshot.sampleCount, 2, "second movement sample recorded")
+	assertTrue(secondTrailSnapshot.hasPressure, "second movement sample yields trail pressure")
+	assertEqual(secondTrailSnapshot.segmentCount, 1, "single trail segment projected")
+
+	local querySnapshot = globalEnv._TinyfolkStatusService_QueryAPI.GetTrailSnapshot(tinyfolk.UserId, 401)
+	assertEqual(querySnapshot.segmentCount, 1, "query api exposes trail snapshot")
+
+	globalEnv._TinyfolkHiding_QueryAPI = {
+		IsPlayerHiding = function(userId: number): boolean
+			return userId == tinyfolk.UserId
+		end,
+	}
+	tinyfolk.Character = makeCharacter(makePosition(12, 0, 0), 100)
+	TinyfolkStatusService.ResolveNow(tinyfolk, 402)
+	local hiddenTrailSnapshot = TinyfolkStatusService.GetTrailSnapshot(tinyfolk, 402)
+	assertEqual(hiddenTrailSnapshot.sampleCount, 2, "hidden tinyfolk suppresses fresh trail sample")
+	assertEqual(hiddenTrailSnapshot.segmentCount, 1, "hidden tinyfolk keeps existing trail until decay")
+
+	globalEnv._TinyfolkHiding_QueryAPI = {
+		IsPlayerHiding = function(_userId: number)
+			error("hiding query fault")
+		end,
+	}
+	tinyfolk.Character = makeCharacter(makePosition(18, 0, 0), 100)
+	local resolveOk = pcall(TinyfolkStatusService.ResolveNow, tinyfolk, 403)
+	assertTrue(resolveOk, "hiding query fault does not break status tick")
+	local faultTrailSnapshot = TinyfolkStatusService.GetTrailSnapshot(tinyfolk, 403)
+	assertEqual(faultTrailSnapshot.sampleCount, 3, "faulting hiding query falls back to non-hidden trail sampling")
+	assertEqual(faultTrailSnapshot.segmentCount, 2, "faulting hiding query still advances coarse trail pressure")
+
+	tinyfolk:SetAttribute("Role", "Giant")
+	runServiceAny.Heartbeat:Fire()
+	local roleShiftTrailSnapshot = TinyfolkStatusService.GetTrailSnapshot(tinyfolk, 404)
+	assertEqual(roleShiftTrailSnapshot.sampleCount, 0, "role change clears stale trail state")
+	assertEqual(roleShiftTrailSnapshot.segmentCount, 0, "role change clears stale trail segments")
+	tinyfolk:SetAttribute("Role", "Tinyfolk")
+	globalEnv._TinyfolkHiding_QueryAPI = nil
 end
 
 print("timed_condition_states_runtime_entrypoint: all checks passed")
