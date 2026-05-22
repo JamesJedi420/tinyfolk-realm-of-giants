@@ -87,6 +87,18 @@ lune run tests/score_service_runtime_entrypoint.spec.luau
 
 Use this focused pair before broader validation when the change is limited to score feedback presentation or the existing score attribute contract.
 
+## Session-end recognition focused regression
+
+For the session-end recognition overlay slice, run:
+
+```powershell
+lune run tests/session_end_recognition_presentation.spec.luau
+lune run tests/escape_service_runtime_entrypoint.spec.luau
+lune run tests/score_service_runtime_entrypoint.spec.luau
+```
+
+Use this focused trio before broader validation when the change is limited to final-exit recognition presentation or the existing final-exit and score attribute contracts.
+
 ## Studio/runtime validation boundary
 
 Studio Play Solo and Test -> Start runtime evidence currently requires manual interaction in Roblox Studio and manual Output capture.
