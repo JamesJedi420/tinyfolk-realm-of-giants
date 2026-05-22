@@ -65,6 +65,17 @@ lune run tests/trail_pressure_logic.spec.luau
 
 Use this focused group before broader integration runs when the change is limited to Tinyfolk status, warning projection, hiding suppression, or trail pressure behavior.
 
+## Tinyfolk Raid HUD focused regression
+
+For the Tinyfolk raid HUD presentation slice, run:
+
+```powershell
+lune run tests/tinyfolk_raid_status_hud_presentation.spec.luau
+lune run tests/tinyfolk_raid_status_projection.spec.luau
+```
+
+Use this focused pair before broader validation when the change is limited to the Tinyfolk raid HUD client or its shared presentation helper.
+
 ## Studio/runtime validation boundary
 
 Studio Play Solo and Test -> Start runtime evidence currently requires manual interaction in Roblox Studio and manual Output capture.
