@@ -2,7 +2,85 @@
 
 local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
 
-local function assertEqual(actual, expected, label)
+type Vector3Data = {
+	x: number,
+	y: number,
+	z: number,
+}
+
+type OccupiedSpaceBoxRecord = {
+	tag: string?,
+	worldCenter: Vector3Data,
+	halfExtents: Vector3Data,
+}
+
+type PlacedStructureSaveRecord = {
+	structureId: string,
+	placedByUserId: number,
+	placedAt: number,
+	proposedOccupiedSpace: { OccupiedSpaceBoxRecord },
+}
+
+type EmergencyReinforcementSaveRecord = {
+	used: boolean,
+	callStartedAt: number?,
+	cooldownEndsAt: number?,
+	triggeredByUserId: number?,
+	spawnedUserId: number?,
+	lastReason: string?,
+	lastObjectiveId: string?,
+}
+
+type ShrineSaveRecord = {
+	shrineId: string,
+	isActive: boolean,
+	essenceTotal: number,
+	tickCount: number,
+	lastTickAt: number,
+	activatedByUserId: number?,
+}
+
+type ShrinePersistenceSaveRecord = {
+	shrines: { ShrineSaveRecord },
+}
+
+type RescueContractSaveRecord = {
+	rescuerUserId: number,
+	targetUserId: number,
+	targetRealmOwnerUserId: number,
+	entryRouteId: string,
+	entryRouteKind: string,
+	startedAt: number,
+	expiresAt: number,
+	isAccelerated: boolean,
+}
+
+type RescueQueueEntrySaveRecord = {
+	queueEntryId: string,
+	capturedUserId: number,
+	realmId: string,
+	sessionId: string,
+	rewardHint: string,
+	dangerRating: number,
+	expiration: number,
+	rescuerUserId: number,
+	targetRealmOwnerUserId: number,
+	entryRouteId: string,
+	entryRouteKind: string,
+	createdAt: number,
+	status: string,
+	acceptedAt: number?,
+	acceptedByUserId: number?,
+	resolvedAt: number?,
+	resolvedReason: string?,
+}
+
+type RescuePersistenceSaveRecord = {
+	contracts: { RescueContractSaveRecord },
+	queueEntries: { RescueQueueEntrySaveRecord },
+}
+
+local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
 		error(
 			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
@@ -10,7 +88,7 @@ local function assertEqual(actual, expected, label)
 	end
 end
 
-local function assertTrue(value, label)
+local function assertTrue(value: boolean, label: string)
 	if not value then
 		error("assertTrue failed [" .. label .. "]")
 	end
@@ -29,8 +107,9 @@ local function assertInvalid(expectedReason: string, label: string, valid: boole
 	assertEqual(reason, expectedReason, label .. " reason")
 end
 
-local function makeOccupiedBox(tag: string?)
-	local box: any = {
+local function makeOccupiedBox(tag: string?): OccupiedSpaceBoxRecord
+	local box: OccupiedSpaceBoxRecord = {
+		tag = nil,
 		worldCenter = { x = 12, y = 3, z = -5 },
 		halfExtents = { x = 4, y = 2, z = 6 },
 	}
@@ -40,7 +119,7 @@ local function makeOccupiedBox(tag: string?)
 	return box
 end
 
-local function makePlacedStructureRecord(structureId: string)
+local function makePlacedStructureRecord(structureId: string): PlacedStructureSaveRecord
 	return {
 		structureId = structureId,
 		placedByUserId = 9402,
@@ -51,7 +130,7 @@ local function makePlacedStructureRecord(structureId: string)
 	}
 end
 
-local function makeSaveRoot()
+local function makeSaveRoot(): any
 	return {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
 		ownerUserId = 9402,
@@ -61,7 +140,7 @@ local function makeSaveRoot()
 	}
 end
 
-local function makeEmergencyReinforcementRecord()
+local function makeEmergencyReinforcementRecord(): EmergencyReinforcementSaveRecord
 	return {
 		used = true,
 		callStartedAt = 55,
@@ -73,7 +152,7 @@ local function makeEmergencyReinforcementRecord()
 	}
 end
 
-local function makeShrinePersistenceRecord()
+local function makeShrinePersistenceRecord(): ShrinePersistenceSaveRecord
 	return {
 		shrines = {
 			{
@@ -96,7 +175,7 @@ local function makeShrinePersistenceRecord()
 	}
 end
 
-local function makeRescuePersistenceRecord()
+local function makeRescuePersistenceRecord(): RescuePersistenceSaveRecord
 	return {
 		contracts = {
 			{
@@ -163,13 +242,17 @@ local function makeRescuePersistenceRecord()
 	}
 end
 
-local function assertVector3Equal(actual, expected, label)
+local function assertVector3Equal(actual: Vector3Data, expected: Vector3Data, label: string)
 	assertEqual(actual.x, expected.x, label .. " x")
 	assertEqual(actual.y, expected.y, label .. " y")
 	assertEqual(actual.z, expected.z, label .. " z")
 end
 
-local function assertRecordMatchesState(record, state, label)
+local function assertRecordMatchesState(
+	record: PlacedStructureSaveRecord,
+	state: PlacedStructureSaveRecord,
+	label: string
+)
 	assertEqual(record.structureId, state.structureId, label .. " structureId")
 	assertEqual(record.placedByUserId, state.placedByUserId, label .. " placedByUserId")
 	assertEqual(record.placedAt, state.placedAt, label .. " placedAt")
@@ -462,7 +545,8 @@ local function run()
 
 	do
 		local record = makePlacedStructureRecord("A")
-		record.proposedOccupiedSpace[1].tag = 42
+		local invalidBox: any = record.proposedOccupiedSpace[1]
+		invalidBox.tag = 42
 		assertInvalid(
 			"occupied_space_box_tag_invalid index=1",
 			"invalid occupied tag",
@@ -472,7 +556,8 @@ local function run()
 
 	do
 		local record = makePlacedStructureRecord("A")
-		record.proposedOccupiedSpace[1].worldCenter = { x = 1, y = "bad", z = 3 }
+		local invalidBox: any = record.proposedOccupiedSpace[1]
+		invalidBox.worldCenter = { x = 1, y = "bad", z = 3 }
 		assertInvalid(
 			"occupied_space_box_world_center_invalid index=1",
 			"invalid occupied worldCenter",

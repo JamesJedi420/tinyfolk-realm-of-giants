@@ -1,7 +1,6 @@
 --!strict
 
 local RealmCaptureZoneValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmCaptureZoneValidator")
-local RealmTopologyValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmTopologyValidator")
 
 type RealmDescriptor = any
 type CaptureZoneConfig = any
@@ -34,6 +33,13 @@ local config: CaptureZoneConfig = {
 	maximumCaptureZonesPerRealm = 4,
 	safeZoneNowSeconds = 100,
 }
+
+local function reasonContains(reason: string?, text: string): boolean
+	if type(reason) ~= "string" then
+		return false
+	end
+	return string.find(reason, text, 1, true) ~= nil
+end
 
 -- Block 1: Vacuous pass (empty captureZones)
 do
@@ -91,10 +97,7 @@ do
 	})
 	local result = RealmCaptureZoneValidator.captureZoneSpawnSeparation(descriptor, config)
 	assert(result.passed == false, "Block 5: Should fail when any capture zone violates minimum separation")
-	assert(
-		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
-		"Block 5: Reason should identify the violating zone"
-	)
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 5: Reason should identify the violating zone")
 end
 
 -- Block 6: Multiple spawns, capture too close to at least one
@@ -107,7 +110,7 @@ do
 	})
 	local result = RealmCaptureZoneValidator.captureZoneSpawnSeparation(descriptor, config)
 	assert(result.passed == false, "Block 6: Should fail if capture zone is too close to any spawn")
-	assert(string.find(result.reason, "TinyfolkSpawn_A") ~= nil, "Block 6: Reason should identify the nearest spawn")
+	assert(reasonContains(result.reason, "TinyfolkSpawn_A"), "Block 6: Reason should identify the nearest spawn")
 end
 
 -- Block 7: 3D distance check (not just XZ plane)
@@ -220,10 +223,7 @@ do
 	-- Zone_B at (70,0,0): 30 studs from escape → fail
 	local result = RealmCaptureZoneValidator.captureZoneEscapeSeparation(descriptor, config)
 	assert(result.passed == false, "Block 14: Should fail when any capture zone violates escape separation")
-	assert(
-		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
-		"Block 14: Reason should identify the violating zone"
-	)
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 14: Reason should identify the violating zone")
 end
 
 -- Block 15: Multiple escape routes (valid against one, invalid against another)
@@ -254,7 +254,7 @@ do
 	-- Zone_A at (20,0,0): 180 studs from EscapeRoute_A (pass), 40 studs from EscapeRoute_B (fail)
 	local result = RealmCaptureZoneValidator.captureZoneEscapeSeparation(d3, config)
 	assert(result.passed == false, "Block 15: Should fail when zone is too close to any escape route")
-	assert(string.find(result.reason, "EscapeRoute_B") ~= nil, "Block 15: Reason should identify EscapeRoute_B")
+	assert(reasonContains(result.reason, "EscapeRoute_B"), "Block 15: Reason should identify EscapeRoute_B")
 end
 
 -- Block 16: 3D distance verification
@@ -356,10 +356,7 @@ do
 	})
 	local result = RealmCaptureZoneValidator.captureZoneRadiusBounds(descriptor, config)
 	assert(result.passed == false, "Block 23: Should fail when any zone violates radius bounds")
-	assert(
-		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
-		"Block 23: Reason should identify the violating zone"
-	)
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 23: Reason should identify the violating zone")
 end
 
 -- Block 24: Non-GiantCapture tag is ignored
@@ -463,10 +460,7 @@ do
 	})
 	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
 	assert(result.passed == false, "Block 30: Should fail when any zone encloses a spawn")
-	assert(
-		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
-		"Block 30: Reason should identify the violating zone"
-	)
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 30: Reason should identify the violating zone")
 end
 
 -- Block 31: Multiple spawns mixed (one outside, one inside)
@@ -480,7 +474,7 @@ do
 	-- TinyfolkSpawn_A: dist=195, radius=15 → pass; TinyfolkSpawn_B: dist=5, radius=15 → fail
 	local result = RealmCaptureZoneValidator.captureZoneSpawnPerimeterClearance(descriptor, config)
 	assert(result.passed == false, "Block 31: Should fail when any spawn is inside any zone")
-	assert(string.find(result.reason, "TinyfolkSpawn_B") ~= nil, "Block 31: Reason should identify the enclosed spawn")
+	assert(reasonContains(result.reason, "TinyfolkSpawn_B"), "Block 31: Reason should identify the enclosed spawn")
 end
 
 -- Block 32: 3D perimeter case (Y offset matters)
@@ -639,10 +633,7 @@ do
 	-- Zone_B at (100,0,0) radius 20: dist to escape = 0 → 0-20=-20 ≤ 0 → fail
 	local result = RealmCaptureZoneValidator.captureZoneEscapePerimeterClearance(d9, config)
 	assert(result.passed == false, "Block 39: Should fail when any zone encloses an escape route")
-	assert(
-		string.find(result.reason, "GiantCaptureZone_B") ~= nil,
-		"Block 39: Reason should identify the violating zone"
-	)
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 39: Reason should identify the violating zone")
 end
 
 -- Block 40: 3D perimeter case
@@ -779,8 +770,8 @@ do
 	-- B-C: dist=10, r1+r2=20 → 10 < 20 → fail
 	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
 	assert(result.passed == false, "Block 47: Should fail when any pair overlaps")
-	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 47: Reason should include zone B")
-	assert(string.find(result.reason, "GiantCaptureZone_C") ~= nil, "Block 47: Reason should include zone C")
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 47: Reason should include zone B")
+	assert(reasonContains(result.reason, "GiantCaptureZone_C"), "Block 47: Reason should include zone C")
 end
 
 -- Block 48: 3D overlap case (Y-axis separation)
@@ -827,8 +818,8 @@ do
 	local result = RealmCaptureZoneValidator.captureZoneOverlap(descriptor, config)
 	assert(result.passed == false, "Block 50: Should fail on first violating pair")
 	-- The first pair in iteration order (A, B) must be reported, not C
-	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 50: First zone in pair should be A")
-	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 50: Second zone in pair should be B")
+	assert(reasonContains(result.reason, "GiantCaptureZone_A"), "Block 50: First zone in pair should be A")
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 50: Second zone in pair should be B")
 end
 
 print("✓ realm_capture_zone.spec.luau: all 50 blocks passed")
@@ -929,8 +920,8 @@ do
 	-- A-B: gap=40 pass; A-C: gap=64 pass; B-C: dist=24 gap=4 fail
 	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
 	assert(result.passed == false, "Block 57: Any bad pair should fail")
-	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 57: Reason should include zone B")
-	assert(string.find(result.reason, "GiantCaptureZone_C") ~= nil, "Block 57: Reason should include zone C")
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 57: Reason should include zone B")
+	assert(reasonContains(result.reason, "GiantCaptureZone_C"), "Block 57: Reason should include zone C")
 end
 
 -- Block 58: 3D spacing case
@@ -972,8 +963,8 @@ do
 	-- A-B is checked first and already violates gap minimum, so A/B should be reported.
 	local result = RealmCaptureZoneValidator.captureZoneMinimumSpacing(descriptor, config)
 	assert(result.passed == false, "Block 60: Should fail on first violating pair")
-	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 60: First pair should include A")
-	assert(string.find(result.reason, "GiantCaptureZone_B") ~= nil, "Block 60: First pair should include B")
+	assert(reasonContains(result.reason, "GiantCaptureZone_A"), "Block 60: First pair should include A")
+	assert(reasonContains(result.reason, "GiantCaptureZone_B"), "Block 60: First pair should include B")
 end
 
 print("✓ realm_capture_zone.spec.luau: all 60 blocks passed")
@@ -1098,7 +1089,7 @@ do
 	-- For A, all B/C/D are within 30 in 3D -> 3 neighbors > max 2 -> fail
 	local result = RealmCaptureZoneValidator.captureZoneClusterDensityCap(descriptor, config)
 	assert(result.passed == false, "Block 68: 3D neighbor counting should fail with 3 neighbors inside radius")
-	assert(string.find(result.reason, "GiantCaptureZone_A") ~= nil, "Block 68: Reason should identify center zone")
+	assert(reasonContains(result.reason, "GiantCaptureZone_A"), "Block 68: Reason should identify center zone")
 end
 
 -- Block 69: deterministic failure reporting / stable repeat behavior
@@ -1243,7 +1234,13 @@ do
 		constructionSites = {},
 		upgradeBoards = {},
 		controlZones = {
-			{ name = "SharedHubSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "SharedHub" },
+			{
+				name = "SharedHubSafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "SharedHub",
+			},
 		},
 		captureZones = {},
 		props = {},
@@ -1263,7 +1260,13 @@ do
 		constructionSites = {},
 		upgradeBoards = {},
 		controlZones = {
-			{ name = "SharedHubSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "SharedHub" },
+			{
+				name = "SharedHubSafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "SharedHub",
+			},
 		},
 		captureZones = {
 			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
@@ -1273,7 +1276,7 @@ do
 	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
 	assert(result.passed == false, "Block 78: overlap with SharedHub safe zone must fail")
-	assert(string.find(result.reason, "SharedHub") ~= nil, "Block 78: reason should include SharedHub type")
+	assert(reasonContains(result.reason, "SharedHub"), "Block 78: reason should include SharedHub type")
 end
 
 -- Block 79: Realm entry protection active rejects overlap
@@ -1303,7 +1306,10 @@ do
 	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
 	assert(result.passed == false, "Block 79: active RealmEntry protection must fail")
-	assert(string.find(result.reason, "realm_entry_protected") ~= nil, "Block 79: reason should include entry-protected reason")
+	assert(
+		reasonContains(result.reason, "realm_entry_protected"),
+		"Block 79: reason should include entry-protected reason"
+	)
 end
 
 -- Block 80: Realm entry protection expired allows placement
@@ -1345,7 +1351,13 @@ do
 		constructionSites = {},
 		upgradeBoards = {},
 		controlZones = {
-			{ name = "RealmExitSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "RealmExit" },
+			{
+				name = "RealmExitSafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "RealmExit",
+			},
 		},
 		captureZones = {
 			{ name = "GiantCaptureZone_A", position = { x = 10, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
@@ -1355,7 +1367,10 @@ do
 	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
 	assert(result.passed == false, "Block 81: overlap with RealmExit safe zone must fail")
-	assert(string.find(result.reason, "realm_exit_protected") ~= nil, "Block 81: reason should include realm-exit protection")
+	assert(
+		reasonContains(result.reason, "realm_exit_protected"),
+		"Block 81: reason should include realm-exit protection"
+	)
 end
 
 -- Block 82: Unknown safe-zone type rejects safely
@@ -1368,7 +1383,13 @@ do
 		constructionSites = {},
 		upgradeBoards = {},
 		controlZones = {
-			{ name = "UnknownSafeZone", position = { x = 0, y = 0, z = 0 }, radius = 20, tag = "SafeZone", zoneType = "AlienZone" },
+			{
+				name = "UnknownSafeZone",
+				position = { x = 0, y = 0, z = 0 },
+				radius = 20,
+				tag = "SafeZone",
+				zoneType = "AlienZone",
+			},
 		},
 		captureZones = {
 			{ name = "GiantCaptureZone_A", position = { x = 40, y = 0, z = 0 }, radius = 5, tag = "GiantCapture" },
@@ -1378,7 +1399,7 @@ do
 	} :: RealmDescriptor
 	local result = RealmCaptureZoneValidator.captureZoneProtectedZoneClearance(descriptor, config)
 	assert(result.passed == false, "Block 82: unknown safe-zone type should reject deterministically")
-	assert(string.find(result.reason, "unsupported zone type") ~= nil, "Block 82: reason should mention unsupported type")
+	assert(reasonContains(result.reason, "unsupported zone type"), "Block 82: reason should mention unsupported type")
 end
 
 print("✓ realm_capture_zone.spec.luau: all 82 blocks passed")

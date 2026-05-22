@@ -67,7 +67,7 @@ end
 ensureBuildRemote(10)
 ensureDebugRemotes(10)
 
-local function getHumanoidRootPart(character: Model?): BasePart?
+local function getHumanoidRootPart(character: Instance?): BasePart?
 	if not character then
 		return nil
 	end
@@ -123,47 +123,55 @@ local function bindDebugResponseIfReady()
 
 	local resolvedDebugResponseRemote = debugResponseRemote :: RemoteEvent
 	resolvedDebugResponseRemote.OnClientEvent:Connect(function(payload)
-		if type(payload) == "table" and payload.siteId ~= nil then
-			debugLog(string.format(
-				"Construction debug id=%s built=%s buildCount=%s lastBuiltBy=%s costWood=%s costStone=%s woodProduced=%s woodInTransit=%s woodStored=%s woodUsable=%s stoneProduced=%s stoneInTransit=%s stoneStored=%s stoneUsable=%s",
-				tostring(payload.siteId),
-				tostring(payload.isBuilt),
-				tostring(payload.buildCount),
-				tostring(payload.lastBuiltByUserId),
-				tostring(payload.costWood),
-				tostring(payload.costStone),
-				tostring(payload.woodProduced),
-				tostring(payload.woodInTransit),
-				tostring(payload.woodStored),
-				tostring(payload.woodUsable),
-				tostring(payload.stoneProduced),
-				tostring(payload.stoneInTransit),
-				tostring(payload.stoneStored),
-				tostring(payload.stoneUsable)
-			))
-			return
+		if type(payload) == "table" then
+			local payloadTable: any = payload
+			if payloadTable.siteId ~= nil then
+				debugLog(
+					string.format(
+						"Construction debug id=%s built=%s buildCount=%s lastBuiltBy=%s costWood=%s costStone=%s woodProduced=%s woodInTransit=%s woodStored=%s woodUsable=%s stoneProduced=%s stoneInTransit=%s stoneStored=%s stoneUsable=%s",
+						tostring(payloadTable.siteId),
+						tostring(payloadTable.isBuilt),
+						tostring(payloadTable.buildCount),
+						tostring(payloadTable.lastBuiltByUserId),
+						tostring(payloadTable.costWood),
+						tostring(payloadTable.costStone),
+						tostring(payloadTable.woodProduced),
+						tostring(payloadTable.woodInTransit),
+						tostring(payloadTable.woodStored),
+						tostring(payloadTable.woodUsable),
+						tostring(payloadTable.stoneProduced),
+						tostring(payloadTable.stoneInTransit),
+						tostring(payloadTable.stoneStored),
+						tostring(payloadTable.stoneUsable)
+					)
+				)
+				return
+			end
 		end
 
 		if type(payload) == "table" then
 			for _, item in payload do
 				if type(item) == "table" then
-					debugLog(string.format(
-						"Construction snapshot id=%s built=%s buildCount=%s lastBuiltBy=%s costWood=%s costStone=%s woodProduced=%s woodInTransit=%s woodStored=%s woodUsable=%s stoneProduced=%s stoneInTransit=%s stoneStored=%s stoneUsable=%s",
-						tostring(item.siteId),
-						tostring(item.isBuilt),
-						tostring(item.buildCount),
-						tostring(item.lastBuiltByUserId),
-						tostring(item.costWood),
-						tostring(item.costStone),
-						tostring(item.woodProduced),
-						tostring(item.woodInTransit),
-						tostring(item.woodStored),
-						tostring(item.woodUsable),
-						tostring(item.stoneProduced),
-						tostring(item.stoneInTransit),
-						tostring(item.stoneStored),
-						tostring(item.stoneUsable)
-					))
+					local itemTable: any = item
+					debugLog(
+						string.format(
+							"Construction snapshot id=%s built=%s buildCount=%s lastBuiltBy=%s costWood=%s costStone=%s woodProduced=%s woodInTransit=%s woodStored=%s woodUsable=%s stoneProduced=%s stoneInTransit=%s stoneStored=%s stoneUsable=%s",
+							tostring(itemTable.siteId),
+							tostring(itemTable.isBuilt),
+							tostring(itemTable.buildCount),
+							tostring(itemTable.lastBuiltByUserId),
+							tostring(itemTable.costWood),
+							tostring(itemTable.costStone),
+							tostring(itemTable.woodProduced),
+							tostring(itemTable.woodInTransit),
+							tostring(itemTable.woodStored),
+							tostring(itemTable.woodUsable),
+							tostring(itemTable.stoneProduced),
+							tostring(itemTable.stoneInTransit),
+							tostring(itemTable.stoneStored),
+							tostring(itemTable.stoneUsable)
+						)
+					)
 				end
 			end
 			return
@@ -216,13 +224,15 @@ local function requestDebugState()
 	end
 end
 
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
+UserInputService.InputBegan:Connect(function(input: any, gameProcessedEvent: boolean)
 	local isBuildKey = BUILD_KEY_ENABLED and input.KeyCode == BUILD_KEY
 	local isDebugKey = input.KeyCode == DEBUG_KEY
 	local isConstructionKey = isBuildKey or isDebugKey
 
 	if isConstructionKey then
-		debugLog(string.format("Detected key=%s gameProcessed=%s", tostring(input.KeyCode), tostring(gameProcessedEvent)))
+		debugLog(
+			string.format("Detected key=%s gameProcessed=%s", tostring(input.KeyCode), tostring(gameProcessedEvent))
+		)
 	end
 
 	if gameProcessedEvent and not isConstructionKey then

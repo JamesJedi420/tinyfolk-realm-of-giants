@@ -1,8 +1,16 @@
 local RealmChokepointValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmChokepointValidator")
 
+type RealmDescriptor = RealmChokepointValidator.RealmDescriptor
+type NamedNode = RealmChokepointValidator.NamedNode
+type RouteEdge = RealmChokepointValidator.RouteEdge
+type NamedZone = RealmChokepointValidator.NamedZone
+type RealmChokepointConfig = RealmChokepointValidator.RealmChokepointConfig
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -42,60 +50,61 @@ end
 --     └─▶ RouteSouth (waypoint) ─▶ EscapeRoute_A
 --
 -- EscapeRoute_B reachable only via RouteNorth (no direct RouteSouth edge).
-local PROTOTYPE_NODES = {
-	{ name = "TinyfolkSpawn",  position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn"    },
-	{ name = "RouteNorth",     position = { x = 0,   y = 0,   z = -90 }, nodeType = "waypoint" },
-	{ name = "RouteSouth",     position = { x = 0,   y = 0,   z = 90  }, nodeType = "waypoint" },
-	{ name = "EscapeRoute_A",  position = { x = 0,   y = 1,   z = 170 }, nodeType = "escape",  tier = "primary"  },
-	{ name = "EscapeRoute_B",  position = { x = -90, y = 1,   z = 170 }, nodeType = "escape",  tier = "fallback" },
+local PROTOTYPE_NODES: { NamedNode } = {
+	{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 }, nodeType = "spawn" },
+	{ name = "RouteNorth", position = { x = 0, y = 0, z = -90 }, nodeType = "waypoint" },
+	{ name = "RouteSouth", position = { x = 0, y = 0, z = 90 }, nodeType = "waypoint" },
+	{ name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 }, nodeType = "escape", tier = "primary" },
+	{ name = "EscapeRoute_B", position = { x = -90, y = 1, z = 170 }, nodeType = "escape", tier = "fallback" },
 }
 
-local PROTOTYPE_EDGES = {
-	{ from = "TinyfolkSpawn", to = "RouteNorth",    distance = 90 },
-	{ from = "TinyfolkSpawn", to = "RouteSouth",    distance = 90 },
-	{ from = "RouteNorth",    to = "EscapeRoute_A", distance = 80 },
-	{ from = "RouteSouth",    to = "EscapeRoute_A", distance = 80 },
-	{ from = "RouteNorth",    to = "EscapeRoute_B", distance = 90 },
-	{ from = "RouteNorth",    to = "TinyfolkSpawn", distance = 90 },
-	{ from = "RouteSouth",    to = "TinyfolkSpawn", distance = 90 },
-	{ from = "EscapeRoute_A", to = "RouteNorth",    distance = 80 },
-	{ from = "EscapeRoute_A", to = "RouteSouth",    distance = 80 },
-	{ from = "EscapeRoute_B", to = "RouteNorth",    distance = 90 },
+local PROTOTYPE_EDGES: { RouteEdge } = {
+	{ from = "TinyfolkSpawn", to = "RouteNorth", distance = 90 },
+	{ from = "TinyfolkSpawn", to = "RouteSouth", distance = 90 },
+	{ from = "RouteNorth", to = "EscapeRoute_A", distance = 80 },
+	{ from = "RouteSouth", to = "EscapeRoute_A", distance = 80 },
+	{ from = "RouteNorth", to = "EscapeRoute_B", distance = 90 },
+	{ from = "RouteNorth", to = "TinyfolkSpawn", distance = 90 },
+	{ from = "RouteSouth", to = "TinyfolkSpawn", distance = 90 },
+	{ from = "EscapeRoute_A", to = "RouteNorth", distance = 80 },
+	{ from = "EscapeRoute_A", to = "RouteSouth", distance = 80 },
+	{ from = "EscapeRoute_B", to = "RouteNorth", distance = 90 },
 }
 
-local EMPTY_CONTROL_ZONES = {}
+local EMPTY_CONTROL_ZONES: { NamedZone } = {}
 
 -- Config that requires fallback escape reachability.
-local REQUIRE_FALLBACK_CONFIG = {
-	zoneTagFilter                     = "GiantControl",
-	minimumDisjointPathCount          = 1,
+local REQUIRE_FALLBACK_CONFIG: RealmChokepointConfig = {
+	zoneTagFilter = "GiantControl",
+	minimumDisjointPathCount = 1,
 	requireFallbackEscapeReachability = true,
+	checkCaptureZoneEdgeBlocking = false,
 }
 
 -- Config that skips the fallback check.
-local SKIP_FALLBACK_CONFIG = {
-	zoneTagFilter                     = "GiantControl",
-	minimumDisjointPathCount          = 1,
+local SKIP_FALLBACK_CONFIG: RealmChokepointConfig = {
+	zoneTagFilter = "GiantControl",
+	minimumDisjointPathCount = 1,
 	requireFallbackEscapeReachability = false,
+	checkCaptureZoneEdgeBlocking = false,
 }
 
-local function makeDescriptor(nodes, edges, controlZones)
+local function makeDescriptor(nodes: { NamedNode }, edges: { RouteEdge }, controlZones: { NamedZone }): RealmDescriptor
 	return {
-		spawns            = {},
-		escapeRoutes      = {},
-		returnPoints      = {},
-		stations          = {},
+		spawns = {},
+		escapeRoutes = {},
+		returnPoints = {},
+		stations = {},
 		constructionSites = {},
-		upgradeBoards     = {},
-		controlZones      = controlZones,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = { nodes = nodes, edges = edges },
+		upgradeBoards = {},
+		controlZones = controlZones,
+		captureZones = {},
+		props = {},
+		routeGraph = { nodes = nodes, edges = edges },
 	}
 end
 
 local function run()
-
 	-- ============================================================
 	-- BLOCK 1: Prototype graph, no zones
 	-- EscapeRoute_B is unblocked and reachable via RouteNorth → PASS
@@ -153,8 +162,8 @@ local function run()
 	for _, e in PROTOTYPE_EDGES do
 		table.insert(edgesWithAltPath, e)
 	end
-	table.insert(edgesWithAltPath, { from = "RouteSouth",    to = "EscapeRoute_B", distance = 100 })
-	table.insert(edgesWithAltPath, { from = "EscapeRoute_B", to = "RouteSouth",    distance = 100 })
+	table.insert(edgesWithAltPath, { from = "RouteSouth", to = "EscapeRoute_B", distance = 100 })
+	table.insert(edgesWithAltPath, { from = "EscapeRoute_B", to = "RouteSouth", distance = 100 })
 
 	local r4 = RealmChokepointValidator.ValidateChokepoints(
 		makeDescriptor(PROTOTYPE_NODES, edgesWithAltPath, {

@@ -194,6 +194,13 @@ local function findShrinesRoot(): Instance?
 	return current
 end
 
+local function magnitudeBetweenPositions(a: any, b: any): number
+	local dx = a.X - b.X
+	local dy = a.Y - b.Y
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
 local function shouldTrackShrinePart(part: BasePart): boolean
 	return string.match(part.Name, "^" .. ShrineConfig.ShrineNamePrefix) ~= nil
 end
@@ -229,7 +236,7 @@ local function registerShrinesFromWorkspace()
 		return
 	end
 
-	for _, descendant in shrinesRoot:GetDescendants() do
+	for _, descendant in ((shrinesRoot :: any):GetDescendants()) do
 		if descendant:IsA("BasePart") and shouldTrackShrinePart(descendant) then
 			registerShrinePart(descendant)
 		end
@@ -413,7 +420,7 @@ local function validateActivationRequest(player: Player, shrineState: ShrineStat
 	end
 	local rootPart = root :: BasePart
 
-	local distance = (shrineState.part.Position - rootPart.Position).Magnitude
+	local distance = magnitudeBetweenPositions(shrineState.part.Position :: any, rootPart.Position :: any)
 	if distance > ShrineConfig.ActivationRangeStuds then
 		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, ShrineConfig.ActivationRangeStuds)
 	end
@@ -643,13 +650,16 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		shrineState.accumulatorSeconds += deltaTime
 
 		while shrineState.accumulatorSeconds >= ShrineConfig.GenerationIntervalSeconds and shrineState.isActive do
-			local activatingPlayer = shrineState.activatedByUserId
-				and Players:GetPlayerByUserId(shrineState.activatedByUserId)
+			local activatingPlayer: Player? = nil
+			if shrineState.activatedByUserId ~= nil then
+				activatingPlayer = Players:GetPlayerByUserId(shrineState.activatedByUserId)
+			end
 			if not activatingPlayer or not isPlayerTinyfolkWorshipper(activatingPlayer) then
 				applyDebugAttributes(shrineState)
 				deactivateShrine(shrineState, "worshipper_role_lost")
 				break
 			end
+			local activePlayer = activatingPlayer :: Player
 
 			shrineState.accumulatorSeconds -= ShrineConfig.GenerationIntervalSeconds
 			shrineState.tickCount += 1
@@ -664,7 +674,11 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			end
 
 			shrineState.essenceTotal += generatedAmount
-			local sessionSnapshot = GiantEssenceSession.AddGenerated("Shrine:" .. shrineState.shrineId, generatedAmount)
+			local sessionSnapshot = GiantEssenceSession.AddGenerated(
+				activePlayer.UserId,
+				"Shrine:" .. shrineState.shrineId,
+				generatedAmount
+			)
 
 			if shrineState.essenceTotal >= ShrineConfig.MaxEssenceTotal then
 				shrineState.essenceTotal = ShrineConfig.MaxEssenceTotal

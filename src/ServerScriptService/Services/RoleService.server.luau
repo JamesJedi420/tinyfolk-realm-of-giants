@@ -6,34 +6,34 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
-local RoleConfig = require(Config:WaitForChild("RoleConfig"))
-local function resolveDependency(parent: any, childName: string, fallbackRequirePath: string): any
+
+local function requireDependency(parent: any, childName: string, fallbackPath: string): any
+	local requireAny: any = require
 	if parent ~= nil and type(parent.WaitForChild) == "function" then
 		local child = parent:WaitForChild(childName)
 		if child ~= nil then
-			local ok, requiredOrError = pcall(function()
-				return require(child)
+			local ok, loaded = pcall(function()
+				return requireAny(child)
 			end)
 			if ok then
-				return requiredOrError
+				return loaded
 			end
 		end
 	end
 
-	return require(fallbackRequirePath)
+	return requireAny(fallbackPath)
 end
 
-local GiantRealm = if Shared ~= nil and type((Shared :: any).WaitForChild) == "function"
-	then (Shared :: any):WaitForChild("GiantRealm")
-	else nil
-local EscapeConfig = resolveDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
+local giantRealm = Shared:FindFirstChild("GiantRealm")
+local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local EscapeConfig = requireDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
 local SafeZonePolicy =
-	resolveDependency(GiantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
+	requireDependency(giantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 local DownedState =
-	resolveDependency(GiantRealm, "DownedState", "../../ReplicatedStorage/Shared/GiantRealm/DownedState")
+	requireDependency(giantRealm, "DownedState", "../../ReplicatedStorage/Shared/GiantRealm/DownedState")
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
-	else require("./ProfilePersistenceGateway")
+	else (require :: any)("./ProfilePersistenceGateway")
 
 local RoleService: any = {}
 
@@ -193,6 +193,7 @@ local function getPlayerByUserId(userId: number): Player?
 end
 
 local function getGrabServiceQueryApi(): any?
+	-- selene: allow(global_usage)
 	local globalValue: any = _G
 	if type(globalValue) ~= "table" then
 		return nil
@@ -263,7 +264,7 @@ local function getOrCreateDownedState(userId: number): any
 	return created
 end
 
-local function applyScaleToCharacter(player: Player, character: Model)
+local function applyScaleToCharacter(player: Player, character: Instance)
 	local role = getRoleOrDefault(player)
 	local scale = RoleConfig.ScaleByRole[role]
 	if type(scale) ~= "number" then
@@ -271,13 +272,14 @@ local function applyScaleToCharacter(player: Player, character: Model)
 		return
 	end
 
-	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+	local characterAny: any = character
+	local humanoid = characterAny:FindFirstChildOfClass("Humanoid") or characterAny:WaitForChild("Humanoid", 5)
 	if humanoid == nil then
 		debugWarn(string.format("Could not scale %s: Humanoid not found", player.Name))
 		return
 	end
 
-	character:ScaleTo(scale)
+	characterAny:ScaleTo(scale)
 	debugLog(string.format("Applied scale %.2f to %s as %s", scale, player.Name, role))
 end
 
@@ -307,7 +309,7 @@ local function ensureRoleForLockedPlayer(player: Player)
 	end
 end
 
-local function findSpawnForRole(roleName: string): SpawnLocation?
+local function findSpawnForRole(roleName: string): BasePart?
 	local mapRoot = Workspace:FindFirstChild(SPAWN_MAP_ROOT_NAME)
 	if not mapRoot then
 		return nil
@@ -327,7 +329,7 @@ local function findSpawnForRole(roleName: string): SpawnLocation?
 	return nil
 end
 
-local function placeCharacterAtRoleSpawn(player: Player, character: Model)
+local function placeCharacterAtRoleSpawn(player: Player, character: Instance)
 	local roleName = getRoleOrDefault(player)
 	local spawnLocation = findSpawnForRole(roleName)
 	if spawnLocation == nil then
@@ -337,14 +339,15 @@ local function placeCharacterAtRoleSpawn(player: Player, character: Model)
 		return
 	end
 
-	local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+	local characterAny: any = character
+	local root = characterAny:FindFirstChild("HumanoidRootPart") or characterAny:WaitForChild("HumanoidRootPart", 5)
 	if not root or not root:IsA("BasePart") then
 		debugWarn(string.format("Could not place %s at role spawn: HumanoidRootPart not found", player.Name))
 		return
 	end
 
 	local targetCFrame = spawnLocation.CFrame + Vector3.new(0, 3, 0)
-	character:PivotTo(targetCFrame)
+	characterAny:PivotTo(targetCFrame)
 	debugLog(string.format("Placed %s at %s", player.Name, spawnLocation.Name))
 end
 
@@ -371,7 +374,8 @@ local function requestRespawnForLockedPlayer(player: Player, reason: string)
 		end
 
 		debugLog(string.format("Respawning locked player userId=%d reason=%s", player.UserId, reason))
-		player:LoadCharacterAsync()
+		local playerAny: any = player
+		playerAny:LoadCharacterAsync()
 	end)
 end
 
@@ -458,7 +462,8 @@ local function projectActiveGiantRealmOwner()
 end
 
 local function findLoadedGiantRealmOwnerUserId(): number?
-	for _, player in Players:GetPlayers() do
+	for _, playerInstance in Players:GetPlayers() do
+		local player = playerInstance :: Player
 		if loadedGiantRealmOwnerUserIds[player.UserId] then
 			return player.UserId
 		end
@@ -569,19 +574,20 @@ local function setupPlayer(player: Player)
 	initializePlayerRoleSelection(player)
 	player:SetAttribute(GIANT_REALM_OWNER_USER_ID_ATTRIBUTE, activeGiantRealmOwnerUserId)
 	setDownedAttributes(player, DownedState.Snapshot(DownedState.New(downedNow())))
-
-	player.CharacterAdded:Connect(function(character)
+	local playerAny: any = player
+	playerAny.CharacterAdded:Connect(function(character: Instance)
 		ensureRoleForLockedPlayer(player)
 		applyScaleToCharacter(player, character)
 		placeCharacterAtRoleSpawn(player, character)
 
-		local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+		local characterAny: any = character
+		local humanoid = characterAny:FindFirstChildOfClass("Humanoid") or characterAny:WaitForChild("Humanoid", 5)
 		if humanoid == nil then
 			debugWarn(string.format("Could not bind respawn handler for %s: Humanoid not found", player.Name))
 			return
 		end
 
-		humanoid.Died:Connect(function()
+		(humanoid :: any).Died:Connect(function()
 			requestRespawnForLockedPlayer(player, "humanoid_died")
 		end)
 	end)
@@ -637,7 +643,8 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 		projectActiveGiantRealmOwner()
 	end
 	debugLog(string.format("Accepted role select for %s -> %s (locked)", player.Name, roleName))
-	player:LoadCharacter()
+	local playerAny: any = player
+	playerAny:LoadCharacter()
 end)
 
 roleDebugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -739,6 +746,7 @@ function RoleService.getDownedSnapshot(userId: number): any
 	return DownedState.Snapshot(state)
 end
 
+-- selene: allow(global_usage)
 _G._RoleService_QueryAPI = {
 	SetDowned = function(userId: number, duration: number, reason: string): boolean
 		return RoleService.setDowned(userId, duration, reason)

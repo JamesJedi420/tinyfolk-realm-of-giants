@@ -161,21 +161,22 @@ function PostCrossingBurstLogic.ResolveCrossing(
 	nextState.lastCrossingRouteId = event.routeId
 	nextState.lastBurstReason = traceReason
 
-	return nextState, {
-		accepted = true,
-		reason = "accepted",
-		targetWalkSpeed = targetWalkSpeed,
-		restoreWalkSpeed = restoreWalkSpeed,
-		burstActiveUntil = burstActiveUntil,
-		burstCooldownUntil = burstCooldownUntil,
-		sharedBurstCooldownUntil = sharedBurstCooldownUntil,
-		traceCostUntil = traceCostUntil,
-		traceCostReason = traceReason,
-	}
+	return nextState,
+		{
+			accepted = true,
+			reason = "accepted",
+			targetWalkSpeed = targetWalkSpeed,
+			restoreWalkSpeed = restoreWalkSpeed,
+			burstActiveUntil = burstActiveUntil,
+			burstCooldownUntil = burstCooldownUntil,
+			sharedBurstCooldownUntil = sharedBurstCooldownUntil,
+			traceCostUntil = traceCostUntil,
+			traceCostReason = traceReason,
+		}
 end
 
 function PostCrossingBurstLogic.Snapshot(state: BurstState?, now: number): StateSnapshot
-	local source = state or {}
+	local source = cloneState(state)
 	local burstActiveUntil = source.burstActiveUntil
 	local traceCostUntil = source.traceCostUntil
 	local burstActive = type(burstActiveUntil) == "number" and now < burstActiveUntil

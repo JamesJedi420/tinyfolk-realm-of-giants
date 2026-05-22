@@ -43,7 +43,7 @@ type StationState = {
 	part: BasePart,
 	isActive: boolean,
 	resourceTotal: number,
-	materialType: string,
+	materialType: "Wood" | "Stone",
 	tickCount: number,
 	lastTickAt: number,
 	activatedByUserId: number?,
@@ -172,7 +172,7 @@ local function applyDebugAttributes(state: StationState)
 	ResourceFlowState.ApplyAttributesToPart(state.part)
 end
 
-local function getMaterialTypeForStation(stationId: string): string
+local function getMaterialTypeForStation(stationId: string): "Wood" | "Stone"
 	if string.match(stationId, "^" .. StationConfig.MiningStationNamePrefix) ~= nil then
 		return "Stone"
 	end
@@ -200,6 +200,13 @@ local function findStationsRoot(): Instance?
 	end
 
 	return current
+end
+
+local function magnitudeBetweenPositions(a: any, b: any): number
+	local dx = a.X - b.X
+	local dy = a.Y - b.Y
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
 end
 
 local function shouldTrackStationPart(part: BasePart): boolean
@@ -246,7 +253,7 @@ local function registerStationsFromWorkspace()
 		return
 	end
 
-	for _, descendant in stationsRoot:GetDescendants() do
+	for _, descendant in ((stationsRoot :: any):GetDescendants()) do
 		if descendant:IsA("BasePart") and shouldTrackStationPart(descendant) then
 			registerStationPart(descendant)
 		end
@@ -335,7 +342,7 @@ local function validateActivationRequest(player: Player, stationState: StationSt
 	end
 	local rootPart = root :: BasePart
 
-	local distance = (stationState.part.Position - rootPart.Position).Magnitude
+	local distance = magnitudeBetweenPositions(stationState.part.Position :: any, rootPart.Position :: any)
 	if distance > StationConfig.ActivationRangeStuds then
 		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, StationConfig.ActivationRangeStuds)
 	end
@@ -489,7 +496,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local materialName = stationState.materialType == "Stone" and "Stone" or "Wood"
+	local materialName: "Wood" | "Stone" = stationState.materialType
 	local maxHaulAmount = StationConfig.HaulTransferPerStepByMaterial[materialName]
 	if type(maxHaulAmount) == "number" and maxHaulAmount > 0 then
 		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
@@ -750,5 +757,7 @@ end)
 debugLog("StationService initialized")
 
 -- Test-only exports for runtime proof slices.
+-- selene: allow(global_usage)
 _G._StationService_StationState = stationStateById
+-- selene: allow(global_usage)
 _G._StationService_TaskState = taskStateByStationId

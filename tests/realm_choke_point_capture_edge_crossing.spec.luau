@@ -14,6 +14,12 @@
 
 local RealmChokepointValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmChokepointValidator")
 
+type RealmDescriptor = RealmChokepointValidator.RealmDescriptor
+type NamedNode = RealmChokepointValidator.NamedNode
+type RouteEdge = RealmChokepointValidator.RouteEdge
+type NamedZone = RealmChokepointValidator.NamedZone
+type RealmChokepointConfig = RealmChokepointValidator.RealmChokepointConfig
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -66,14 +72,14 @@ end
 --   K→E from (50,0,100): closest ≈ 22.4 > 10 → NOT BLOCKED
 --   → 1 path (via K) survives after zone blocks N→E
 
-local DIAMOND_NODES = {
+local DIAMOND_NODES: { NamedNode } = {
 	{ name = "S", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
 	{ name = "N", position = { x = 0, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "K", position = { x = 50, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "E", position = { x = 0, y = 0, z = 200 }, nodeType = "escape", tier = "primary" },
 }
 
-local DIAMOND_EDGES = {
+local DIAMOND_EDGES: { RouteEdge } = {
 	{ from = "S", to = "N", distance = 100 },
 	{ from = "N", to = "S", distance = 100 },
 	{ from = "S", to = "K", distance = 111 },
@@ -85,7 +91,7 @@ local DIAMOND_EDGES = {
 }
 
 -- Config requiring 2 paths, with capture-zone edge blocking enabled.
-local STANDARD_CONFIG = {
+local STANDARD_CONFIG: RealmChokepointConfig = {
 	zoneTagFilter = "GiantControl",
 	minimumDisjointPathCount = 2,
 	requireFallbackEscapeReachability = false,
@@ -93,7 +99,7 @@ local STANDARD_CONFIG = {
 }
 
 -- Relaxed config: only 1 path required.
-local RELAXED_CONFIG = {
+local RELAXED_CONFIG: RealmChokepointConfig = {
 	zoneTagFilter = "GiantControl",
 	minimumDisjointPathCount = 1,
 	requireFallbackEscapeReachability = false,
@@ -101,14 +107,19 @@ local RELAXED_CONFIG = {
 }
 
 -- Config with capture-zone edge blocking disabled.
-local DISABLED_CONFIG = {
+local DISABLED_CONFIG: RealmChokepointConfig = {
 	zoneTagFilter = "GiantControl",
 	minimumDisjointPathCount = 2,
 	requireFallbackEscapeReachability = false,
 	checkCaptureZoneEdgeBlocking = false,
 }
 
-local function makeDescriptor(nodes, edges, captureZones, controlZones)
+local function makeDescriptor(
+	nodes: { NamedNode },
+	edges: { RouteEdge },
+	captureZones: { NamedZone }?,
+	controlZones: { NamedZone }?
+): RealmDescriptor
 	return {
 		spawns = {},
 		escapeRoutes = {},
@@ -128,10 +139,8 @@ local function run()
 	-- BLOCK 1: No capture zones, check enabled — 2 paths survive → PASS
 	-- Baseline: vacuous pass when captureZones is empty.
 	-- ============================================================
-	local r1 = RealmChokepointValidator.ValidateChokepoints(
-		makeDescriptor(DIAMOND_NODES, DIAMOND_EDGES, {}),
-		STANDARD_CONFIG
-	)
+	local r1 =
+		RealmChokepointValidator.ValidateChokepoints(makeDescriptor(DIAMOND_NODES, DIAMOND_EDGES, {}), STANDARD_CONFIG)
 	assertEqual(r1.passed, true, "block1 overall")
 	assertCheckPassed(
 		requireResult(r1.results, "capture_zone_route_edge_blocking", "block1"),
@@ -243,7 +252,12 @@ local function run()
 	-- ============================================================
 	local r7 = RealmChokepointValidator.ValidateChokepoints(
 		makeDescriptor(DIAMOND_NODES, DIAMOND_EDGES, {
-			{ name = "CaptureZone_BothPaths", position = { x = 10, y = 0, z = 150 }, radius = 20, tag = "GiantCapture" },
+			{
+				name = "CaptureZone_BothPaths",
+				position = { x = 10, y = 0, z = 150 },
+				radius = 20,
+				tag = "GiantCapture",
+			},
 		}),
 		RELAXED_CONFIG
 	)
@@ -259,11 +273,11 @@ local function run()
 	-- Zone at midpoint (50,50,50) radius=10 blocks the edge.
 	-- Then verify a laterally offset zone misses.
 	-- ============================================================
-	local nodes3D = {
+	local nodes3D: { NamedNode } = {
 		{ name = "S3D", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
 		{ name = "E3D", position = { x = 100, y = 100, z = 100 }, nodeType = "escape", tier = "primary" },
 	}
-	local edges3D = {
+	local edges3D: { RouteEdge } = {
 		{ from = "S3D", to = "E3D", distance = 173 },
 		{ from = "E3D", to = "S3D", distance = 173 },
 	}

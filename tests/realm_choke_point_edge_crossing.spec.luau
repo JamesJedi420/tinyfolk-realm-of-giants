@@ -10,6 +10,12 @@
 
 local RealmChokepointValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmChokepointValidator")
 
+type RealmDescriptor = RealmChokepointValidator.RealmDescriptor
+type NamedNode = RealmChokepointValidator.NamedNode
+type RouteEdge = RealmChokepointValidator.RouteEdge
+type NamedZone = RealmChokepointValidator.NamedZone
+type RealmChokepointConfig = RealmChokepointValidator.RealmChokepointConfig
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -61,14 +67,14 @@ end
 --   K→E from (50,0,100) to (0,0,200) closest to (0,0,150) ≈ 22.4 > 10 → NOT BLOCKED
 --   → 1 path (via K) survives
 
-local EDGE_CROSSING_NODES = {
+local EDGE_CROSSING_NODES: { NamedNode } = {
 	{ name = "S", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
 	{ name = "N", position = { x = 0, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "K", position = { x = 50, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "E", position = { x = 0, y = 0, z = 200 }, nodeType = "escape", tier = "primary" },
 }
 
-local EDGE_CROSSING_EDGES = {
+local EDGE_CROSSING_EDGES: { RouteEdge } = {
 	{ from = "S", to = "N", distance = 100 },
 	{ from = "N", to = "S", distance = 100 },
 	{ from = "S", to = "K", distance = 111 },
@@ -80,20 +86,22 @@ local EDGE_CROSSING_EDGES = {
 }
 
 -- Standard config: 2 disjoint paths required, GiantControl tag.
-local STANDARD_CONFIG = {
+local STANDARD_CONFIG: RealmChokepointConfig = {
 	zoneTagFilter = "GiantControl",
 	minimumDisjointPathCount = 2,
 	requireFallbackEscapeReachability = false,
+	checkCaptureZoneEdgeBlocking = false,
 }
 
 -- Relaxed config: only 1 path required.
-local RELAXED_CONFIG = {
+local RELAXED_CONFIG: RealmChokepointConfig = {
 	zoneTagFilter = "GiantControl",
 	minimumDisjointPathCount = 1,
 	requireFallbackEscapeReachability = false,
+	checkCaptureZoneEdgeBlocking = false,
 }
 
-local function makeDescriptor(nodes, edges, controlZones)
+local function makeDescriptor(nodes: { NamedNode }, edges: { RouteEdge }, controlZones: { NamedZone }): RealmDescriptor
 	return {
 		spawns = {},
 		escapeRoutes = {},
@@ -249,11 +257,11 @@ local function run()
 	-- Then verify that a laterally offset zone misses the same edge.
 	-- Zone at (100,50,50) radius=10: closest≈(66.7,66.7,66.7), dist≈41 > 10 → PASS (min=1).
 	-- ============================================================
-	local nodes3D = {
+	local nodes3D: { NamedNode } = {
 		{ name = "S3D", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
 		{ name = "E3D", position = { x = 100, y = 100, z = 100 }, nodeType = "escape", tier = "primary" },
 	}
-	local edges3D = {
+	local edges3D: { RouteEdge } = {
 		{ from = "S3D", to = "E3D", distance = 173 },
 		{ from = "E3D", to = "S3D", distance = 173 },
 	}

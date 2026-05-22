@@ -159,7 +159,7 @@ local function resolveSprintTick(player: Player, requestedSprint: boolean, now: 
 	state.player = player
 
 	if sprintRestoreWalkSpeedByUserId[player.UserId] == nil and humanoid ~= nil then
-		sprintRestoreWalkSpeedByUserId[player.UserId] = humanoid.WalkSpeed
+		sprintRestoreWalkSpeedByUserId[player.UserId] = (humanoid :: any).WalkSpeed
 	end
 
 	local nextState, outcome = SprintStaminaLogic.ResolveTick(state, TinyfolkMovementTraitConfig, {
@@ -171,9 +171,10 @@ local function resolveSprintTick(player: Player, requestedSprint: boolean, now: 
 		hasRootPart = root ~= nil,
 	})
 
-	nextState.player = player
-	nextState.restoreWalkSpeed = sprintRestoreWalkSpeedByUserId[player.UserId]
-	sprintStateByUserId[player.UserId] = nextState
+	local nextStateAny: any = nextState
+	nextStateAny.player = player
+	nextStateAny.restoreWalkSpeed = sprintRestoreWalkSpeedByUserId[player.UserId]
+	sprintStateByUserId[player.UserId] = nextStateAny
 	applySprintAttributes(player, outcome.snapshot)
 	applySprintWalkSpeed(player, outcome.snapshot)
 	return outcome
@@ -198,7 +199,7 @@ local function scheduleRestore(player: Player, activeUntil: number, restoreWalkS
 
 		local humanoid = getHumanoid(player)
 		if humanoid ~= nil then
-			humanoid.WalkSpeed = restoreWalkSpeed
+			(humanoid :: any).WalkSpeed = restoreWalkSpeed
 		end
 
 		restoreWalkSpeedByUserId[player.UserId] = nil
@@ -216,7 +217,7 @@ function TinyfolkMovementTraitService.OnValidRouteCrossing(player: Player, route
 	local state = getState(player.UserId)
 	local restoreWalkSpeed = restoreWalkSpeedByUserId[player.UserId]
 	if restoreWalkSpeed == nil and humanoid ~= nil then
-		restoreWalkSpeed = humanoid.WalkSpeed
+		restoreWalkSpeed = (humanoid :: any).WalkSpeed
 	end
 
 	local nextState, outcome = PostCrossingBurstLogic.ResolveCrossing(state, TinyfolkMovementTraitConfig, {
@@ -236,7 +237,8 @@ function TinyfolkMovementTraitService.OnValidRouteCrossing(player: Player, route
 
 	if outcome.accepted and humanoid ~= nil and outcome.targetWalkSpeed ~= nil and outcome.restoreWalkSpeed ~= nil then
 		restoreWalkSpeedByUserId[player.UserId] = outcome.restoreWalkSpeed
-		humanoid.WalkSpeed = outcome.targetWalkSpeed
+		local humanoidAny: any = humanoid
+		humanoidAny.WalkSpeed = outcome.targetWalkSpeed
 		scheduleRestore(player, outcome.burstActiveUntil :: number, outcome.restoreWalkSpeed)
 		debugLog(
 			string.format(
@@ -291,9 +293,9 @@ end)
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
 	for _, sprintState in pairs(sprintStateByUserId) do
-		local player = sprintState.player
+		local player = (sprintState :: any).player
 		if player ~= nil and typeof(player) == "Instance" and player:IsA("Player") then
-			resolveSprintTick(player, sprintState.requestedSprint == true, now)
+			resolveSprintTick(player :: Player, (sprintState :: any).requestedSprint == true, now)
 		end
 	end
 end)

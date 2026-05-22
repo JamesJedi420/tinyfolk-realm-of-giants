@@ -42,7 +42,7 @@ local ESSENCE_SPENT_TOTAL_ATTRIBUTE = "GiantEssenceSpentTotal"
 local ESSENCE_LAST_SPENT_REASON_ATTRIBUTE = "GiantEssenceLastSpentReason"
 local ESSENCE_LAST_SPENT_AMOUNT_ATTRIBUTE = "GiantEssenceLastSpentAmount"
 
-local BOARDS_FOLDER_PATH = {"Map", "Stations"}
+local BOARDS_FOLDER_PATH = { "Map", "Stations" }
 
 type UpgradeSelectionPayload = {
 	boardId: string,
@@ -60,7 +60,7 @@ type ProgressionState = {
 	completedSteps: number,
 	totalSteps: number,
 	nextUpgradeId: string?,
-	status: string,
+	status: "InProgress" | "Completed" | "Unavailable",
 }
 
 type GiantResolvedEffects = {
@@ -79,13 +79,14 @@ type HumanoidState = {
 	walkSpeed: number,
 }
 
-local boardPartById: {[string]: BasePart} = {}
-local giantUpgradeStateByUserId: {[number]: {[string]: boolean}} = {}
-local giantResolvedEffectsByUserId: {[number]: GiantResolvedEffects} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+local boardPartById: { [string]: BasePart } = {}
+local giantUpgradeStateByUserId: { [number]: { [string]: boolean }? } = {}
+local giantResolvedEffectsByUserId: { [number]: GiantResolvedEffects? } = {}
+local lastRequestAtByUserId: { [number]: number? } = {}
 
-local progressionKernel = UpgradeProgressionLogic.BuildKernel(UpgradeBoardConfig.UpgradeOptions, UpgradeBoardConfig.EffectByUpgradeId)
-local orderedUpgradeIds = progressionKernel.orderedUpgradeIds
+local progressionKernel =
+	UpgradeProgressionLogic.BuildKernel(UpgradeBoardConfig.UpgradeOptions, UpgradeBoardConfig.EffectByUpgradeId)
+local _orderedUpgradeIds = progressionKernel.orderedUpgradeIds
 local validUpgradeIdSet = progressionKernel.validUpgradeIdSet
 local upgradeCostById = progressionKernel.upgradeCostById
 
@@ -133,7 +134,8 @@ local function isCoolingDown(userId: number): boolean
 		return false
 	end
 
-	return (os.clock() - last) < UpgradeBoardConfig.RequestCooldownSeconds
+	local lastAt = last :: number
+	return (os.clock() - lastAt) < UpgradeBoardConfig.RequestCooldownSeconds
 end
 
 local function markRequest(userId: number)
@@ -179,7 +181,7 @@ local function isPlayerAlive(player: Player): boolean
 		return false
 	end
 
-	return humanoid.Health > 0
+	return (humanoid :: any).Health > 0
 end
 
 local function isGiant(player: Player): boolean
@@ -203,6 +205,13 @@ local function findBoardsRoot(): Instance?
 	return current
 end
 
+local function magnitudeBetweenPositions(a: any, b: any): number
+	local dx = a.X - b.X
+	local dy = a.Y - b.Y
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
 local function registerBoardPart(part: BasePart)
 	local boardId = part.Name
 	if boardPartById[boardId] then
@@ -223,7 +232,7 @@ local function registerBoardsFromWorkspace()
 		return
 	end
 
-	for _, descendant in boardsRoot:GetDescendants() do
+	for _, descendant in ((boardsRoot :: any):GetDescendants()) do
 		if descendant:IsA("BasePart") and shouldTrackBoardPart(descendant) then
 			registerBoardPart(descendant)
 		end
@@ -234,26 +243,26 @@ local function registerBoardsFromWorkspace()
 	end
 end
 
-local function getOrCreateGiantUpgradeState(userId: number): {[string]: boolean}
+local function getOrCreateGiantUpgradeState(userId: number): { [string]: boolean }
 	local state = giantUpgradeStateByUserId[userId]
 	if state then
 		return state
 	end
 
-	local createdState: {[string]: boolean} = {}
+	local createdState: { [string]: boolean } = {}
 	giantUpgradeStateByUserId[userId] = createdState
 	return createdState
 end
 
-local function rebuildUpgradeCsv(state: {[string]: boolean}): string
+local function rebuildUpgradeCsv(state: { [string]: boolean }): string
 	return UpgradeProgressionLogic.RebuildUpgradeCsv(progressionKernel, state)
 end
 
-local function resolveProgressionState(state: {[string]: boolean}): ProgressionState
+local function resolveProgressionState(state: { [string]: boolean }): ProgressionState
 	return UpgradeProgressionLogic.ResolveProgressionState(progressionKernel, state)
 end
 
-local function resolveEffectValues(state: {[string]: boolean}): GiantResolvedEffects
+local function resolveEffectValues(state: { [string]: boolean }): GiantResolvedEffects
 	local maxHealthBonus = 0
 	local walkSpeedBonus = 0
 	local powerBudgetBonus = 0
@@ -283,7 +292,7 @@ local function resolveEffectValues(state: {[string]: boolean}): GiantResolvedEff
 	}
 end
 
-local function applyUpgradeAttributes(player: Player, state: {[string]: boolean})
+local function applyUpgradeAttributes(player: Player, state: { [string]: boolean })
 	for upgradeId in validUpgradeIdSet do
 		player:SetAttribute(UPGRADE_ATTRIBUTE_PREFIX .. upgradeId, state[upgradeId] == true)
 	end
@@ -325,7 +334,7 @@ local function resetUpgradeState(player: Player, reason: string)
 	giantUpgradeStateByUserId[player.UserId] = {}
 	giantResolvedEffectsByUserId[player.UserId] = nil
 
-	local emptyState: {[string]: boolean} = {}
+	local emptyState: { [string]: boolean } = {}
 	applyUpgradeAttributes(player, emptyState)
 	applyProgressionAttributes(player, resolveProgressionState(emptyState))
 
@@ -362,15 +371,16 @@ local function applyResolvedHumanoidState(player: Player, state: HumanoidState):
 		return false
 	end
 
-	local currentMaxHealth = humanoid.MaxHealth
+	local humanoidAny: any = humanoid
+	local currentMaxHealth = humanoidAny.MaxHealth
 	local healthRatio = 1
 	if currentMaxHealth > 0 then
-		healthRatio = math.clamp(humanoid.Health / currentMaxHealth, 0, 1)
+		healthRatio = math.clamp(humanoidAny.Health / currentMaxHealth, 0, 1)
 	end
 
-	humanoid.MaxHealth = state.maxHealth
-	humanoid.WalkSpeed = state.walkSpeed
-	humanoid.Health = math.clamp(state.maxHealth * healthRatio, 0, state.maxHealth)
+	humanoidAny.MaxHealth = state.maxHealth
+	humanoidAny.WalkSpeed = state.walkSpeed
+	humanoidAny.Health = math.clamp(state.maxHealth * healthRatio, 0, state.maxHealth)
 
 	return true
 end
@@ -393,32 +403,42 @@ local function applyGiantUpgradeEffects(player: Player, reason: string)
 
 	local applied = applyResolvedHumanoidState(player, targetHumanoidState)
 	if not applied then
-		debugLog(string.format("Deferred role state apply userId=%d reason=%s detail=missing_humanoid", player.UserId, reason))
+		debugLog(
+			string.format(
+				"Deferred role state apply userId=%d reason=%s detail=missing_humanoid",
+				player.UserId,
+				reason
+			)
+		)
 		return
 	end
 
 	if not isGiant(player) then
-		debugLog(string.format(
-			"Applied non-giant baseline userId=%d reason=%s maxHealth=%.1f walkSpeed=%.1f",
-			player.UserId,
-			reason,
-			targetHumanoidState.maxHealth,
-			targetHumanoidState.walkSpeed
-		))
+		debugLog(
+			string.format(
+				"Applied non-giant baseline userId=%d reason=%s maxHealth=%.1f walkSpeed=%.1f",
+				player.UserId,
+				reason,
+				targetHumanoidState.maxHealth,
+				targetHumanoidState.walkSpeed
+			)
+		)
 		return
 	end
 
-	debugLog(string.format(
-		"Applied Giant effects userId=%d reason=%s maxHealth=%.1f walkSpeed=%.1f powerBudget=%.1f movementControl=%.2f maxHealthBonus=%.1f walkSpeedBonus=%.1f",
-		player.UserId,
-		reason,
-		effects.maxHealth,
-		effects.walkSpeed,
-		effects.powerBudget,
-		effects.movementControl,
-		effects.maxHealthBonus,
-		effects.walkSpeedBonus
-	))
+	debugLog(
+		string.format(
+			"Applied Giant effects userId=%d reason=%s maxHealth=%.1f walkSpeed=%.1f powerBudget=%.1f movementControl=%.2f maxHealthBonus=%.1f walkSpeedBonus=%.1f",
+			player.UserId,
+			reason,
+			effects.maxHealth,
+			effects.walkSpeed,
+			effects.powerBudget,
+			effects.movementControl,
+			effects.maxHealthBonus,
+			effects.walkSpeedBonus
+		)
+	)
 end
 
 local function rejectSelect(player: Player, reason: string)
@@ -441,7 +461,10 @@ registerBoardsFromWorkspace()
 selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	if isCoolingDown(player.UserId) then
 		rejectSelect(player, "request_cooldown")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = "", reason = "request_cooldown" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = "", reason = "request_cooldown" } :: SelectResultPayload
+		)
 		return
 	end
 
@@ -449,7 +472,10 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	if type(payload) ~= "table" then
 		rejectSelect(player, "malformed_payload")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = "", reason = "malformed_payload" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = "", reason = "malformed_payload" } :: SelectResultPayload
+		)
 		return
 	end
 
@@ -459,47 +485,72 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	if type(boardId) ~= "string" or type(upgradeId) ~= "string" then
 		rejectSelect(player, "malformed_payload")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = "", reason = "malformed_payload" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = "", reason = "malformed_payload" } :: SelectResultPayload
+		)
 		return
 	end
 
 	local boardPart = boardPartById[boardId]
 	if not boardPart then
 		rejectSelect(player, "board_not_found")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "board_not_found" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "board_not_found" } :: SelectResultPayload
+		)
 		return
 	end
 
 	if not isGiant(player) then
 		rejectSelect(player, "requester_not_giant")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "requester_not_giant" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "requester_not_giant" } :: SelectResultPayload
+		)
 		return
 	end
 
 	if not isPlayerAlive(player) then
 		rejectSelect(player, "player_not_alive")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "player_not_alive" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "player_not_alive" } :: SelectResultPayload
+		)
 		return
 	end
 
 	local root = getHumanoidRootPart(player)
 	if not root then
 		rejectSelect(player, "humanoid_root_missing")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "humanoid_root_missing" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "humanoid_root_missing" } :: SelectResultPayload
+		)
 		return
 	end
+	local rootPart = root :: BasePart
 
 	local boardEnabled = boardPart:GetAttribute(BOARD_ENABLED_ATTRIBUTE)
 	if boardEnabled == false then
 		rejectSelect(player, "board_disabled")
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "board_disabled" } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "board_disabled" } :: SelectResultPayload
+		)
 		return
 	end
 
-	local distance = (boardPart.Position - root.Position).Magnitude
+	local distance = magnitudeBetweenPositions(boardPart.Position :: any, rootPart.Position :: any)
 	if distance > UpgradeBoardConfig.InteractionRangeStuds then
-		rejectSelect(player, string.format("out_of_range distance=%.2f max=%.2f", distance, UpgradeBoardConfig.InteractionRangeStuds))
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "out_of_range" } :: SelectResultPayload)
+		rejectSelect(
+			player,
+			string.format("out_of_range distance=%.2f max=%.2f", distance, UpgradeBoardConfig.InteractionRangeStuds)
+		)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "out_of_range" } :: SelectResultPayload
+		)
 		return
 	end
 
@@ -510,25 +561,35 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		hasSufficientEssence = GiantEssenceSession.CanSpend(player.UserId, previewCost)
 	end
 
-	local selectionAllowed, selectionReason, _, upgradeCost = UpgradeProgressionLogic.ValidateSelection(
-		progressionKernel,
-		state,
-		upgradeId,
-		hasSufficientEssence
-	)
+	local selectionAllowed, selectionReason, _, upgradeCost =
+		UpgradeProgressionLogic.ValidateSelection(progressionKernel, state, upgradeId, hasSufficientEssence)
 
 	if not selectionAllowed then
 		if selectionReason == "insufficient_essence" then
 			local insufficientSnapshot = GiantEssenceSession.GetSnapshot(player.UserId)
 			applyEssenceDebugAttributes(player, insufficientSnapshot)
-			rejectSelect(player, string.format("insufficient_essence required=%d total=%.0f upgradeId=%s", upgradeCost, insufficientSnapshot.total, upgradeId))
-			selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "insufficient_essence" } :: SelectResultPayload)
+			rejectSelect(
+				player,
+				string.format(
+					"insufficient_essence required=%d total=%.0f upgradeId=%s",
+					upgradeCost,
+					insufficientSnapshot.total,
+					upgradeId
+				)
+			)
+			selectResultRemote:FireClient(
+				player,
+				{ accepted = false, upgradeId = upgradeId, reason = "insufficient_essence" } :: SelectResultPayload
+			)
 			return
 		end
 
 		local rejectionReason = selectionReason or "selection_rejected"
 		rejectSelect(player, rejectionReason)
-		selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = rejectionReason } :: SelectResultPayload)
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = rejectionReason } :: SelectResultPayload
+		)
 		return
 	end
 
@@ -536,12 +597,33 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		local spent, spendSnapshot = GiantEssenceSession.Spend(player.UserId, "UpgradeBoard:" .. upgradeId, upgradeCost)
 		applyEssenceDebugAttributes(player, spendSnapshot)
 		if not spent then
-			rejectSelect(player, string.format("insufficient_essence required=%d total=%.0f upgradeId=%s", upgradeCost, spendSnapshot.total, upgradeId))
-			selectResultRemote:FireClient(player, { accepted = false, upgradeId = upgradeId, reason = "insufficient_essence" } :: SelectResultPayload)
+			rejectSelect(
+				player,
+				string.format(
+					"insufficient_essence required=%d total=%.0f upgradeId=%s",
+					upgradeCost,
+					spendSnapshot.total,
+					upgradeId
+				)
+			)
+			selectResultRemote:FireClient(
+				player,
+				{ accepted = false, upgradeId = upgradeId, reason = "insufficient_essence" } :: SelectResultPayload
+			)
 			return
 		end
 
-		debugLog(string.format("Spent Giant Essence userId=%d upgradeId=%s cost=%d total=%.0f generatedTotal=%.0f spentTotal=%.0f", player.UserId, upgradeId, upgradeCost, spendSnapshot.total, spendSnapshot.generatedTotal, spendSnapshot.spentTotal))
+		debugLog(
+			string.format(
+				"Spent Giant Essence userId=%d upgradeId=%s cost=%d total=%.0f generatedTotal=%.0f spentTotal=%.0f",
+				player.UserId,
+				upgradeId,
+				upgradeCost,
+				spendSnapshot.total,
+				spendSnapshot.generatedTotal,
+				spendSnapshot.spentTotal
+			)
+		)
 	end
 
 	state = UpgradeProgressionLogic.ApplySelection(state, upgradeId)
@@ -557,16 +639,28 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	end
 	boardPart:SetAttribute(BOARD_SELECTION_COUNT_ATTRIBUTE, currentSelectionCount + 1)
 
-	selectResultRemote:FireClient(player, {
-		accepted = true,
-		upgradeId = upgradeId,
-		newStepCompleted = newProgression.completedSteps,
-	} :: SelectResultPayload)
-	debugLog(string.format("Accepted UpgradeBoardSelectRequest userId=%d boardId=%s upgradeId=%s", player.UserId, boardId, upgradeId))
+	selectResultRemote:FireClient(
+		player,
+		{
+			accepted = true,
+			upgradeId = upgradeId,
+			newStepCompleted = newProgression.completedSteps,
+		} :: SelectResultPayload
+	)
+	debugLog(
+		string.format(
+			"Accepted UpgradeBoardSelectRequest userId=%d boardId=%s upgradeId=%s",
+			player.UserId,
+			boardId,
+			upgradeId
+		)
+	)
 end)
 
 debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	debugLog(string.format("Received UpgradeBoardDebugStateRequest userId=%d payloadType=%s", player.UserId, typeof(payload)))
+	debugLog(
+		string.format("Received UpgradeBoardDebugStateRequest userId=%d payloadType=%s", player.UserId, typeof(payload))
+	)
 
 	if payload ~= nil and type(payload) ~= "string" then
 		rejectDebug(player, "malformed_payload")
@@ -644,7 +738,14 @@ end)
 debugEssenceDrainRemote.OnServerEvent:Connect(function(player: Player)
 	local _, drainSnapshot = GiantEssenceSession.Spend(player.UserId, "DebugDrain", DEBUG_ESSENCE_DRAIN_AMOUNT)
 	applyEssenceDebugAttributes(player, drainSnapshot)
-	debugLog(string.format("DebugEssenceDrain userId=%d drained=%d total=%.0f", player.UserId, DEBUG_ESSENCE_DRAIN_AMOUNT, drainSnapshot.total))
+	debugLog(
+		string.format(
+			"DebugEssenceDrain userId=%d drained=%d total=%.0f",
+			player.UserId,
+			DEBUG_ESSENCE_DRAIN_AMOUNT,
+			drainSnapshot.total
+		)
+	)
 end)
 
 local function setupPlayer(player: Player)
@@ -653,12 +754,11 @@ local function setupPlayer(player: Player)
 	applyProgressionAttributes(player, resolveProgressionState(state))
 	applyEssenceDebugAttributes(player, GiantEssenceSession.GetSnapshot(player.UserId))
 	applyGiantUpgradeEffects(player, "player_setup")
-
-	player.CharacterAdded:Connect(function()
+	local playerAny: any = player
+	playerAny.CharacterAdded:Connect(function()
 		applyGiantUpgradeEffects(player, "character_added")
 	end)
-
-	player:GetAttributeChangedSignal("Role"):Connect(function()
+	playerAny:GetAttributeChangedSignal("Role"):Connect(function()
 		resetUpgradeState(player, "role_changed")
 		GiantEssenceSession.ResetSession(player.UserId, "role_changed")
 		applyEssenceDebugAttributes(player, GiantEssenceSession.GetSnapshot(player.UserId))

@@ -2,6 +2,12 @@
 
 local RealmContainmentValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmContainmentValidator")
 
+type RealmDescriptor = RealmContainmentValidator.RealmDescriptor
+type NamedNode = RealmContainmentValidator.NamedNode
+type RouteEdge = RealmContainmentValidator.RouteEdge
+type NamedZone = RealmContainmentValidator.NamedZone
+type RealmContainmentConfig = RealmContainmentValidator.RealmContainmentConfig
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -42,7 +48,7 @@ end
 --   RouteNorth             ──►  EscapeRoute_B (escape, fallback)
 --   (all edges are bidirectional via reverse entries)
 -- ============================================================
-local PROTOTYPE_ROUTE_GRAPH = {
+local PROTOTYPE_ROUTE_GRAPH: { nodes: { NamedNode }, edges: { RouteEdge } } = {
 	nodes = {
 		{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 }, nodeType = "spawn" },
 		{ name = "RouteNorth", position = { x = 0, y = 0, z = -90 }, nodeType = "waypoint" },
@@ -74,9 +80,9 @@ local PROTOTYPE_ROUTE_GRAPH = {
 	},
 }
 
-local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
+local EMPTY_ROUTE_GRAPH: { nodes: { NamedNode }, edges: { RouteEdge } } = { nodes = {}, edges = {} }
 
-local STANDARD_CONFIG = {
+local STANDARD_CONFIG: RealmContainmentConfig = {
 	captureZoneTagFilter = "GiantCapture",
 	controlZoneTagFilter = "GiantControl",
 }
@@ -85,7 +91,7 @@ local function run()
 	-- ============================================================
 	-- BLOCK 1: No capture zones → vacuous pass
 	-- ============================================================
-	local noCaptureZones = {
+	local noCaptureZones: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},
@@ -109,7 +115,7 @@ local function run()
 	-- BLOCK 2: Zone near RouteNorth (0,0,-90), no control zones.
 	-- Nearest unblocked node is RouteNorth; BFS reaches EscapeRoute_A → PASS
 	-- ============================================================
-	local zoneClearPath = {
+	local zoneClearPath: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},
@@ -135,7 +141,7 @@ local function run()
 	-- Control zones block BOTH RouteNorth and RouteSouth.
 	-- No unblocked path to any escape node → FAIL
 	-- ============================================================
-	local zoneBothPathsBlocked = {
+	local zoneBothPathsBlocked: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},
@@ -163,7 +169,7 @@ local function run()
 	-- BLOCK 4: Zone at TinyfolkSpawn (-12,0.5,0).
 	-- Control zone blocks only RouteNorth; RouteSouth path survives → PASS
 	-- ============================================================
-	local zoneOnePathSurvives = {
+	local zoneOnePathSurvives: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},
@@ -191,7 +197,7 @@ local function run()
 	-- CaptureZone_A has a clear path; CaptureZone_B has both paths blocked.
 	-- Overall → FAIL (one zone fails)
 	-- ============================================================
-	local twoZonesOneFails = {
+	local twoZonesOneFails: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},
@@ -222,7 +228,7 @@ local function run()
 	-- BLOCK 6: Capture zone present but route graph is empty.
 	-- No unblocked nodes to start BFS from → FAIL
 	-- ============================================================
-	local zoneEmptyGraph = {
+	local zoneEmptyGraph: RealmDescriptor = {
 		spawns = {},
 		escapeRoutes = {},
 		returnPoints = {},

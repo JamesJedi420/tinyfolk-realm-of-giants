@@ -83,7 +83,7 @@ local function debugWarn(message: string)
 	warn(string.format("[InteractionResolver] %s", message))
 end
 
-local function getHumanoidRootPart(character: Model?): BasePart?
+local function getHumanoidRootPart(character: Instance?): BasePart?
 	if not character then
 		return nil
 	end
@@ -102,6 +102,17 @@ end
 
 local function pushCandidate(candidates: { Candidate }, candidate: Candidate)
 	table.insert(candidates, candidate)
+end
+
+local function magnitudeBetweenPositions(a: any, b: any): number
+	local dx = a.X - b.X
+	local dy = a.Y - b.Y
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+local function getPriority(action: CandidateAction): number
+	return (PRIORITY_BY_ACTION :: any)[action]
 end
 
 local function chooseNextUpgradeId(): string?
@@ -157,7 +168,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 		end
 		local part = descendant :: BasePart
 
-		local distance = (part.Position - localRoot.Position).Magnitude
+		local distance = magnitudeBetweenPositions(part.Position :: any, localRoot.Position :: any)
 		local targetId = part.Name
 
 		if
@@ -169,7 +180,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				action = "escape_attempt",
 				targetId = targetId,
 				distance = distance,
-				priority = PRIORITY_BY_ACTION.escape_attempt,
+				priority = getPriority("escape_attempt"),
 				mode = "attempt",
 				payload = targetId,
 			})
@@ -183,7 +194,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				action = "construction_build",
 				targetId = targetId,
 				distance = distance,
-				priority = PRIORITY_BY_ACTION.construction_build,
+				priority = getPriority("construction_build"),
 				mode = "build",
 				payload = targetId,
 			})
@@ -198,7 +209,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				action = "upgrade_board_progress",
 				targetId = targetId,
 				distance = distance,
-				priority = PRIORITY_BY_ACTION.upgrade_board_progress,
+				priority = getPriority("upgrade_board_progress"),
 				mode = "progress_next",
 				payload = {
 					boardId = targetId,
@@ -215,7 +226,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				action = "warehouse_deliver",
 				targetId = targetId,
 				distance = distance,
-				priority = PRIORITY_BY_ACTION.warehouse_deliver,
+				priority = getPriority("warehouse_deliver"),
 				mode = "deliver",
 				payload = targetId,
 			})
@@ -232,7 +243,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 						action = "station_pickup_or_assign",
 						targetId = targetId,
 						distance = distance,
-						priority = PRIORITY_BY_ACTION.station_pickup_or_assign,
+						priority = getPriority("station_pickup_or_assign"),
 						mode = "activate",
 						payload = targetId,
 					})
@@ -244,7 +255,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 							action = "station_pickup_or_assign",
 							targetId = targetId,
 							distance = distance,
-							priority = PRIORITY_BY_ACTION.station_pickup_or_assign,
+							priority = getPriority("station_pickup_or_assign"),
 							mode = mode,
 							payload = targetId,
 						})
@@ -253,7 +264,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 							action = "station_pickup_or_assign",
 							targetId = targetId,
 							distance = distance,
-							priority = PRIORITY_BY_ACTION.station_pickup_or_assign,
+							priority = getPriority("station_pickup_or_assign"),
 							mode = "assign",
 							payload = {
 								specialistRole = requiredSpecialistRole,
@@ -265,7 +276,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 							action = "station_pickup_or_assign",
 							targetId = targetId,
 							distance = distance,
-							priority = PRIORITY_BY_ACTION.station_pickup_or_assign,
+							priority = getPriority("station_pickup_or_assign"),
 							mode = "assign_replace",
 							payload = {
 								specialistRole = requiredSpecialistRole,
@@ -287,7 +298,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 					action = "shrine_assign_worshipper",
 					targetId = targetId,
 					distance = distance,
-					priority = PRIORITY_BY_ACTION.shrine_assign_worshipper,
+					priority = getPriority("shrine_assign_worshipper"),
 					mode = "activate",
 					payload = targetId,
 				})
@@ -296,7 +307,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 					action = "shrine_assign_worshipper",
 					targetId = targetId,
 					distance = distance,
-					priority = PRIORITY_BY_ACTION.shrine_assign_worshipper,
+					priority = getPriority("shrine_assign_worshipper"),
 					mode = "assign_worshipper",
 					payload = {
 						specialistRole = SpecialistConfig.SpecialistRoles.Worshipper,
@@ -308,7 +319,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 					action = "shrine_assign_worshipper",
 					targetId = targetId,
 					distance = distance,
-					priority = PRIORITY_BY_ACTION.shrine_assign_worshipper,
+					priority = getPriority("shrine_assign_worshipper"),
 					mode = "assign_worshipper_replace",
 					payload = {
 						specialistRole = SpecialistConfig.SpecialistRoles.Worshipper,
@@ -667,7 +678,7 @@ local function requestContextInteraction()
 	fireCandidate(resolvedWinner)
 end
 
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
+UserInputService.InputBegan:Connect(function(input: any, gameProcessedEvent: boolean)
 	if gameProcessedEvent then
 		return
 	end
@@ -681,7 +692,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEv
 	end
 end)
 
-UserInputService.InputEnded:Connect(function(input: InputObject, _gameProcessedEvent: boolean)
+UserInputService.InputEnded:Connect(function(input: any, _gameProcessedEvent: boolean)
 	if input.KeyCode ~= INTERACT_KEY then
 		return
 	end

@@ -9,6 +9,12 @@
 
 local RealmChokepointValidator = require("../src/ReplicatedStorage/Shared/RealmTopology/RealmChokepointValidator")
 
+type RealmDescriptor = RealmChokepointValidator.RealmDescriptor
+type NamedNode = RealmChokepointValidator.NamedNode
+type RouteEdge = RealmChokepointValidator.RouteEdge
+type NamedZone = RealmChokepointValidator.NamedZone
+type RealmChokepointConfig = RealmChokepointValidator.RealmChokepointConfig
+
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
 		error(
@@ -42,14 +48,14 @@ local function requireResult(results, id, context)
 end
 
 -- Same 4-node diamond used in edge-crossing specs.
-local NODES = {
+local NODES: { NamedNode } = {
 	{ name = "S", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
 	{ name = "N", position = { x = 0, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "K", position = { x = 50, y = 0, z = 100 }, nodeType = "waypoint" },
 	{ name = "E", position = { x = 0, y = 0, z = 200 }, nodeType = "escape", tier = "primary" },
 }
 
-local EDGES = {
+local EDGES: { RouteEdge } = {
 	{ from = "S", to = "N", distance = 100 },
 	{ from = "N", to = "S", distance = 100 },
 	{ from = "S", to = "K", distance = 111 },
@@ -60,7 +66,7 @@ local EDGES = {
 	{ from = "E", to = "K", distance = 111 },
 }
 
-local function makeDescriptor(controlZones, captureZones)
+local function makeDescriptor(controlZones: { NamedZone }?, captureZones: { NamedZone }?): RealmDescriptor
 	return {
 		spawns = {},
 		escapeRoutes = {},
@@ -81,7 +87,7 @@ local function run()
 	-- Control zone edge-cross blocks N->E, leaving 1 surviving path.
 	-- Shared minimum=2 would fail, control-specific minimum=1 must pass.
 	-- ============================================================
-	local controlSpecificConfig = {
+	local controlSpecificConfig: RealmChokepointConfig = {
 		zoneTagFilter = "GiantControl",
 		minimumDisjointPathCount = 2,
 		minimumControlZoneDisjointPathCount = 1,
@@ -104,7 +110,7 @@ local function run()
 	-- Capture zone edge-cross blocks N->E, leaving 1 surviving path.
 	-- Shared minimum=2 would fail, capture-specific minimum=1 must pass.
 	-- ============================================================
-	local captureSpecificConfig = {
+	local captureSpecificConfig: RealmChokepointConfig = {
 		zoneTagFilter = "GiantControl",
 		minimumDisjointPathCount = 2,
 		minimumCaptureZoneDisjointPathCount = 1,
@@ -127,7 +133,7 @@ local function run()
 	-- No class-specific values provided; shared minimum=2 applies.
 	-- One surviving path after control-zone edge-cross => fail.
 	-- ============================================================
-	local sharedOnlyConfig = {
+	local sharedOnlyConfig: RealmChokepointConfig = {
 		zoneTagFilter = "GiantControl",
 		minimumDisjointPathCount = 2,
 		requireFallbackEscapeReachability = false,
@@ -149,7 +155,7 @@ local function run()
 	-- One-path case with shared=1 but control-specific=2 should fail.
 	-- If shared had won this would pass; expected failure proves precedence.
 	-- ============================================================
-	local precedenceConfig = {
+	local precedenceConfig: RealmChokepointConfig = {
 		zoneTagFilter = "GiantControl",
 		minimumDisjointPathCount = 1,
 		minimumControlZoneDisjointPathCount = 2,
@@ -174,7 +180,7 @@ local function run()
 	local desc5 = makeDescriptor({}, {
 		{ name = "CaptureCross", position = { x = 0, y = 0, z = 150 }, radius = 10, tag = "GiantCapture" },
 	})
-	local cfg5 = {
+	local cfg5: RealmChokepointConfig = {
 		zoneTagFilter = "GiantControl",
 		minimumDisjointPathCount = 2,
 		minimumCaptureZoneDisjointPathCount = 1,
