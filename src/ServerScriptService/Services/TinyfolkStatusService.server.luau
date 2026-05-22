@@ -6,12 +6,56 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
-local RoleConfig = require(Config:WaitForChild("RoleConfig"))
-local TinyfolkStatusConfig = require(Config:WaitForChild("TinyfolkStatusConfig"))
-local GiantThreatStageLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("GiantThreatStageLogic"))
-local TimedConditionStateLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TimedConditionStateLogic"))
-local RaidStatusProjection = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("RaidStatusProjection"))
-local TrailPressureLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TrailPressureLogic"))
+local TinyfolkStatusFolder = Shared:WaitForChild("TinyfolkStatus")
+local requireAny: any = require
+
+local function requireFromNodeOrPath(parent: any, moduleName: string, fallbackPath: string): any
+	local parentAny: any = parent
+	local moduleNode = nil
+	local findFirstChild = if type(parentAny) == "table" then parentAny.FindFirstChild else nil
+	if type(findFirstChild) == "function" then
+		moduleNode = findFirstChild(parentAny, moduleName)
+	end
+
+	local waitForChild = if type(parentAny) == "table" then parentAny.WaitForChild else nil
+	if moduleNode == nil and type(waitForChild) == "function" then
+		moduleNode = waitForChild(parentAny, moduleName)
+	end
+
+	if type(moduleNode) == "string" then
+		return requireAny(moduleNode)
+	end
+
+	if moduleNode ~= nil then
+		return requireAny(moduleNode)
+	end
+
+	return requireAny(fallbackPath)
+end
+
+local RoleConfig = requireFromNodeOrPath(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
+local TinyfolkStatusConfig =
+	requireFromNodeOrPath(Config, "TinyfolkStatusConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkStatusConfig")
+local GiantThreatStageLogic = requireFromNodeOrPath(
+	TinyfolkStatusFolder,
+	"GiantThreatStageLogic",
+	"../../ReplicatedStorage/Shared/TinyfolkStatus/GiantThreatStageLogic"
+)
+local TimedConditionStateLogic = requireFromNodeOrPath(
+	TinyfolkStatusFolder,
+	"TimedConditionStateLogic",
+	"../../ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic"
+)
+local RaidStatusProjection = requireFromNodeOrPath(
+	TinyfolkStatusFolder,
+	"RaidStatusProjection",
+	"../../ReplicatedStorage/Shared/TinyfolkStatus/RaidStatusProjection"
+)
+local TrailPressureLogic = requireFromNodeOrPath(
+	TinyfolkStatusFolder,
+	"TrailPressureLogic",
+	"../../ReplicatedStorage/Shared/TinyfolkStatus/TrailPressureLogic"
+)
 
 local TinyfolkStatusService = {}
 local globalEnv: any = getfenv()
