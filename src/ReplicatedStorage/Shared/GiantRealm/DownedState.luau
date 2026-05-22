@@ -72,10 +72,7 @@ export type Result = {
 }
 
 local function cloneMask(mask: InteractionMask?): InteractionMask
-	local output: InteractionMask = {}
-	for key, value in pairs(DEFAULT_INTERACTION_MASK) do
-		output[key] = value
-	end
+	local output: InteractionMask = table.clone(DEFAULT_INTERACTION_MASK)
 	if type(mask) == "table" then
 		for key, value in pairs(mask :: InteractionMask) do
 			output[key] = value == true

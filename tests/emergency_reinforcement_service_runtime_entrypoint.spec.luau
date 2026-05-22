@@ -1,4 +1,5 @@
 --!nocheck
+-- selene: allow(global_usage)
 --!nolint BuiltinGlobalWrite
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
@@ -890,6 +891,23 @@ do
 	assertFalse(compensationRequired.accepted, "token consumed + spawn failure = reinforcement_spawn_failed")
 	assertEqual(compensationRequired.reason, "reinforcement_spawn_failed", "compensation-trace failure reason")
 	assertTrue(type(compensationRequired.snapshot) == "table", "compensation-trace includes snapshot")
+	assertTrue(type(compensationRequired.trace) == "table", "compensation-trace includes trace payload")
+	assertTrue(
+		compensationRequired.trace.compensationRequired == true,
+		"compensation-trace marks compensation required"
+	)
+	assertEqual(
+		compensationRequired.trace.reason,
+		"token_consumed_spawn_failed",
+		"compensation-trace exposes reconciliation reason"
+	)
+	assertEqual(
+		compensationRequired.trace.requesterUserId,
+		requester.UserId,
+		"compensation-trace includes requester user id"
+	)
+	assertEqual(compensationRequired.trace.objectiveId, "CallCenter_A", "compensation-trace includes objective id")
+	assertEqual(compensationRequired.trace.consumedAt, 100, "compensation-trace includes consume timestamp")
 
 	reinforcementApi.SetStateTransitionResolverForTests(nil)
 	spawnsFolder._Children["ReinforcementSpawn"] = reinforcementSpawnPart

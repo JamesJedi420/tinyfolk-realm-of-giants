@@ -99,10 +99,7 @@ local function cloneState(state: State): State
 		end
 	end
 
-	local rescuerByTarget: { [number]: number? } = {}
-	for targetUserId, rescuerUserId in pairs(state.rescuerByTarget) do
-		rescuerByTarget[targetUserId] = rescuerUserId
-	end
+	local rescuerByTarget: { [number]: number? } = table.clone(state.rescuerByTarget)
 
 	return {
 		contractsByRescuer = contractsByRescuer,

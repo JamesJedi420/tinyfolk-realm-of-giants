@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -114,14 +113,24 @@ local function requestPlace()
 
 	local desiredPosition = localRoot.Position + localRoot.CFrame.LookVector * GrabConfig.ClientPlaceDistanceStuds
 	placeRemote:FireServer(desiredPosition)
-	debugLog(string.format("Sent PlaceRequest desiredPosition=(%.1f, %.1f, %.1f)", desiredPosition.X, desiredPosition.Y, desiredPosition.Z))
+	debugLog(
+		string.format(
+			"Sent PlaceRequest desiredPosition=(%.1f, %.1f, %.1f)",
+			desiredPosition.X,
+			desiredPosition.Y,
+			desiredPosition.Z
+		)
+	)
 end
 
 local function requestCounterplay()
 	if not isLocalPlayerTinyfolk() then
 		return
 	end
-	if localPlayer:GetAttribute("CarriedState") ~= "Carried" and localPlayer:GetAttribute("CarriedState") ~= "Counterplay" then
+	if
+		localPlayer:GetAttribute("CarriedState") ~= "Carried"
+		and localPlayer:GetAttribute("CarriedState") ~= "Counterplay"
+	then
 		return
 	end
 

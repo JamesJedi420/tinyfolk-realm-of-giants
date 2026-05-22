@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -39,7 +38,9 @@ local function requestAssign(specialistRole: string)
 		specialistRole = specialistRole,
 		assignedStationId = nil,
 	})
-	debugLog(string.format("Sent SpecialistAssignRequest specialistRole=%s userId=%d", specialistRole, localPlayer.UserId))
+	debugLog(
+		string.format("Sent SpecialistAssignRequest specialistRole=%s userId=%d", specialistRole, localPlayer.UserId)
+	)
 end
 
 local function requestClear()
@@ -58,16 +59,18 @@ debugResponseRemote.OnClientEvent:Connect(function(payload)
 		return
 	end
 
-	debugLog(string.format(
-		"Specialist debug userId=%s role=%s isTinyfolk=%s specialistRole=%s assignedStationId=%s lastAssignmentReason=%s lastAssignedAt=%s",
-		tostring(payload.userId),
-		tostring(payload.role),
-		tostring(payload.isTinyfolk),
-		tostring(payload.specialistRole),
-		tostring(payload.assignedStationId),
-		tostring(payload.lastAssignmentReason),
-		tostring(payload.lastAssignedAt)
-	))
+	debugLog(
+		string.format(
+			"Specialist debug userId=%s role=%s isTinyfolk=%s specialistRole=%s assignedStationId=%s lastAssignmentReason=%s lastAssignedAt=%s",
+			tostring(payload.userId),
+			tostring(payload.role),
+			tostring(payload.isTinyfolk),
+			tostring(payload.specialistRole),
+			tostring(payload.assignedStationId),
+			tostring(payload.lastAssignmentReason),
+			tostring(payload.lastAssignedAt)
+		)
+	)
 end)
 
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)

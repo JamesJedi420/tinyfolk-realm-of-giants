@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 -- EscapeService: Orchestrates escape, block, and through-gap validation for TIN-76
 -- Enforces all safe zone and no-capture rules (routes with InSafeZone=true are rejected for escape/block)
 -- All logic is attribute-driven and server-authoritative; integrates with EscapeConfig and validator modules

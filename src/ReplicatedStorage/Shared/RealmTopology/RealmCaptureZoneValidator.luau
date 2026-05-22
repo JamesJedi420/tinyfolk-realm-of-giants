@@ -208,7 +208,7 @@ end
 -- Slice 14: spawn perimeter clearance
 -- Convention: vacuous pass when captureZones or spawns is empty, matching spawn-separation rule.
 -- Non-GiantCapture tags are skipped (matching captureZoneRadiusBounds convention).
-local function captureZoneSpawnPerimeterClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+local function captureZoneSpawnPerimeterClearance(descriptor: RealmDescriptor, _config: CaptureZoneConfig): CheckResult
 	if #descriptor.captureZones == 0 then
 		return {
 			id = "capture_zone_spawn_perimeter_clearance",
@@ -259,7 +259,7 @@ end
 -- Slice 15: escape perimeter clearance
 -- Convention: vacuous pass when captureZones or escapeRoutes is empty, matching escape-separation rule.
 -- Non-GiantCapture tags are skipped.
-local function captureZoneEscapePerimeterClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+local function captureZoneEscapePerimeterClearance(descriptor: RealmDescriptor, _config: CaptureZoneConfig): CheckResult
 	if #descriptor.captureZones == 0 then
 		return {
 			id = "capture_zone_escape_perimeter_clearance",
@@ -314,7 +314,7 @@ end
 -- captureZoneRadiusBounds, captureZoneSpawnPerimeterClearance, and
 -- captureZoneEscapePerimeterClearance.
 -- Vacuous pass when fewer than two GiantCapture zones exist.
-local function captureZoneOverlap(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+local function captureZoneOverlap(descriptor: RealmDescriptor, _config: CaptureZoneConfig): CheckResult
 	-- Collect only GiantCapture zones so pair indices are stable and deterministic.
 	local giantZones: { NamedZone } = {}
 	for _, zone in ipairs(descriptor.captureZones) do

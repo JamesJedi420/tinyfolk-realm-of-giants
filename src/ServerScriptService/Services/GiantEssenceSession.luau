@@ -22,7 +22,7 @@ type GiantEssenceSnapshot = {
 	lastSpentAmount: number,
 }
 
-local sessionByUserId: {[number]: GiantEssenceSnapshot} = {}
+local sessionByUserId: { [number]: GiantEssenceSnapshot } = {}
 
 local function applyTestStartingEssence(s: GiantEssenceSnapshot, reason: string)
 	if TEST_STARTING_ESSENCE <= 0 then
@@ -90,7 +90,14 @@ function GiantEssenceSession.AddGenerated(userId: number, source: string, amount
 	end
 
 	if amount <= 0 then
-		debugWarn(string.format("Rejected generation update userId=%d source=%s reason=non_positive_amount amount=%.2f", userId, source, amount))
+		debugWarn(
+			string.format(
+				"Rejected generation update userId=%d source=%s reason=non_positive_amount amount=%.2f",
+				userId,
+				source,
+				amount
+			)
+		)
 		return snapshotCopyFor(userId)
 	end
 
@@ -100,7 +107,17 @@ function GiantEssenceSession.AddGenerated(userId: number, source: string, amount
 	s.lastGeneratedSource = source
 	s.lastGeneratedAmount = amount
 
-	debugLog(string.format("Generated userId=%d source=%s amount=%.0f total=%.0f generatedTotal=%.0f spentTotal=%.0f", userId, source, amount, s.total, s.generatedTotal, s.spentTotal))
+	debugLog(
+		string.format(
+			"Generated userId=%d source=%s amount=%.0f total=%.0f generatedTotal=%.0f spentTotal=%.0f",
+			userId,
+			source,
+			amount,
+			s.total,
+			s.generatedTotal,
+			s.spentTotal
+		)
+	)
 	return snapshotCopyFor(userId)
 end
 
@@ -111,14 +128,29 @@ function GiantEssenceSession.Spend(userId: number, reason: string, amount: numbe
 	end
 
 	if amount <= 0 then
-		debugWarn(string.format("Rejected spend userId=%d reason=%s detail=non_positive_amount amount=%.2f", userId, reason, amount))
+		debugWarn(
+			string.format(
+				"Rejected spend userId=%d reason=%s detail=non_positive_amount amount=%.2f",
+				userId,
+				reason,
+				amount
+			)
+		)
 		return false, snapshotCopyFor(userId)
 	end
 
 	local s = getOrCreateSession(userId)
 
 	if s.total < amount then
-		debugWarn(string.format("Rejected spend userId=%d reason=%s detail=insufficient total=%.0f required=%.0f", userId, reason, s.total, amount))
+		debugWarn(
+			string.format(
+				"Rejected spend userId=%d reason=%s detail=insufficient total=%.0f required=%.0f",
+				userId,
+				reason,
+				s.total,
+				amount
+			)
+		)
 		return false, snapshotCopyFor(userId)
 	end
 
@@ -131,7 +163,17 @@ function GiantEssenceSession.Spend(userId: number, reason: string, amount: numbe
 		s.total = 0
 	end
 
-	debugLog(string.format("Spent userId=%d reason=%s amount=%.0f total=%.0f generatedTotal=%.0f spentTotal=%.0f", userId, reason, amount, s.total, s.generatedTotal, s.spentTotal))
+	debugLog(
+		string.format(
+			"Spent userId=%d reason=%s amount=%.0f total=%.0f generatedTotal=%.0f spentTotal=%.0f",
+			userId,
+			reason,
+			amount,
+			s.total,
+			s.generatedTotal,
+			s.spentTotal
+		)
+	)
 	return true, snapshotCopyFor(userId)
 end
 

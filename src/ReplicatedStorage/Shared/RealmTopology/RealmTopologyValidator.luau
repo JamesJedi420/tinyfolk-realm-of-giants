@@ -159,10 +159,7 @@ local function checkReturnPointExists(descriptor: RealmDescriptor): CheckResult
 end
 
 -- Check 5: Every required specialist station ID has a registered part.
-local function checkStationCoverage(
-	descriptor: RealmDescriptor,
-	config: RealmValidationConfig
-): CheckResult
+local function checkStationCoverage(descriptor: RealmDescriptor, config: RealmValidationConfig): CheckResult
 	local missing: { string } = {}
 	for _, stationId in config.requiredSpecialistStationIds do
 		if not findByName(descriptor.stations, stationId) then
@@ -180,10 +177,7 @@ local function checkStationCoverage(
 end
 
 -- Check 6: Every construction site ID in config has a registered part.
-local function checkConstructionSiteCoverage(
-	descriptor: RealmDescriptor,
-	config: RealmValidationConfig
-): CheckResult
+local function checkConstructionSiteCoverage(descriptor: RealmDescriptor, config: RealmValidationConfig): CheckResult
 	local missing: { string } = {}
 	for _, siteId in config.constructionSiteIds do
 		if not findByName(descriptor.constructionSites, siteId) then
@@ -203,10 +197,7 @@ end
 -- Check 7: Every upgrade board center is within (boardInteractionRangeStuds * 2)
 -- studs of at least one GiantSpawn. Uses 2x the interaction range as a loose
 -- "player can walk to the board from spawn" bound.
-local function checkUpgradeBoardReachability(
-	descriptor: RealmDescriptor,
-	config: RealmValidationConfig
-): CheckResult
+local function checkUpgradeBoardReachability(descriptor: RealmDescriptor, config: RealmValidationConfig): CheckResult
 	local giantSpawns = getByPrefix(descriptor.spawns, "GiantSpawn")
 	local maxDist = config.boardInteractionRangeStuds * 2
 	local tooFar: { string } = {}
@@ -220,10 +211,7 @@ local function checkUpgradeBoardReachability(
 			end
 		end
 		if not reachable then
-			table.insert(
-				tooFar,
-				string.format("%s (no GiantSpawn within %.1f studs)", board.name, maxDist)
-			)
+			table.insert(tooFar, string.format("%s (no GiantSpawn within %.1f studs)", board.name, maxDist))
 		end
 	end
 
@@ -239,10 +227,7 @@ end
 
 -- Check 8: No escape route center is within (escapeTriggerRadiusStuds + 5) studs
 -- of any spawn. Prevents an escape route from being triggerable from spawn.
-local function checkEscapeRouteSpawnSeparation(
-	descriptor: RealmDescriptor,
-	config: RealmValidationConfig
-): CheckResult
+local function checkEscapeRouteSpawnSeparation(descriptor: RealmDescriptor, config: RealmValidationConfig): CheckResult
 	local minDist = config.escapeTriggerRadiusStuds + 5
 	local violations: { string } = {}
 
@@ -252,13 +237,7 @@ local function checkEscapeRouteSpawnSeparation(
 			if d < minDist then
 				table.insert(
 					violations,
-					string.format(
-						"%s is %.1f studs from %s (min %.1f)",
-						route.name,
-						d,
-						spawn.name,
-						minDist
-					)
+					string.format("%s is %.1f studs from %s (min %.1f)", route.name, d, spawn.name, minDist)
 				)
 			end
 		end

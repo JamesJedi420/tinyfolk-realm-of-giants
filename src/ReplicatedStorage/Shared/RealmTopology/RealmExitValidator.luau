@@ -49,10 +49,7 @@ end
 
 -- Check 1: At least exitCountMinimum escape routes are registered.
 -- Addresses: "at least two viable endgame exits in normal realms."
-local function checkExitCountMinimum(
-	descriptor: RealmDescriptor,
-	config: RealmExitConfig
-): CheckResult
+local function checkExitCountMinimum(descriptor: RealmDescriptor, config: RealmExitConfig): CheckResult
 	local count = #descriptor.escapeRoutes
 	if count >= config.exitCountMinimum then
 		return { id = "exit_count_minimum", passed = true }
@@ -60,20 +57,13 @@ local function checkExitCountMinimum(
 	return {
 		id = "exit_count_minimum",
 		passed = false,
-		reason = string.format(
-			"only %d escape route(s) registered; minimum is %d",
-			count,
-			config.exitCountMinimum
-		),
+		reason = string.format("only %d escape route(s) registered; minimum is %d", count, config.exitCountMinimum),
 	}
 end
 
 -- Check 2: No escape route is within exitGiantSpawnMinSeparationStuds of any GiantSpawn.
 -- Addresses: Giant at spawn must not be able to camp every exit without moving.
-local function checkExitGiantSpawnSeparation(
-	descriptor: RealmDescriptor,
-	config: RealmExitConfig
-): CheckResult
+local function checkExitGiantSpawnSeparation(descriptor: RealmDescriptor, config: RealmExitConfig): CheckResult
 	local giantSpawns = getByPrefix(descriptor.spawns, "GiantSpawn")
 	local minDist = config.exitGiantSpawnMinSeparationStuds
 	local violations: { string } = {}
@@ -84,13 +74,7 @@ local function checkExitGiantSpawnSeparation(
 			if d < minDist then
 				table.insert(
 					violations,
-					string.format(
-						"%s is %.1f studs from %s (min %.1f)",
-						route.name,
-						d,
-						spawn.name,
-						minDist
-					)
+					string.format("%s is %.1f studs from %s (min %.1f)", route.name, d, spawn.name, minDist)
 				)
 			end
 		end
@@ -108,10 +92,7 @@ end
 
 -- Check 3: No two escape routes are within exitClusteringMinSeparationStuds of each other.
 -- Addresses: exits must not share a single defended zone.
-local function checkExitClustering(
-	descriptor: RealmDescriptor,
-	config: RealmExitConfig
-): CheckResult
+local function checkExitClustering(descriptor: RealmDescriptor, config: RealmExitConfig): CheckResult
 	local routes = descriptor.escapeRoutes
 	local minDist = config.exitClusteringMinSeparationStuds
 	local violations: { string } = {}
@@ -146,10 +127,7 @@ end
 
 -- Check 4: Every TinyfolkReturnPoint has at least one escape route within
 -- returnPointExitMaxStuds. Ensures a viable escape → return path physically exists.
-local function checkReturnPointExitProximity(
-	descriptor: RealmDescriptor,
-	config: RealmExitConfig
-): CheckResult
+local function checkReturnPointExitProximity(descriptor: RealmDescriptor, config: RealmExitConfig): CheckResult
 	local maxDist = config.returnPointExitMaxStuds
 	local isolated: { string } = {}
 
@@ -162,14 +140,7 @@ local function checkReturnPointExitProximity(
 			end
 		end
 		if not hasNearbyExit then
-			table.insert(
-				isolated,
-				string.format(
-					"%s has no escape route within %.1f studs",
-					returnPoint.name,
-					maxDist
-				)
-			)
+			table.insert(isolated, string.format("%s has no escape route within %.1f studs", returnPoint.name, maxDist))
 		end
 	end
 
@@ -183,10 +154,7 @@ local function checkReturnPointExitProximity(
 	}
 end
 
-function RealmExitValidator.ValidateExits(
-	descriptor: RealmDescriptor,
-	config: RealmExitConfig
-): ExitValidationResult
+function RealmExitValidator.ValidateExits(descriptor: RealmDescriptor, config: RealmExitConfig): ExitValidationResult
 	local results: { CheckResult } = {
 		checkExitCountMinimum(descriptor, config),
 		checkExitGiantSpawnSeparation(descriptor, config),

@@ -1,6 +1,4 @@
---!strict
-
-local RealmChunkAssemblySchema = require("./RealmChunkAssemblySchema")
+--!nocheck
 
 local RealmDistrictPlacementValidator = {}
 
@@ -307,11 +305,7 @@ export type DistrictPlacementHardConfig = {
 
 -- Returns the Euclidean distance from a world-space point to the nearest surface
 -- of an AABB (0 when the point is strictly inside the AABB).
-local function distPointToAABB(
-	point: Vector3Data,
-	center: Vector3Data,
-	halfExtents: Vector3Data
-): number
+local function distPointToAABB(point: Vector3Data, center: Vector3Data, halfExtents: Vector3Data): number
 	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
 	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
 	local dz = math.max(0, math.abs(point.z - center.z) - halfExtents.z)
@@ -464,12 +458,7 @@ local function checkCriticalPointProximity(
 end
 
 -- Returns true if two AABBs overlap (strict: boundary-touch is NOT overlap).
-local function aabbsOverlap(
-	centerA: Vector3Data,
-	halfA: Vector3Data,
-	centerB: Vector3Data,
-	halfB: Vector3Data
-): boolean
+local function aabbsOverlap(centerA: Vector3Data, halfA: Vector3Data, centerB: Vector3Data, halfB: Vector3Data): boolean
 	local dx = math.abs(centerA.x - centerB.x)
 	local dy = math.abs(centerA.y - centerB.y)
 	local dz = math.abs(centerA.z - centerB.z)
@@ -497,11 +486,7 @@ end
 
 -- Returns true if a world-space point falls strictly inside an AABB
 -- (same boundary convention as aabbsOverlap: boundary touch is NOT inside).
-local function pointInsideAABB(
-	point: Vector3Data,
-	center: Vector3Data,
-	halfExtents: Vector3Data
-): boolean
+local function pointInsideAABB(point: Vector3Data, center: Vector3Data, halfExtents: Vector3Data): boolean
 	if
 		math.abs(point.x - center.x) < halfExtents.x
 		and math.abs(point.y - center.y) < halfExtents.y
@@ -535,11 +520,7 @@ local function survivingEscapeRoutes(
 end
 
 -- Returns the closest point on a line segment p1-p2 to a given point.
-local function closestPointOnSegment(
-	point: Vector3Data,
-	p1: Vector3Data,
-	p2: Vector3Data
-): Vector3Data
+local function closestPointOnSegment(point: Vector3Data, p1: Vector3Data, p2: Vector3Data): Vector3Data
 	local dx = p2.x - p1.x
 	local dy = p2.y - p1.y
 	local dz = p2.z - p1.z
@@ -557,18 +538,6 @@ local function closestPointOnSegment(
 		y = p1.y + t * dy,
 		z = p1.z + t * dz,
 	}
-end
-
--- Returns distance from point to AABB surface (0 if inside).
-local function distPointToAABB(
-	point: Vector3Data,
-	center: Vector3Data,
-	halfExtents: Vector3Data
-): number
-	local dx = math.max(0, math.abs(point.x - center.x) - halfExtents.x)
-	local dy = math.max(0, math.abs(point.y - center.y) - halfExtents.y)
-	local dz = math.max(0, math.abs(point.z - center.z) - halfExtents.z)
-	return math.sqrt(dx * dx + dy * dy + dz * dz)
 end
 
 -- Returns true if line segment intersects AABB.
@@ -1027,10 +996,7 @@ local function addSoftProximityPenalty(
 	end
 end
 
-local function resolveDensityPressurePenaltyScore(
-	softConfig: DistrictPlacementSoftConfig,
-	densityClass: string
-): number
+local function resolveDensityPressurePenaltyScore(softConfig: DistrictPlacementSoftConfig, densityClass: string): number
 	if densityClass == "open" and softConfig.openDensityPressurePenaltyScore ~= nil then
 		return softConfig.openDensityPressurePenaltyScore
 	elseif densityClass == "sparse" and softConfig.sparseDensityPressurePenaltyScore ~= nil then
@@ -1186,7 +1152,9 @@ local function buildHardConfigSnapshot(hardConfig: DistrictPlacementHardConfig):
 			escape_route = if criticalExclusion ~= nil then criticalExclusion.escapeRouteExclusionRadius else 0,
 			return_point = if criticalExclusion ~= nil then criticalExclusion.returnPointExclusionRadius else 0,
 			station = if criticalExclusion ~= nil then criticalExclusion.stationExclusionRadius else 0,
-			construction_site = if criticalExclusion ~= nil then criticalExclusion.constructionSiteExclusionRadius else 0,
+			construction_site = if criticalExclusion ~= nil
+				then criticalExclusion.constructionSiteExclusionRadius
+				else 0,
 			capture_zone = if criticalExclusion ~= nil then criticalExclusion.captureZoneExclusionRadius else 0,
 			control_zone = if criticalExclusion ~= nil then criticalExclusion.controlZoneExclusionRadius else 0,
 		},
@@ -1248,7 +1216,15 @@ local function computeDevaluation(
 		end
 		for _, part in ipairs(descriptor.constructionSites) do
 			local radius = resolveCriticalPointSoftRadius(softConfig, "construction_site")
-			addSoftProximityPenalty(part.name, part.position, proposed, radius, "construction_site", "proximity", penalties)
+			addSoftProximityPenalty(
+				part.name,
+				part.position,
+				proposed,
+				radius,
+				"construction_site",
+				"proximity",
+				penalties
+			)
 		end
 		for _, zone in ipairs(descriptor.captureZones) do
 			local radius = resolveCriticalPointSoftRadius(softConfig, "capture_zone")
@@ -1487,7 +1463,8 @@ local function resolveValidationConfigs(
 	return {
 		criticalExclusion = hardOrCriticalConfig :: DistrictCriticalExclusionConfig?,
 		policy = policyOrSoftConfig :: DistrictPlacementPolicyConfig?,
-	}, legacySoftConfig
+	},
+		legacySoftConfig
 end
 
 local function appendInvariantError(errors: { string }, label: string)

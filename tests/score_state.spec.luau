@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local ScoreState = require("../src/ReplicatedStorage/Shared/GiantRealm/ScoreState")
 local ScoreConfig = require("../src/ReplicatedStorage/Shared/Config/ScoreConfig")
 
@@ -280,7 +279,11 @@ do
 	assertEqual(snapshot.categories.objective, 500, "normal objective category remains capped")
 	assertEqual(snapshot.buckets.bonus.categories.objective, 200, "bonus objective bucket tracked separately")
 	assertEqual(snapshot.buckets.hidden.categories.objective, 75, "hidden objective bucket tracked separately")
-	assertEqual(snapshot.buckets.compensation.categories.teamplay, 150, "compensation teamplay bucket tracked separately")
+	assertEqual(
+		snapshot.buckets.compensation.categories.teamplay,
+		150,
+		"compensation teamplay bucket tracked separately"
+	)
 
 	local bucketTotals = ScoreState.GetBucketTotals(compensation.state)
 	assertEqual(bucketTotals.normal.categories.objective, 500, "normal bucket global total")

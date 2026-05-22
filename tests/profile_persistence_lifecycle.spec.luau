@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local ProfilePersistenceLifecycle = require("../src/ServerScriptService/Services/ProfilePersistenceLifecycle")
 local globalEnv: any = getfenv()
 

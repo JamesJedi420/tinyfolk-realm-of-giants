@@ -65,10 +65,7 @@ local function cloneAlert(alert: any?): any?
 		return alert
 	end
 
-	local copied = {}
-	for key, value in pairs(alert) do
-		copied[key] = value
-	end
+	local copied = table.clone(alert)
 	return copied
 end
 

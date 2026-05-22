@@ -106,7 +106,7 @@ cloneTable = function(value: any): any
 	return result
 end
 
-local function getConfiguredOwnerLayer(operation: string, profileKey: string): ProfileOwnerLayer?
+local function getConfiguredOwnerLayer(_operation: string, _profileKey: string): ProfileOwnerLayer?
 	if ownerLayer == nil then
 		return nil
 	end

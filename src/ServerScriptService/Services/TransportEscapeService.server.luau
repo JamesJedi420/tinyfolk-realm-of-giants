@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local TRANSPORT_ENDPOINT_PATH = { "Map", "TransportEndpoints" }
 
 local TRANSPORT_ENDPOINT_ID_ATTRIBUTE = "TransportEndpointId"

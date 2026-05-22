@@ -91,14 +91,14 @@ do
 end
 
 do
-	local state = ({
+	local state = {
 		burstActiveUntil = 11.25,
 		burstCooldownUntil = 16,
 		sharedBurstCooldownUntil = 16,
 		traceCostUntil = 14.25,
 		lastCrossingRouteId = "EscapeRoute_A",
 		lastBurstReason = "PostCrossingBurst",
-	} :: any)
+	} :: any
 	local event = baseEvent(12)
 	local nextState, outcome = PostCrossingBurstLogic.ResolveCrossing(state, Config, event)
 
@@ -108,9 +108,9 @@ do
 end
 
 do
-	local state = ({
+	local state = {
 		sharedBurstCooldownUntil = 16,
-	} :: any)
+	} :: any
 	local event = baseEvent(12)
 	local nextState, outcome = PostCrossingBurstLogic.ResolveCrossing(state, Config, event)
 

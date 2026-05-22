@@ -1,4 +1,5 @@
 --!nocheck
+-- selene: allow(global_usage)
 --!nolint BuiltinGlobalWrite
 
 local MockPlayer = require("../tests/mocks/MockPlayer")

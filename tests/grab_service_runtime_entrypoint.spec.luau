@@ -1,10 +1,12 @@
---!strict
-
-Vector3 = Vector3 or {
-	new = function(x: number, y: number, z: number)
-		return { X = x, Y = y, Z = z, x = x, y = y, z = z }
-	end,
-}
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
+Vector3 = Vector3
+	or {
+		new = function(x: number, y: number, z: number)
+			return { X = x, Y = y, Z = z, x = x, y = y, z = z }
+		end,
+	}
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
 
@@ -239,7 +241,11 @@ do
 	assertFalse(grabApi.IsPlayerCarried(tinyfolk.UserId), "counterplay releases target")
 	assertEqual(tinyfolk:GetAttribute("CarriedState"), "Released", "release state attributed")
 	assertEqual(tinyfolk:GetAttribute("CarriedReleaseReason"), "counterplay_completed", "release reason attributed")
-	assertEqual(tinyfolk:GetAttribute("CarryLastDropReason"), "pre_grab_fallback", "counterplay release uses fallback drop")
+	assertEqual(
+		tinyfolk:GetAttribute("CarryLastDropReason"),
+		"pre_grab_fallback",
+		"counterplay release uses fallback drop"
+	)
 	assertEqual(giant:GetAttribute("CarrySlotsUsed"), 0, "counterplay clears carrier slots")
 	assertEqual(giant:GetAttribute("CarrySpeedMultiplier"), 1, "counterplay restores speed multiplier")
 	assertEqual(giant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed, 16, "counterplay restores carrier speed")
@@ -293,7 +299,11 @@ do
 	assertFalse(grabApi.IsPlayerCarried(downedTinyfolk.UserId), "target removal clears carried query")
 	assertEqual(otherGiant:GetAttribute("CarriedTargetUserId"), nil, "target removal clears carrier target")
 	assertEqual(otherGiant:GetAttribute("CarrySlotsUsed"), 0, "target removal clears carrier slots")
-	assertEqual(otherGiant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed, 16, "target removal restores carrier speed")
+	assertEqual(
+		otherGiant.Character:FindFirstChildOfClass("Humanoid").WalkSpeed,
+		16,
+		"target removal restores carrier speed"
+	)
 	local nextGrab = grabApi.RequestGrab(otherGiant.UserId, tinyfolk.UserId, 120)
 	assertTrue(nextGrab.accepted, "carrier can grab again after target removal cleanup")
 end

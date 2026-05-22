@@ -44,7 +44,9 @@ function WoodSession.AddGenerated(source: string, amount: number): WoodSnapshot
 	end
 
 	if amount <= 0 then
-		debugWarn(string.format("Rejected generation update source=%s reason=non_positive_amount amount=%.2f", source, amount))
+		debugWarn(
+			string.format("Rejected generation update source=%s reason=non_positive_amount amount=%.2f", source, amount)
+		)
 		return snapshotCopy()
 	end
 
@@ -53,7 +55,15 @@ function WoodSession.AddGenerated(source: string, amount: number): WoodSnapshot
 	state.lastGeneratedSource = source
 	state.lastGeneratedAmount = amount
 
-	debugLog(string.format("Generated source=%s amount=%.0f total=%.0f generatedTotal=%.0f", source, amount, state.total, state.generatedTotal))
+	debugLog(
+		string.format(
+			"Generated source=%s amount=%.0f total=%.0f generatedTotal=%.0f",
+			source,
+			amount,
+			state.total,
+			state.generatedTotal
+		)
+	)
 	return snapshotCopy()
 end
 

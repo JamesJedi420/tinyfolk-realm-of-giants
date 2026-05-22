@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
 		error(string.format("FAIL [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))

@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
 		error(string.format("FAIL [%s]: expected true, got false", label))
@@ -147,7 +148,7 @@ local function makePlayer(userId: number)
 		Name = "Player" .. tostring(userId),
 	}
 
-	function player.SetAttribute(self: any, attributeName: string, value: any)
+	function player.SetAttribute(_self: any, attributeName: string, value: any)
 		attributes[attributeName] = value
 		local signal = attributeChangedSignals[attributeName]
 		if signal ~= nil then

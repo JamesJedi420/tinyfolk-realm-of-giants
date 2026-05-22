@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local GiantBuildModeConfig = require("../src/ReplicatedStorage/Shared/Config/GiantBuildModeConfig")
 local GiantStructureCatalog = require("../src/ReplicatedStorage/Shared/Config/GiantStructureCatalog")
 local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")

@@ -98,10 +98,7 @@ local function cloneState(state: State): State
 		end
 	end
 
-	local custodianByTarget: { [number]: number? } = {}
-	for targetUserId, custodianUserId in pairs(state.custodianByTarget) do
-		custodianByTarget[targetUserId] = custodianUserId
-	end
+	local custodianByTarget: { [number]: number? } = table.clone(state.custodianByTarget)
 
 	return {
 		captureByTarget = captureByTarget,
@@ -276,7 +273,7 @@ function CaptureState.GetTargetCapture(state: State, targetUserId: number): Capt
 end
 
 function CaptureState.GetCustodianCapture(state: State, custodianUserId: number): CaptureRecord?
-	for targetUserId, record in pairs(state.captureByTarget) do
+	for _targetUserId, record in pairs(state.captureByTarget) do
 		if record ~= nil and record.custodianUserId == custodianUserId then
 			return record
 		end

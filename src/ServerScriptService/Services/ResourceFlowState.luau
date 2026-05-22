@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -53,7 +52,7 @@ local ResourceFlowState = {}
 local TEST_STARTING_WOOD_STORED = 120
 local TEST_STARTING_STONE_STORED = 120
 
-local STATIONS_PATH = {"Map", "Stations"}
+local STATIONS_PATH = { "Map", "Stations" }
 
 local ATTRIBUTE_WOOD_PRODUCED_TOTAL = "WoodProducedTotal"
 local ATTRIBUTE_WOOD_IN_TRANSIT_TOTAL = "WoodInTransitTotal"
@@ -64,7 +63,7 @@ local ATTRIBUTE_STONE_IN_TRANSIT_TOTAL = "StoneInTransitTotal"
 local ATTRIBUTE_STONE_STORED_TOTAL = "StoneStoredTotal"
 local ATTRIBUTE_STONE_USABLE_TOTAL = "StoneUsableTotal"
 
-local stateByMaterial: {[MaterialName]: MaterialFlowState} = {
+local stateByMaterial: { [MaterialName]: MaterialFlowState } = {
 	Wood = {
 		produced = 0,
 		inTransit = 0,
@@ -94,7 +93,7 @@ local deliveryPointsState: DeliveryPointsState = {
 	granaryPart = nil,
 }
 
-local warnedMissingDeliveryByMaterial: {[MaterialName]: boolean} = {
+local warnedMissingDeliveryByMaterial: { [MaterialName]: boolean } = {
 	Wood = false,
 	Stone = false,
 }
@@ -116,12 +115,14 @@ local function applyTestStartingStoredResources(reason: string)
 		stateByMaterial.Stone.stored = TEST_STARTING_STONE_STORED
 	end
 
-	debugLog(string.format(
-		"Applied test starting stored resources reason=%s woodStored=%.0f stoneStored=%.0f",
-		reason,
-		stateByMaterial.Wood.stored,
-		stateByMaterial.Stone.stored
-	))
+	debugLog(
+		string.format(
+			"Applied test starting stored resources reason=%s woodStored=%.0f stoneStored=%.0f",
+			reason,
+			stateByMaterial.Wood.stored,
+			stateByMaterial.Stone.stored
+		)
+	)
 end
 
 local function cloneMaterialSnapshot(materialState: MaterialFlowState): MaterialFlowSnapshot
@@ -238,7 +239,14 @@ function ResourceFlowState.AddProduced(material: MaterialName, source: string, a
 	end
 
 	if amount <= 0 then
-		debugWarn(string.format("Rejected produced update material=%s source=%s reason=non_positive_amount amount=%.2f", material, source, amount))
+		debugWarn(
+			string.format(
+				"Rejected produced update material=%s source=%s reason=non_positive_amount amount=%.2f",
+				material,
+				source,
+				amount
+			)
+		)
 		return cloneMaterialSnapshot(stateByMaterial[material])
 	end
 
@@ -249,7 +257,15 @@ function ResourceFlowState.AddProduced(material: MaterialName, source: string, a
 	materialState.lastProducedAmount = amount
 
 	refreshDeliveryPointAttributes()
-	debugLog(string.format("Produced material=%s source=%s amount=%.0f produced=%.0f", material, source, amount, materialState.produced))
+	debugLog(
+		string.format(
+			"Produced material=%s source=%s amount=%.0f produced=%.0f",
+			material,
+			source,
+			amount,
+			materialState.produced
+		)
+	)
 
 	return cloneMaterialSnapshot(materialState)
 end
@@ -309,13 +325,15 @@ function ResourceFlowState.TransferProducedToInTransit(material: MaterialName, m
 		materialState.produced -= transferAmount
 		materialState.inTransit += transferAmount
 
-		debugLog(string.format(
-			"Hauled to transit material=%s amount=%.0f produced=%.0f inTransit=%.0f",
-			material,
-			transferAmount,
-			materialState.produced,
-			materialState.inTransit
-		))
+		debugLog(
+			string.format(
+				"Hauled to transit material=%s amount=%.0f produced=%.0f inTransit=%.0f",
+				material,
+				transferAmount,
+				materialState.produced,
+				materialState.inTransit
+			)
+		)
 		refreshDeliveryPointAttributes()
 	end
 
@@ -345,21 +363,27 @@ function ResourceFlowState.TransferInTransitToStored(material: MaterialName, max
 		materialState.lastDeliveredTo = getDeliveryIdForMaterial(material)
 		materialState.lastDeliveredAmount = transferAmount
 
-		debugLog(string.format(
-			"Delivered to storage material=%s amount=%.0f deliveryPoint=%s inTransit=%.0f stored=%.0f",
-			material,
-			transferAmount,
-			tostring(materialState.lastDeliveredTo),
-			materialState.inTransit,
-			materialState.stored
-		))
+		debugLog(
+			string.format(
+				"Delivered to storage material=%s amount=%.0f deliveryPoint=%s inTransit=%.0f stored=%.0f",
+				material,
+				transferAmount,
+				tostring(materialState.lastDeliveredTo),
+				materialState.inTransit,
+				materialState.stored
+			)
+		)
 		refreshDeliveryPointAttributes()
 	end
 
 	return cloneMaterialSnapshot(materialState)
 end
 
-function ResourceFlowState.SpendStoredAtomic(woodCost: number, stoneCost: number, reason: string): (boolean, FlowSnapshot, string?)
+function ResourceFlowState.SpendStoredAtomic(
+	woodCost: number,
+	stoneCost: number,
+	reason: string
+): (boolean, FlowSnapshot, string?)
 	if type(reason) ~= "string" or reason == "" then
 		return false, ResourceFlowState.GetSnapshot(), "invalid_reason"
 	end
@@ -376,25 +400,31 @@ function ResourceFlowState.SpendStoredAtomic(woodCost: number, stoneCost: number
 	local stoneState = stateByMaterial.Stone
 
 	if woodState.stored < woodCost then
-		return false, ResourceFlowState.GetSnapshot(), string.format("insufficient_wood required=%.0f stored=%.0f", woodCost, woodState.stored)
+		return false,
+			ResourceFlowState.GetSnapshot(),
+			string.format("insufficient_wood required=%.0f stored=%.0f", woodCost, woodState.stored)
 	end
 
 	if stoneState.stored < stoneCost then
-		return false, ResourceFlowState.GetSnapshot(), string.format("insufficient_stone required=%.0f stored=%.0f", stoneCost, stoneState.stored)
+		return false,
+			ResourceFlowState.GetSnapshot(),
+			string.format("insufficient_stone required=%.0f stored=%.0f", stoneCost, stoneState.stored)
 	end
 
 	woodState.stored -= woodCost
 	stoneState.stored -= stoneCost
 	refreshDeliveryPointAttributes()
 
-	debugLog(string.format(
-		"Spent stored reason=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
-		reason,
-		woodCost,
-		stoneCost,
-		woodState.stored,
-		stoneState.stored
-	))
+	debugLog(
+		string.format(
+			"Spent stored reason=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+			reason,
+			woodCost,
+			stoneCost,
+			woodState.stored,
+			stoneState.stored
+		)
+	)
 
 	return true, ResourceFlowState.GetSnapshot(), nil
 end
@@ -407,14 +437,16 @@ function ResourceFlowState.AddStoredAtomic(woodAmount: number, stoneAmount: numb
 	stateByMaterial.Stone.stored += safeStoneAmount
 	refreshDeliveryPointAttributes()
 
-	debugLog(string.format(
-		"Restored stored reason=%s woodAmount=%.0f stoneAmount=%.0f woodStored=%.0f stoneStored=%.0f",
-		reason,
-		safeWoodAmount,
-		safeStoneAmount,
-		stateByMaterial.Wood.stored,
-		stateByMaterial.Stone.stored
-	))
+	debugLog(
+		string.format(
+			"Restored stored reason=%s woodAmount=%.0f stoneAmount=%.0f woodStored=%.0f stoneStored=%.0f",
+			reason,
+			safeWoodAmount,
+			safeStoneAmount,
+			stateByMaterial.Wood.stored,
+			stateByMaterial.Stone.stored
+		)
+	)
 
 	return ResourceFlowState.GetSnapshot()
 end

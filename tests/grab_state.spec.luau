@@ -106,10 +106,7 @@ do
 	assertTrue(GrabState.CanPerformCarriedInteraction(state, "escapeAttempt"), "free actors can interact")
 	enterCarried(state)
 	assertFalse(GrabState.CanPerformCarriedInteraction(state, "escapeAttempt"), "carried actors cannot escape")
-	assertTrue(
-		GrabState.CanPerformCarriedInteraction(state, "carriedCounterplay"),
-		"carried actors can counterplay"
-	)
+	assertTrue(GrabState.CanPerformCarriedInteraction(state, "carriedCounterplay"), "carried actors can counterplay")
 end
 
 print("grab_state: all checks passed")

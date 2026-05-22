@@ -122,19 +122,16 @@ function MockPlayer.new(userId: number, name: string, options: any?)
 		Character = if opts.missingCharacter == true then nil else makeCharacter(position, hasRoot, opts),
 	}, MockPlayer)
 
-	function self:GetAttribute(attributeName: string): any
+	function self.GetAttribute(_self: any, attributeName: string): any
 		return attributes[attributeName]
 	end
 
-	function self:SetAttribute(attributeName: string, value: any)
+	function self.SetAttribute(_self: any, attributeName: string, value: any)
 		attributes[attributeName] = value
 	end
 
-	function self:GetAttributes(): { [string]: any }
-		local result: { [string]: any } = {}
-		for k, v in pairs(attributes) do
-			result[k] = v
-		end
+	function self.GetAttributes(_self: any): { [string]: any }
+		local result: { [string]: any } = table.clone(attributes)
 		return result
 	end
 

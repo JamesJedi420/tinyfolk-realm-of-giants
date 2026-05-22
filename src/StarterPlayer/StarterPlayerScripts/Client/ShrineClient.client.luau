@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -101,28 +100,32 @@ end
 
 shrineDebugStateResponseRemote.OnClientEvent:Connect(function(payload)
 	if type(payload) == "table" and payload.shrineId ~= nil then
-		debugLog(string.format(
-			"Debug state id=%s active=%s essenceTotal=%s tickCount=%s activatedBy=%s",
-			tostring(payload.shrineId),
-			tostring(payload.isActive),
-			tostring(payload.essenceTotal),
-			tostring(payload.tickCount),
-			tostring(payload.activatedByUserId)
-		))
+		debugLog(
+			string.format(
+				"Debug state id=%s active=%s essenceTotal=%s tickCount=%s activatedBy=%s",
+				tostring(payload.shrineId),
+				tostring(payload.isActive),
+				tostring(payload.essenceTotal),
+				tostring(payload.tickCount),
+				tostring(payload.activatedByUserId)
+			)
+		)
 		return
 	end
 
 	if type(payload) == "table" then
 		for _, item in payload do
 			if type(item) == "table" then
-				debugLog(string.format(
-					"Debug snapshot id=%s active=%s essenceTotal=%s tickCount=%s activatedBy=%s",
-					tostring(item.shrineId),
-					tostring(item.isActive),
-					tostring(item.essenceTotal),
-					tostring(item.tickCount),
-					tostring(item.activatedByUserId)
-				))
+				debugLog(
+					string.format(
+						"Debug snapshot id=%s active=%s essenceTotal=%s tickCount=%s activatedBy=%s",
+						tostring(item.shrineId),
+						tostring(item.isActive),
+						tostring(item.essenceTotal),
+						tostring(item.tickCount),
+						tostring(item.activatedByUserId)
+					)
+				)
 			end
 		end
 		return

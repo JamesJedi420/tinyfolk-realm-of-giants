@@ -65,8 +65,8 @@ local function makeFakeProfileStoreModule(startSessionImpl: ((string, any) -> an
 			},
 			endSessionCount = 0,
 		}
-		function profile:EndSession()
-			self.endSessionCount += 1
+		function profile.EndSession(_profile: any)
+			_profile.endSessionCount += 1
 		end
 
 		profilesByKey[profileKey] = profile

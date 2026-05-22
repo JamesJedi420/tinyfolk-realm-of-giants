@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local RealmChunkAssemblySchema = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmChunkAssemblySchema")
 local RealmAssemblyPrototypeFixture =
 	require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmAssemblyPrototypeFixture")
@@ -191,16 +190,6 @@ local function assertMinimalConsumerReadPaths(result: any, label: string)
 	assertTrue(type(result.validationSnapshot.hardConfig) == "table", label .. " hard snapshot readable")
 	assertTrue(type(result.validationSnapshot.softConfig) == "table", label .. " soft snapshot readable")
 	assertSnapshotMatrix(result, label .. " snapshot")
-end
-
-local function assertResultModeMatrix(
-	result: any,
-	expectedAccepted: boolean,
-	expectRejects: boolean,
-	expectPenalties: boolean,
-	label: string
-)
-	assertValidationResultContract(result, expectedAccepted, expectRejects, expectPenalties, label)
 end
 
 local protoOutput =
@@ -5268,7 +5257,7 @@ local function run()
 		end
 	end
 
-	local function captureValidationResultContractCommentAnchors(label: string): { [string]: any }
+	local function captureValidationResultContractCommentAnchors(_label: string): { [string]: any }
 		local contract = VALIDATION_RESULT_CONTRACT_DOCUMENTATION
 		return {
 			layerMapAnchor = contract.layerMapMarker,

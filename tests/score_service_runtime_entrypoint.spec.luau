@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local MockPlayer = require("../tests/mocks/MockPlayer")
 
 local function assertEqual(actual: any, expected: any, label: string)
@@ -224,7 +225,7 @@ end
 
 do
 	resetState()
-	local first = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 1, nil)
+	local _first = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 1, nil)
 	local second = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 2, nil)
 	local third = scoreApi.RequestScoreEvent(tinyfolk.UserId, "rescue_complete", 3, nil)
 

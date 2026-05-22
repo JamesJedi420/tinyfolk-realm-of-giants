@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
 		error(string.format("FAIL [%s]: expected true, got false", label))
@@ -153,7 +154,7 @@ local function makePlayer(userId: number)
 		loadCharacterAsyncCount = 0,
 	}
 
-	function player.SetAttribute(self: any, attributeName: string, value: any)
+	function player.SetAttribute(_self: any, attributeName: string, value: any)
 		attributes[attributeName] = value
 	end
 
@@ -545,7 +546,11 @@ assertEqual(
 	"realm save failure setup sets Giant role"
 )
 assertEqual(realmLoadCallCountByUserId[2004], 1, "realm save failure setup loads realm")
-assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), 2004, "second loaded Giant becomes active realm owner")
+assertEqual(
+	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
+	2004,
+	"second loaded Giant becomes active realm owner"
+)
 
 playerRemoving:Fire(playerRealmSaveFail)
 assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
@@ -565,7 +570,11 @@ assertEqual(realmReleaseCallCountByUserId[2003], nil, "removing failed-load Gian
 playerRemoving:Fire(playerUpdateOk)
 assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
 assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
-assertEqual(roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(), nil, "removing active Giant clears active realm owner")
+assertEqual(
+	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
+	nil,
+	"removing active Giant clears active realm owner"
+)
 assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), nil, "active realm owner projection clears")
 
 bindToCloseCallbacks[1]()

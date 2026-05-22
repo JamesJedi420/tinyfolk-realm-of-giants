@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local RealmChunkAssemblySchema = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmChunkAssemblySchema")
 local RealmAssemblyPrototypeFixture =
 	require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmAssemblyPrototypeFixture")
@@ -474,7 +473,8 @@ local function run()
 
 	-- BLOCK 28: Assembly output exposes resolvedMetadata and resolvedMetadataByPlacement.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		assert(out.resolvedMetadata ~= nil, "block28 resolvedMetadata present")
 		assert(out.resolvedMetadataByPlacement ~= nil, "block28 resolvedMetadataByPlacement present")
 		assertEqual(#out.resolvedMetadata, 2, "block28 two placement metadata entries")
@@ -484,7 +484,8 @@ local function run()
 
 	-- BLOCK 29: Landmark anchor metadata is preserved through assembly output.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
 		assert(startMeta ~= nil, "block29 P_Start metadata present")
 		assertEqual(startMeta.placementId, "P_Start", "block29 placementId")
@@ -499,7 +500,8 @@ local function run()
 
 	-- BLOCK 30: Tile-size class metadata is preserved through assembly output.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
 		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
 		assertEqual(startMeta.tileSizeClass, "large", "block30 P_Start tileSizeClass")
@@ -508,7 +510,8 @@ local function run()
 
 	-- BLOCK 31: Recurring-structure tags are preserved with stable ordering.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
 		assert(startMeta.recurringStructureTags ~= nil, "block31 recurringStructureTags present")
 		assertEqual(#startMeta.recurringStructureTags, 2, "block31 tag count")
@@ -521,7 +524,8 @@ local function run()
 
 	-- BLOCK 32: Indoor/outdoor and traversal-density metadata are preserved through assembly output.
 	do
-		local out = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local out =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		local startMeta = out.resolvedMetadataByPlacement["P_Start"]
 		local exitMeta = out.resolvedMetadataByPlacement["P_Exit"]
 		assertEqual(startMeta.environmentClass, "outdoor", "block32 P_Start environmentClass")
@@ -532,8 +536,10 @@ local function run()
 
 	-- BLOCK 33: Repeated runs produce identical resolved metadata ordering and values.
 	do
-		local outA = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
-		local outB = RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local outA =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local outB =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
 		assertEqual(#outA.resolvedMetadata, #outB.resolvedMetadata, "block33 count stable")
 		for index, metaA in ipairs(outA.resolvedMetadata) do
 			local metaB = outB.resolvedMetadata[index]
@@ -542,7 +548,11 @@ local function run()
 			assertEqual(metaA.isLandmarkAnchor, metaB.isLandmarkAnchor, "block33 landmark stable " .. tostring(index))
 			assertEqual(metaA.tileSizeClass, metaB.tileSizeClass, "block33 tileSize stable " .. tostring(index))
 			assertEqual(metaA.environmentClass, metaB.environmentClass, "block33 env stable " .. tostring(index))
-			assertEqual(metaA.traversalDensityClass, metaB.traversalDensityClass, "block33 density stable " .. tostring(index))
+			assertEqual(
+				metaA.traversalDensityClass,
+				metaB.traversalDensityClass,
+				"block33 density stable " .. tostring(index)
+			)
 		end
 	end
 

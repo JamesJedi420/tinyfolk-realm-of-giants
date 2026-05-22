@@ -96,12 +96,7 @@ local function checkSpecialistStationTinyfolkAccess(
 		if d > maxDist then
 			table.insert(
 				violations,
-				string.format(
-					"%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)",
-					station.name,
-					d,
-					maxDist
-				)
+				string.format("%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)", station.name, d, maxDist)
 			)
 		end
 	end
@@ -118,10 +113,7 @@ end
 
 -- Check 2: Every warehouse is within warehouseMaxPathStuds of a TinyfolkSpawn.
 -- Catches: warehouse placed so far that haulers cannot deliver.
-local function checkWarehouseTinyfolkAccess(
-	descriptor: RealmDescriptor,
-	config: RealmStationAccessConfig
-): CheckResult
+local function checkWarehouseTinyfolkAccess(descriptor: RealmDescriptor, config: RealmStationAccessConfig): CheckResult
 	local tinyfolkSpawns = getByPrefix(descriptor.spawns, "TinyfolkSpawn")
 	local warehouses = getByPrefix(descriptor.stations, config.warehousePrefix)
 	local maxDist = config.warehouseMaxPathStuds
@@ -132,12 +124,7 @@ local function checkWarehouseTinyfolkAccess(
 		if d > maxDist then
 			table.insert(
 				violations,
-				string.format(
-					"%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)",
-					warehouse.name,
-					d,
-					maxDist
-				)
+				string.format("%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)", warehouse.name, d, maxDist)
 			)
 		end
 	end
@@ -169,12 +156,7 @@ local function checkProductionWarehouseHaulLoop(
 		if d > maxDist then
 			table.insert(
 				violations,
-				string.format(
-					"%s is %.1f studs from nearest warehouse (max %.1f)",
-					station.name,
-					d,
-					maxDist
-				)
+				string.format("%s is %.1f studs from nearest warehouse (max %.1f)", station.name, d, maxDist)
 			)
 		end
 	end
@@ -204,12 +186,7 @@ local function checkConstructionSiteTinyfolkAccess(
 		if d > maxDist then
 			table.insert(
 				violations,
-				string.format(
-					"%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)",
-					site.name,
-					d,
-					maxDist
-				)
+				string.format("%s is %.1f studs from nearest TinyfolkSpawn (max %.1f)", site.name, d, maxDist)
 			)
 		end
 	end

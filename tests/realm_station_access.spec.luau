@@ -2,7 +2,9 @@ local RealmStationAccessValidator = require("../src/ReplicatedStorage/Shared/Rea
 
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -34,13 +36,13 @@ end
 --   StationConfig.ActivationRangeStuds = 16 (runtime gate; 80 studs is the design-time bound)
 --   All production stations and warehouse cluster near z=0 axis; max prototype distances ~64 studs
 local STANDARD_CONFIG = {
-	specialistStationPrefixes        = { "WorkStation_", "MiningStation_", "Shrine_" },
-	productionStationPrefixes        = { "WorkStation_", "MiningStation_" },
-	warehousePrefix                  = "Warehouse_",
-	specialistStationMaxPathStuds    = 80,
-	warehouseMaxPathStuds            = 100,
-	haulMaxStuds                     = 80,
-	constructionSiteMaxPathStuds     = 80,
+	specialistStationPrefixes = { "WorkStation_", "MiningStation_", "Shrine_" },
+	productionStationPrefixes = { "WorkStation_", "MiningStation_" },
+	warehousePrefix = "Warehouse_",
+	specialistStationMaxPathStuds = 80,
+	warehouseMaxPathStuds = 100,
+	haulMaxStuds = 80,
+	constructionSiteMaxPathStuds = 80,
 }
 
 -- Positions from Layout.model.json files:
@@ -55,14 +57,14 @@ local STANDARD_CONFIG = {
 
 local PROTOTYPE_SPAWNS = {
 	{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } },
-	{ name = "GiantSpawn",    position = { x = 12,  y = 0.5, z = 0 } },
+	{ name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } },
 }
 local PROTOTYPE_STATIONS = {
-	{ name = "WorkStation_A",   position = { x = 20,  y = 3,   z = 0 } },
-	{ name = "MiningStation_A", position = { x = 36,  y = 3,   z = 0 } },
-	{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },
-	{ name = "Warehouse_A",     position = { x = 52,  y = 3.5, z = 0 } },
-	{ name = "Granary_A",       position = { x = 4,   y = 3.5, z = 0 } },
+	{ name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } },
+	{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+	{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
+	{ name = "Warehouse_A", position = { x = 52, y = 3.5, z = 0 } },
+	{ name = "Granary_A", position = { x = 4, y = 3.5, z = 0 } },
 }
 local PROTOTYPE_SITES = {
 	{ name = "ConstructionSite_A", position = { x = 12, y = 0.5, z = 32 } },
@@ -74,20 +76,19 @@ local EMPTY_ZONES = {}
 local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 
 local PROTOTYPE_DESCRIPTOR = {
-	spawns            = PROTOTYPE_SPAWNS,
-	escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-	returnPoints      = EMPTY_RETURN_POINTS,
-	stations          = PROTOTYPE_STATIONS,
+	spawns = PROTOTYPE_SPAWNS,
+	escapeRoutes = EMPTY_ESCAPE_ROUTES,
+	returnPoints = EMPTY_RETURN_POINTS,
+	stations = PROTOTYPE_STATIONS,
 	constructionSites = PROTOTYPE_SITES,
-	upgradeBoards     = EMPTY_BOARDS,
-	controlZones      = EMPTY_ZONES,
-	captureZones      = {},
-	props             = {},
-	routeGraph        = EMPTY_ROUTE_GRAPH,
+	upgradeBoards = EMPTY_BOARDS,
+	controlZones = EMPTY_ZONES,
+	captureZones = {},
+	props = {},
+	routeGraph = EMPTY_ROUTE_GRAPH,
 }
 
 local function run()
-
 	-- ============================================================
 	-- BLOCK 1: Prototype map — all 4 checks pass
 	-- WorkStation_A: ~32.1 studs from TinyfolkSpawn <= 80
@@ -120,21 +121,21 @@ local function run()
 	-- WorkStation_A at (300, 3, 0) — dist to TinyfolkSpawn ~312 >> 80
 	-- ============================================================
 	local distantWorkStation = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = {
-			{ name = "WorkStation_A",   position = { x = 300, y = 3,   z = 0 } },
-			{ name = "MiningStation_A", position = { x = 36,  y = 3,   z = 0 } },
-			{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },
-			{ name = "Warehouse_A",     position = { x = 52,  y = 3.5, z = 0 } },
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = EMPTY_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = {
+			{ name = "WorkStation_A", position = { x = 300, y = 3, z = 0 } },
+			{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+			{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
+			{ name = "Warehouse_A", position = { x = 52, y = 3.5, z = 0 } },
 		},
 		constructionSites = PROTOTYPE_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r2 = RealmStationAccessValidator.ValidateStationAccess(distantWorkStation, STANDARD_CONFIG)
 	assertEqual(r2.passed, false, "distant workstation overall fail")
@@ -148,21 +149,21 @@ local function run()
 	-- Warehouse_A at (300, 3, 0) — dist to TinyfolkSpawn ~312 >> 100
 	-- ============================================================
 	local distantWarehouse = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = {
-			{ name = "WorkStation_A",   position = { x = 20,  y = 3,   z = 0 } },
-			{ name = "MiningStation_A", position = { x = 36,  y = 3,   z = 0 } },
-			{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },
-			{ name = "Warehouse_A",     position = { x = 300, y = 3,   z = 0 } },
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = EMPTY_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = {
+			{ name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } },
+			{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+			{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
+			{ name = "Warehouse_A", position = { x = 300, y = 3, z = 0 } },
 		},
 		constructionSites = PROTOTYPE_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmStationAccessValidator.ValidateStationAccess(distantWarehouse, STANDARD_CONFIG)
 	assertEqual(r3.passed, false, "distant warehouse overall fail")
@@ -176,21 +177,21 @@ local function run()
 	-- WorkStation at (0, 3, 0), only Warehouse at (0, 3, 300) — haul dist = 300 >> 80
 	-- ============================================================
 	local brokenHaulLoop = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = {
-			{ name = "WorkStation_A",   position = { x = 0, y = 3,   z = 0   } },
-			{ name = "MiningStation_A", position = { x = 36, y = 3,  z = 0   } },
-			{ name = "Shrine_A",        position = { x = -20, y = 4, z = 0   } },
-			{ name = "Warehouse_A",     position = { x = 0, y = 3,   z = 300 } },
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = EMPTY_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = {
+			{ name = "WorkStation_A", position = { x = 0, y = 3, z = 0 } },
+			{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+			{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
+			{ name = "Warehouse_A", position = { x = 0, y = 3, z = 300 } },
 		},
 		constructionSites = PROTOTYPE_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmStationAccessValidator.ValidateStationAccess(brokenHaulLoop, STANDARD_CONFIG)
 	assertEqual(r4.passed, false, "broken haul loop overall fail")
@@ -204,18 +205,18 @@ local function run()
 	-- ConstructionSite at (300, 0.5, 0) — dist to TinyfolkSpawn ~312 >> 80
 	-- ============================================================
 	local distantSite = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = PROTOTYPE_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = EMPTY_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = PROTOTYPE_STATIONS,
 		constructionSites = {
 			{ name = "ConstructionSite_A", position = { x = 300, y = 0.5, z = 0 } },
 		},
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmStationAccessValidator.ValidateStationAccess(distantSite, STANDARD_CONFIG)
 	assertEqual(r5.passed, false, "distant construction site overall fail")
@@ -233,21 +234,21 @@ local function run()
 	-- This isolates the specialist access failure without breaking the haul loop.
 	-- ============================================================
 	local mixedStations = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = EMPTY_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = {
-			{ name = "WorkStation_A",   position = { x = 20,  y = 3,   z = 0 } },  -- ~32.1 studs from spawn, passes
-			{ name = "MiningStation_A", position = { x = 130, y = 3,   z = 0 } },  -- ~142 studs from spawn, fails; ~78 studs from warehouse, haul passes
-			{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },  -- ~8.7 studs from spawn, passes
-			{ name = "Warehouse_A",     position = { x = 52,  y = 3.5, z = 0 } },  -- ~64.1 studs from spawn, passes
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = EMPTY_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = {
+			{ name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } }, -- ~32.1 studs from spawn, passes
+			{ name = "MiningStation_A", position = { x = 130, y = 3, z = 0 } }, -- ~142 studs from spawn, fails; ~78 studs from warehouse, haul passes
+			{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } }, -- ~8.7 studs from spawn, passes
+			{ name = "Warehouse_A", position = { x = 52, y = 3.5, z = 0 } }, -- ~64.1 studs from spawn, passes
 		},
 		constructionSites = PROTOTYPE_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmStationAccessValidator.ValidateStationAccess(mixedStations, STANDARD_CONFIG)
 	assertEqual(r6.passed, false, "mixed stations overall fail")

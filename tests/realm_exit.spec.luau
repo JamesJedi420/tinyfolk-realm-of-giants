@@ -2,7 +2,9 @@ local RealmExitValidator = require("../src/ReplicatedStorage/Shared/RealmTopolog
 
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -35,10 +37,10 @@ end
 --   exitClusteringMinSeparationStuds = 40 (exits must not share one defended zone)
 --   returnPointExitMaxStuds = 100 (EscapeRoute_A is ~50 studs from ReturnPoint)
 local STANDARD_CONFIG = {
-	exitCountMinimum                  = 2,
-	exitGiantSpawnMinSeparationStuds  = 30,
-	exitClusteringMinSeparationStuds  = 40,
-	returnPointExitMaxStuds           = 100,
+	exitCountMinimum = 2,
+	exitGiantSpawnMinSeparationStuds = 30,
+	exitClusteringMinSeparationStuds = 40,
+	returnPointExitMaxStuds = 100,
 }
 
 -- Map positions from Layout.model.json:
@@ -47,8 +49,8 @@ local STANDARD_CONFIG = {
 --   EscapeRoute_A:        (  0, 1,   170)   -- ~170 studs from GiantSpawn
 --   TinyfolkReturnPoint:  (  0, 1,   220)   -- ~50 studs from EscapeRoute_A
 local PROTOTYPE_SPAWNS = {
-	{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0   } },
-	{ name = "GiantSpawn",    position = { x = 12,  y = 0.5, z = 0   } },
+	{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } },
+	{ name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } },
 }
 local PROTOTYPE_ESCAPE_ROUTES = {
 	{ name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 } },
@@ -67,36 +69,35 @@ local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 --   EscapeRoute_C: (60, 1, 170) — 60 studs from B (>40), ~168 studs from GiantSpawn
 --   Both exits are ~50–80 studs from TinyfolkReturnPoint (0,1,220) — within 100
 local TWO_EXIT_DESCRIPTOR = {
-	spawns            = PROTOTYPE_SPAWNS,
-	escapeRoutes      = {
-		{ name = "EscapeRoute_B", position = { x = 0,  y = 1, z = 170 } },
+	spawns = PROTOTYPE_SPAWNS,
+	escapeRoutes = {
+		{ name = "EscapeRoute_B", position = { x = 0, y = 1, z = 170 } },
 		{ name = "EscapeRoute_C", position = { x = 60, y = 1, z = 170 } },
 	},
-	returnPoints      = PROTOTYPE_RETURN_POINTS,
-	stations          = EMPTY_STATIONS,
+	returnPoints = PROTOTYPE_RETURN_POINTS,
+	stations = EMPTY_STATIONS,
 	constructionSites = EMPTY_SITES,
-	upgradeBoards     = EMPTY_BOARDS,
-	controlZones      = EMPTY_ZONES,
-	captureZones      = {},
-	props             = {},
-	routeGraph        = EMPTY_ROUTE_GRAPH,
+	upgradeBoards = EMPTY_BOARDS,
+	controlZones = EMPTY_ZONES,
+	captureZones = {},
+	props = {},
+	routeGraph = EMPTY_ROUTE_GRAPH,
 }
 
 local PROTOTYPE_DESCRIPTOR = {
-	spawns            = PROTOTYPE_SPAWNS,
-	escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-	returnPoints      = PROTOTYPE_RETURN_POINTS,
-	stations          = EMPTY_STATIONS,
+	spawns = PROTOTYPE_SPAWNS,
+	escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+	returnPoints = PROTOTYPE_RETURN_POINTS,
+	stations = EMPTY_STATIONS,
 	constructionSites = EMPTY_SITES,
-	upgradeBoards     = EMPTY_BOARDS,
-	controlZones      = EMPTY_ZONES,
-	captureZones      = {},
-	props             = {},
-	routeGraph        = EMPTY_ROUTE_GRAPH,
+	upgradeBoards = EMPTY_BOARDS,
+	controlZones = EMPTY_ZONES,
+	captureZones = {},
+	props = {},
+	routeGraph = EMPTY_ROUTE_GRAPH,
 }
 
 local function run()
-
 	-- ============================================================
 	-- BLOCK 1: Synthetic two-exit descriptor — all 4 checks pass
 	-- EscapeRoute_B (0,1,170) and EscapeRoute_C (60,1,170):
@@ -150,16 +151,16 @@ local function run()
 	-- BLOCK 3: Failure — only 1 exit, minimum 2
 	-- ============================================================
 	local oneExit = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = { { name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 } } },
-		returnPoints      = PROTOTYPE_RETURN_POINTS,
-		stations          = EMPTY_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = { { name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 } } },
+		returnPoints = PROTOTYPE_RETURN_POINTS,
+		stations = EMPTY_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmExitValidator.ValidateExits(oneExit, STANDARD_CONFIG)
 	assertEqual(r3.passed, false, "one exit overall fail")
@@ -173,19 +174,19 @@ local function run()
 	-- EscapeRoute_D: (0,1,170), EscapeRoute_E: (20,1,170) — 20 studs apart < 40
 	-- ============================================================
 	local clusteredExits = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = {
-			{ name = "EscapeRoute_D", position = { x = 0,  y = 1, z = 170 } },
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = {
+			{ name = "EscapeRoute_D", position = { x = 0, y = 1, z = 170 } },
 			{ name = "EscapeRoute_E", position = { x = 20, y = 1, z = 170 } },
 		},
-		returnPoints      = PROTOTYPE_RETURN_POINTS,
-		stations          = EMPTY_STATIONS,
+		returnPoints = PROTOTYPE_RETURN_POINTS,
+		stations = EMPTY_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmExitValidator.ValidateExits(clusteredExits, STANDARD_CONFIG)
 	assertEqual(r4.passed, false, "clustered exits overall fail")
@@ -200,19 +201,19 @@ local function run()
 	-- Pair with a distant exit to pass exit_count_minimum.
 	-- ============================================================
 	local exitNearGiantSpawn = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = {
-			{ name = "EscapeRoute_F", position = { x = 12,  y = 0.5, z = 20  } },
-			{ name = "EscapeRoute_G", position = { x = -80, y = 1,   z = 170 } },
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = {
+			{ name = "EscapeRoute_F", position = { x = 12, y = 0.5, z = 20 } },
+			{ name = "EscapeRoute_G", position = { x = -80, y = 1, z = 170 } },
 		},
-		returnPoints      = PROTOTYPE_RETURN_POINTS,
-		stations          = EMPTY_STATIONS,
+		returnPoints = PROTOTYPE_RETURN_POINTS,
+		stations = EMPTY_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmExitValidator.ValidateExits(exitNearGiantSpawn, STANDARD_CONFIG)
 	assertEqual(r5.passed, false, "exit near Giant spawn overall fail")
@@ -226,21 +227,21 @@ local function run()
 	-- ReturnPoint at (0,1,220); exits at (200,1,0) and (240,1,0) — both >200 studs away
 	-- ============================================================
 	local isolatedReturnPoint = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = {
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = {
 			{ name = "EscapeRoute_H", position = { x = 200, y = 1, z = 0 } },
 			{ name = "EscapeRoute_I", position = { x = 240, y = 1, z = 0 } },
 		},
-		returnPoints      = {
+		returnPoints = {
 			{ name = "TinyfolkReturnPoint", position = { x = 0, y = 1, z = 220 } },
 		},
-		stations          = EMPTY_STATIONS,
+		stations = EMPTY_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = EMPTY_ZONES,
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = EMPTY_ZONES,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r6 = RealmExitValidator.ValidateExits(isolatedReturnPoint, STANDARD_CONFIG)
 	assertEqual(r6.passed, false, "isolated return point overall fail")

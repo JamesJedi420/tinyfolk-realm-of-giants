@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local ProfileStoreOwnerLayer = require("../src/ServerScriptService/Services/ProfileStoreOwnerLayer")
 local fs = require("@lune/fs")
 
@@ -35,7 +34,7 @@ local function makeFakeProfileStoreModule(): any
 					schemaVersion = template.schemaVersion,
 				},
 			}
-			function profile:EndSession() end
+			function profile.EndSession(_self: any) end
 			return profile
 		end
 

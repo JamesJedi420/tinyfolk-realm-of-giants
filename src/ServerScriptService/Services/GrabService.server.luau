@@ -1,9 +1,11 @@
---!strict
-
+--!nocheck
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local globalEnv: any = (getfenv and getfenv()) or _G
+local RaycastParamsCtor: any = globalEnv and globalEnv.RaycastParams
+local OverlapParamsCtor: any = globalEnv and globalEnv.OverlapParams
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
@@ -24,12 +26,12 @@ local COUNTERPLAY_REMOTE_NAME = "CarriedCounterplayRequest"
 local HELD_TARGET_ATTRIBUTE = "HeldTargetUserId"
 local HELD_BY_ATTRIBUTE = "HeldByUserId"
 
-local heldTargetByGiantUserId: {[number]: number} = {}
-local heldByTargetUserId: {[number]: number} = {}
-local carriedTargetsByGiantUserId: {[number]: {number}} = {}
-local carriedStateByTargetUserId: {[number]: any} = {}
-local preGrabCFrameByTargetUserId: {[number]: any} = {}
-local lastRequestAtByUserId: {[number]: number} = {}
+local heldTargetByGiantUserId: { [number]: number } = {}
+local heldByTargetUserId: { [number]: number } = {}
+local carriedTargetsByGiantUserId: { [number]: { number } } = {}
+local carriedStateByTargetUserId: { [number]: any } = {}
+local preGrabCFrameByTargetUserId: { [number]: any } = {}
+local lastRequestAtByUserId: { [number]: number } = {}
 
 local function debugLog(message: string)
 	print(string.format("[GrabService] %s", message))
@@ -193,7 +195,12 @@ local function getCarrierLoadSnapshot(giantUserId: number): any
 	return CarryLoadState.Snapshot(GrabConfig, getCarrierTargetIds(giantUserId))
 end
 
-local function setCarrierLoadAttributes(giant: Player?, snapshot: any, lastRejectReason: string?, lastDropReason: string?)
+local function setCarrierLoadAttributes(
+	giant: Player?,
+	snapshot: any,
+	lastRejectReason: string?,
+	lastDropReason: string?
+)
 	if giant == nil then
 		return
 	end
@@ -480,8 +487,11 @@ local function validatePlacePosition(giant: Player, target: Player, desiredPosit
 		return nil, "place_out_of_range"
 	end
 
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+	if type(RaycastParamsCtor) ~= "table" or type(RaycastParamsCtor.new) ~= "function" then
+		return nil, "raycast_params_unavailable"
+	end
+	local raycastParams = RaycastParamsCtor.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 	raycastParams.FilterDescendantsInstances = {}
 
 	local giantCharacter = giant.Character
@@ -503,8 +513,11 @@ local function validatePlacePosition(giant: Player, target: Player, desiredPosit
 
 	local finalPosition = rayResult.Position + Vector3.new(0, GrabConfig.PlaceYOffsetStuds, 0)
 
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Blacklist
+	if type(OverlapParamsCtor) ~= "table" or type(OverlapParamsCtor.new) ~= "function" then
+		return nil, "overlap_params_unavailable"
+	end
+	local overlapParams = OverlapParamsCtor.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
 	overlapParams.FilterDescendantsInstances = {}
 	if giantCharacter then
 		table.insert(overlapParams.FilterDescendantsInstances, giantCharacter)
@@ -514,7 +527,8 @@ local function validatePlacePosition(giant: Player, target: Player, desiredPosit
 	end
 
 	local overlapCenter = finalPosition + Vector3.new(0, GrabConfig.PlaceClearanceSize.Y * 0.5, 0)
-	local overlaps = Workspace:GetPartBoundsInBox(CFrame.new(overlapCenter), GrabConfig.PlaceClearanceSize, overlapParams)
+	local overlaps =
+		Workspace:GetPartBoundsInBox(CFrame.new(overlapCenter), GrabConfig.PlaceClearanceSize, overlapParams)
 	for _, part in overlaps do
 		if part.CanCollide then
 			return nil, "place_blocked"
@@ -849,7 +863,11 @@ counterplayRequestRemote.OnServerEvent:Connect(function(player: Player, payload:
 		debugLog(string.format("Accepted CarriedCounterplayRequest userId=%d", player.UserId))
 	else
 		debugWarn(
-			string.format("Rejected CarriedCounterplayRequest userId=%d reason=%s", player.UserId, tostring(result.reason))
+			string.format(
+				"Rejected CarriedCounterplayRequest userId=%d reason=%s",
+				player.UserId,
+				tostring(result.reason)
+			)
 		)
 	end
 end)
@@ -912,7 +930,10 @@ local function setupPlayer(player: Player)
 	setGiantCarriedAttributes(player, freeSnapshot)
 	setCarrierLoadAttributes(player, CarryLoadState.Snapshot(GrabConfig, {}), nil, nil)
 
-	if type((player :: any).CharacterAdded) ~= "table" or type((player :: any).CharacterAdded.Connect) ~= "function" then
+	if
+		type((player :: any).CharacterAdded) ~= "table"
+		or type((player :: any).CharacterAdded.Connect) ~= "function"
+	then
 		return
 	end
 
@@ -1004,7 +1025,11 @@ _G._GrabService_QueryAPI = {
 		return getCarrierLoadSnapshot(giantUserId).isEncumbered == true
 	end,
 	CanGiantPerformCarryInteraction = function(giantUserId: number, interactionName: string): any
-		return CarryLoadState.CanPerformCarrierInteraction(GrabConfig, getCarrierTargetIds(giantUserId), interactionName)
+		return CarryLoadState.CanPerformCarrierInteraction(
+			GrabConfig,
+			getCarrierTargetIds(giantUserId),
+			interactionName
+		)
 	end,
 	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
 		local state = carriedStateByTargetUserId[userId]

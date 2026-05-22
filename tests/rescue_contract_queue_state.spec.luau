@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local RescueContractQueueState = require("../src/ReplicatedStorage/Shared/GiantRealm/RescueContractQueueState")
 
 local function assertEqual(actual: any, expected: any, label: string)

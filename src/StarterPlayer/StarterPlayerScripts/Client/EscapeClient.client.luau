@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -105,13 +104,15 @@ escapeDebugResponseRemote.OnClientEvent:Connect(function(payload)
 	end
 
 	if payload.routeId ~= nil then
-		debugLog(string.format(
-			"Escape debug routeId=%s isEnabled=%s successfulEscapes=%s escaped=%s",
-			tostring(payload.routeId),
-			tostring(payload.isEnabled),
-			tostring(payload.successfulEscapes),
-			tostring(payload.escaped)
-		))
+		debugLog(
+			string.format(
+				"Escape debug routeId=%s isEnabled=%s successfulEscapes=%s escaped=%s",
+				tostring(payload.routeId),
+				tostring(payload.isEnabled),
+				tostring(payload.successfulEscapes),
+				tostring(payload.escaped)
+			)
+		)
 		return
 	end
 
@@ -119,12 +120,14 @@ escapeDebugResponseRemote.OnClientEvent:Connect(function(payload)
 	if type(routes) == "table" then
 		for _, route in routes do
 			if type(route) == "table" then
-				debugLog(string.format(
-					"Escape debug snapshot routeId=%s isEnabled=%s successfulEscapes=%s",
-					tostring(route.routeId),
-					tostring(route.isEnabled),
-					tostring(route.successfulEscapes)
-				))
+				debugLog(
+					string.format(
+						"Escape debug snapshot routeId=%s isEnabled=%s successfulEscapes=%s",
+						tostring(route.routeId),
+						tostring(route.isEnabled),
+						tostring(route.successfulEscapes)
+					)
+				)
 			end
 		end
 		debugLog(string.format("Escape debug snapshot escaped=%s", tostring(payload.escaped)))

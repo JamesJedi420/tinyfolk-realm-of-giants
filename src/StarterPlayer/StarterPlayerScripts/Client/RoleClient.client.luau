@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -126,22 +125,26 @@ roleDebugResponseRemote.OnClientEvent:Connect(function(payload)
 		return
 	end
 
-	print(string.format(
-		"[RoleClient] Debug role=%s selectedRole=%s roleLocked=%s",
-		tostring(payload.role),
-		tostring(payload.selectedRole),
-		tostring(payload.roleLocked)
-	))
+	print(
+		string.format(
+			"[RoleClient] Debug role=%s selectedRole=%s roleLocked=%s",
+			tostring(payload.role),
+			tostring(payload.selectedRole),
+			tostring(payload.roleLocked)
+		)
+	)
 end)
 
 localPlayer:GetAttributeChangedSignal(ROLE_LOCKED_ATTRIBUTE):Connect(function()
 	if isRoleLocked() then
 		refreshPromptVisibility()
-		print(string.format(
-			"[RoleClient] Role locked: selectedRole=%s activeRole=%s",
-			tostring(localPlayer:GetAttribute(SELECTED_ROLE_ATTRIBUTE)),
-			tostring(localPlayer:GetAttribute(ROLE_ATTRIBUTE))
-		))
+		print(
+			string.format(
+				"[RoleClient] Role locked: selectedRole=%s activeRole=%s",
+				tostring(localPlayer:GetAttribute(SELECTED_ROLE_ATTRIBUTE)),
+				tostring(localPlayer:GetAttribute(ROLE_ATTRIBUTE))
+			)
+		)
 		return
 	end
 

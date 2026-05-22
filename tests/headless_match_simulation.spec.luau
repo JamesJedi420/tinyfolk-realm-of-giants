@@ -1,4 +1,6 @@
 --!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 
 local MatchSimulation = require("../tests/harness/MatchSimulation")
 
@@ -50,6 +52,7 @@ local function createEscapeServiceFixture()
 		Name = "EscapeRoute_A",
 		ClassName = "BasePart",
 		Position = { x = 0, y = 0, z = 0 },
+		Parent = nil,
 	}
 
 	function routePart:IsA(className: string): boolean
@@ -66,6 +69,7 @@ local function createEscapeServiceFixture()
 
 	local escapeRoutesFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function escapeRoutesFolder:FindFirstChild(childName: string): any
@@ -81,6 +85,7 @@ local function createEscapeServiceFixture()
 
 	local mapFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function mapFolder:FindFirstChild(childName: string): any
@@ -93,6 +98,10 @@ local function createEscapeServiceFixture()
 	local workspaceService: any = {
 		ClassName = "Workspace",
 	}
+
+	routePart.Parent = escapeRoutesFolder
+	escapeRoutesFolder.Parent = mapFolder
+	mapFolder.Parent = workspaceService
 
 	function workspaceService:FindFirstChild(childName: string): any
 		if childName == "Map" then
@@ -201,19 +210,13 @@ local function createEscapeServiceFixture()
 		},
 		completedSiteIds = {},
 	}
-	local scoreEvents: { any } = {}
-	_G._ScoreService_QueryAPI = {
-		RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
-			table.insert(scoreEvents, {
-				userId = userId,
-				eventId = eventId,
-				at = at,
-				metadata = metadata,
-			})
+	local globalEnv: any = getfenv()
+	local scoreServiceQueryApi = {
+		RequestScoreEvent = function(_userId: number, _eventId: string, _at: number, _metadata: any): any
 			return { accepted = true, reason = "accepted" }
 		end,
 	}
-	_G._RealmObjectiveService_QueryAPI = {
+	local objectiveServiceQueryApi = {
 		IsEscapeObjectiveThresholdMet = function(): boolean
 			return objectiveState.completedCount >= objectiveState.requiredCompletions
 		end,
@@ -255,6 +258,10 @@ local function createEscapeServiceFixture()
 			objectiveState.completedSiteIds = {}
 		end,
 	}
+	globalEnv._ScoreService_QueryAPI = scoreServiceQueryApi
+	_G._ScoreService_QueryAPI = scoreServiceQueryApi
+	globalEnv._RealmObjectiveService_QueryAPI = objectiveServiceQueryApi
+	_G._RealmObjectiveService_QueryAPI = objectiveServiceQueryApi
 	local EscapeServiceFactory = require("../src/ServerScriptService/Services/EscapeService.server")
 	local escapeService = EscapeServiceFactory(mockGame, {
 		autoInitialize = true,
@@ -277,7 +284,7 @@ local function createEscapeServiceFixture()
 			currentTime = nextNow
 		end,
 		completeObjective = function(siteId: string, completedByUserId: number?, at: number?): any
-			return _G._RealmObjectiveService_QueryAPI.RecordObjectiveCompletion(siteId, completedByUserId, at)
+			return objectiveServiceQueryApi.RecordObjectiveCompletion(siteId, completedByUserId, at)
 		end,
 	}
 end
@@ -302,6 +309,7 @@ local function createTransportEscapeIntegrationFixture()
 		Name = "EscapeRoute_A",
 		ClassName = "BasePart",
 		Position = { x = 0, y = 0, z = 0 },
+		Parent = nil,
 	}
 
 	function routePart:IsA(className: string): boolean
@@ -318,6 +326,7 @@ local function createTransportEscapeIntegrationFixture()
 
 	local escapeRoutesFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function escapeRoutesFolder:FindFirstChild(childName: string): any
@@ -344,6 +353,7 @@ local function createTransportEscapeIntegrationFixture()
 	local transportEndpointPart: any = {
 		Name = "TransportEndpoint_Main",
 		ClassName = "BasePart",
+		Parent = nil,
 	}
 
 	function transportEndpointPart:GetAttribute(attributeName: string): any
@@ -356,6 +366,7 @@ local function createTransportEscapeIntegrationFixture()
 
 	local transportEndpointsFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function transportEndpointsFolder:GetChildren(): { any }
@@ -371,6 +382,7 @@ local function createTransportEscapeIntegrationFixture()
 
 	local tinyfolkWorldFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function tinyfolkWorldFolder:FindFirstChild(childName: string): any
@@ -382,6 +394,7 @@ local function createTransportEscapeIntegrationFixture()
 
 	local mapFolder: any = {
 		ClassName = "Folder",
+		Parent = nil,
 	}
 
 	function mapFolder:FindFirstChild(childName: string): any
@@ -400,6 +413,13 @@ local function createTransportEscapeIntegrationFixture()
 	local workspaceService: any = {
 		ClassName = "Workspace",
 	}
+
+	routePart.Parent = escapeRoutesFolder
+	escapeRoutesFolder.Parent = mapFolder
+	transportEndpointPart.Parent = transportEndpointsFolder
+	transportEndpointsFolder.Parent = mapFolder
+	tinyfolkWorldFolder.Parent = mapFolder
+	mapFolder.Parent = workspaceService
 
 	function workspaceService:FindFirstChild(childName: string): any
 		if childName == "Map" then
@@ -503,7 +523,8 @@ local function createTransportEscapeIntegrationFixture()
 	local currentTime = 100
 	local objectiveThresholdMet = false
 	local scoreEvents: { any } = {}
-	_G._ScoreService_QueryAPI = {
+	local globalEnv: any = getfenv()
+	local scoreServiceQueryApi = {
 		RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
 			table.insert(scoreEvents, {
 				userId = userId,
@@ -514,11 +535,15 @@ local function createTransportEscapeIntegrationFixture()
 			return { accepted = true, reason = "accepted" }
 		end,
 	}
-	_G._RealmObjectiveService_QueryAPI = {
+	local objectiveServiceQueryApi = {
 		IsEscapeObjectiveThresholdMet = function(): boolean
 			return objectiveThresholdMet == true
 		end,
 	}
+	globalEnv._ScoreService_QueryAPI = scoreServiceQueryApi
+	_G._ScoreService_QueryAPI = scoreServiceQueryApi
+	globalEnv._RealmObjectiveService_QueryAPI = objectiveServiceQueryApi
+	_G._RealmObjectiveService_QueryAPI = objectiveServiceQueryApi
 	local EscapeServiceFactory = require("../src/ServerScriptService/Services/EscapeService.server")
 	local escapeService = EscapeServiceFactory(mockGame, {
 		autoInitialize = true,
@@ -532,6 +557,10 @@ local function createTransportEscapeIntegrationFixture()
 			end,
 		},
 	})
+	if type(globalEnv._EscapeService_QueryAPI) == "table" then
+		_G._EscapeService_QueryAPI = globalEnv._EscapeService_QueryAPI
+	end
+	local escapeQueryApi = globalEnv._EscapeService_QueryAPI
 
 	local TransportEscapeServiceFactory = require("../src/ServerScriptService/Services/TransportEscapeService.server")
 	TransportEscapeServiceFactory(mockGame, {
@@ -540,10 +569,14 @@ local function createTransportEscapeIntegrationFixture()
 			return currentTime
 		end,
 	})
+	if type(_G._TransportEscapeService_QueryAPI) == "table" then
+		globalEnv._TransportEscapeService_QueryAPI = _G._TransportEscapeService_QueryAPI
+	end
+	local transportQueryApi = globalEnv._TransportEscapeService_QueryAPI
 
 	return {
 		escapeService = escapeService,
-		transportQueryApi = _G._TransportEscapeService_QueryAPI,
+		transportQueryApi = transportQueryApi,
 		playersByUserId = playersByUserId,
 		routeAttributes = routeAttributes,
 		scoreEvents = scoreEvents,
@@ -554,16 +587,22 @@ local function createTransportEscapeIntegrationFixture()
 			objectiveThresholdMet = isMet == true
 		end,
 		refreshFinalExit = function(routeId: string?): any
-			return _G._EscapeService_QueryAPI.GetFinalExitSnapshot(if routeId ~= nil then routeId else "EscapeRoute_A")
+			if escapeQueryApi == nil then
+				return nil
+			end
+			return escapeQueryApi.GetFinalExitSnapshot(if routeId ~= nil then routeId else "EscapeRoute_A")
 		end,
 		openFinalExit = function(routeId: string?)
 			local targetRouteId = if routeId ~= nil then routeId else "EscapeRoute_A"
 			objectiveThresholdMet = true
-			_G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
+			if escapeQueryApi == nil then
+				return nil
+			end
+			escapeQueryApi.GetFinalExitSnapshot(targetRouteId)
 			currentTime = 102
-			_G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
+			escapeQueryApi.GetFinalExitSnapshot(targetRouteId)
 			currentTime = 105
-			return _G._EscapeService_QueryAPI.GetFinalExitSnapshot(targetRouteId)
+			return escapeQueryApi.GetFinalExitSnapshot(targetRouteId)
 		end,
 	}
 end
@@ -691,7 +730,11 @@ do
 	assertEqual(poweredResults[3].result.accepted, false, "managed final exit rejects powered escape in headless flow")
 	assertEqual(poweredResults[3].result.reason, "final_exit_powered", "managed final exit powered reason")
 
-	fixture.setNow(102)
+	local poweredEndsAt = fixture.routeAttributes.FinalExitPoweredEndsAt
+	assertTrue(type(poweredEndsAt) == "number", "headless fixture projects powered end timestamp")
+
+	fixture.setNow(poweredEndsAt)
+	fixture.escapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
 	sim:queueAction(3, "attemptEscape", {
 		userId = 12,
 		routeId = "EscapeRoute_A",
@@ -701,7 +744,11 @@ do
 	assertEqual(openingResults[4].result.accepted, false, "managed final exit rejects opening escape in headless flow")
 	assertEqual(openingResults[4].result.reason, "final_exit_opening", "managed final exit opening reason")
 
-	fixture.setNow(105)
+	local openingEndsAt = fixture.routeAttributes.FinalExitOpeningEndsAt
+	assertTrue(type(openingEndsAt) == "number", "headless fixture projects opening end timestamp")
+
+	fixture.setNow(openingEndsAt)
+	fixture.escapeService.RefreshFinalExitStateForTests("EscapeRoute_A")
 	sim:queueAction(4, "attemptEscape", {
 		userId = 12,
 		routeId = "EscapeRoute_A",
@@ -747,15 +794,9 @@ do
 end
 
 do
-	local captureRequests: { any } = {}
 	local scoreRequests: { any } = {}
 	_G._CaptureService_QueryAPI = {
-		RequestCapture = function(custodianUserId: number, targetUserId: number, at: number): any
-			table.insert(captureRequests, {
-				custodianUserId = custodianUserId,
-				targetUserId = targetUserId,
-				at = at,
-			})
+		RequestCapture = function(_custodianUserId: number, _targetUserId: number, _at: number): any
 			-- Default: reject because target is not downed
 			return {
 				accepted = false,
@@ -844,7 +885,8 @@ end
 do
 	local fixture = createEscapeServiceFixture()
 	local downedByUserId: { [number]: any } = {}
-	_G._RoleService_QueryAPI = {
+	local globalEnv: any = getfenv()
+	local roleServiceQueryApi = {
 		SetDowned = function(userId: number, durationSeconds: number, _reason: string): boolean
 			local player = fixture.playersByUserId[userId]
 			if player == nil then
@@ -910,6 +952,8 @@ do
 			return true
 		end,
 	}
+	globalEnv._RoleService_QueryAPI = roleServiceQueryApi
+	_G._RoleService_QueryAPI = roleServiceQueryApi
 
 	local simulation = MatchSimulation.new({ seed = 12345, escapeService = fixture.escapeService })
 	local tinyfolk = simulation:addPlayer(501, "DownedTinyfolk", { role = "Tinyfolk" })
@@ -966,6 +1010,9 @@ do
 	simulation:advanceTick()
 	local finalResults = simulation:getResults()
 	assertEqual(finalResults[#finalResults].result.accepted, false, "non-Tinyfolk cannot enter downed state")
+
+	globalEnv._RoleService_QueryAPI = nil
+	_G._RoleService_QueryAPI = nil
 end
 
 do

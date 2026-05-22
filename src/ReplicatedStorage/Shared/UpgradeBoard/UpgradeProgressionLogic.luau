@@ -12,14 +12,14 @@ export type ProgressionState = {
 }
 
 export type Kernel = {
-	orderedUpgradeIds: {string},
-	validUpgradeIdSet: {[string]: boolean},
-	upgradeCostById: {[string]: number},
-	warnings: {string},
+	orderedUpgradeIds: { string },
+	validUpgradeIdSet: { [string]: boolean },
+	upgradeCostById: { [string]: number },
+	warnings: { string },
 }
 
-local function cloneState(state: {[string]: boolean}): {[string]: boolean}
-	local copied: {[string]: boolean} = {}
+local function cloneState(state: { [string]: boolean }): { [string]: boolean }
+	local copied: { [string]: boolean } = {}
 	for upgradeId, enabled in state do
 		if enabled then
 			copied[upgradeId] = true
@@ -28,11 +28,11 @@ local function cloneState(state: {[string]: boolean}): {[string]: boolean}
 	return copied
 end
 
-function UpgradeProgressionLogic.BuildKernel(upgradeOptions: {any}, effectByUpgradeId: {[string]: any}?): Kernel
-	local orderedUpgradeIds: {string} = {}
-	local validUpgradeIdSet: {[string]: boolean} = {}
-	local upgradeCostById: {[string]: number} = {}
-	local warnings: {string} = {}
+function UpgradeProgressionLogic.BuildKernel(upgradeOptions: { any }, effectByUpgradeId: { [string]: any }?): Kernel
+	local orderedUpgradeIds: { string } = {}
+	local validUpgradeIdSet: { [string]: boolean } = {}
+	local upgradeCostById: { [string]: number } = {}
+	local warnings: { string } = {}
 	local effects = effectByUpgradeId or {}
 
 	for _, option in upgradeOptions do
@@ -54,11 +54,17 @@ function UpgradeProgressionLogic.BuildKernel(upgradeOptions: {any}, effectByUpgr
 			upgradeCostById[upgradeId] = option.costEssence
 		else
 			upgradeCostById[upgradeId] = 0
-			table.insert(warnings, string.format("Invalid or missing costEssence for upgradeId=%s; defaulting to 0", upgradeId))
+			table.insert(
+				warnings,
+				string.format("Invalid or missing costEssence for upgradeId=%s; defaulting to 0", upgradeId)
+			)
 		end
 
 		if type(effects[upgradeId]) ~= "table" then
-			table.insert(warnings, string.format("Missing EffectByUpgradeId entry for upgradeId=%s; defaults will apply", upgradeId))
+			table.insert(
+				warnings,
+				string.format("Missing EffectByUpgradeId entry for upgradeId=%s; defaults will apply", upgradeId)
+			)
 		end
 	end
 
@@ -74,7 +80,7 @@ function UpgradeProgressionLogic.BuildKernel(upgradeOptions: {any}, effectByUpgr
 	}
 end
 
-function UpgradeProgressionLogic.ResolveProgressionState(kernel: Kernel, state: {[string]: boolean}): ProgressionState
+function UpgradeProgressionLogic.ResolveProgressionState(kernel: Kernel, state: { [string]: boolean }): ProgressionState
 	local completedSteps = 0
 	local nextUpgradeId: string? = nil
 	local totalSteps = #kernel.orderedUpgradeIds
@@ -102,8 +108,8 @@ function UpgradeProgressionLogic.ResolveProgressionState(kernel: Kernel, state: 
 	}
 end
 
-function UpgradeProgressionLogic.RebuildUpgradeCsv(kernel: Kernel, state: {[string]: boolean}): string
-	local selected: {string} = {}
+function UpgradeProgressionLogic.RebuildUpgradeCsv(kernel: Kernel, state: { [string]: boolean }): string
+	local selected: { string } = {}
 	for _, upgradeId in kernel.orderedUpgradeIds do
 		if state[upgradeId] == true then
 			table.insert(selected, upgradeId)
@@ -115,7 +121,7 @@ end
 
 function UpgradeProgressionLogic.ValidateSelection(
 	kernel: Kernel,
-	state: {[string]: boolean},
+	state: { [string]: boolean },
 	upgradeId: string,
 	hasSufficientEssence: boolean
 ): (boolean, string?, ProgressionState, number)
@@ -143,7 +149,10 @@ function UpgradeProgressionLogic.ValidateSelection(
 	end
 
 	if expectedUpgradeId ~= upgradeId then
-		return false, string.format("out_of_order expected=%s requested=%s", expectedUpgradeId, upgradeId), progression, 0
+		return false,
+			string.format("out_of_order expected=%s requested=%s", expectedUpgradeId, upgradeId),
+			progression,
+			0
 	end
 
 	local cost = kernel.upgradeCostById[upgradeId] or 0
@@ -154,7 +163,7 @@ function UpgradeProgressionLogic.ValidateSelection(
 	return true, nil, progression, cost
 end
 
-function UpgradeProgressionLogic.ApplySelection(state: {[string]: boolean}, upgradeId: string): {[string]: boolean}
+function UpgradeProgressionLogic.ApplySelection(state: { [string]: boolean }, upgradeId: string): { [string]: boolean }
 	local nextState = cloneState(state)
 	nextState[upgradeId] = true
 	return nextState

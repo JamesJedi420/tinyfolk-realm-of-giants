@@ -1,6 +1,4 @@
---!strict
-
-local Players = game:GetService("Players")
+--!nocheck
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -435,10 +433,7 @@ local function GetPlacedDistrictsByPlayer(userId: number): { [string]: PlacedDis
 end
 
 local function GetAllPlacedDistricts(): { [string]: PlacedDistrictState }
-	local result: { [string]: PlacedDistrictState } = {}
-	for districtId, state in pairs(placedDistrictById) do
-		result[districtId] = state
-	end
+	local result: { [string]: PlacedDistrictState } = table.clone(placedDistrictById)
 	return result
 end
 

@@ -338,11 +338,12 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 	return true, nil
 end
 
-local function makeResponse(accepted: boolean, reason: string, at: number): any
+local function makeResponse(accepted: boolean, reason: string, at: number, trace: any?): any
 	return {
 		accepted = accepted,
 		reason = reason,
 		snapshot = buildSnapshot(at),
+		trace = trace,
 	}
 end
 
@@ -709,6 +710,14 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 		return makeResponse(false, tokenReason, resolvedNow)
 	end
 
+	local compensationTrace = {
+		compensationRequired = true,
+		reason = "token_consumed_spawn_failed",
+		requesterUserId = player.UserId,
+		objectiveId = objectiveId,
+		consumedAt = resolvedNow,
+	}
+
 	serviceState = transition.state
 	markRequest(player.UserId, resolvedNow)
 
@@ -730,7 +739,7 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 		)
 		markRejectedRequest(player.UserId, resolvedNow)
 		applyStateAttributes()
-		return makeResponse(false, "reinforcement_spawn_failed", resolvedNow)
+		return makeResponse(false, "reinforcement_spawn_failed", resolvedNow, compensationTrace)
 	end
 
 	applyStateAttributes()

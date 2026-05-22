@@ -76,10 +76,7 @@ local function cloneState(state: State): State
 		componentsById[componentId] = cloneComponent(component)
 	end
 
-	local boardedByUserId: { [number]: boolean? } = {}
-	for userId, value in pairs(state.boardedByUserId) do
-		boardedByUserId[userId] = value
-	end
+	local boardedByUserId: { [number]: boolean? } = table.clone(state.boardedByUserId)
 
 	local boardedOrder: { number } = {}
 	for _, userId in ipairs(state.boardedOrder) do

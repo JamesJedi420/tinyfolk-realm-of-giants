@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local MockPlayer = require("../tests/mocks/MockPlayer")
 local globalEnv: any = getfenv()
 

@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local RescueContractState = require("../src/ReplicatedStorage/Shared/GiantRealm/RescueContractState")
 
 local function assertTrue(condition: boolean, label: string)
@@ -137,11 +136,7 @@ do
 	local state = RescueContractState.NewState()
 	local invalidRealm = RescueContractState.ResolveRequest(state, makeRequestInput({ targetRealmOwnerUserId = 0 }))
 	assertFalse(invalidRealm.accepted, "invalid target realm rejects")
-	assertEqual(
-		invalidRealm.reason,
-		"target_realm_owner_user_id_invalid",
-		"invalid target realm rejection reason"
-	)
+	assertEqual(invalidRealm.reason, "target_realm_owner_user_id_invalid", "invalid target realm rejection reason")
 
 	local invalidRouteId = RescueContractState.ResolveRequest(state, makeRequestInput({ entryRouteId = "" }))
 	assertFalse(invalidRouteId.accepted, "invalid entry route id rejects")

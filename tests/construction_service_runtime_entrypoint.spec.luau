@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
 		error(string.format("FAIL [%s]: expected true, got false", label))
@@ -204,13 +205,13 @@ local constructionSitePartB = makeBasePart("ConstructionSite_B", 15, 0, 10)
 addChild(mapFolder, "ConstructionSite_B", constructionSitePartB)
 addChild(workspaceService, "Map", mapFolder)
 
-local playerRemovingConnections: { (any) -> () } = {}
+local _playerRemovingConnections: { (any) -> () } = {}
 local playersService: any = {
 	Name = "Players",
 	ClassName = "Players",
 	PlayerRemoving = {
 		Connect = function(_signal: any, callback: (any) -> ())
-			table.insert(playerRemovingConnections, callback)
+			table.insert(_playerRemovingConnections, callback)
 		end,
 	},
 }
@@ -282,13 +283,13 @@ local function makeAlivePlayer(userId: number, position: Vector3)
 		Health = 100,
 	}
 	local character = {
-		FindFirstChild = function(self: any, childName: string): any
+		FindFirstChild = function(_self: any, childName: string): any
 			if childName == "HumanoidRootPart" then
 				return root
 			end
 			return nil
 		end,
-		FindFirstChildOfClass = function(self: any, className: string): any
+		FindFirstChildOfClass = function(_self: any, className: string): any
 			if className == "Humanoid" then
 				return humanoid
 			end

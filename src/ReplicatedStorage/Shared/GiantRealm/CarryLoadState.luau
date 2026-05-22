@@ -92,10 +92,12 @@ function CarryLoadState.Snapshot(config: any, targetUserIds: { number }?): Snaps
 		if config ~= nil then config.CarryEncumbrancePerTinyfolk else nil,
 		DEFAULT_ENCUMBRANCE_PER_TINYFOLK
 	)
-	local minimumSpeedMultiplier = clamp01(finiteNonNegative(
-		if config ~= nil then config.CarryMinimumSpeedMultiplier else nil,
-		DEFAULT_MINIMUM_SPEED_MULTIPLIER
-	))
+	local minimumSpeedMultiplier = clamp01(
+		finiteNonNegative(
+			if config ~= nil then config.CarryMinimumSpeedMultiplier else nil,
+			DEFAULT_MINIMUM_SPEED_MULTIPLIER
+		)
+	)
 
 	local encumbrance = slotsUsed * encumbrancePerTinyfolk
 	local speedMultiplier = 1
@@ -135,7 +137,11 @@ function CarryLoadState.CanAcceptTarget(config: any, targetUserIds: { number }?,
 	return { accepted = true, reason = "accepted", snapshot = snapshot }
 end
 
-function CarryLoadState.CanPerformCarrierInteraction(config: any, targetUserIds: { number }?, interactionName: any): Result
+function CarryLoadState.CanPerformCarrierInteraction(
+	config: any,
+	targetUserIds: { number }?,
+	interactionName: any
+): Result
 	local snapshot = CarryLoadState.Snapshot(config, targetUserIds)
 	if not snapshot.isEncumbered then
 		return { accepted = true, reason = "accepted", snapshot = snapshot }

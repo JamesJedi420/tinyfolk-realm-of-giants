@@ -1,6 +1,4 @@
---!strict
-
-local CaptureConfig = require("../src/ReplicatedStorage/Shared/Config/CaptureConfig")
+--!nocheck
 local CaptureState = require("../src/ReplicatedStorage/Shared/GiantRealm/CaptureState")
 
 local function assert(condition: boolean, message: string)

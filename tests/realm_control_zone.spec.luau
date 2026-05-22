@@ -2,7 +2,9 @@ local RealmControlZoneValidator = require("../src/ReplicatedStorage/Shared/Realm
 
 local function assertEqual(actual, expected, label)
 	if actual ~= expected then
-		error(string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+		error(
+			string.format("assertEqual failed [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual))
+		)
 	end
 end
 
@@ -35,10 +37,10 @@ end
 -- minimumStationZonePerimeterStuds=5 is small buffer beyond activation range (16) for safe approach
 -- minimumEscapeRouteZonePerimeterStuds=10 ensures escape isn't threatened
 local STANDARD_CONFIG = {
-	zoneTagFilter                          = "GiantControl",
-	minimumSpawnZoneSeparationStuds        = 50,
-	minimumStationZonePerimeterStuds       = 5,
-	minimumEscapeRouteZonePerimeterStuds   = 10,
+	zoneTagFilter = "GiantControl",
+	minimumSpawnZoneSeparationStuds = 50,
+	minimumStationZonePerimeterStuds = 5,
+	minimumEscapeRouteZonePerimeterStuds = 10,
 }
 
 -- Prototype positions (from Layout.model.json):
@@ -50,12 +52,12 @@ local STANDARD_CONFIG = {
 
 local PROTOTYPE_SPAWNS = {
 	{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 } },
-	{ name = "GiantSpawn",    position = { x = 12,  y = 0.5, z = 0 } },
+	{ name = "GiantSpawn", position = { x = 12, y = 0.5, z = 0 } },
 }
 local PROTOTYPE_STATIONS = {
-	{ name = "WorkStation_A",   position = { x = 20,  y = 3,   z = 0 } },
-	{ name = "MiningStation_A", position = { x = 36,  y = 3,   z = 0 } },
-	{ name = "Shrine_A",        position = { x = -20, y = 4,   z = 0 } },
+	{ name = "WorkStation_A", position = { x = 20, y = 3, z = 0 } },
+	{ name = "MiningStation_A", position = { x = 36, y = 3, z = 0 } },
+	{ name = "Shrine_A", position = { x = -20, y = 4, z = 0 } },
 }
 local PROTOTYPE_ESCAPE_ROUTES = {
 	{ name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 } },
@@ -71,43 +73,42 @@ local PROTOTYPE_CONTROL_ZONE = {
 
 local PROTOTYPE_ROUTE_GRAPH = {
 	nodes = {
-		{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0   }, nodeType = "spawn" },
-		{ name = "RouteNorth",    position = { x = 0,   y = 0,   z = -90 }, nodeType = "waypoint" },
-		{ name = "RouteSouth",    position = { x = 0,   y = 0,   z = 90  }, nodeType = "waypoint" },
-		{ name = "EscapeRoute_A", position = { x = 0,   y = 1,   z = 170 }, nodeType = "escape", tier = "primary"  },
-		{ name = "EscapeRoute_B", position = { x = -90, y = 1,   z = 170 }, nodeType = "escape", tier = "fallback" },
+		{ name = "TinyfolkSpawn", position = { x = -12, y = 0.5, z = 0 }, nodeType = "spawn" },
+		{ name = "RouteNorth", position = { x = 0, y = 0, z = -90 }, nodeType = "waypoint" },
+		{ name = "RouteSouth", position = { x = 0, y = 0, z = 90 }, nodeType = "waypoint" },
+		{ name = "EscapeRoute_A", position = { x = 0, y = 1, z = 170 }, nodeType = "escape", tier = "primary" },
+		{ name = "EscapeRoute_B", position = { x = -90, y = 1, z = 170 }, nodeType = "escape", tier = "fallback" },
 	},
 	edges = {
-		{ from = "TinyfolkSpawn", to = "RouteNorth",    distance = 90 },
-		{ from = "TinyfolkSpawn", to = "RouteSouth",    distance = 90 },
-		{ from = "RouteNorth",    to = "EscapeRoute_A", distance = 80 },
-		{ from = "RouteSouth",    to = "EscapeRoute_A", distance = 80 },
-		{ from = "RouteNorth",    to = "EscapeRoute_B", distance = 90 },
-		{ from = "RouteNorth",    to = "TinyfolkSpawn", distance = 90 },
-		{ from = "RouteSouth",    to = "TinyfolkSpawn", distance = 90 },
-		{ from = "EscapeRoute_A", to = "RouteNorth",    distance = 80 },
-		{ from = "EscapeRoute_A", to = "RouteSouth",    distance = 80 },
-		{ from = "EscapeRoute_B", to = "RouteNorth",    distance = 90 },
+		{ from = "TinyfolkSpawn", to = "RouteNorth", distance = 90 },
+		{ from = "TinyfolkSpawn", to = "RouteSouth", distance = 90 },
+		{ from = "RouteNorth", to = "EscapeRoute_A", distance = 80 },
+		{ from = "RouteSouth", to = "EscapeRoute_A", distance = 80 },
+		{ from = "RouteNorth", to = "EscapeRoute_B", distance = 90 },
+		{ from = "RouteNorth", to = "TinyfolkSpawn", distance = 90 },
+		{ from = "RouteSouth", to = "TinyfolkSpawn", distance = 90 },
+		{ from = "EscapeRoute_A", to = "RouteNorth", distance = 80 },
+		{ from = "EscapeRoute_A", to = "RouteSouth", distance = 80 },
+		{ from = "EscapeRoute_B", to = "RouteNorth", distance = 90 },
 	},
 }
 
 local EMPTY_ROUTE_GRAPH = { nodes = {}, edges = {} }
 
 local PROTOTYPE_DESCRIPTOR = {
-	spawns            = PROTOTYPE_SPAWNS,
-	escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-	returnPoints      = EMPTY_RETURN_POINTS,
-	stations          = PROTOTYPE_STATIONS,
+	spawns = PROTOTYPE_SPAWNS,
+	escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+	returnPoints = EMPTY_RETURN_POINTS,
+	stations = PROTOTYPE_STATIONS,
 	constructionSites = EMPTY_SITES,
-	upgradeBoards     = EMPTY_BOARDS,
-	controlZones      = PROTOTYPE_CONTROL_ZONE,
-	captureZones      = {},
-	props             = {},
-	routeGraph        = PROTOTYPE_ROUTE_GRAPH,
+	upgradeBoards = EMPTY_BOARDS,
+	controlZones = PROTOTYPE_CONTROL_ZONE,
+	captureZones = {},
+	props = {},
+	routeGraph = PROTOTYPE_ROUTE_GRAPH,
 }
 
 local function run()
-
 	-- ============================================================
 	-- BLOCK 1: Prototype map with aggressive zone placement
 	-- GiantControlZone_A at (12, 0.5, 0), radius 30
@@ -139,18 +140,18 @@ local function run()
 	-- All 3 checks should pass
 	-- ============================================================
 	local repositionedZone = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = PROTOTYPE_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = PROTOTYPE_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = {
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = {
 			{ name = "GiantControlZone_A", position = { x = 120, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 		},
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r2 = RealmControlZoneValidator.ValidateControlZones(repositionedZone, STANDARD_CONFIG)
 	assertEqual(r2.passed, true, "repositioned zone overall pass")
@@ -165,18 +166,18 @@ local function run()
 	-- escape_route_safety should fail (0 < 10)
 	-- ============================================================
 	local zoneBlocksEscape = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = PROTOTYPE_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = PROTOTYPE_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = {
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = {
 			{ name = "GiantControlZone_A", position = { x = 5, y = 1, z = 175 }, radius = 30, tag = "GiantControl" },
 		},
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r3 = RealmControlZoneValidator.ValidateControlZones(zoneBlocksEscape, STANDARD_CONFIG)
 	assertEqual(r3.passed, false, "zone blocks escape overall fail")
@@ -194,19 +195,19 @@ local function run()
 	-- Zone B doesn't threaten anything; Zone A creates same failures as Block 1
 	-- ============================================================
 	local multiZone = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = PROTOTYPE_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = PROTOTYPE_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = {
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = {
 			{ name = "GiantControlZone_A", position = { x = 12, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 			{ name = "GiantControlZone_B", position = { x = 80, y = 0.5, z = 0 }, radius = 30, tag = "GiantControl" },
 		},
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r4 = RealmControlZoneValidator.ValidateControlZones(multiZone, STANDARD_CONFIG)
 	assertEqual(r4.passed, false, "multiple zones overall fail (Zone A still aggressive)")
@@ -232,18 +233,18 @@ local function run()
 	-- station_access should fail (two stations inside)
 	-- ============================================================
 	local zonePerimeterEdge = {
-		spawns            = PROTOTYPE_SPAWNS,
-		escapeRoutes      = PROTOTYPE_ESCAPE_ROUTES,
-		returnPoints      = EMPTY_RETURN_POINTS,
-		stations          = PROTOTYPE_STATIONS,
+		spawns = PROTOTYPE_SPAWNS,
+		escapeRoutes = PROTOTYPE_ESCAPE_ROUTES,
+		returnPoints = EMPTY_RETURN_POINTS,
+		stations = PROTOTYPE_STATIONS,
 		constructionSites = EMPTY_SITES,
-		upgradeBoards     = EMPTY_BOARDS,
-		controlZones      = {
+		upgradeBoards = EMPTY_BOARDS,
+		controlZones = {
 			{ name = "GiantControlZone_A", position = { x = 35, y = 3, z = 0 }, radius = 35, tag = "GiantControl" },
 		},
-		captureZones      = {},
-		props             = {},
-		routeGraph        = EMPTY_ROUTE_GRAPH,
+		captureZones = {},
+		props = {},
+		routeGraph = EMPTY_ROUTE_GRAPH,
 	}
 	local r5 = RealmControlZoneValidator.ValidateControlZones(zonePerimeterEdge, STANDARD_CONFIG)
 	assertEqual(r5.passed, false, "edge case overall fail")

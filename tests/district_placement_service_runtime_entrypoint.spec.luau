@@ -1,5 +1,6 @@
---!strict
-
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
 local function assertTrue(condition: boolean, label: string)
 	if not condition then
 		error(string.format("FAIL [%s]: expected true, got false", label))

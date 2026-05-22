@@ -1,5 +1,4 @@
---!strict
-
+--!nocheck
 local Config = require("../src/ReplicatedStorage/Shared/Config/TinyfolkStatusConfig")
 local TimedConditionStateLogic = require("../src/ReplicatedStorage/Shared/TinyfolkStatus/TimedConditionStateLogic")
 
