@@ -268,7 +268,11 @@ local function clearGiantStructureArtifacts()
 end
 
 local function clearSnareTrapArtifacts()
+	local structureIds = {}
 	for structureId in pairs(snareTrapByStructureId) do
+		table.insert(structureIds, structureId)
+	end
+	for _, structureId in ipairs(structureIds) do
 		snareTrapByStructureId[structureId] = nil
 	end
 end
@@ -763,6 +767,16 @@ local function GetAllPlacedStructures(): { [string]: AcceptedStructurePlacementS
 	return result
 end
 
+local function GetSaveablePlacedStructures(): { [string]: AcceptedStructurePlacementState }
+	local result: { [string]: AcceptedStructurePlacementState } = {}
+	for structureId, state in pairs(placedStructureById) do
+		if state ~= nil and not isSnareTrapStructure(structureId) then
+			result[structureId] = state
+		end
+	end
+	return result
+end
+
 local function GetPlacedSnareTrap(structureId: string): any?
 	local trapRecord = snareTrapByStructureId[structureId]
 	if trapRecord == nil then
@@ -898,7 +912,7 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
-		GetAllPlacedStructures(),
+		GetSaveablePlacedStructures(),
 		emergencyReinforcementState,
 		shrinePersistenceState,
 		rescuePersistenceState
@@ -980,7 +994,11 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		end
 	end
 
+	local structureIds = {}
 	for structureId in pairs(placedStructureById) do
+		table.insert(structureIds, structureId)
+	end
+	for _, structureId in ipairs(structureIds) do
 		placedStructureById[structureId] = nil
 	end
 	clearGiantStructureArtifacts()

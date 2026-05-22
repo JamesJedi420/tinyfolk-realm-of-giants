@@ -803,7 +803,7 @@ local insufficientStructureId = "GiantStructure_Runtime_B"
 local resourcesBeforeInsufficient = ResourceFlowState.GetSnapshot()
 local warnsBeforeInsufficient = #warns
 clearRequestCooldownFor(acceptedPlayer)
-giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(insufficientStructureId, 280, 0, 300))
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(insufficientStructureId, 1280, 0, 300))
 assertTrue(registry[insufficientStructureId] == nil, "insufficient resources do not mutate registry")
 assertStoredTotalsUnchanged(resourcesBeforeInsufficient, "insufficient resources do not debit resources")
 
@@ -1023,6 +1023,21 @@ assertEqual(
 	"apply forwards reinforcement persistence state"
 )
 
+local originalEmergencyApplyPersistence = globalEnv._EmergencyReinforcementService_QueryAPI.ApplyPersistenceState
+globalEnv._EmergencyReinforcementService_QueryAPI.ApplyPersistenceState = function(
+	_persistedState: any
+): (boolean, string?)
+	return false, "emergency_apply_failed_for_test"
+end
+
+local failedEmergencyApplyOk, failedEmergencyApplyReason = queryApi.ApplySaveSnapshot(applyWithReinforcementRoot)
+assertTrue(not failedEmergencyApplyOk, "failed emergency apply rejects snapshot apply")
+assertEqual(failedEmergencyApplyReason, "emergency_apply_failed_for_test", "failed emergency apply reason")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureA), "failed emergency apply preserves applied structure A")
+assertTrue(queryApi.IsStructurePlaced(appliedStructureB), "failed emergency apply preserves applied structure B")
+
+globalEnv._EmergencyReinforcementService_QueryAPI.ApplyPersistenceState = originalEmergencyApplyPersistence
+
 local applyWithShrineRoot = {
 	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
 	ownerUserId = applyRoot.ownerUserId,
@@ -1148,6 +1163,15 @@ local staleArtifactAfterInvalid = giantStructuresAfterApply
 	and giantStructuresAfterApply:FindFirstChild(acceptedStructureId)
 assertTrue(appliedArtifactAAfterInvalid ~= nil, "invalid apply preserves applied artifact")
 assertTrue(staleArtifactAfterInvalid == nil, "invalid apply keeps stale artifact absent")
+
+local cleanupApplyRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = applyRoot.ownerUserId,
+	placedStructures = {},
+}
+local cleanupApplyOk, cleanupApplyReason = queryApi.ApplySaveSnapshot(cleanupApplyRoot)
+assertTrue(cleanupApplyOk, "cleanup apply clears placement state before resource exhaustion block")
+assertEqual(cleanupApplyReason, nil, "cleanup apply has no failure reason")
 
 -- Repeated accepted placements should deplete stored totals until a later known placement rejects.
 ResourceFlowState.ResetSession("giant_build_mode_repeated_depletion")

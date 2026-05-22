@@ -1,6 +1,7 @@
 --!strict
 
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
+local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
 
 local function assertTrue(value: boolean, label: string)
 	if not value then
@@ -233,6 +234,7 @@ assertFailure(
 assertFailure(
 	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(_currentData: any): any
 		error("boom")
+		return nil
 	end),
 	"UpdateLoadedPlayerProfileData",
 	"profile_update_failed",
@@ -323,6 +325,45 @@ assertEqual(calls[2].profileKey, "GiantRealmProfile:9402", "load realm owner key
 assertEqual(calls[2].ownerUserId, 9402, "load realm owner id")
 assertEqual(queryCalls[2].method, "ApplySaveSnapshot", "load realm apply method")
 assertTrue(queryCalls[2].saveRoot == loadRealm.data, "load realm applies owner save root")
+
+local malformedRoot = {
+	schemaVersion = 1,
+	ownerUserId = 9402,
+	placedStructures = {},
+	emergencyReinforcement = {
+		used = "bad",
+	},
+}
+
+local originalApplySaveSnapshot = _G._GiantBuildModeService_QueryAPI.ApplySaveSnapshot
+_G._GiantBuildModeService_QueryAPI.ApplySaveSnapshot = function(root: any): (boolean, string?)
+	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
+	if not valid then
+		return false, reason
+	end
+
+	return true, nil
+end
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = ownerLayer.LoadPlayerProfile,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = function(profileKey: string, _ownerUserId: number): any
+		return makeOwnerResult("LoadGiantRealmProfile", profileKey, malformedRoot)
+	end,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+assertFailure(
+	ProfilePersistenceGateway.LoadGiantRealmProfile(9402),
+	"LoadGiantRealmProfile",
+	"emergency_reinforcement_used_invalid",
+	"load realm malformed emergency record"
+)
+
+_G._GiantBuildModeService_QueryAPI.ApplySaveSnapshot = originalApplySaveSnapshot
 
 local releaseRealm = ProfilePersistenceGateway.ReleaseGiantRealmProfile(9402)
 assertSuccess(releaseRealm, "ReleaseGiantRealmProfile", "GiantRealmProfile:9402", "release realm")
