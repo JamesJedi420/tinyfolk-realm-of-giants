@@ -76,6 +76,17 @@ lune run tests/tinyfolk_raid_status_projection.spec.luau
 
 Use this focused pair before broader validation when the change is limited to the Tinyfolk raid HUD client or its shared presentation helper.
 
+## Score feedback focused regression
+
+For the live score-feedback overlay slice, run:
+
+```powershell
+lune run tests/score_feedback_presentation.spec.luau
+lune run tests/score_service_runtime_entrypoint.spec.luau
+```
+
+Use this focused pair before broader validation when the change is limited to score feedback presentation or the existing score attribute contract.
+
 ## Studio/runtime validation boundary
 
 Studio Play Solo and Test -> Start runtime evidence currently requires manual interaction in Roblox Studio and manual Output capture.
