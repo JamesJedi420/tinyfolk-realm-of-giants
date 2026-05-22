@@ -723,6 +723,88 @@ end
 do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			error("forced token snapshot exception")
+			return nil
+		end,
+	}
+
+	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+
+	assertFalse(rejected.accepted, "token snapshot exception rejects reinforcement")
+	assertEqual(rejected.reason, "token_snapshot_failed", "token snapshot exception rejection reason")
+	assertFalse(rejected.snapshot.used, "token snapshot exception does not consume one-time-use")
+	assertEqual(tokenConsumeCallCount, 0, "token consume not called when token snapshot faults")
+
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			return tokenSnapshotResult
+		end,
+	}
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			error("forced token consume exception")
+			return nil
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			return tokenSnapshotResult
+		end,
+	}
+
+	local rejected = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+
+	assertFalse(rejected.accepted, "token consume exception rejects reinforcement")
+	assertEqual(rejected.reason, "token_consume_failed", "token consume exception rejection reason")
+	assertFalse(rejected.snapshot.used, "token consume exception does not consume one-time-use")
+	assertEqual(tokenConsumeCallCount, 1, "token consume is attempted before consume-fault rejection")
+
+	_G._RealmObjectiveService_QueryAPI = {
+		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
+			tokenConsumeCallCount += 1
+			return tokenConsumeResult
+		end,
+		GetEmergencyTokenSnapshot = function(_objectiveId: string, _at: number): any
+			return tokenSnapshotResult
+		end,
+	}
+
+	tokenConsumeResult = {
+		accepted = true,
+		reason = "accepted",
+		tokenState = nil,
+	}
+	tokenSnapshotResult = {
+		accepted = true,
+		reason = "accepted",
+		tokenState = {
+			remainingTokens = 1,
+			revoked = false,
+		},
+	}
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
 	tokenSnapshotResult = {
 		accepted = false,
 		reason = "objective_token_inactive",
