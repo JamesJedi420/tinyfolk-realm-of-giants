@@ -126,6 +126,7 @@ local function collectAttributes(): { [string]: any }
 		Role = localPlayer:GetAttribute("Role"),
 		RaidHudSummary = localPlayer:GetAttribute(attributes.RaidHudSummary),
 		RaidHudThreatLevel = localPlayer:GetAttribute(attributes.RaidHudThreatLevel),
+		RaidHudThreatStage = localPlayer:GetAttribute(attributes.RaidHudThreatStage),
 		RaidHudCustodyState = localPlayer:GetAttribute(attributes.RaidHudCustodyState),
 		RaidHudPersonalEffects = localPlayer:GetAttribute(attributes.RaidHudPersonalEffects),
 		RaidHudTeammateActivity = localPlayer:GetAttribute(attributes.RaidHudTeammateActivity),
@@ -162,6 +163,7 @@ end
 hookAttribute("Role")
 hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudSummary)
 hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudThreatLevel)
+hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudThreatStage)
 hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudCustodyState)
 hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudPersonalEffects)
 hookAttribute(TinyfolkStatusConfig.Attributes.RaidHudTeammateActivity)

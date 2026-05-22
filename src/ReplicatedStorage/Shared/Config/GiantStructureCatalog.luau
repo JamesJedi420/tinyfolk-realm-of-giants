@@ -20,6 +20,12 @@ local GiantStructureCatalog: { [string]: GiantStructureDefinition } = {
 		woodCost = 16,
 		stoneCost = 10,
 	},
+	GiantStructure_Runtime_Snare_A = {
+		displayName = "Runtime Test Snare Trap A",
+		category = "trap",
+		woodCost = 10,
+		stoneCost = 4,
+	},
 }
 
 for structureId, definition in pairs(GiantStructureCatalog) do

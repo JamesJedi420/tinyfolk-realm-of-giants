@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local TinyfolkStatusConfig = require(Config:WaitForChild("TinyfolkStatusConfig"))
+local GiantThreatStageLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("GiantThreatStageLogic"))
 local TimedConditionStateLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TimedConditionStateLogic"))
 local RaidStatusProjection = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("RaidStatusProjection"))
 local TrailPressureLogic = require(Shared:WaitForChild("TinyfolkStatus"):WaitForChild("TrailPressureLogic"))
@@ -17,9 +18,11 @@ local globalEnv: any = getfenv()
 
 type TimedConditionState = any
 type TrailState = any
+type ThreatStageState = any
 
 local stateByUserId: { [number]: TimedConditionState? } = {}
 local trailStateByUserId: { [number]: TrailState? } = {}
+local raidThreatStageByUserId: { [number]: ThreatStageState? } = {}
 
 local function getHumanoid(player: Player): Humanoid?
 	local character = player.Character
@@ -86,6 +89,17 @@ local function getHidingQueryApi(): any?
 	return api
 end
 
+local function getSnareTrapQueryApi(): any?
+	local api = rawget(globalEnv, "_GiantBuildModeService_QueryAPI")
+	if type(api) ~= "table" then
+		return nil
+	end
+	if type(api.ResolveSnareTrapContact) ~= "function" then
+		return nil
+	end
+	return api
+end
+
 local function getFearSourcesForPlayer(player: Player): { any }
 	local fearSources = {}
 	for _, otherPlayer in ipairs(Players:GetPlayers()) do
@@ -111,6 +125,7 @@ end
 local function clearPlayerState(userId: number)
 	stateByUserId[userId] = nil
 	trailStateByUserId[userId] = nil
+	raidThreatStageByUserId[userId] = nil
 end
 
 local function updateTrailState(
@@ -151,6 +166,7 @@ local function applyAttributes(player: Player, snapshot: any)
 	player:SetAttribute(attributes.FearNearestGiantUserId, nil)
 	player:SetAttribute(attributes.FearNearestGiantDistance, nil)
 	player:SetAttribute(attributes.GiantProximityWarningLevel, snapshot.giantProximityWarningLevel)
+	player:SetAttribute(attributes.RaidHudThreatStage, snapshot.raidThreatStage)
 	player:SetAttribute(attributes.ConditionSummary, snapshot.conditionSummary)
 	player:SetAttribute(attributes.BleedActive, snapshot.bleedActive)
 	player:SetAttribute(attributes.BleedUntil, snapshot.bleedUntil)
@@ -189,6 +205,7 @@ local HUD_STATUS_ATTRIBUTES = {
 	TinyfolkStatusConfig.Attributes.FearExposureRatio,
 	TinyfolkStatusConfig.Attributes.FearPanic,
 	TinyfolkStatusConfig.Attributes.GiantProximityWarningLevel,
+	TinyfolkStatusConfig.Attributes.RaidHudThreatStage,
 	TinyfolkStatusConfig.Attributes.BleedActive,
 	TinyfolkStatusConfig.Attributes.BleedUntil,
 	TinyfolkStatusConfig.Attributes.StunActive,
@@ -242,11 +259,30 @@ end
 
 local function resolveTick(player: Player, now: number): any
 	local state = getOrCreateState(player.UserId)
+	local threatStageState = raidThreatStageByUserId[player.UserId]
 	local humanoid = getHumanoid(player)
 	local root = getHumanoidRootPart(player)
 	local isTinyfolk = player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
 	local hasAliveHumanoid = isAlive(humanoid)
 	updateTrailState(player, now, isTinyfolk, hasAliveHumanoid, root)
+
+	if isTinyfolk and hasAliveHumanoid and root ~= nil then
+		local snareTrapQueryApi = getSnareTrapQueryApi()
+		if snareTrapQueryApi ~= nil then
+			local ok, trapResult =
+				pcall(snareTrapQueryApi.ResolveSnareTrapContact, player.UserId, (root :: any).Position, now)
+			if ok and type(trapResult) == "table" and trapResult.accepted == true then
+				state = TimedConditionStateLogic.ApplyCondition(
+					state,
+					"stun",
+					now,
+					TinyfolkStatusConfig.StunDurationSeconds,
+					TinyfolkStatusConfig.MaxTimedConditionDurationSeconds
+				)
+			end
+		end
+	end
+
 	local nextState, snapshot = TimedConditionStateLogic.ResolveTick(state, TinyfolkStatusConfig, {
 		now = now,
 		position = if root ~= nil then (root :: any).Position else nil,
@@ -255,11 +291,19 @@ local function resolveTick(player: Player, now: number): any
 		hasRootPart = root ~= nil,
 		nearbyFearSources = getFearSourcesForPlayer(player),
 	})
+	local nextThreatStageState, threatStageSnapshot =
+		GiantThreatStageLogic.ResolveTick(threatStageState, TinyfolkStatusConfig, {
+			now = now,
+			warningLevel = snapshot.giantProximityWarningLevel,
+		})
 	nextState.lastUpdatedAt = now
 	stateByUserId[player.UserId] = nextState
-	applyAttributes(player, snapshot)
+	raidThreatStageByUserId[player.UserId] = nextThreatStageState
+	local nextSnapshot: any = table.clone(snapshot)
+	nextSnapshot.raidThreatStage = threatStageSnapshot.stage
+	applyAttributes(player, nextSnapshot)
 	applyRaidHudProjection(player, now)
-	return snapshot
+	return nextSnapshot
 end
 
 function TinyfolkStatusService.SetCondition(
@@ -306,6 +350,7 @@ end
 function TinyfolkStatusService.ResetForTests()
 	stateByUserId = {}
 	trailStateByUserId = {}
+	raidThreatStageByUserId = {}
 end
 
 globalEnv._TinyfolkStatusService_QueryAPI = {
@@ -320,6 +365,17 @@ globalEnv._TinyfolkStatusService_QueryAPI = {
 			output[userId] = resolveTrailSnapshot(userId, currentNow)
 		end
 		return output
+	end,
+	GetRaidThreatStageSnapshot = function(userId: number): any
+		local state = raidThreatStageByUserId[userId]
+		if state == nil then
+			return nil
+		end
+		return {
+			stage = state.stage,
+			stageEnteredAt = state.stageEnteredAt,
+			lastUpdatedAt = state.lastUpdatedAt,
+		}
 	end,
 }
 

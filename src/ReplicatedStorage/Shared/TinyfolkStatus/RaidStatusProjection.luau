@@ -23,7 +23,10 @@ end
 
 local function positiveUserId(value: any): number?
 	local numeric = finiteNumber(value)
-	if numeric == nil or numeric <= 0 or numeric % 1 ~= 0 then
+	if numeric == nil then
+		return nil
+	end
+	if numeric <= 0 or numeric % 1 ~= 0 then
 		return nil
 	end
 	return numeric
@@ -119,7 +122,7 @@ end
 
 local function categoryName(config: any, key: string, fallback: string): string
 	local hud = getHud(config)
-	local categories = if type(hud.Categories) == "table" then hud.Categories else {}
+	local categories: any = if type(hud.Categories) == "table" then hud.Categories else {}
 	local value = categories[key]
 	if type(value) == "string" and value ~= "" then
 		return value
@@ -129,7 +132,7 @@ end
 
 local function severityName(config: any, key: string, fallback: string): string
 	local hud = getHud(config)
-	local severity = if type(hud.Severity) == "table" then hud.Severity else {}
+	local severity: any = if type(hud.Severity) == "table" then hud.Severity else {}
 	local value = severity[key]
 	if type(value) == "string" and value ~= "" then
 		return value
@@ -167,13 +170,13 @@ end
 
 local function resolveThreatLevel(config: any, exposureRatio: any, panicActive: any): string
 	local hud = getHud(config)
-	local levels = hud.ThreatLevels or {}
+	local levels: any = hud.ThreatLevels or {}
 	if panicActive == true then
 		return levels.High or "high"
 	end
 
 	local exposure = unitValue(exposureRatio) or 0
-	local thresholds = hud.ThreatExposureThresholds or {}
+	local thresholds: any = hud.ThreatExposureThresholds or {}
 	if exposure >= (thresholds.High or 0.75) then
 		return levels.High or "high"
 	end
@@ -302,10 +305,10 @@ local function threatLevelName(config: any, key: string, fallback: string): stri
 end
 
 local function warningLevelName(config: any, key: string, fallback: string): string
-	local warningConfig = if type(config) == "table" and type(config.GiantProximityWarning) == "table"
+	local warningConfig: any = if type(config) == "table" and type(config.GiantProximityWarning) == "table"
 		then config.GiantProximityWarning
 		else {}
-	local levels = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
+	local levels: any = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
 	local value = levels[key]
 	if type(value) == "string" and value ~= "" then
 		return value
@@ -330,12 +333,34 @@ local function addThreatEntry(config: any, entriesById: { [string]: Entry }, ord
 	})
 end
 
+local function addThreatStageEntry(
+	config: any,
+	entriesById: { [string]: Entry },
+	order: { string },
+	threatStage: string
+)
+	if threatStage == "" or threatStage == "calm" then
+		return
+	end
+
+	addOrRefresh(entriesById, order, {
+		id = "threat_stage_" .. threatStage,
+		category = categoryName(config, "Threat", "threat"),
+		severity = if threatStage == "critical"
+			then severityName(config, "Critical", "critical")
+			elseif threatStage == "pressure" then severityName(config, "Warning", "warning")
+			else severityName(config, "Info", "info"),
+		labelKey = "raid_status_threat_stage_" .. threatStage,
+		privacy = "opposing_role_redacted",
+	})
+end
+
 local function resolveWarningLevel(config: any, value: any): string?
 	local hud = getHud(config)
-	local warningConfig = if type(config) == "table" and type(config.GiantProximityWarning) == "table"
+	local warningConfig: any = if type(config) == "table" and type(config.GiantProximityWarning) == "table"
 		then config.GiantProximityWarning
 		else {}
-	local levels = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
+	local levels: any = if type(warningConfig.Levels) == "table" then warningConfig.Levels else {}
 	local resolved = stringValue(value)
 	if resolved == nil then
 		return nil
@@ -351,7 +376,7 @@ local function resolveWarningLevel(config: any, value: any): string?
 		return resolved
 	end
 
-	local threatLevels = hud.ThreatLevels or {}
+	local threatLevels: any = hud.ThreatLevels or {}
 	if resolved == (threatLevels.Low or "low") then
 		return levels.Watch or "watch"
 	end
@@ -470,12 +495,12 @@ local function addTeammateActivity(
 end
 
 function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): any
-	local projectionConfig = if type(config) == "table" then config else {}
+	local projectionConfig = if type(config) == "table" then config :: any else {} :: any
 	local attrs = if type(input) == "table" then input.attributes else nil
 	local now = if type(input) == "table" then finiteNumber(input.now) else nil
 	local entriesById: { [string]: Entry } = {}
 	local order: { string } = {}
-	local configAttrs = projectionConfig.Attributes or {}
+	local configAttrs: any = projectionConfig.Attributes or {}
 
 	addPersonalEffect(
 		projectionConfig,
@@ -538,6 +563,7 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 		projectionConfig,
 		getAttr(attrs, configAttrs.GiantProximityWarningLevel or "TinyfolkGiantProximityWarningLevel")
 	)
+	local threatStage = stringValue(getAttr(attrs, configAttrs.RaidHudThreatStage or "TinyfolkRaidHudThreatStage"))
 	if warningLevel == nil then
 		local threatLevels = getHud(projectionConfig).ThreatLevels or {}
 		warningLevel = if threatLevel == (threatLevels.Low or "low")
@@ -548,6 +574,7 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 	end
 	local resolvedWarningLevel = warningLevel or "none"
 	addThreatEntry(projectionConfig, entriesById, order, threatLevel)
+	addThreatStageEntry(projectionConfig, entriesById, order, threatStage or "calm")
 	addGiantProximityWarningEntry(projectionConfig, entriesById, order, resolvedWarningLevel)
 	addScoreFeedback(projectionConfig, entriesById, order, attrs)
 
@@ -561,6 +588,7 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 		entries = entries,
 		summary = serializeEntries(entries),
 		threatLevel = threatLevel,
+		threatStage = threatStage or "calm",
 		giantProximityWarningLevel = resolvedWarningLevel,
 		custodyState = custodyState,
 		personalEffects = serializeEntries((function()

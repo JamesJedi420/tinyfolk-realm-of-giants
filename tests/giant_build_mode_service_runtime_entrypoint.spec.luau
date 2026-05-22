@@ -119,10 +119,12 @@ addChild(remotesFolder, "ConstructionBuildRequest", constructionBuildRemote)
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared/Config/GiantBuildModeConfig"
 configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
+configFolder._Children["SnareTrapConfig"] = "../../ReplicatedStorage/Shared/Config/SnareTrapConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["GiantRealmSaveSchema"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema"
+giantRealmFolder._Children["SnareTrapState"] = "../../ReplicatedStorage/Shared/GiantRealm/SnareTrapState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -135,6 +137,18 @@ addChild(replicatedStorage, "Remotes", remotesFolder)
 local workspaceService = makeNode("Workspace", "Workspace", "Workspace")
 local mapFolder = makeNode("Map", "Folder", "Workspace.Map")
 addChild(workspaceService, "Map", mapFolder)
+
+local objectivesFolder = makeNode("Objectives", "Folder", "Workspace.Map.Objectives")
+local objectiveSite = makeNode("ObjectiveSite_A", "BasePart", "Workspace.Map.Objectives.ObjectiveSite_A")
+objectiveSite.Position = { x = 20, y = 0, z = 20 }
+addChild(objectivesFolder, "ObjectiveSite_A", objectiveSite)
+addChild(mapFolder, "Objectives", objectivesFolder)
+
+local escapeRoutesFolder = makeNode("EscapeRoutes", "Folder", "Workspace.Map.EscapeRoutes")
+local escapeRoute = makeNode("EscapeRoute_A", "BasePart", "Workspace.Map.EscapeRoutes.EscapeRoute_A")
+escapeRoute.Position = { x = 100, y = 0, z = 100 }
+addChild(escapeRoutesFolder, "EscapeRoute_A", escapeRoute)
+addChild(mapFolder, "EscapeRoutes", escapeRoutesFolder)
 
 local playerRemovingConnections: { (any) -> () } = {}
 local playersService: any = {
@@ -208,6 +222,12 @@ GiantStructureCatalog.GiantStructure_Runtime_G = {
 	category = "utility",
 	woodCost = 10,
 	stoneCost = 10,
+}
+GiantStructureCatalog.GiantStructure_Runtime_Snare_B = {
+	displayName = "Runtime Test Snare Trap B",
+	category = "trap",
+	woodCost = 10,
+	stoneCost = 4,
 }
 
 local function makeAlivePlayer(userId: number)
@@ -414,6 +434,12 @@ assertEqual(
 	8,
 	"catalog runtime structure A stores stone cost"
 )
+assertTrue(type(GiantStructureCatalog.GiantStructure_Runtime_Snare_A) == "table", "catalog exposes runtime snare trap")
+assertEqual(
+	GiantStructureCatalog.GiantStructure_Runtime_Snare_A.category,
+	"trap",
+	"catalog runtime snare trap stores category"
+)
 assertTrue(giantPlacementRemote._Handler ~= nil, "service binds GiantStructurePlacementRequest OnServerEvent")
 assertTrue(constructionBuildRemote._Handler == nil, "service does not bind ConstructionBuildRequest")
 
@@ -514,6 +540,9 @@ local queryApi = globalEnv._GiantBuildModeService_QueryAPI
 assertTrue(type(queryApi) == "table", "query API export is available")
 assertTrue(type(queryApi.GetPlacedStructure) == "function", "query API exposes GetPlacedStructure")
 assertTrue(type(queryApi.GetAllPlacedStructures) == "function", "query API exposes GetAllPlacedStructures")
+assertTrue(type(queryApi.GetPlacedSnareTrap) == "function", "query API exposes GetPlacedSnareTrap")
+assertTrue(type(queryApi.GetAllPlacedSnareTraps) == "function", "query API exposes GetAllPlacedSnareTraps")
+assertTrue(type(queryApi.ResolveSnareTrapContact) == "function", "query API exposes ResolveSnareTrapContact")
 assertTrue(type(queryApi.IsStructurePlaced) == "function", "query API exposes IsStructurePlaced")
 assertTrue(type(queryApi.BuildSaveSnapshot) == "function", "query API exposes BuildSaveSnapshot")
 assertTrue(type(queryApi.ApplySaveSnapshot) == "function", "query API exposes ApplySaveSnapshot")
@@ -526,6 +555,87 @@ assertTrue(fetched ~= nil, "query API returns accepted structure state")
 if fetched then
 	assertEqual(fetched.structureId, acceptedStructureId, "query API state structureId matches")
 end
+
+-- Snare traps should place, expose query state, and trigger through the shared query API.
+local snareTrapStructureId = "GiantStructure_Runtime_Snare_A"
+local resourcesBeforeSnareTrap = ResourceFlowState.GetSnapshot()
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(snareTrapStructureId, 300, 0, 300))
+
+local snareTrapState = registry[snareTrapStructureId]
+assertTrue(snareTrapState ~= nil, "snare trap placement records structure state")
+if snareTrapState then
+	assertEqual(snareTrapState.structureId, snareTrapStructureId, "snare trap state stores structure id")
+	assertEqual(snareTrapState.placedByUserId, acceptedPlayer.UserId, "snare trap state stores placer user id")
+end
+
+local snareTrapSnapshot = queryApi.GetPlacedSnareTrap(snareTrapStructureId)
+assertTrue(snareTrapSnapshot ~= nil, "snare trap query returns snapshot")
+if snareTrapSnapshot then
+	assertEqual(snareTrapSnapshot.structureId, snareTrapStructureId, "snare trap snapshot stores structure id")
+	assertTrue(snareTrapSnapshot.armed, "snare trap snapshot starts armed")
+end
+
+local snareTrapArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(snareTrapStructureId)
+assertTrue(snareTrapArtifact ~= nil, "snare trap placement materializes artifact")
+if snareTrapArtifact then
+	assertEqual(
+		snareTrapArtifact:GetAttribute("StructureId"),
+		snareTrapStructureId,
+		"snare trap artifact stores structure id"
+	)
+	assertEqual(snareTrapArtifact:GetAttribute("SnareTrapArmed"), true, "snare trap artifact starts armed")
+end
+
+local snareTrapContact = queryApi.ResolveSnareTrapContact(acceptedPlayer.UserId, { x = 300, y = 0, z = 300 }, 999)
+assertTrue(snareTrapContact.accepted, "snare trap contact triggers when inside radius")
+assertEqual(snareTrapContact.reason, "triggered", "snare trap contact reason is deterministic")
+assertTrue(snareTrapContact.trap ~= nil, "snare trap contact returns trap snapshot")
+if snareTrapContact.trap then
+	assertEqual(snareTrapContact.trap.triggeredByUserId, acceptedPlayer.UserId, "snare trap trigger records user id")
+	assertTrue(not snareTrapContact.trap.armed, "snare trap becomes unarmed after trigger")
+end
+
+local snareTrapSnapshotAfterTrigger = queryApi.GetPlacedSnareTrap(snareTrapStructureId)
+assertTrue(snareTrapSnapshotAfterTrigger ~= nil, "snare trap snapshot still available after trigger")
+if snareTrapSnapshotAfterTrigger then
+	assertTrue(not snareTrapSnapshotAfterTrigger.armed, "snare trap snapshot is unarmed after trigger")
+	assertEqual(
+		snareTrapSnapshotAfterTrigger.triggeredByUserId,
+		acceptedPlayer.UserId,
+		"snare trap snapshot stores triggering user"
+	)
+end
+
+assertStoredTotals(
+	resourcesBeforeSnareTrap.Wood.stored - GiantStructureCatalog.GiantStructure_Runtime_Snare_A.woodCost,
+	resourcesBeforeSnareTrap.Stone.stored - GiantStructureCatalog.GiantStructure_Runtime_Snare_A.stoneCost,
+	"snare trap placement debits exact structure cost"
+)
+
+local warnsBeforeSnareReject = #warns
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 22, 0, 22))
+local sawSnareTrapNearObjective = false
+for i = warnsBeforeSnareReject + 1, #warns do
+	if string.find(warns[i], "snare_trap_near_objective", 1, true) then
+		sawSnareTrapNearObjective = true
+		break
+	end
+end
+assertTrue(sawSnareTrapNearObjective, "snare trap objective proximity rejection is deterministic")
+
+local warnsBeforeExitReject = #warns
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 100, 0, 100))
+local sawSnareTrapNearExit = false
+for i = warnsBeforeExitReject + 1, #warns do
+	if string.find(warns[i], "snare_trap_near_exit", 1, true) then
+		sawSnareTrapNearExit = true
+		break
+	end
+end
+assertTrue(sawSnareTrapNearExit, "snare trap exit proximity rejection is deterministic")
 
 -- Non-overlapping occupied space should accept a second known structure.
 local nonOverlappingStructureId = "GiantStructure_Runtime_F"

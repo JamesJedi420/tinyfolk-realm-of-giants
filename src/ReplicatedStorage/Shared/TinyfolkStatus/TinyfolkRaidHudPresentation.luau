@@ -19,6 +19,7 @@ export type HudModel = {
 	status: string,
 	summary: string,
 	threat: string,
+	threatStage: string,
 	custody: string,
 	personalEffects: string,
 	teammateActivity: string,
@@ -173,6 +174,9 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 	local threatLevel = if type(attributes) == "table" and type(attributes.RaidHudThreatLevel) == "string"
 		then attributes.RaidHudThreatLevel
 		else "none"
+	local threatStage = if type(attributes) == "table" and type(attributes.RaidHudThreatStage) == "string"
+		then attributes.RaidHudThreatStage
+		else "calm"
 	local custodyState = if type(attributes) == "table" and type(attributes.RaidHudCustodyState) == "string"
 		then attributes.RaidHudCustodyState
 		else "free"
@@ -185,9 +189,12 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 	return {
 		visible = visible,
 		title = "Tinyfolk Raid Status",
-		status = string.format("Threat: %s", titleCase(threatLevel)),
+		status = if threatStage == "calm"
+			then string.format("Threat: %s", titleCase(threatLevel))
+			else string.format("Threat: %s / Stage: %s", titleCase(threatLevel), titleCase(threatStage)),
 		summary = summary,
 		threat = string.format("Threat: %s", titleCase(threatLevel)),
+		threatStage = string.format("Stage: %s", titleCase(threatStage)),
 		custody = string.format("Custody: %s", titleCase(custodyState)),
 		personalEffects = personalEffects,
 		teammateActivity = teammateActivity,

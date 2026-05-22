@@ -47,6 +47,7 @@ do
 	attrs.TinyfolkStunUntil = 12
 	attrs.TinyfolkFearExposureRatio = 0.5
 	attrs.TinyfolkGiantProximityWarningLevel = "near"
+	attrs.TinyfolkRaidHudThreatStage = "pressure"
 
 	local projection = Projection.BuildPlayerProjection(Config, {
 		now = 10,
@@ -60,6 +61,7 @@ do
 	assertTrue(contains(projection.personalEffects, "bleed|personal_effect|warning|15"), "bleed timer projected")
 	assertTrue(contains(projection.personalEffects, "stun|personal_effect|critical|12"), "stun timer projected")
 	assertTrue(contains(projection.summary, "threat_medium|threat|warning"), "threat entry projected")
+	assertTrue(contains(projection.summary, "threat_stage_pressure|threat|warning"), "stage entry projected")
 	assertTrue(
 		contains(projection.summary, "giant_proximity_warning_near|threat|warning"),
 		"proximity warning entry projected"
@@ -153,6 +155,7 @@ do
 			TinyfolkBleedUntil = 14,
 			TinyfolkFearExposureRatio = 1,
 			TinyfolkGiantProximityWarningLevel = "bad",
+			TinyfolkRaidHudThreatStage = "critical",
 			PostRescueProtected = true,
 			PostRescueProtectionExpiresAt = 15,
 		},
@@ -172,6 +175,7 @@ do
 
 	assertEqual(projection.threatLevel, "high", "nil config uses fallback threat buckets")
 	assertEqual(projection.giantProximityWarningLevel, "danger", "malformed warning falls back to threat bucket")
+	assertEqual(projection.threatStage, "critical", "stage field is preserved")
 	assertTrue(
 		contains(projection.personalEffects, "bleed|personal_effect|warning|14"),
 		"nil config uses fallback categories"

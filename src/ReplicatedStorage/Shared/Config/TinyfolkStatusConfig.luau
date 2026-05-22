@@ -23,6 +23,22 @@ TinyfolkStatusConfig.GiantProximityWarning = {
 	},
 }
 
+TinyfolkStatusConfig.GiantThreatStage = {
+	Levels = {
+		Calm = "calm",
+		Watch = "watch",
+		Pressure = "pressure",
+		Critical = "critical",
+	},
+	WarningLevelToStage = {
+		none = "calm",
+		watch = "watch",
+		near = "pressure",
+		danger = "critical",
+	},
+	DecaySeconds = 10,
+}
+
 TinyfolkStatusConfig.BleedDurationSeconds = 5
 TinyfolkStatusConfig.StunDurationSeconds = 2
 TinyfolkStatusConfig.FluxDurationSeconds = 6
@@ -42,6 +58,7 @@ TinyfolkStatusConfig.Attributes = {
 	FearNearestGiantUserId = "TinyfolkFearNearestGiantUserId",
 	FearNearestGiantDistance = "TinyfolkFearNearestGiantDistance",
 	GiantProximityWarningLevel = "TinyfolkGiantProximityWarningLevel",
+	RaidHudThreatStage = "TinyfolkRaidHudThreatStage",
 	ConditionSummary = "TinyfolkConditionSummary",
 	BleedActive = "TinyfolkBleedActive",
 	BleedUntil = "TinyfolkBleedUntil",
