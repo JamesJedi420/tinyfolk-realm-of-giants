@@ -217,6 +217,7 @@ local giantPlayer = makeRolePlayer(900, "Giant", { x = 30, y = 0, z = 24, X = 30
 playersService._playerList = { testPlayer, giantPlayer }
 
 local trapContactCalls: { any } = {}
+local trapShouldTrigger = true
 globalEnv._GiantBuildModeService_QueryAPI = {
 	ResolveSnareTrapContact = function(userId: number, position: any, now: number?)
 		table.insert(trapContactCalls, {
@@ -224,6 +225,13 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 			position = position,
 			now = now,
 		})
+		if not trapShouldTrigger then
+			return {
+				accepted = false,
+				reason = "snare_trap_not_triggered",
+				trap = nil,
+			}
+		end
 		return {
 			accepted = true,
 			reason = "triggered",
@@ -252,6 +260,16 @@ assertTrue(snapshot.stunUntil > 250, "snare trap contact sets stun duration")
 local attributes = TinyfolkStatusConfig.Attributes
 assertEqual(testPlayer:GetAttribute(attributes.StunActive), true, "player attribute mirrors stun active state")
 assertTrue(testPlayer:GetAttribute(attributes.StunUntil) > 250, "player attribute mirrors stun duration")
+
+local statusQueryApi = globalEnv._TinyfolkStatusService_QueryAPI
+assertTrue(
+	type(statusQueryApi.ClearConditionForUserId) == "function",
+	"status query API exposes ClearConditionForUserId"
+)
+trapShouldTrigger = false
+local clearedSnapshot = statusQueryApi.ClearConditionForUserId(testPlayer.UserId, "stun", 252)
+assertTrue(clearedSnapshot ~= nil, "clear condition by user id returns snapshot")
+assertEqual(clearedSnapshot.stunActive, false, "clear condition by user id clears stun")
 
 assertEqual(
 	testPlayer:GetAttribute(attributes.RaidHudThreatStage),

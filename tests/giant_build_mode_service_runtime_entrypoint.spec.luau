@@ -154,11 +154,15 @@ local playerRemovingConnections: { (any) -> () } = {}
 local playersService: any = {
 	Name = "Players",
 	ClassName = "Players",
+	_playerList = {},
 	PlayerRemoving = {
 		Connect = function(_signal: any, callback: (any) -> ())
 			table.insert(playerRemovingConnections, callback)
 		end,
 	},
+	GetPlayers = function(self: any): { any }
+		return self._playerList
+	end,
 }
 
 local function clearRequestCooldownFor(player: any)
@@ -229,10 +233,25 @@ GiantStructureCatalog.GiantStructure_Runtime_Snare_B = {
 	woodCost = 10,
 	stoneCost = 4,
 }
+GiantStructureCatalog.GiantStructure_Runtime_Snare_C = {
+	displayName = "Runtime Test Snare Trap C",
+	category = "trap",
+	woodCost = 10,
+	stoneCost = 4,
+}
+GiantStructureCatalog.GiantStructure_Runtime_Snare_D = {
+	displayName = "Runtime Test Snare Trap D",
+	category = "trap",
+	woodCost = 10,
+	stoneCost = 4,
+}
 
-local function makeAlivePlayer(userId: number)
+local function makeAlivePlayer(userId: number, role: string?)
 	local humanoid = {
 		Health = 100,
+	}
+	local attributes = {
+		Role = role or "Giant",
 	}
 	local character = {
 		FindFirstChildOfClass = function(_self: any, className: string): any
@@ -245,6 +264,12 @@ local function makeAlivePlayer(userId: number)
 	return {
 		UserId = userId,
 		Character = character,
+		GetAttribute = function(_self: any, attributeName: string): any
+			return attributes[attributeName]
+		end,
+		SetAttribute = function(_self: any, attributeName: string, value: any)
+			attributes[attributeName] = value
+		end,
 	}
 end
 
@@ -400,6 +425,40 @@ globalEnv._RescueContractService_QueryAPI = {
 	end,
 }
 
+local eventLogRecords: { any } = {}
+globalEnv._EventLogService_QueryAPI = {
+	RecordEvent = function(category: any, message: any, severity: any, timestamp: any, metadata: any): any
+		local record = {
+			category = category,
+			message = message,
+			severity = severity,
+			timestamp = timestamp,
+			metadata = metadata,
+		}
+		table.insert(eventLogRecords, record)
+		return {
+			accepted = true,
+			reason = "accepted",
+			record = record,
+		}
+	end,
+}
+
+local clearedConditions: { any } = {}
+globalEnv._TinyfolkStatusService_QueryAPI = {
+	ClearConditionForUserId = function(userId: number, conditionName: string, now: number?)
+		table.insert(clearedConditions, {
+			userId = userId,
+			conditionName = conditionName,
+			now = now,
+		})
+		return {
+			stunActive = false,
+			stunUntil = nil,
+		}
+	end,
+}
+
 local serviceLoaded, serviceError = pcall(function()
 	require("../src/ServerScriptService/Services/GiantBuildModeService.server")
 end)
@@ -490,6 +549,9 @@ assertTrue(sawUnknownReject, "unknown structure rejection reason is deterministi
 
 -- Accepted payload creates server-owned registry entry and one workspace artifact.
 local acceptedPlayer = makeAlivePlayer(9402)
+local trappedTinyfolk = makeAlivePlayer(8401, "Tinyfolk")
+local rescuerTinyfolk = makeAlivePlayer(8402, "Tinyfolk")
+playersService._playerList = { acceptedPlayer, trappedTinyfolk, rescuerTinyfolk }
 local acceptedStructureId = "GiantStructure_Runtime_A"
 local resourcesBeforeAccept = ResourceFlowState.GetSnapshot()
 giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayload(acceptedStructureId))
@@ -543,6 +605,9 @@ assertTrue(type(queryApi.GetAllPlacedStructures) == "function", "query API expos
 assertTrue(type(queryApi.GetPlacedSnareTrap) == "function", "query API exposes GetPlacedSnareTrap")
 assertTrue(type(queryApi.GetAllPlacedSnareTraps) == "function", "query API exposes GetAllPlacedSnareTraps")
 assertTrue(type(queryApi.ResolveSnareTrapContact) == "function", "query API exposes ResolveSnareTrapContact")
+assertTrue(type(queryApi.ResolveSnareTrapDisarm) == "function", "query API exposes ResolveSnareTrapDisarm")
+assertTrue(type(queryApi.ResolveSnareTrapRescue) == "function", "query API exposes ResolveSnareTrapRescue")
+assertTrue(type(queryApi.RefreshSnareTrapLegality) == "function", "query API exposes RefreshSnareTrapLegality")
 assertTrue(type(queryApi.IsStructurePlaced) == "function", "query API exposes IsStructurePlaced")
 assertTrue(type(queryApi.BuildSaveSnapshot) == "function", "query API exposes BuildSaveSnapshot")
 assertTrue(type(queryApi.ApplySaveSnapshot) == "function", "query API exposes ApplySaveSnapshot")
@@ -556,61 +621,115 @@ if fetched then
 	assertEqual(fetched.structureId, acceptedStructureId, "query API state structureId matches")
 end
 
--- Snare traps should place, expose query state, and trigger through the shared query API.
+-- Snare traps should place, expose query state, trigger, emit coarse alerts, and support counterplay.
 local snareTrapStructureId = "GiantStructure_Runtime_Snare_A"
 local resourcesBeforeSnareTrap = ResourceFlowState.GetSnapshot()
 clearRequestCooldownFor(acceptedPlayer)
 giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt(snareTrapStructureId, 300, 0, 300))
 
-local snareTrapState = registry[snareTrapStructureId]
-assertTrue(snareTrapState ~= nil, "snare trap placement records structure state")
-if snareTrapState then
-	assertEqual(snareTrapState.structureId, snareTrapStructureId, "snare trap state stores structure id")
-	assertEqual(snareTrapState.placedByUserId, acceptedPlayer.UserId, "snare trap state stores placer user id")
-end
-
+local allSnareTraps = queryApi.GetAllPlacedSnareTraps()
 local snareTrapSnapshot = queryApi.GetPlacedSnareTrap(snareTrapStructureId)
 assertTrue(snareTrapSnapshot ~= nil, "snare trap query returns snapshot")
 if snareTrapSnapshot then
 	assertEqual(snareTrapSnapshot.structureId, snareTrapStructureId, "snare trap snapshot stores structure id")
+	assertTrue(type(snareTrapSnapshot.trapId) == "string", "snare trap snapshot stores generated trap id")
+	assertEqual(snareTrapSnapshot.status, "armed", "snare trap snapshot starts armed")
 	assertTrue(snareTrapSnapshot.armed, "snare trap snapshot starts armed")
+	assertTrue(allSnareTraps[snareTrapSnapshot.trapId] ~= nil, "all snare traps keyed by trap id")
+	assertTrue(registry[snareTrapStructureId] == nil, "snare trap does not enter saveable structure registry")
 end
 
-local snareTrapArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(snareTrapStructureId)
+local snareTrapId = snareTrapSnapshot.trapId
+local snareTrapArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(snareTrapId)
 assertTrue(snareTrapArtifact ~= nil, "snare trap placement materializes artifact")
 if snareTrapArtifact then
-	assertEqual(
-		snareTrapArtifact:GetAttribute("StructureId"),
-		snareTrapStructureId,
-		"snare trap artifact stores structure id"
-	)
+	assertEqual(snareTrapArtifact:GetAttribute("SnareTrapId"), snareTrapId, "snare trap artifact stores trap id")
+	assertEqual(snareTrapArtifact:GetAttribute("SnareTrapStatus"), "armed", "snare trap artifact starts armed")
 	assertEqual(snareTrapArtifact:GetAttribute("SnareTrapArmed"), true, "snare trap artifact starts armed")
 end
 
-local snareTrapContact = queryApi.ResolveSnareTrapContact(acceptedPlayer.UserId, { x = 300, y = 0, z = 300 }, 999)
+local giantContact = queryApi.ResolveSnareTrapContact(acceptedPlayer.UserId, { x = 300, y = 0, z = 300 }, 998)
+assertTrue(not giantContact.accepted, "snare trap contact requires Tinyfolk role")
+assertEqual(giantContact.reason, "snare_trap_contact_requires_tinyfolk", "wrong role contact reason")
+
+local snareTrapContact = queryApi.ResolveSnareTrapContact(trappedTinyfolk.UserId, { x = 300, y = 0, z = 300 }, 999)
 assertTrue(snareTrapContact.accepted, "snare trap contact triggers when inside radius")
 assertEqual(snareTrapContact.reason, "triggered", "snare trap contact reason is deterministic")
 assertTrue(snareTrapContact.trap ~= nil, "snare trap contact returns trap snapshot")
 if snareTrapContact.trap then
-	assertEqual(snareTrapContact.trap.triggeredByUserId, acceptedPlayer.UserId, "snare trap trigger records user id")
+	assertEqual(snareTrapContact.trap.status, "triggered", "snare trap trigger records status")
+	assertEqual(snareTrapContact.trap.triggeredByUserId, trappedTinyfolk.UserId, "snare trap trigger records user id")
 	assertTrue(not snareTrapContact.trap.armed, "snare trap becomes unarmed after trigger")
 end
+assertEqual(eventLogRecords[#eventLogRecords].category, "snare_trap", "trigger emits event-log category")
+assertEqual(eventLogRecords[#eventLogRecords].message, "snare_trap_triggered", "trigger emits event-log message")
+assertEqual(eventLogRecords[#eventLogRecords].severity, "warn", "trigger emits warn severity")
+assertEqual(eventLogRecords[#eventLogRecords].metadata.trapId, snareTrapId, "trigger event metadata stores trap id")
+assertTrue(eventLogRecords[#eventLogRecords].metadata.coarseGridCell ~= nil, "trigger event uses coarse location")
 
-local snareTrapSnapshotAfterTrigger = queryApi.GetPlacedSnareTrap(snareTrapStructureId)
+local snareTrapSnapshotAfterTrigger = queryApi.GetPlacedSnareTrap(snareTrapId)
 assertTrue(snareTrapSnapshotAfterTrigger ~= nil, "snare trap snapshot still available after trigger")
 if snareTrapSnapshotAfterTrigger then
 	assertTrue(not snareTrapSnapshotAfterTrigger.armed, "snare trap snapshot is unarmed after trigger")
 	assertEqual(
 		snareTrapSnapshotAfterTrigger.triggeredByUserId,
-		acceptedPlayer.UserId,
+		trappedTinyfolk.UserId,
 		"snare trap snapshot stores triggering user"
 	)
 end
 
+local earlyRescue = queryApi.ResolveSnareTrapRescue(
+	rescuerTinyfolk.UserId,
+	trappedTinyfolk.UserId,
+	snareTrapId,
+	{ x = 300, y = 0, z = 300 },
+	1000,
+	1001
+)
+assertTrue(not earlyRescue.accepted, "snare rescue rejects incomplete timed interaction")
+assertEqual(earlyRescue.reason, "snare_trap_interaction_incomplete", "incomplete rescue reason")
+
+local rescue = queryApi.ResolveSnareTrapRescue(
+	rescuerTinyfolk.UserId,
+	trappedTinyfolk.UserId,
+	snareTrapId,
+	{ x = 300, y = 0, z = 300 },
+	1000,
+	1002
+)
+assertTrue(rescue.accepted, "snare rescue accepts valid teammate interaction")
+assertEqual(rescue.reason, "rescued", "snare rescue reason")
+assertEqual(rescue.trap.status, "rescued", "snare rescue status")
+assertEqual(
+	clearedConditions[#clearedConditions].userId,
+	trappedTinyfolk.UserId,
+	"snare rescue clears trapped user's stun"
+)
+assertEqual(clearedConditions[#clearedConditions].conditionName, "stun", "snare rescue clears stun")
+
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 360, 0, 300))
+local disarmTrap = queryApi.GetPlacedSnareTrap("GiantStructure_Runtime_Snare_B")
+assertTrue(disarmTrap ~= nil, "second trap placed for disarm")
+local wrongRoleDisarm =
+	queryApi.ResolveSnareTrapDisarm(acceptedPlayer.UserId, disarmTrap.trapId, { x = 360, y = 0, z = 300 }, 1100, 1102)
+assertTrue(not wrongRoleDisarm.accepted, "disarm requires Tinyfolk role")
+assertEqual(wrongRoleDisarm.reason, "snare_trap_disarm_requires_tinyfolk", "wrong role disarm reason")
+local disarm =
+	queryApi.ResolveSnareTrapDisarm(rescuerTinyfolk.UserId, disarmTrap.trapId, { x = 360, y = 0, z = 300 }, 1100, 1102)
+assertTrue(disarm.accepted, "disarm accepts valid Tinyfolk interaction")
+assertEqual(disarm.reason, "disarmed", "disarm reason")
+assertEqual(disarm.trap.status, "disarmed", "disarm status")
+
 assertStoredTotals(
-	resourcesBeforeSnareTrap.Wood.stored - GiantStructureCatalog.GiantStructure_Runtime_Snare_A.woodCost,
-	resourcesBeforeSnareTrap.Stone.stored - GiantStructureCatalog.GiantStructure_Runtime_Snare_A.stoneCost,
-	"snare trap placement debits exact structure cost"
+	resourcesBeforeSnareTrap.Wood.stored
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_A.woodCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.woodCost,
+	resourcesBeforeSnareTrap.Stone.stored
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_A.stoneCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.stoneCost,
+	"snare trap placements debit exact structure cost"
 )
 
 local warnsBeforeSnareReject = #warns
@@ -636,6 +755,51 @@ for i = warnsBeforeExitReject + 1, #warns do
 	end
 end
 assertTrue(sawSnareTrapNearExit, "snare trap exit proximity rejection is deterministic")
+
+ResourceFlowState.ResetSession("snare_trap_cap_and_recharge")
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_A", 600, 0, 300))
+local rechargeBaseline = ResourceFlowState.GetSnapshot()
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 660, 0, 300))
+assertStoredTotalsUnchanged(rechargeBaseline, "snare recharge reject does not debit resources")
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 660, 0, 300))
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_C", 720, 0, 300))
+local beforeReplacement = queryApi.GetAllPlacedSnareTraps()
+local activeBeforeReplacement = 0
+for _, trap in pairs(beforeReplacement) do
+	if trap.status == "armed" then
+		activeBeforeReplacement += 1
+	end
+end
+assertEqual(activeBeforeReplacement, 3, "snare cap allows three armed traps")
+
+clearRequestCooldownFor(acceptedPlayer)
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_D", 780, 0, 300))
+local afterReplacement = queryApi.GetAllPlacedSnareTraps()
+local activeAfterReplacement = 0
+for _, trap in pairs(afterReplacement) do
+	if trap.status == "armed" then
+		activeAfterReplacement += 1
+	end
+end
+assertEqual(activeAfterReplacement, 3, "snare cap replacement preserves active max")
+
+local protectedSpawn = makeNode("Spawn_A", "BasePart", "Workspace.Map.Spawns.Spawn_A")
+protectedSpawn.Position = { x = 780, y = 0, z = 300 }
+local spawnsFolder = makeNode("Spawns", "Folder", "Workspace.Map.Spawns")
+addChild(spawnsFolder, "Spawn_A", protectedSpawn)
+addChild(mapFolder, "Spawns", spawnsFolder)
+local invalidatedTraps = queryApi.RefreshSnareTrapLegality(1300)
+assertTrue(#invalidatedTraps >= 1, "refresh invalidates trap that becomes illegal near spawn")
+assertEqual(invalidatedTraps[1].status, "invalidated", "refresh stores invalidated status")
 
 -- Non-overlapping occupied space should accept a second known structure.
 local nonOverlappingStructureId = "GiantStructure_Runtime_F"

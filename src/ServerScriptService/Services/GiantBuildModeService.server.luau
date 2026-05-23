@@ -33,8 +33,10 @@ type AcceptedStructurePlacementState = {
 }
 
 local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
-local snareTrapByStructureId: { [string]: any? } = {}
+local snareTrapByTrapId: { [string]: any? } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
+local lastSnareTrapPlacementAtByUserId: { [number]: number? } = {}
+local snareTrapSequence = 0
 local realmOwnerUserId: number? = nil
 local globalEnv: any = getfenv()
 
@@ -242,20 +244,53 @@ local function materializeAcceptedWorkspaceArtifact(state: AcceptedStructurePlac
 	setArtifactAttribute(artifact, "PlacedAt", state.placedAt)
 	setArtifactAttribute(artifact, "OccupiedBoxCount", #state.proposedOccupiedSpace)
 
-	local snareTrapRecord = snareTrapByStructureId[state.structureId]
-	if snareTrapRecord ~= nil then
-		local snapshot = SnareTrapState.BuildSnapshot(snareTrapRecord, os.clock())
-		if snapshot ~= nil then
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.Armed, snapshot.armed)
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredAt, snapshot.triggeredAt)
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredByUserId, snapshot.triggeredByUserId)
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.ExpiresAt, snapshot.expiresAt)
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggerRadiusStuds, snapshot.triggerRadiusStuds)
-			setArtifactAttribute(artifact, SnareTrapConfig.Attributes.PlacedAt, snapshot.placedAt)
-		end
+	debugLog(string.format("Materialized giant structure artifact structureId=%s", state.structureId))
+end
+
+local function applySnareTrapArtifactAttributes(artifact: any, snapshot: any)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TrapId, snapshot.trapId)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.Status, snapshot.status)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.Armed, snapshot.armed)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredAt, snapshot.triggeredAt)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredByUserId, snapshot.triggeredByUserId)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.ResolvedAt, snapshot.resolvedAt)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.ResolvedByUserId, snapshot.resolvedByUserId)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.ExpiresAt, snapshot.expiresAt)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggerRadiusStuds, snapshot.triggerRadiusStuds)
+	setArtifactAttribute(artifact, SnareTrapConfig.Attributes.PlacedAt, snapshot.placedAt)
+end
+
+local function materializeSnareTrapArtifact(record: any)
+	local snapshot = SnareTrapState.BuildSnapshot(record, os.clock())
+	if snapshot == nil then
+		return
 	end
 
-	debugLog(string.format("Materialized giant structure artifact structureId=%s", state.structureId))
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
+	removeChildFolderByName(giantStructuresFolder, snapshot.trapId)
+
+	local artifact = createFolder(snapshot.trapId, giantStructuresFolder)
+	setArtifactAttribute(artifact, "StructureId", snapshot.structureId)
+	setArtifactAttribute(artifact, "PlacedByUserId", snapshot.placedByUserId)
+	setArtifactAttribute(artifact, "PlacedAt", snapshot.placedAt)
+	setArtifactAttribute(artifact, "OccupiedBoxCount", 1)
+	applySnareTrapArtifactAttributes(artifact, snapshot)
+	debugLog(string.format("Materialized snare trap artifact trapId=%s", snapshot.trapId))
+end
+
+local function updateSnareTrapArtifact(record: any, now: number)
+	local snapshot = SnareTrapState.BuildSnapshot(record, now)
+	if snapshot == nil then
+		return
+	end
+
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
+	local artifact = giantStructuresFolder:FindFirstChild(snapshot.trapId)
+	if artifact ~= nil then
+		applySnareTrapArtifactAttributes(artifact, snapshot)
+	end
 end
 
 local function clearGiantStructureArtifacts()
@@ -269,11 +304,11 @@ end
 
 local function clearSnareTrapArtifacts()
 	local structureIds = {}
-	for structureId in pairs(snareTrapByStructureId) do
-		table.insert(structureIds, structureId)
+	for trapId in pairs(snareTrapByTrapId) do
+		table.insert(structureIds, trapId)
 	end
-	for _, structureId in ipairs(structureIds) do
-		snareTrapByStructureId[structureId] = nil
+	for _, trapId in ipairs(structureIds) do
+		snareTrapByTrapId[trapId] = nil
 	end
 end
 
@@ -474,17 +509,32 @@ local function getSnareTrapPlacementAnchors(): { any }
 		return anchors
 	end
 
-	local objectiveFolder = mapFolder:FindFirstChild("Objectives")
-	if objectiveFolder ~= nil then
-		collectBaseParts(objectiveFolder, anchors)
-	end
-
-	local escapeRoutesFolder = mapFolder:FindFirstChild("EscapeRoutes")
-	if escapeRoutesFolder ~= nil then
-		collectBaseParts(escapeRoutesFolder, anchors)
+	for _, folderName in ipairs({ "Objectives", "EscapeRoutes", "Spawns", "CaptureZones", "RescueEntryRoutes" }) do
+		local folder = mapFolder:FindFirstChild(folderName)
+		if folder ~= nil then
+			collectBaseParts(folder, anchors)
+		end
 	end
 
 	return anchors
+end
+
+local function snareTrapProtectedReason(anchor: any): string
+	local name = tostring(anchor.Name)
+	local parentName = if anchor.Parent ~= nil then tostring(anchor.Parent.Name) else ""
+	if string.find(name, "Objective", 1, true) ~= nil or string.find(parentName, "Objectives", 1, true) ~= nil then
+		return "snare_trap_near_objective"
+	end
+	if string.find(name, "Spawn", 1, true) ~= nil or string.find(parentName, "Spawns", 1, true) ~= nil then
+		return "snare_trap_near_spawn"
+	end
+	if string.find(name, "Capture", 1, true) ~= nil or string.find(parentName, "CaptureZones", 1, true) ~= nil then
+		return "snare_trap_near_capture_zone"
+	end
+	if string.find(name, "Rescue", 1, true) ~= nil or string.find(parentName, "RescueEntryRoutes", 1, true) ~= nil then
+		return "snare_trap_near_rescue_entry"
+	end
+	return "snare_trap_near_exit"
 end
 
 local function validateSnareTrapPlacement(request: StructurePlacementRequest): (boolean, string?)
@@ -497,13 +547,7 @@ local function validateSnareTrapPlacement(request: StructurePlacementRequest): (
 		local anchorPosition = anchor.Position
 		if type(anchorPosition) == "table" then
 			if getVectorDistance(trapCenter, anchorPosition) < SnareTrapConfig.NoBuildRadiusStuds then
-				if
-					string.find(anchor.Name, "ObjectiveSite", 1, true) ~= nil
-					or string.find(anchor.Name, "Objective", 1, true) ~= nil
-				then
-					return false, "snare_trap_near_objective"
-				end
-				return false, "snare_trap_near_exit"
+				return false, snareTrapProtectedReason(anchor)
 			end
 		end
 	end
@@ -517,7 +561,10 @@ local function createSnareTrapState(request: StructurePlacementRequest, placedBy
 		return nil
 	end
 
+	snareTrapSequence += 1
+	local trapId = string.format("%s_%d", request.structureId, snareTrapSequence)
 	return SnareTrapState.NewRecord(
+		trapId,
 		request.structureId,
 		placedByUserId,
 		placedAt,
@@ -610,6 +657,75 @@ local function overlapsAcceptedOccupiedSpace(request: StructurePlacementRequest)
 	return false
 end
 
+local function getSnareTrapRechargeRemaining(userId: number, now: number): number
+	local last = lastSnareTrapPlacementAtByUserId[userId]
+	if type(last) ~= "number" then
+		return 0
+	end
+	local recharge = tonumber(SnareTrapConfig.PlacementRechargeSeconds) or 0
+	return math.max(0, recharge - (now - last))
+end
+
+local function getSortedSnareTrapIds(): { string }
+	local trapIds = {}
+	for trapId in pairs(snareTrapByTrapId) do
+		table.insert(trapIds, trapId)
+	end
+	table.sort(trapIds, function(a: string, b: string): boolean
+		local left = snareTrapByTrapId[a]
+		local right = snareTrapByTrapId[b]
+		if left ~= nil and right ~= nil and left.placedAt ~= right.placedAt then
+			return left.placedAt < right.placedAt
+		end
+		return a < b
+	end)
+	return trapIds
+end
+
+local function countActiveSnareTrapsForUser(userId: number, now: number): number
+	local count = 0
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local record = snareTrapByTrapId[trapId]
+		if record ~= nil and record.placedByUserId == userId then
+			local snapshot = SnareTrapState.BuildSnapshot(record, now)
+			if snapshot ~= nil and (snapshot.armed or snapshot.status == SnareTrapState.Status.Triggered) then
+				count += 1
+			end
+		end
+	end
+	return count
+end
+
+local function removeOldestReplaceableSnareTrapForUser(userId: number, now: number): string?
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local record = snareTrapByTrapId[trapId]
+		if record ~= nil and record.placedByUserId == userId then
+			local snapshot = SnareTrapState.BuildSnapshot(record, now)
+			if snapshot ~= nil and snapshot.armed then
+				snareTrapByTrapId[trapId] = nil
+				local mapFolder = ensureChildFolder(Workspace, "Map")
+				local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
+				removeChildFolderByName(giantStructuresFolder, trapId)
+				return trapId
+			end
+		end
+	end
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local record = snareTrapByTrapId[trapId]
+		if record ~= nil and record.placedByUserId == userId then
+			local snapshot = SnareTrapState.BuildSnapshot(record, now)
+			if snapshot ~= nil and SnareTrapState.IsTerminalStatus(snapshot.status) then
+				snareTrapByTrapId[trapId] = nil
+				local mapFolder = ensureChildFolder(Workspace, "Map")
+				local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
+				removeChildFolderByName(giantStructuresFolder, trapId)
+				return trapId
+			end
+		end
+	end
+	return nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 debugLog("Ensuring giant structure placement remote")
 local placementRemote = ensureRemoteEvent(remotesFolder, GiantBuildModeConfig.StructurePlacementRemoteName)
@@ -669,7 +785,7 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	if placedStructureById[request.structureId] ~= nil then
+	if not isSnareTrapStructure(request.structureId) and placedStructureById[request.structureId] ~= nil then
 		rejectPlacement(player, "structure_already_placed")
 		logPlacementOutcome("rejected", player, request.structureId, "structure_already_placed")
 		return
@@ -687,6 +803,13 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
+	local placedAt = os.clock()
+	if isSnareTrapStructure(request.structureId) and getSnareTrapRechargeRemaining(player.UserId, placedAt) > 0 then
+		rejectPlacement(player, "snare_trap_recharge_active")
+		logPlacementOutcome("rejected", player, request.structureId, "snare_trap_recharge_active")
+		return
+	end
+
 	local spent, flowSnapshot, spendError, woodCost, stoneCost = spendStructureCost(request.structureId)
 	if not spent then
 		local reason = spendError or "insufficient_resources"
@@ -695,7 +818,6 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	local placedAt = os.clock()
 	local accepted: AcceptedStructurePlacementState = {
 		structureId = request.structureId,
 		placedByUserId = player.UserId,
@@ -708,25 +830,44 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		if trapRecord == nil then
 			rejectPlacement(player, "snare_trap_invalid_state")
 			logPlacementOutcome("rejected", player, request.structureId, "snare_trap_invalid_state")
+			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
 			return
 		end
-		snareTrapByStructureId[request.structureId] = trapRecord
-	end
+		if
+			countActiveSnareTrapsForUser(player.UserId, placedAt)
+			>= (tonumber(SnareTrapConfig.MaxActiveTrapsPerGiant) or 3)
+		then
+			removeOldestReplaceableSnareTrapForUser(player.UserId, placedAt)
+		end
 
-	local previousState = placedStructureById[request.structureId]
-	local appliedPlacement, placementError = pcall(function()
-		placedStructureById[request.structureId] = accepted
-		materializeAcceptedWorkspaceArtifact(accepted)
-	end)
+		local appliedTrap, trapError = pcall(function()
+			snareTrapByTrapId[trapRecord.trapId] = trapRecord
+			materializeSnareTrapArtifact(trapRecord)
+		end)
+		if not appliedTrap then
+			snareTrapByTrapId[trapRecord.trapId] = nil
+			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+			local applyFailureReason = string.format("snare_trap_apply_failed detail=%s", tostring(trapError))
+			rejectPlacement(player, applyFailureReason)
+			logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
+			return
+		end
+		lastSnareTrapPlacementAtByUserId[player.UserId] = placedAt
+	else
+		local previousState = placedStructureById[request.structureId]
+		local appliedPlacement, placementError = pcall(function()
+			placedStructureById[request.structureId] = accepted
+			materializeAcceptedWorkspaceArtifact(accepted)
+		end)
 
-	if not appliedPlacement then
-		placedStructureById[request.structureId] = previousState
-		snareTrapByStructureId[request.structureId] = nil
-		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
-		local applyFailureReason = string.format("placement_apply_failed detail=%s", tostring(placementError))
-		rejectPlacement(player, applyFailureReason)
-		logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
-		return
+		if not appliedPlacement then
+			placedStructureById[request.structureId] = previousState
+			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+			local applyFailureReason = string.format("placement_apply_failed detail=%s", tostring(placementError))
+			rejectPlacement(player, applyFailureReason)
+			logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
+			return
+		end
 	end
 
 	if realmOwnerUserId == nil then
@@ -777,8 +918,107 @@ local function GetSaveablePlacedStructures(): { [string]: AcceptedStructurePlace
 	return result
 end
 
-local function GetPlacedSnareTrap(structureId: string): any?
-	local trapRecord = snareTrapByStructureId[structureId]
+local function findSnareTrapRecord(trapIdOrStructureId: string): (string?, any?)
+	local direct = snareTrapByTrapId[trapIdOrStructureId]
+	if direct ~= nil then
+		return trapIdOrStructureId, direct
+	end
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local record = snareTrapByTrapId[trapId]
+		if record ~= nil and record.structureId == trapIdOrStructureId then
+			return trapId, record
+		end
+	end
+	return nil, nil
+end
+
+local function getEventLogQueryApi(): any?
+	local api = rawget(globalEnv, "_EventLogService_QueryAPI")
+	if type(api) == "table" and type(api.RecordEvent) == "function" then
+		return api
+	end
+	return nil
+end
+
+local function getTinyfolkStatusQueryApi(): any?
+	local api = rawget(globalEnv, "_TinyfolkStatusService_QueryAPI")
+	if type(api) == "table" then
+		return api
+	end
+	return nil
+end
+
+local function coarseGridCell(position: any): any
+	local gridSize = tonumber(SnareTrapConfig.CoarseAlertGridSizeStuds) or 50
+	gridSize = math.max(1, gridSize)
+	return {
+		x = math.floor(position.x / gridSize),
+		z = math.floor(position.z / gridSize),
+	}
+end
+
+local function recordSnareTrapEvent(message: string, severity: string, snapshot: any)
+	local eventLog = getEventLogQueryApi()
+	if eventLog == nil or snapshot == nil then
+		return
+	end
+	pcall(
+		eventLog.RecordEvent,
+		"snare_trap",
+		message,
+		severity,
+		snapshot.resolvedAt or snapshot.triggeredAt or os.clock(),
+		{
+			trapId = snapshot.trapId,
+			structureId = snapshot.structureId,
+			placedByUserId = snapshot.placedByUserId,
+			status = snapshot.status,
+			coarseGridCell = coarseGridCell(snapshot.center),
+		}
+	)
+end
+
+local function getPlayerByUserId(userId: number): any?
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.UserId == userId then
+			return player
+		end
+	end
+	return nil
+end
+
+local function isTinyfolkUserId(userId: number): boolean
+	local player = getPlayerByUserId(userId)
+	return player ~= nil and player:GetAttribute("Role") == "Tinyfolk"
+end
+
+local function validateTimedInteraction(position: any, startedAt: any, completedAt: any, record: any): (boolean, string)
+	if type(position) ~= "table" then
+		return false, "snare_trap_interaction_position_invalid"
+	end
+	if type(startedAt) ~= "number" or type(completedAt) ~= "number" then
+		return false, "snare_trap_interaction_time_invalid"
+	end
+	if completedAt < startedAt then
+		return false, "snare_trap_interaction_time_invalid"
+	end
+	if completedAt - startedAt < math.max(0, tonumber(SnareTrapConfig.InteractionDurationSeconds) or 2) then
+		return false, "snare_trap_interaction_incomplete"
+	end
+	if
+		not SnareTrapState.IsInteractionInRange(
+			record,
+			position,
+			tonumber(SnareTrapConfig.InteractionRadiusStuds) or 10
+		)
+	then
+		return false, "snare_trap_interaction_out_of_range"
+	end
+	return true, "accepted"
+end
+
+local function GetPlacedSnareTrap(trapIdOrStructureId: string): any?
+	local _trapId, trapRecord = findSnareTrapRecord(trapIdOrStructureId)
 	if trapRecord == nil then
 		return nil
 	end
@@ -787,8 +1027,9 @@ end
 
 local function GetAllPlacedSnareTraps(): { [string]: any }
 	local result: { [string]: any } = {}
-	for structureId, trapRecord in pairs(snareTrapByStructureId) do
-		result[structureId] = SnareTrapState.BuildSnapshot(trapRecord, os.clock())
+	local snapshotAt = os.clock()
+	for trapId, trapRecord in pairs(snareTrapByTrapId) do
+		result[trapId] = SnareTrapState.BuildSnapshot(trapRecord, snapshotAt)
 	end
 	return result
 end
@@ -801,26 +1042,33 @@ local function ResolveSnareTrapContact(userId: number, position: any, at: number
 			trap = nil,
 		}
 	end
+	if not isTinyfolkUserId(userId) then
+		return {
+			accepted = false,
+			reason = "snare_trap_contact_requires_tinyfolk",
+			trap = nil,
+		}
+	end
 
 	local resolvedAt = if type(at) == "number" then at else os.clock()
-	for structureId, trapRecord in pairs(snareTrapByStructureId) do
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local trapRecord = snareTrapByTrapId[trapId]
 		local triggered, reason, nextRecord = SnareTrapState.ResolveContact(trapRecord, userId, position, resolvedAt)
 		if triggered == true and nextRecord ~= nil then
-			snareTrapByStructureId[structureId] = nextRecord
-			local mapFolder = ensureChildFolder(Workspace, "Map")
-			local giantStructuresFolder = ensureChildFolder(mapFolder, "GiantStructures")
-			local artifact = giantStructuresFolder:FindFirstChild(structureId)
-			if artifact ~= nil then
-				local snapshot = SnareTrapState.BuildSnapshot(nextRecord, resolvedAt)
-				setArtifactAttribute(artifact, SnareTrapConfig.Attributes.Armed, snapshot.armed)
-				setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredAt, snapshot.triggeredAt)
-				setArtifactAttribute(artifact, SnareTrapConfig.Attributes.TriggeredByUserId, snapshot.triggeredByUserId)
-			end
+			snareTrapByTrapId[trapId] = nextRecord
+			updateSnareTrapArtifact(nextRecord, resolvedAt)
+			local snapshot = SnareTrapState.BuildSnapshot(nextRecord, resolvedAt)
+			recordSnareTrapEvent("snare_trap_triggered", "warn", snapshot)
 			return {
 				accepted = true,
 				reason = reason,
-				trap = SnareTrapState.BuildSnapshot(nextRecord, resolvedAt),
+				trap = snapshot,
 			}
+		end
+		if nextRecord ~= nil and nextRecord.status == SnareTrapState.Status.Expired then
+			snareTrapByTrapId[trapId] = nextRecord
+			updateSnareTrapArtifact(nextRecord, resolvedAt)
+			recordSnareTrapEvent("expired", "info", SnareTrapState.BuildSnapshot(nextRecord, resolvedAt))
 		end
 	end
 
@@ -829,6 +1077,136 @@ local function ResolveSnareTrapContact(userId: number, position: any, at: number
 		reason = "snare_trap_not_triggered",
 		trap = nil,
 	}
+end
+
+local function ResolveSnareTrapDisarm(
+	userId: number,
+	trapId: string,
+	position: any,
+	startedAt: number,
+	completedAt: number
+): any
+	if not isTinyfolkUserId(userId) then
+		return { accepted = false, reason = "snare_trap_disarm_requires_tinyfolk", trap = nil }
+	end
+	local resolvedTrapId, record = findSnareTrapRecord(trapId)
+	if resolvedTrapId == nil or record == nil then
+		return { accepted = false, reason = "snare_trap_missing", trap = nil }
+	end
+	local interactionOk, interactionReason = validateTimedInteraction(position, startedAt, completedAt, record)
+	if not interactionOk then
+		return { accepted = false, reason = interactionReason, trap = SnareTrapState.BuildSnapshot(record, completedAt) }
+	end
+	local disarmed, reason, nextRecord = SnareTrapState.ResolveDisarm(record, userId, completedAt)
+	if not disarmed or nextRecord == nil then
+		return {
+			accepted = false,
+			reason = reason,
+			trap = SnareTrapState.BuildSnapshot(nextRecord or record, completedAt),
+		}
+	end
+	snareTrapByTrapId[resolvedTrapId] = nextRecord
+	updateSnareTrapArtifact(nextRecord, completedAt)
+	local snapshot = SnareTrapState.BuildSnapshot(nextRecord, completedAt)
+	recordSnareTrapEvent("disarmed", "info", snapshot)
+	return { accepted = true, reason = reason, trap = snapshot }
+end
+
+local function ResolveSnareTrapRescue(
+	rescuerUserId: number,
+	trappedUserId: number,
+	trapId: string,
+	position: any,
+	startedAt: number,
+	completedAt: number
+): any
+	if not isTinyfolkUserId(rescuerUserId) then
+		return { accepted = false, reason = "snare_trap_rescue_requires_tinyfolk", trap = nil }
+	end
+	if rescuerUserId == trappedUserId then
+		return { accepted = false, reason = "snare_trap_rescue_requires_teammate", trap = nil }
+	end
+	local resolvedTrapId, record = findSnareTrapRecord(trapId)
+	if resolvedTrapId == nil or record == nil then
+		return { accepted = false, reason = "snare_trap_missing", trap = nil }
+	end
+	if record.triggeredByUserId ~= trappedUserId then
+		return {
+			accepted = false,
+			reason = "snare_trap_rescue_target_mismatch",
+			trap = SnareTrapState.BuildSnapshot(record, completedAt),
+		}
+	end
+	local interactionOk, interactionReason = validateTimedInteraction(position, startedAt, completedAt, record)
+	if not interactionOk then
+		return { accepted = false, reason = interactionReason, trap = SnareTrapState.BuildSnapshot(record, completedAt) }
+	end
+	local rescued, reason, nextRecord = SnareTrapState.ResolveRescue(record, rescuerUserId, completedAt)
+	if not rescued or nextRecord == nil then
+		return {
+			accepted = false,
+			reason = reason,
+			trap = SnareTrapState.BuildSnapshot(nextRecord or record, completedAt),
+		}
+	end
+	snareTrapByTrapId[resolvedTrapId] = nextRecord
+	updateSnareTrapArtifact(nextRecord, completedAt)
+	local statusApi = getTinyfolkStatusQueryApi()
+	if statusApi ~= nil and type(statusApi.ClearConditionForUserId) == "function" then
+		pcall(statusApi.ClearConditionForUserId, trappedUserId, "stun", completedAt)
+	end
+	local snapshot = SnareTrapState.BuildSnapshot(nextRecord, completedAt)
+	recordSnareTrapEvent("rescued", "info", snapshot)
+	return { accepted = true, reason = reason, trap = snapshot }
+end
+
+local function RefreshSnareTrapLegality(now: number?): any
+	local resolvedAt = if type(now) == "number" then now else os.clock()
+	local refreshed = {}
+	for _, trapId in ipairs(getSortedSnareTrapIds()) do
+		local record = snareTrapByTrapId[trapId]
+		if record ~= nil then
+			local expired, _, expiredRecord = SnareTrapState.ResolveExpiry(record, resolvedAt)
+			if expired and expiredRecord ~= nil then
+				snareTrapByTrapId[trapId] = expiredRecord
+				updateSnareTrapArtifact(expiredRecord, resolvedAt)
+				local snapshot = SnareTrapState.BuildSnapshot(expiredRecord, resolvedAt)
+				recordSnareTrapEvent("expired", "info", snapshot)
+				table.insert(refreshed, snapshot)
+			elseif record.status == SnareTrapState.Status.Armed or record.status == SnareTrapState.Status.Triggered then
+				local fakeRequest: StructurePlacementRequest = {
+					structureId = record.structureId,
+					proposedOccupiedSpace = {
+						{
+							tag = "snare",
+							worldCenter = record.center,
+							halfExtents = { x = 1, y = 1, z = 1 },
+						},
+					},
+				}
+				local legal = validateSnareTrapPlacement(fakeRequest)
+				if not legal then
+					local invalidated, _, invalidatedRecord = SnareTrapState.ResolveInvalidated(record, resolvedAt)
+					if invalidated and invalidatedRecord ~= nil then
+						snareTrapByTrapId[trapId] = invalidatedRecord
+						updateSnareTrapArtifact(invalidatedRecord, resolvedAt)
+						local snapshot = SnareTrapState.BuildSnapshot(invalidatedRecord, resolvedAt)
+						recordSnareTrapEvent("invalidated", "info", snapshot)
+						table.insert(refreshed, snapshot)
+					end
+				end
+			end
+		end
+	end
+	return refreshed
+end
+
+local function ResetSnareTrapRechargeForTests(userId: number?)
+	if type(userId) == "number" then
+		lastSnareTrapPlacementAtByUserId[userId] = nil
+		return
+	end
+	lastSnareTrapPlacementAtByUserId = {}
 end
 
 local function IsStructurePlaced(structureId: string): boolean
@@ -1020,6 +1398,10 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	GetPlacedSnareTrap = GetPlacedSnareTrap,
 	GetAllPlacedSnareTraps = GetAllPlacedSnareTraps,
 	ResolveSnareTrapContact = ResolveSnareTrapContact,
+	ResolveSnareTrapDisarm = ResolveSnareTrapDisarm,
+	ResolveSnareTrapRescue = ResolveSnareTrapRescue,
+	RefreshSnareTrapLegality = RefreshSnareTrapLegality,
+	ResetSnareTrapRechargeForTests = ResetSnareTrapRechargeForTests,
 	IsStructurePlaced = IsStructurePlaced,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,

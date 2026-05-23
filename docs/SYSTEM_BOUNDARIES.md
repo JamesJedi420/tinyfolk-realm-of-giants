@@ -218,7 +218,7 @@ These mechanics extend existing Tinyfolk buckets without introducing new system 
 
 5. **Dash Maneuver (TIN-185):** VHS monster dash/teleport maps to Giant phase mobility as a grounded shockwave-landing move with clear travel-time arc. Use gap-block state for temporary traversal denial. Visual: ghost trajectory line or flashing footprints during dash.
 
-6. **Temporary Snare Traps (TIN-216):** VHS trap mechanics (place → trigger → immobilize → rescue/timeout) already exist in Tinyfolk. Reuse trap states and emphasize anti-camp validation (no placement on active quest items or near exits). UI: glowing footprint or red warning circle when armed.
+6. **Temporary Snare Traps (TIN-216):** VHS trap mechanics (place -> trigger -> immobilize -> rescue/timeout) fold into the existing Giant build and Tinyfolk timed-condition paths. Current scope is runtime-only, server-authoritative, non-persistent, and nonlethal: traps reuse `stun`, emit coarse event-log alerts, and rely on protected-anchor anti-camp validation rather than a new client alert or map-zone subsystem.
 
 ### Already-Represented Mechanics (2 candidates)
 
