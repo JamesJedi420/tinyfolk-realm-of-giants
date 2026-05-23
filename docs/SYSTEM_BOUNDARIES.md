@@ -63,6 +63,15 @@ Closure evidence for the 2026-05-22 timed-condition runtime seam fix is recorded
 - Anti-abuse detection (repeated targeting, custody duration, forced interaction patterns)
 - Live score feedback
 
+### Event Log and Runtime Observability System
+- Structured runtime event recording for simulation/debug readability
+- Bounded event schema (`timestamp`, `category`, `message`, `severity`)
+- Recent-event query surface for debug/UI consumers
+
+**Current implementation status:** TIN-93 adds a bounded server-owned event-log surface backed by deterministic shared logic in `Shared/GiantRealm/EventLogState` and runtime service orchestration in `EventLogService`. Game systems can emit events through service seams, required event fields are validated deterministically, recent events are retained in a bounded window, and test harness/runtime query seams expose recent events and state snapshots for debug and UI-consumer paths. Final UI polish, analytics/history expansion, and durable event persistence remain deferred.
+
+Closure evidence for the 2026-05-22 event-log slice is recorded in `docs/TIN-93_EVENT_LOG_CLOSURE_2026-05-22.md`.
+
 **Current implementation status:** TIN-170 adds a bounded server-authoritative raid score event model owned by `ScoreService` and deterministic shared logic in `Shared/GiantRealm/ScoreState`. Score events are data-driven through `ScoreConfig`, with explicit role-scoped categories, reward buckets (`normal`, `bonus`, `hidden`, `compensation`), fixed or proportional value rules, repeat depreciation, repeat caps, normal-category caps, and display-safe feedback keys. Normal category totals remain the compatibility surface for existing score attributes, while bucket-separated totals keep tutorial, hidden, and compensation rewards from distorting normal session caps. Score event authoring is schema-validated at resolution time so malformed categories, buckets, value rules, point values, decay settings, repeat caps, or category/role pairings reject deterministically instead of silently awarding or bypassing caps. `ScoreService` keeps the existing remote/query request shapes, returns expanded score records, projects last-score feedback attributes, and exposes read-only category, bucket, and recent-event query surfaces. A lightweight client overlay now consumes the live score feedback attributes through `ScoreFeedbackClient`, and a session-end recognition overlay now consumes the projected final-exit attributes plus the live score snapshot through `SessionEndRecognitionClient`, while full HUD rendering, persistence of score ledgers, and broader analytics remain deferred.
 
 **Fold into this bucket:** per-category score weights, decay curves, reward triggers for escape/containment/objective events.
