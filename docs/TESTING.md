@@ -107,6 +107,18 @@ Roblox Studio CLI use in this repository is launch/navigation support only.
 Do not claim Roblox Studio CLI replaces the manual Play Solo or multi-client Output capture path unless a concrete supported command path is documented and verified.
 Fold Studio-open smoke test checklist work into TIN-157 instead of creating a separate validation workflow.
 
+## Published-client teleport validation
+
+Real Roblox teleport behavior requires a published client/server context.
+Studio, Rojo build output, and headless tests are not final evidence for realm entry, escape return, failed transfer, or party transfer behavior.
+
+Use `docs/PUBLISHED_CLIENT_TELEPORT_TEST_PLAN.md` for TIN-107 published-client teleport evidence.
+The local helper contract is covered by:
+
+```powershell
+lune run tests/published_client_teleport_evidence.spec.luau
+```
+
 ## Issue-to-workflow mapping
 
 Use pure-Luau tests for deterministic validator/spec work.
@@ -121,11 +133,15 @@ For the current batched manual Studio sweep, use TIN-157 as the evidence path.
 Use published-place rollback/open workflow only for published Roblox place concerns.
 Do not use rollback/open steps as a substitute for local source validation.
 
+Use published-client teleport validation for live Roblox transfer behavior.
+Start in `docs/PUBLISHED_CLIENT_TELEPORT_TEST_PLAN.md`; record manual evidence back on the linked Linear issue.
+
 ## Navigation quick start
 
 * Rebuild: `docs/ROJO_WORKFLOW.md` -> Primary build command
 * Local runtime validation: `docs/ROJO_WORKFLOW.md` -> Local build/open path
 * Manual Studio sweep: TIN-157 runbook, with this document defining validation boundaries
+* Published-client teleport validation: `docs/PUBLISHED_CLIENT_TELEPORT_TEST_PLAN.md`
 * Rollback/open decisions: `docs/ROJO_WORKFLOW.md` -> Publish and rollback records
 
 ## Known TIN-157 upgrade-board runtime blocker

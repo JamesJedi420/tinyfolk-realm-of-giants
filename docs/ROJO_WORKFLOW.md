@@ -153,6 +153,7 @@ Use the Studio-published place for:
 * live-place investigation
 * published-version rollback/open decisions
 * checking behavior that depends on the deployed Roblox place version
+* published-client teleport validation through `docs/PUBLISHED_CLIENT_TELEPORT_TEST_PLAN.md`
 
 Do not use a published place revision as proof that current repository source is valid.
 Do not use a local `.rbxlx` check as proof that a published Roblox place version is correct.
