@@ -110,6 +110,8 @@ Closure evidence for the 2026-05-22 timed-condition runtime seam fix is recorded
 
 **Persistence schema status:** Giant realm persistence now has an initial pure-Luau save schema plus deterministic serialization/validation helpers for accepted Giant structure records. A read-only live snapshot assembly surface builds and validates a schema-valid save root from accepted Giant build-mode structures, and a bounded apply surface replaces live accepted Giant build-mode state from a schema-valid save root. Migration upgrades remain deferred.
 
+Closure evidence for the 2026-05-22 GiantBuild persistence hardening slice is recorded in `docs/TIN-228_GIANT_BUILD_PERSISTENCE_CLOSURE_2026-05-22.md`.
+
 **Durable persistence ownership decision:** Durable Giant realm and player profile persistence is owned by a profile-locking persistence layer, reached through a thin server-only Tinyfolk compatibility gateway. Gameplay systems must not write directly to raw `DataStoreService`. Giant build mode remains the live-state owner and exposes snapshot/apply surfaces; it does not own durable profile sessions, autosave, load orchestration, or session locks.
 
 **Profile persistence gateway status:** A server-only `ProfilePersistenceGateway` defines the Tinyfolk compatibility gateway boundary, typed success/failure result shape, and injected profile-locking owner-layer seam. The gateway itself does not import or call ProfileStore/ProfileService/raw DataStore persistence. Giant realm save/load handoff is limited to the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` query API surface, with explicit release available for ending realm profile sessions.
