@@ -9,6 +9,8 @@ if (-not $lune) {
 }
 
 $testFiles = @(
+    'tests\event_log_state.spec.luau',
+    'tests\event_log_service_runtime_entrypoint.spec.luau',
     'tests\upgrade_progression_logic.spec.luau',
     'tests\emergency_reinforcement_state.spec.luau',
     'tests\emergency_reinforcement_service_runtime_entrypoint.spec.luau',
