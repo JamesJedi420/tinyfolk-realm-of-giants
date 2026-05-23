@@ -104,6 +104,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	)
 	local FinalExitState =
 		resolveDependency(GiantRealm, "FinalExitState", "../../ReplicatedStorage/Shared/GiantRealm/FinalExitState")
+	local FallbackEscapeState = resolveDependency(
+		GiantRealm,
+		"FallbackEscapeState",
+		"../../ReplicatedStorage/Shared/GiantRealm/FallbackEscapeState"
+	)
 
 	local TinyfolkMovementTraitService: any = nil
 	if options ~= nil and type(options.tinyfolkMovementTraitService) == "table" then
@@ -126,6 +131,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local lastRequestAtByUserId: { [number]: number? } = {}
 	local traversalGapBlockByRouteId: { [string]: any? } = {}
 	local finalExitStateByRouteId: { [string]: any? } = {}
+	local fallbackEscapeStateByRouteId: { [string]: any? } = {}
 	local lastDashRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 
@@ -389,7 +395,22 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		}
 	end
 
+	local function buildFallbackEscapeConfig(routeId: string): any
+		return {
+			RouteId = routeId,
+			OpenDelaySeconds = EscapeConfig.FallbackEscapeOpenDelaySeconds,
+			CloseDurationSeconds = EscapeConfig.FallbackEscapeCloseDurationSeconds,
+		}
+	end
+
+	local function isFallbackEscapeCandidate(routePart: BasePart): boolean
+		return routePart:GetAttribute(EscapeConfig.FallbackEscapeCandidateAttribute) == true
+	end
+
 	local function isFinalExitManaged(routePart: BasePart): boolean
+		if isFallbackEscapeCandidate(routePart) then
+			return false
+		end
 		return routePart:GetAttribute(EscapeConfig.FinalExitManagedAttribute) ~= false
 	end
 
@@ -432,6 +453,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, snapshot.isEscapeOpen == true)
 	end
 
+	local function fallbackEscapeRejectReason(phase: string?): string
+		if phase == FallbackEscapeState.Phases.Searching then
+			return "fallback_escape_searching"
+		end
+		if phase == FallbackEscapeState.Phases.Closed then
+			return "fallback_escape_closed"
+		end
+		if phase == FallbackEscapeState.Phases.Resolved then
+			return "fallback_escape_resolved"
+		end
+		return "fallback_escape_inactive"
+	end
+
+	local function applyFallbackEscapeAttributes(routePart: BasePart, snapshot: any?)
+		if snapshot == nil then
+			routePart:SetAttribute(EscapeConfig.FallbackEscapePhaseAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FallbackEscapeClosedEndsAtAttribute, nil)
+			routePart:SetAttribute(EscapeConfig.FallbackEscapeClosedByUserIdAttribute, nil)
+			return
+		end
+
+		routePart:SetAttribute(EscapeConfig.FallbackEscapePhaseAttribute, snapshot.phase)
+		routePart:SetAttribute(
+			EscapeConfig.FallbackEscapeCueBandAttribute,
+			if snapshot.phase == FallbackEscapeState.Phases.Inactive then nil else "local_search"
+		)
+		routePart:SetAttribute(EscapeConfig.FallbackEscapeClosedEndsAtAttribute, snapshot.closedEndsAt)
+		routePart:SetAttribute(EscapeConfig.FallbackEscapeClosedByUserIdAttribute, snapshot.closedByUserId)
+		routePart:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, snapshot.isEscapeOpen == true)
+	end
+
 	local function ensureFinalExitState(routeId: string, routePart: BasePart): any?
 		if not isFinalExitManaged(routePart) then
 			finalExitStateByRouteId[routeId] = nil
@@ -459,6 +512,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		escapeRouteById[routeId] = part
 
+		if isFallbackEscapeCandidate(part) then
+			if part:GetAttribute(EscapeConfig.FinalExitManagedAttribute) == nil then
+				part:SetAttribute(EscapeConfig.FinalExitManagedAttribute, false)
+			end
+			if part:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == nil then
+				part:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, false)
+			end
+		end
+
 		if part:GetAttribute(EscapeConfig.FinalExitManagedAttribute) == nil then
 			part:SetAttribute(EscapeConfig.FinalExitManagedAttribute, true)
 		end
@@ -481,6 +543,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		part:SetAttribute(EscapeConfig.TraversalGapBlockedByUserIdAttribute, nil)
 		if part:GetAttribute(EscapeConfig.TraversalGapBlockExemptAttribute) == nil then
 			part:SetAttribute(EscapeConfig.TraversalGapBlockExemptAttribute, false)
+		end
+		if isFallbackEscapeCandidate(part) then
+			applyFallbackEscapeAttributes(part, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
 		end
 
 		local finalExitState = ensureFinalExitState(routeId, part)
@@ -734,6 +799,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			escapeRouteById[routeId] = nil
 			traversalGapBlockByRouteId[routeId] = nil
 			finalExitStateByRouteId[routeId] = nil
+			fallbackEscapeStateByRouteId[routeId] = nil
 		end
 
 		registerEscapeRoutesFromWorkspace()
@@ -766,6 +832,108 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 	local function getBlockSnapshot(routeId: string, routePart: BasePart): any
 		return cleanupExpiredBlock(routeId, routePart, now())
+	end
+
+	local function getSortedFallbackCandidateRouteIds(): { string }
+		registerEscapeRoutesFromWorkspace()
+		local routeIds: { string } = {}
+		for routeId in escapeRouteById do
+			local routePart = resolveRoutePart(routeId)
+			if routePart ~= nil and isFallbackEscapeCandidate(routePart) then
+				table.insert(routeIds, routeId)
+			end
+		end
+		table.sort(routeIds)
+		return routeIds
+	end
+
+	local function getSelectedFallbackRouteId(): string?
+		local routeIds = getSortedFallbackCandidateRouteIds()
+		return routeIds[1]
+	end
+
+	local function getPlayersList(): { any }
+		if Players == nil or type(Players.GetPlayers) ~= "function" then
+			return {}
+		end
+		if runtimeGame ~= nil then
+			local ok, result = pcall(function()
+				return Players.GetPlayers()
+			end)
+			return if ok and type(result) == "table" then result else {}
+		end
+
+		local ok, result = pcall(function()
+			return Players:GetPlayers()
+		end)
+		return if ok and type(result) == "table" then result else {}
+	end
+
+	local function getActiveTinyfolkUserIds(): { number }
+		local activeUserIds: { number } = {}
+		local roleServiceQueryApi = getRoleServiceQueryApi()
+		for _, candidate in ipairs(getPlayersList()) do
+			if
+				candidate ~= nil
+				and type(candidate.UserId) == "number"
+				and isTinyfolk(candidate)
+				and isPlayerAlive(candidate)
+				and escapedTinyfolkByUserId[candidate.UserId] ~= true
+			then
+				local downed = false
+				if roleServiceQueryApi ~= nil and type(roleServiceQueryApi.IsPlayerDowned) == "function" then
+					local downedOk, downedResult = pcall(function()
+						return roleServiceQueryApi.IsPlayerDowned(candidate.UserId)
+					end)
+					downed = downedOk and downedResult == true
+				end
+				if downed ~= true then
+					table.insert(activeUserIds, candidate.UserId)
+				end
+			end
+		end
+		table.sort(activeUserIds)
+		return activeUserIds
+	end
+
+	local function ensureFallbackEscapeState(routeId: string, routePart: BasePart): any?
+		if not isFallbackEscapeCandidate(routePart) then
+			fallbackEscapeStateByRouteId[routeId] = nil
+			applyFallbackEscapeAttributes(routePart, nil)
+			return nil
+		end
+		if getSelectedFallbackRouteId() ~= routeId then
+			fallbackEscapeStateByRouteId[routeId] = nil
+			applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
+			return nil
+		end
+
+		local state = fallbackEscapeStateByRouteId[routeId]
+		if state == nil then
+			state = FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))
+			fallbackEscapeStateByRouteId[routeId] = state
+		end
+		return state
+	end
+
+	local function refreshFallbackEscapeState(routeId: string, routePart: BasePart): any?
+		local state = ensureFallbackEscapeState(routeId, routePart)
+		if state == nil then
+			return nil
+		end
+
+		while true do
+			local transition = FallbackEscapeState.Refresh(state, buildFallbackEscapeConfig(routeId), getActiveTinyfolkUserIds(), now())
+			state = transition.state
+			fallbackEscapeStateByRouteId[routeId] = state
+			if transition.accepted ~= true then
+				break
+			end
+		end
+
+		local snapshot = FallbackEscapeState.GetSnapshot(state)
+		applyFallbackEscapeAttributes(routePart, snapshot)
+		return snapshot
 	end
 
 	local function refreshFinalExitState(routeId: string, routePart: BasePart): any?
@@ -859,6 +1027,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		local finalExitSnapshot = nil
+		local fallbackEscapeSnapshot = nil
+		if isFallbackEscapeCandidate(routePart) then
+			fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
+		end
 		if isFinalExitManaged(routePart) then
 			finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		end
@@ -869,7 +1041,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local accepted = true
 		local reason = "accepted"
-		if finalExitSnapshot ~= nil and finalExitSnapshot.isEscapeOpen ~= true then
+		if fallbackEscapeSnapshot ~= nil and fallbackEscapeSnapshot.isEscapeOpen ~= true then
+			accepted = false
+			reason = fallbackEscapeRejectReason(fallbackEscapeSnapshot.phase)
+		elseif finalExitSnapshot ~= nil and finalExitSnapshot.isEscapeOpen ~= true then
 			accepted = false
 			reason = finalExitRejectReason(finalExitSnapshot.phase)
 		elseif not isEnabled then
@@ -890,12 +1065,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			blockState = snapshot.state,
 			blockExempt = routeHasBlockExemption(routePart),
 			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
+			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
+			fallbackEscapeCueBand = routePart:GetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute),
 		}
 	end
 
 	local function buildObjectiveSafeRouteMetadata(routeId: string, routePart: BasePart): any
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
+		local fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
 		return {
 			routeId = routeId,
 			tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true,
@@ -904,12 +1082,16 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			blockState = snapshot.state,
 			blockExempt = routeHasBlockExemption(routePart),
 			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
+			fallbackEscapeCandidate = isFallbackEscapeCandidate(routePart),
+			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
+			fallbackEscapeCueBand = routePart:GetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute),
 		}
 	end
 
 	local function buildRouteDebugPayload(routeId: string, routePart: BasePart, userId: number?): any
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
+		local fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
 		local payload: any = {
 			routeId = routeId,
 			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE),
@@ -926,6 +1108,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			finalExitOpeningEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.openingEndsAt else nil,
 			finalExitBlockedEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.blockedEndsAt else nil,
 			finalExitResolvedAt = if finalExitSnapshot ~= nil then finalExitSnapshot.resolvedAt else nil,
+			fallbackEscapeCandidate = isFallbackEscapeCandidate(routePart),
+			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
+			fallbackEscapeCueBand = routePart:GetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute),
+			fallbackEscapeClosedEndsAt = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.closedEndsAt else nil,
+			fallbackEscapeClosedByUserId = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.closedByUserId else nil,
 		}
 
 		if userId ~= nil then
@@ -1086,6 +1273,75 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return requestBlockWithSettings(player, routeId, EscapeConfig.TriggerRadiusStuds)
 	end
 
+	function service.requestFallbackEscapeClose(player: any, routeId: any): any
+		if type(routeId) ~= "string" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+		if player == nil or type(player.UserId) ~= "number" then
+			return { accepted = false, reason = "caller_user_id_invalid" }
+		end
+
+		local routePart = resolveRoutePart(routeId)
+		if routePart == nil then
+			return { accepted = false, reason = "route_not_found" }
+		end
+		if not isFallbackEscapeCandidate(routePart) then
+			return { accepted = false, reason = "fallback_escape_not_candidate" }
+		end
+
+		local callerRole = getPlayerRole(player)
+		if callerRole ~= RoleConfig.Roles.Giant then
+			return { accepted = false, reason = "caller_not_giant" }
+		end
+		if not isPlayerAlive(player) then
+			return { accepted = false, reason = "player_not_alive" }
+		end
+
+		local callerRoot = getHumanoidRootPart(player)
+		if callerRoot == nil then
+			return { accepted = false, reason = "missing_character_root" }
+		end
+		local distance = resolveDistance((routePart :: any).Position, (callerRoot :: any).Position)
+		if distance == nil then
+			return { accepted = false, reason = "distance_unavailable" }
+		end
+		if distance > EscapeConfig.TriggerRadiusStuds then
+			return { accepted = false, reason = "caller_out_of_range" }
+		end
+
+		local routeSafeZoneDecision = evaluateSafeZoneProtection(
+			routePart:GetAttribute(EscapeConfig.SafeZoneAttribute) == true,
+			routePart:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+			routePart:GetAttribute(EscapeConfig.SafeZoneProtectionEndsAtAttribute)
+		)
+		if routeSafeZoneDecision.protected == true then
+			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
+		end
+
+		local state = ensureFallbackEscapeState(routeId, routePart)
+		if state == nil then
+			return { accepted = false, reason = "fallback_escape_inactive" }
+		end
+		local snapshot = refreshFallbackEscapeState(routeId, routePart)
+		if snapshot == nil then
+			return { accepted = false, reason = "fallback_escape_inactive" }
+		end
+
+		local closed = FallbackEscapeState.ApplyClose(
+			fallbackEscapeStateByRouteId[routeId],
+			buildFallbackEscapeConfig(routeId),
+			player.UserId,
+			now()
+		)
+		fallbackEscapeStateByRouteId[routeId] = closed.state
+		applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(closed.state))
+		return {
+			accepted = closed.accepted == true,
+			reason = if closed.accepted == true then "closed" else fallbackEscapeRejectReason(closed.state.phase),
+			snapshot = FallbackEscapeState.GetSnapshot(closed.state),
+		}
+	end
+
 	function service.requestEscapeAttempt(player: any, routeId: any): any
 		if type(routeId) ~= "string" then
 			return { accepted = false, reason = "route_id_invalid" }
@@ -1166,7 +1422,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
 		end
 
-		if not isFinalExitManaged(routePart) and routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == false then
+		local fallbackEscapeSnapshot = nil
+		if isFallbackEscapeCandidate(routePart) then
+			fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
+			if fallbackEscapeSnapshot == nil or fallbackEscapeSnapshot.isEscapeOpen ~= true then
+				return {
+					accepted = false,
+					reason = fallbackEscapeRejectReason(if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil),
+				}
+			end
+		end
+
+		if not isFinalExitManaged(routePart) and not isFallbackEscapeCandidate(routePart) and routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == false then
 			return { accepted = false, reason = "route_disabled" }
 		end
 
@@ -1190,6 +1457,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			end
 			finalExitStateByRouteId[routeId] = resolvedTransition.state
 			applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(resolvedTransition.state))
+		end
+		if fallbackEscapeStateByRouteId[routeId] ~= nil then
+			local resolvedFallback =
+				FallbackEscapeState.ResolveEscape(fallbackEscapeStateByRouteId[routeId], player.UserId, now())
+			if resolvedFallback.accepted ~= true then
+				return { accepted = false, reason = "fallback_escape_resolution_failed" }
+			end
+			fallbackEscapeStateByRouteId[routeId] = resolvedFallback.state
+			applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(resolvedFallback.state))
 		end
 
 		markPlayerEscaped(player, routeId)
@@ -1376,6 +1652,30 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return refreshFinalExitState(routeId, routePart)
 	end
 
+	function service.getFallbackEscapeSnapshot(routeId: any?): any
+		registerEscapeRoutesFromWorkspace()
+		if routeId ~= nil then
+			if type(routeId) ~= "string" then
+				return nil
+			end
+			local routePart = resolveRoutePart(routeId)
+			if routePart == nil then
+				return nil
+			end
+			return refreshFallbackEscapeState(routeId, routePart)
+		end
+
+		local selectedRouteId = getSelectedFallbackRouteId()
+		if selectedRouteId == nil then
+			return nil
+		end
+		local selectedRoutePart = resolveRoutePart(selectedRouteId)
+		if selectedRoutePart == nil then
+			return nil
+		end
+		return refreshFallbackEscapeState(selectedRouteId, selectedRoutePart)
+	end
+
 	function service.getRouteAccess(player: any, routeId: any): any
 		if type(routeId) ~= "string" then
 			return { accepted = false, reason = "route_id_invalid" }
@@ -1484,6 +1784,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(finalExitState))
 			else
 				applyFinalExitAttributes(routePart, nil)
+			end
+		end
+	end
+
+	function service.ResetFallbackEscapeForTests()
+		fallbackEscapeStateByRouteId = {}
+		for routeId, routePart in escapeRouteById do
+			if isFallbackEscapeCandidate(routePart) then
+				applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
 			end
 		end
 	end
@@ -1749,6 +2058,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		GetFinalExitSnapshot = function(routeId: string): any
 			return service.getFinalExitSnapshot(routeId)
+		end,
+		GetFallbackEscapeSnapshot = function(routeId: string?): any
+			return service.getFallbackEscapeSnapshot(routeId)
+		end,
+		RefreshFallbackEscapeState = function(routeId: string?): any
+			return service.getFallbackEscapeSnapshot(routeId)
+		end,
+		RequestFallbackEscapeClose = function(player: any, routeId: string): any
+			return service.requestFallbackEscapeClose(player, routeId)
 		end,
 		GetRouteAccess = function(player: any, routeId: string): any
 			return service.getRouteAccess(player, routeId)

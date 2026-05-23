@@ -43,12 +43,19 @@ EscapeConfig.FinalExitOpeningEndsAtAttribute = "FinalExitOpeningEndsAt" -- Openi
 EscapeConfig.FinalExitBlockedEndsAtAttribute = "FinalExitBlockedEndsAt" -- Blocked phase end timestamp
 EscapeConfig.FinalExitResolvedAtAttribute = "FinalExitResolvedAt" -- Resolved phase timestamp
 EscapeConfig.FinalExitBlockedByUserIdAttribute = "FinalExitBlockedByUserId" -- UserId that triggered final-exit block
+EscapeConfig.FallbackEscapeCandidateAttribute = "FallbackEscapeCandidate" -- If true, route is a solo fallback escape candidate
+EscapeConfig.FallbackEscapePhaseAttribute = "FallbackEscapePhase" -- Last-Tinyfolk fallback escape phase
+EscapeConfig.FallbackEscapeCueBandAttribute = "FallbackEscapeCueBand" -- Coarse cue band for local search
+EscapeConfig.FallbackEscapeClosedEndsAtAttribute = "FallbackEscapeClosedEndsAt" -- Giant closure expiry timestamp
+EscapeConfig.FallbackEscapeClosedByUserIdAttribute = "FallbackEscapeClosedByUserId" -- UserId that closed fallback route
 
 -- Final exit raid-escalation timings
 EscapeConfig.FinalExitPoweredDurationSeconds = 2 -- Delay between objective threshold and opening start
 EscapeConfig.FinalExitOpeningDurationSeconds = 3 -- Opening wind-up before route becomes escape-ready
 EscapeConfig.FinalExitBlockedDurationSeconds = 4 -- How long a Giant interruption keeps the exit blocked
 EscapeConfig.FinalExitReopenDurationSeconds = 2 -- Reopening wind-up after a block expires
+EscapeConfig.FallbackEscapeOpenDelaySeconds = 2 -- Delay between last-Tinyfolk activation and fallback opening
+EscapeConfig.FallbackEscapeCloseDurationSeconds = 4 -- How long a Giant closure keeps fallback sealed
 
 EscapeConfig.SafeZoneTypes = {
 	SharedHub = "SharedHub",

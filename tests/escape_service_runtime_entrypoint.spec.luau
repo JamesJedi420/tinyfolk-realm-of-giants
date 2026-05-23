@@ -43,6 +43,31 @@ function routePart:SetAttribute(attributeName: string, value: any)
 	routeAttributes[attributeName] = value
 end
 
+local fallbackRouteAttributes: { [string]: any } = {
+	FallbackEscapeCandidate = true,
+	FinalExitManaged = false,
+	RouteEnabled = false,
+	TinyfolkOnlyRoute = true,
+}
+
+local fallbackRoutePart: any = {
+	Name = "EscapeRoute_B",
+	ClassName = "BasePart",
+	Position = { x = 5, y = 0, z = 0 },
+}
+
+function fallbackRoutePart:IsA(className: string): boolean
+	return className == "BasePart"
+end
+
+function fallbackRoutePart:GetAttribute(attributeName: string): any
+	return fallbackRouteAttributes[attributeName]
+end
+
+function fallbackRoutePart:SetAttribute(attributeName: string, value: any)
+	fallbackRouteAttributes[attributeName] = value
+end
+
 local escapeRoutesFolder: any = {
 	ClassName = "Folder",
 }
@@ -52,10 +77,14 @@ function escapeRoutesFolder:FindFirstChild(_childName: string): any
 end
 
 function escapeRoutesFolder:GetDescendants(): { any }
+	local descendants = {}
 	if globalEnv._routePartPresent == true then
-		return { routePart }
+		table.insert(descendants, routePart)
 	end
-	return {}
+	if globalEnv._fallbackRoutePartPresent == true then
+		table.insert(descendants, fallbackRoutePart)
+	end
+	return descendants
 end
 
 local mapFolder: any = {
@@ -97,8 +126,10 @@ local workspaceService: any = {
 escapeRoutesFolder.Parent = mapFolder
 mapFolder.Parent = workspaceService
 routePart.Parent = escapeRoutesFolder
+fallbackRoutePart.Parent = escapeRoutesFolder
 
 globalEnv._routePartPresent = true
+globalEnv._fallbackRoutePartPresent = false
 
 function workspaceService:FindFirstChild(childName: string): any
 	if childName == "Map" then
@@ -112,6 +143,13 @@ local playersByUserId: { [number]: any } = {}
 local playersService: any = {}
 playersService.GetPlayerByUserId = function(userId: number)
 	return playersByUserId[userId]
+end
+playersService.GetPlayers = function()
+	local players = {}
+	for _, player in pairs(playersByUserId) do
+		table.insert(players, player)
+	end
+	return players
 end
 
 local replicatedStorageService: any = {
@@ -163,10 +201,17 @@ local replicatedStorageService: any = {
 									FinalExitBlockedEndsAtAttribute = "FinalExitBlockedEndsAt",
 									FinalExitResolvedAtAttribute = "FinalExitResolvedAt",
 									FinalExitBlockedByUserIdAttribute = "FinalExitBlockedByUserId",
+									FallbackEscapeCandidateAttribute = "FallbackEscapeCandidate",
+									FallbackEscapePhaseAttribute = "FallbackEscapePhase",
+									FallbackEscapeCueBandAttribute = "FallbackEscapeCueBand",
+									FallbackEscapeClosedEndsAtAttribute = "FallbackEscapeClosedEndsAt",
+									FallbackEscapeClosedByUserIdAttribute = "FallbackEscapeClosedByUserId",
 									FinalExitPoweredDurationSeconds = 1,
 									FinalExitOpeningDurationSeconds = 1,
 									FinalExitBlockedDurationSeconds = 2,
 									FinalExitReopenDurationSeconds = 1,
+									FallbackEscapeOpenDelaySeconds = 1,
+									FallbackEscapeCloseDurationSeconds = 2,
 									SupportedThroughGapRouteTypes = { TraversalGap = true },
 								}
 							end
@@ -312,8 +357,19 @@ local function resetRouteDefaults()
 	routeAttributes.FinalExitBlockedEndsAt = nil
 	routeAttributes.FinalExitResolvedAt = nil
 	routeAttributes.FinalExitBlockedByUserId = nil
+	fallbackRouteAttributes.FallbackEscapeCandidate = true
+	fallbackRouteAttributes.FinalExitManaged = false
+	fallbackRouteAttributes.RouteEnabled = false
+	fallbackRouteAttributes.TinyfolkOnlyRoute = true
+	fallbackRouteAttributes.FallbackEscapePhase = "Inactive"
+	fallbackRouteAttributes.FallbackEscapeCueBand = nil
+	fallbackRouteAttributes.FallbackEscapeClosedEndsAt = nil
+	fallbackRouteAttributes.FallbackEscapeClosedByUserId = nil
+	globalEnv._fallbackRoutePartPresent = false
+	fallbackRoutePart.Parent = nil
 	currentTime = 100
 	crossingHooks = {}
+	playersByUserId = {}
 	downedByUserId = {}
 	carriedByUserId = {}
 	carrierEncumberedByUserId = {}
@@ -326,6 +382,7 @@ local function resetRouteDefaults()
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
+	EscapeService.ResetFallbackEscapeForTests()
 	routeAttributes.RouteEnabled = true
 end
 
@@ -472,6 +529,82 @@ do
 	local openAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
 	assertEqual(openAccess.accepted, true, "managed open final exit accepts route access")
 	assertEqual(openAccess.finalExitPhase, "Open", "managed open route access exposes final-exit phase")
+end
+
+do
+	resetRouteDefaults()
+	globalEnv._fallbackRoutePartPresent = true
+	fallbackRoutePart.Parent = escapeRoutesFolder
+	local firstTinyfolk = MockPlayer.new(6501, "FallbackFirstTinyfolk", { role = "Tinyfolk" })
+	local secondTinyfolk = MockPlayer.new(6502, "FallbackSecondTinyfolk", { role = "Tinyfolk" })
+	local giant = MockPlayer.new(6503, "FallbackClosingGiant", { role = "Giant" })
+	playersByUserId[6501] = firstTinyfolk
+	playersByUserId[6502] = secondTinyfolk
+	playersByUserId[6503] = giant
+
+	local teamAccess = EscapeService.getRouteAccess(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(teamAccess.accepted, false, "fallback route inactive while team has multiple active Tinyfolk")
+	assertEqual(teamAccess.reason, "fallback_escape_inactive", "fallback team access reason")
+
+	playersByUserId[6502] = nil
+	local searchingAccess = EscapeService.getRouteAccess(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(searchingAccess.accepted, false, "last Tinyfolk fallback starts in search phase")
+	assertEqual(searchingAccess.reason, "fallback_escape_searching", "fallback searching access reason")
+	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Searching", "fallback searching phase projected")
+	assertEqual(fallbackRouteAttributes.FallbackEscapeCueBand, "local_search", "fallback local cue projected")
+
+	currentTime = 102
+	local openAccess = EscapeService.getRouteAccess(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(openAccess.reason, "accepted", "last Tinyfolk fallback open access reason")
+	assertEqual(openAccess.accepted, true, "last Tinyfolk fallback opens after delay")
+	assertEqual(openAccess.fallbackEscapePhase, "Open", "fallback open phase returned")
+
+	local close = EscapeService.requestFallbackEscapeClose(giant, "EscapeRoute_B")
+	assertEqual(close.accepted, true, "Giant can close open fallback route")
+	assertEqual(close.reason, "closed", "fallback close accepted reason")
+	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Closed", "fallback close phase projected")
+	assertEqual(fallbackRouteAttributes.FallbackEscapeClosedByUserId, giant.UserId, "fallback close user projected")
+
+	currentTime = 103
+	local closedEscape = EscapeService.requestEscapeAttempt(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(closedEscape.accepted, false, "closed fallback rejects escape")
+	assertEqual(closedEscape.reason, "fallback_escape_closed", "closed fallback escape reason")
+
+	currentTime = 107
+	local reopenedAccess = EscapeService.getRouteAccess(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(reopenedAccess.accepted, true, "fallback reopens after close window")
+	assertEqual(reopenedAccess.fallbackEscapePhase, "Open", "fallback reopened phase returned")
+
+	local escaped = EscapeService.requestEscapeAttempt(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(escaped.accepted, true, "open fallback accepts last Tinyfolk escape")
+	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Resolved", "fallback resolves after escape")
+	assertEqual(firstTinyfolk:GetAttribute("Escaped"), true, "fallback escape marks Tinyfolk escaped")
+	assertEqual(crossingHooks[1], "EscapeRoute_B", "fallback escape preserves route-crossing hook")
+
+	local resolvedAttempt = EscapeService.requestEscapeAttempt(firstTinyfolk, "EscapeRoute_B")
+	assertEqual(resolvedAttempt.accepted, false, "resolved fallback rejects later escape")
+	assertEqual(resolvedAttempt.reason, "already_escaped", "resolved fallback escaped player reason")
+end
+
+do
+	resetRouteDefaults()
+	globalEnv._fallbackRoutePartPresent = true
+	fallbackRoutePart.Parent = escapeRoutesFolder
+	local activeTinyfolk = MockPlayer.new(6511, "FallbackActiveTinyfolk", { role = "Tinyfolk" })
+	local downedTinyfolk = MockPlayer.new(6512, "FallbackDownedTinyfolk", { role = "Tinyfolk" })
+	playersByUserId[6511] = activeTinyfolk
+	playersByUserId[6512] = downedTinyfolk
+	downedByUserId[6512] = true
+	roleQueryFault = true
+
+	local faultedAccess = EscapeService.getRouteAccess(activeTinyfolk, "EscapeRoute_B")
+	assertEqual(faultedAccess.accepted, false, "downed query fault keeps fallback inactive with uncertain second Tinyfolk")
+	assertEqual(faultedAccess.reason, "fallback_escape_inactive", "downed query fault fallback reason")
+
+	roleQueryFault = false
+	local searchingAccess = EscapeService.getRouteAccess(activeTinyfolk, "EscapeRoute_B")
+	assertEqual(searchingAccess.accepted, false, "downed second Tinyfolk excluded after query recovers")
+	assertEqual(searchingAccess.reason, "fallback_escape_searching", "recovered downed query fallback reason")
 end
 
 do
