@@ -259,6 +259,7 @@ local grabQueryFault = false
 local transportQueryFault = false
 local scoreQueryFault = false
 local movementHookFault = false
+local remoteBarrierSnapshot: any = nil
 globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		if roleQueryFault == true then
@@ -317,6 +318,14 @@ globalEnv._ScoreService_QueryAPI = {
 			error("score query fault")
 		end
 		return { accepted = true, reason = "accepted" }
+	end,
+}
+globalEnv._RemoteControlStationService_QueryAPI = {
+	IsRouteRemoteBarrierActive = function(_routeId: string): boolean
+		return type(remoteBarrierSnapshot) == "table" and remoteBarrierSnapshot.state == "Active"
+	end,
+	GetRouteBarrierSnapshot = function(_routeId: string): any
+		return remoteBarrierSnapshot
 	end,
 }
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
@@ -379,6 +388,7 @@ local function resetRouteDefaults()
 	transportQueryFault = false
 	scoreQueryFault = false
 	movementHookFault = false
+	remoteBarrierSnapshot = nil
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
@@ -533,6 +543,42 @@ end
 
 do
 	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.RouteEnabled = true
+	local tinyfolk = MockPlayer.new(65, "RemoteBarrierTinyfolk", { role = "Tinyfolk" })
+	remoteBarrierSnapshot = {
+		state = "Warning",
+		warningEndsAt = 101,
+		activeEndsAt = 105,
+		expiresAt = 105,
+	}
+
+	local warningAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	local warningEscape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(warningAccess.accepted, true, "remote barrier warning allows route access")
+	assertEqual(warningAccess.remoteBarrierState, "Warning", "remote barrier warning projects access state")
+	assertEqual(warningEscape.accepted, true, "remote barrier warning allows escape attempt")
+
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.RouteEnabled = true
+	tinyfolk = MockPlayer.new(66, "RemoteBarrierBlockedTinyfolk", { role = "Tinyfolk" })
+	remoteBarrierSnapshot = {
+		state = "Active",
+		warningEndsAt = 101,
+		activeEndsAt = 105,
+		expiresAt = 105,
+	}
+	local activeAccess = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
+	local activeEscape = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(activeAccess.accepted, false, "remote barrier active rejects route access")
+	assertEqual(activeAccess.reason, "remote_barrier_active", "remote barrier access rejection reason")
+	assertEqual(activeEscape.accepted, false, "remote barrier active rejects escape attempt")
+	assertEqual(activeEscape.reason, "remote_barrier_active", "remote barrier escape rejection reason")
+end
+
+do
+	resetRouteDefaults()
 	globalEnv._fallbackRoutePartPresent = true
 	fallbackRoutePart.Parent = escapeRoutesFolder
 	local firstTinyfolk = MockPlayer.new(6501, "FallbackFirstTinyfolk", { role = "Tinyfolk" })
@@ -598,7 +644,11 @@ do
 	roleQueryFault = true
 
 	local faultedAccess = EscapeService.getRouteAccess(activeTinyfolk, "EscapeRoute_B")
-	assertEqual(faultedAccess.accepted, false, "downed query fault keeps fallback inactive with uncertain second Tinyfolk")
+	assertEqual(
+		faultedAccess.accepted,
+		false,
+		"downed query fault keeps fallback inactive with uncertain second Tinyfolk"
+	)
 	assertEqual(faultedAccess.reason, "fallback_escape_inactive", "downed query fault fallback reason")
 
 	roleQueryFault = false

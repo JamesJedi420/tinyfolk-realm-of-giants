@@ -12,6 +12,26 @@
         "Size": [10, 2, 10],
         "Position": [0, 1, 170]
       }
+    },
+    {
+      "name": "EscapeRoute_ControlA",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [0.42, 0.42, 0.5],
+        "Size": [10, 2, 10],
+        "Position": [12, 1, 18]
+      },
+      "attributes": {
+        "RouteEnabled": true,
+        "TinyfolkOnlyRoute": true,
+        "FinalExitManaged": false,
+        "ThroughGapReachAllowed": true,
+        "RouteType": "TraversalGap",
+        "TraversalGapBlockExempt": false
+      }
     }
   ]
 }

@@ -31,6 +31,8 @@ Use these markers consistently in design and implementation discussions:
 - Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
 - Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.
 - Escape route metadata is server-readable; current prototype route access is Tinyfolk-only, excludes Giants from route traversal queries, and exposes only objective-safe route state to objective consumers.
+- Giant remote control station pressure is bounded to authored control zones: a Giant can operate `GiantControlStation_A` to warn then temporarily block a valid Tinyfolk route inside `GiantControlZone_A`, spending station energy and leaving at least one eligible Tinyfolk route unpressured.
+- Tinyfolk can contest the remote control station through bounded sabotage that drains station energy and applies a temporary lockout.
 - Prototype map and interaction surfaces for playtest validation.
 
 ## Long-Term World Model Direction
@@ -113,6 +115,7 @@ Operational state model:
 - Add only the smallest surface required to validate each issue contract.
 - Separate prototype implementation details from long-term directional notes.
 - Keep server services authoritative for role/range/cooldown/material validation; client interaction resolution is only request routing.
+- Keep remote route pressure route-id based and zone-scoped in the current prototype; arbitrary camera placement, permanent walls, portable control, overclocking, and persistence are future scope.
 
 ## Role Selection Rules (Current Prototype)
 - Players must select Giant or Tinyfolk before normal playable spawn.

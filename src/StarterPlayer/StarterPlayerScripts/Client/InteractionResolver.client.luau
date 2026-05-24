@@ -14,6 +14,7 @@ local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
+local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
@@ -25,6 +26,7 @@ local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local UPGRADE_SELECT_REMOTE_NAME = "UpgradeBoardSelectRequest"
 local SPECIALIST_ASSIGN_REMOTE_NAME = "SpecialistAssignRequest"
 local SPECIALIST_CLEAR_REMOTE_NAME = "SpecialistClearRequest"
+local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
 
 local INTERACT_KEY = Enum.KeyCode.F
 
@@ -39,6 +41,7 @@ local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_RE
 local upgradeSelectRemote = remotesFolder:WaitForChild(UPGRADE_SELECT_REMOTE_NAME) :: RemoteEvent
 local specialistAssignRemote = remotesFolder:WaitForChild(SPECIALIST_ASSIGN_REMOTE_NAME) :: RemoteEvent
 local specialistClearRemote = remotesFolder:WaitForChild(SPECIALIST_CLEAR_REMOTE_NAME) :: RemoteEvent
+local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
 local lastSentAtBySignature: { [string]: number } = {}
@@ -48,6 +51,8 @@ local activeStationTaskStationId: string? = nil
 local activeStationTaskToken = 0
 local activeShrineTaskShrineId: string? = nil
 local activeShrineTaskToken = 0
+local activeRemoteControlStationId: string? = nil
+local activeRemoteControlTaskToken = 0
 
 type CandidateAction =
 	"escape_attempt"
@@ -56,6 +61,7 @@ type CandidateAction =
 	| "warehouse_deliver"
 	| "station_pickup_or_assign"
 	| "shrine_assign_worshipper"
+	| "remote_control_station"
 
 type Candidate = {
 	action: CandidateAction,
@@ -73,6 +79,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	warehouse_deliver = 4,
 	station_pickup_or_assign = 5,
 	shrine_assign_worshipper = 6,
+	remote_control_station = 7,
 }
 
 local function debugLog(message: string)
@@ -328,6 +335,34 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				})
 			end
 		end
+
+		if startsWithPrefix(targetId, RemoteControlStationConfig.StationNamePrefix) then
+			if isGiant and distance <= RemoteControlStationConfig.InteractionRangeStuds then
+				pushCandidate(candidates, {
+					action = "remote_control_station",
+					targetId = targetId,
+					distance = distance,
+					priority = getPriority("remote_control_station"),
+					mode = "enter",
+					payload = {
+						stationId = targetId,
+						mode = RemoteControlStationConfig.Mode.Enter,
+					},
+				})
+			elseif isTinyfolk and distance <= RemoteControlStationConfig.SabotageRangeStuds then
+				pushCandidate(candidates, {
+					action = "remote_control_station",
+					targetId = targetId,
+					distance = distance,
+					priority = getPriority("remote_control_station"),
+					mode = "sabotage",
+					payload = {
+						stationId = targetId,
+						mode = RemoteControlStationConfig.Mode.Sabotage,
+					},
+				})
+			end
+		end
 	end
 
 	return candidates
@@ -448,6 +483,11 @@ local function fireCandidate(candidate: Candidate)
 		shrineActivateRemote:FireServer(candidate.payload)
 		return
 	end
+
+	if candidate.action == "remote_control_station" then
+		remoteControlStationRemote:FireServer(candidate.payload)
+		return
+	end
 end
 
 local function cancelActiveConstructionTask(reason: string)
@@ -501,10 +541,23 @@ local function cancelActiveShrineTask(reason: string)
 	debugLog(string.format("Sent shrine task cancel shrineId=%s reason=%s", shrineId, reason))
 end
 
+local function cancelActiveRemoteControlTask(reason: string)
+	if activeRemoteControlStationId == nil then
+		return
+	end
+
+	local stationId = activeRemoteControlStationId
+	activeRemoteControlStationId = nil
+	activeRemoteControlTaskToken += 1
+
+	debugLog(string.format("Cancelled remote control task stationId=%s reason=%s", stationId, reason))
+end
+
 local function beginConstructionTask(candidate: Candidate)
 	cancelActiveConstructionTask("new_begin")
 	cancelActiveStationTask("construction_begin")
 	cancelActiveShrineTask("construction_begin")
+	cancelActiveRemoteControlTask("construction_begin")
 
 	activeConstructionTaskSiteId = candidate.targetId
 	activeConstructionTaskToken += 1
@@ -548,6 +601,7 @@ local function beginStationTask(candidate: Candidate)
 	cancelActiveConstructionTask("station_begin")
 	cancelActiveStationTask("new_begin")
 	cancelActiveShrineTask("station_begin")
+	cancelActiveRemoteControlTask("station_begin")
 
 	activeStationTaskStationId = candidate.targetId
 	activeStationTaskToken += 1
@@ -591,6 +645,7 @@ local function beginShrineTask(candidate: Candidate)
 	cancelActiveConstructionTask("shrine_begin")
 	cancelActiveStationTask("shrine_begin")
 	cancelActiveShrineTask("new_begin")
+	cancelActiveRemoteControlTask("shrine_begin")
 
 	activeShrineTaskShrineId = candidate.targetId
 	activeShrineTaskToken += 1
@@ -627,6 +682,39 @@ local function beginShrineTask(candidate: Candidate)
 		activeShrineTaskShrineId = nil
 		activeShrineTaskToken += 1
 		debugLog(string.format("Sent shrine task complete shrineId=%s", candidate.targetId))
+	end)
+end
+
+local function beginRemoteControlSabotageTask(candidate: Candidate)
+	cancelActiveConstructionTask("remote_control_begin")
+	cancelActiveStationTask("remote_control_begin")
+	cancelActiveShrineTask("remote_control_begin")
+	cancelActiveRemoteControlTask("new_begin")
+
+	activeRemoteControlStationId = candidate.targetId
+	activeRemoteControlTaskToken += 1
+	local tokenAtBegin = activeRemoteControlTaskToken
+
+	debugLog(
+		string.format(
+			"Started remote control sabotage task stationId=%s duration=%.2f",
+			candidate.targetId,
+			RemoteControlStationConfig.SabotageTaskDurationSeconds
+		)
+	)
+
+	task.delay(RemoteControlStationConfig.SabotageTaskDurationSeconds, function()
+		if activeRemoteControlStationId ~= candidate.targetId then
+			return
+		end
+		if activeRemoteControlTaskToken ~= tokenAtBegin then
+			return
+		end
+
+		remoteControlStationRemote:FireServer(candidate.payload)
+		activeRemoteControlStationId = nil
+		activeRemoteControlTaskToken += 1
+		debugLog(string.format("Sent remote control sabotage stationId=%s", candidate.targetId))
 	end)
 end
 
@@ -675,6 +763,11 @@ local function requestContextInteraction()
 		return
 	end
 
+	if resolvedWinner.action == "remote_control_station" and resolvedWinner.mode == "sabotage" then
+		beginRemoteControlSabotageTask(resolvedWinner)
+		return
+	end
+
 	fireCandidate(resolvedWinner)
 end
 
@@ -700,6 +793,7 @@ UserInputService.InputEnded:Connect(function(input: any, _gameProcessedEvent: bo
 	cancelActiveConstructionTask("input_ended")
 	cancelActiveStationTask("input_ended")
 	cancelActiveShrineTask("input_ended")
+	cancelActiveRemoteControlTask("input_ended")
 end)
 
 debugLog("Input hook active (F=Context Interaction Resolver)")

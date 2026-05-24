@@ -149,6 +149,20 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return queryApi
 	end
 
+	local function getRemoteControlStationQueryApi(): any?
+		local globalValue: any = globalEnv
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+
+		local queryApi = globalValue._RemoteControlStationService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+
+		return queryApi
+	end
+
 	local function ensureRemotesFolder(): Folder?
 		if ReplicatedStorage == nil or type(ReplicatedStorage.FindFirstChild) ~= "function" then
 			return nil
@@ -545,7 +559,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			part:SetAttribute(EscapeConfig.TraversalGapBlockExemptAttribute, false)
 		end
 		if isFallbackEscapeCandidate(part) then
-			applyFallbackEscapeAttributes(part, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
+			applyFallbackEscapeAttributes(
+				part,
+				FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId)))
+			)
 		end
 
 		local finalExitState = ensureFinalExitState(routeId, part)
@@ -904,7 +921,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 		if getSelectedFallbackRouteId() ~= routeId then
 			fallbackEscapeStateByRouteId[routeId] = nil
-			applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
+			applyFallbackEscapeAttributes(
+				routePart,
+				FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId)))
+			)
 			return nil
 		end
 
@@ -923,7 +943,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		while true do
-			local transition = FallbackEscapeState.Refresh(state, buildFallbackEscapeConfig(routeId), getActiveTinyfolkUserIds(), now())
+			local transition = FallbackEscapeState.Refresh(
+				state,
+				buildFallbackEscapeConfig(routeId),
+				getActiveTinyfolkUserIds(),
+				now()
+			)
 			state = transition.state
 			fallbackEscapeStateByRouteId[routeId] = state
 			if transition.accepted ~= true then
@@ -994,11 +1019,46 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local function routeRejectsTraversal(routeId: string, routePart: BasePart): boolean
 		local currentTime = now()
 		cleanupExpiredBlock(routeId, routePart, currentTime)
-		return TraversalGapBlockState.ShouldRejectTraversal(
-			traversalGapBlockByRouteId[routeId],
-			currentTime,
-			routeHasBlockExemption(routePart)
-		)
+		if
+			TraversalGapBlockState.ShouldRejectTraversal(
+				traversalGapBlockByRouteId[routeId],
+				currentTime,
+				routeHasBlockExemption(routePart)
+			)
+		then
+			return true
+		end
+
+		local remoteControlQueryApi = getRemoteControlStationQueryApi()
+		if remoteControlQueryApi ~= nil and type(remoteControlQueryApi.IsRouteRemoteBarrierActive) == "function" then
+			local ok, active = pcall(function()
+				return remoteControlQueryApi.IsRouteRemoteBarrierActive(routeId)
+			end)
+			if ok and active == true then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	local function getRemoteBarrierSnapshot(routeId: string): any?
+		local remoteControlQueryApi = getRemoteControlStationQueryApi()
+		if remoteControlQueryApi == nil or type(remoteControlQueryApi.GetRouteBarrierSnapshot) ~= "function" then
+			return nil
+		end
+		local ok, snapshot = pcall(function()
+			return remoteControlQueryApi.GetRouteBarrierSnapshot(routeId)
+		end)
+		if ok and type(snapshot) == "table" then
+			return snapshot
+		end
+		return nil
+	end
+
+	local function routeRejectsRemoteBarrier(routeId: string): boolean
+		local snapshot = getRemoteBarrierSnapshot(routeId)
+		return type(snapshot) == "table" and snapshot.state == "Active"
 	end
 
 	local function getPlayerRole(player: any): string?
@@ -1038,6 +1098,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local isBlocked = snapshot.state == TraversalGapBlockState.States.Active
 			and not routeHasBlockExemption(routePart)
+		local remoteBarrierSnapshot = getRemoteBarrierSnapshot(routeId)
+		local isRemoteBarrierActive = type(remoteBarrierSnapshot) == "table" and remoteBarrierSnapshot.state == "Active"
 
 		local accepted = true
 		local reason = "accepted"
@@ -1053,6 +1115,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		elseif isBlocked then
 			accepted = false
 			reason = "traversal_gap_block_active"
+		elseif isRemoteBarrierActive then
+			accepted = false
+			reason = "remote_barrier_active"
 		end
 
 		return {
@@ -1064,6 +1129,14 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			isEnabled = isEnabled,
 			blockState = snapshot.state,
 			blockExempt = routeHasBlockExemption(routePart),
+			remoteBarrierState = if remoteBarrierSnapshot ~= nil then remoteBarrierSnapshot.state else nil,
+			remoteBarrierWarningEndsAt = if remoteBarrierSnapshot ~= nil
+				then remoteBarrierSnapshot.warningEndsAt
+				else nil,
+			remoteBarrierActiveEndsAt = if remoteBarrierSnapshot ~= nil
+				then remoteBarrierSnapshot.activeEndsAt
+				else nil,
+			remoteBarrierExpiresAt = if remoteBarrierSnapshot ~= nil then remoteBarrierSnapshot.expiresAt else nil,
 			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
 			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
 			fallbackEscapeCueBand = routePart:GetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute),
@@ -1074,6 +1147,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		local fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
+		local remoteBarrierSnapshot = getRemoteBarrierSnapshot(routeId)
 		return {
 			routeId = routeId,
 			tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true,
@@ -1081,6 +1155,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			routeType = routePart:GetAttribute(EscapeConfig.RouteTypeAttribute),
 			blockState = snapshot.state,
 			blockExempt = routeHasBlockExemption(routePart),
+			remoteBarrierState = if remoteBarrierSnapshot ~= nil then remoteBarrierSnapshot.state else nil,
 			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
 			fallbackEscapeCandidate = isFallbackEscapeCandidate(routePart),
 			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
@@ -1092,6 +1167,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		local fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
+		local remoteBarrierSnapshot = getRemoteBarrierSnapshot(routeId)
 		local payload: any = {
 			routeId = routeId,
 			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE),
@@ -1103,6 +1179,14 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			blockExpiresAt = snapshot.expiresAt,
 			blockedByUserId = snapshot.blockedByUserId,
 			blockExempt = routeHasBlockExemption(routePart),
+			remoteBarrierState = if remoteBarrierSnapshot ~= nil then remoteBarrierSnapshot.state else nil,
+			remoteBarrierWarningEndsAt = if remoteBarrierSnapshot ~= nil
+				then remoteBarrierSnapshot.warningEndsAt
+				else nil,
+			remoteBarrierActiveEndsAt = if remoteBarrierSnapshot ~= nil
+				then remoteBarrierSnapshot.activeEndsAt
+				else nil,
+			remoteBarrierExpiresAt = if remoteBarrierSnapshot ~= nil then remoteBarrierSnapshot.expiresAt else nil,
 			finalExitPhase = if finalExitSnapshot ~= nil then finalExitSnapshot.phase else nil,
 			finalExitPoweredEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.poweredEndsAt else nil,
 			finalExitOpeningEndsAt = if finalExitSnapshot ~= nil then finalExitSnapshot.openingEndsAt else nil,
@@ -1111,8 +1195,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			fallbackEscapeCandidate = isFallbackEscapeCandidate(routePart),
 			fallbackEscapePhase = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil,
 			fallbackEscapeCueBand = routePart:GetAttribute(EscapeConfig.FallbackEscapeCueBandAttribute),
-			fallbackEscapeClosedEndsAt = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.closedEndsAt else nil,
-			fallbackEscapeClosedByUserId = if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.closedByUserId else nil,
+			fallbackEscapeClosedEndsAt = if fallbackEscapeSnapshot ~= nil
+				then fallbackEscapeSnapshot.closedEndsAt
+				else nil,
+			fallbackEscapeClosedByUserId = if fallbackEscapeSnapshot ~= nil
+				then fallbackEscapeSnapshot.closedByUserId
+				else nil,
 		}
 
 		if userId ~= nil then
@@ -1428,12 +1516,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			if fallbackEscapeSnapshot == nil or fallbackEscapeSnapshot.isEscapeOpen ~= true then
 				return {
 					accepted = false,
-					reason = fallbackEscapeRejectReason(if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil),
+					reason = fallbackEscapeRejectReason(
+						if fallbackEscapeSnapshot ~= nil then fallbackEscapeSnapshot.phase else nil
+					),
 				}
 			end
 		end
 
-		if not isFinalExitManaged(routePart) and not isFallbackEscapeCandidate(routePart) and routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == false then
+		if
+			not isFinalExitManaged(routePart)
+			and not isFallbackEscapeCandidate(routePart)
+			and routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == false
+		then
 			return { accepted = false, reason = "route_disabled" }
 		end
 
@@ -1443,6 +1537,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				accepted = false,
 				reason = finalExitRejectReason(finalExitSnapshot.phase),
 			}
+		end
+
+		if routeRejectsRemoteBarrier(routeId) then
+			return { accepted = false, reason = "remote_barrier_active" }
 		end
 
 		if routeRejectsTraversal(routeId, routePart) then
@@ -1792,7 +1890,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		fallbackEscapeStateByRouteId = {}
 		for routeId, routePart in escapeRouteById do
 			if isFallbackEscapeCandidate(routePart) then
-				applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId))))
+				applyFallbackEscapeAttributes(
+					routePart,
+					FallbackEscapeState.GetSnapshot(FallbackEscapeState.NewState(buildFallbackEscapeConfig(routeId)))
+				)
 			end
 		end
 	end
