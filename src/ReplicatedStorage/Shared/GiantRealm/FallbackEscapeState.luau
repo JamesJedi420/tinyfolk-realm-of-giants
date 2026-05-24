@@ -30,7 +30,12 @@ local function isFiniteNonNegative(value: any): boolean
 end
 
 local function isValidUserId(value: any): boolean
-	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge and value % 1 == 0 and value > 0
+	return type(value) == "number"
+		and value == value
+		and value ~= math.huge
+		and value ~= -math.huge
+		and value % 1 == 0
+		and value > 0
 end
 
 local function duration(value: any, fallback: number): number
@@ -187,7 +192,10 @@ function FallbackEscapeState.ApplyClose(state: State, config: any, closedByUserI
 	if not isValidUserId(closedByUserId) then
 		return transition(nextState, false, "closed_by_user_id_invalid")
 	end
-	if nextState.phase ~= FallbackEscapeState.Phases.Searching and nextState.phase ~= FallbackEscapeState.Phases.Open then
+	if
+		nextState.phase ~= FallbackEscapeState.Phases.Searching
+		and nextState.phase ~= FallbackEscapeState.Phases.Open
+	then
 		return transition(nextState, false, "phase_not_closeable")
 	end
 

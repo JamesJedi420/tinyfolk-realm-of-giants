@@ -138,6 +138,14 @@ See `docs/PROFILE_OWNERSHIP_DECISION.md` for the full ownership decision record.
 
 **Profile data consumption status:** `ProfilePersistenceGateway` exposes gameplay-safe loaded player profile data access and update entrypoints. Callers can read cloned snapshots and commit mutations only through the gateway update function; they cannot receive ProfileStore profile/session objects or mutate active profile data by reference. `RoleService` consumes this surface for role preference (`rolePreference.preferredRole`) and explicit Giant realm load/save/release, and `SpecialistAssignmentService` consumes this surface for specialist preference fields (`specialistPreference.specialistRole`, `specialistPreference.assignedStationId`, and `specialistPreference.lastAssignedAt`) while preserving existing specialist state-machine validation. These integrations restore valid stored preference values during setup and persist accepted gameplay transitions through gateway-owned persistence timing.
 
+### Ephemeral Cross-Server Coordination System
+- MemoryStore structure policy for live realm registry, admission queue, party matchmaking queue, transfer locks, active realm capacity, rescue contract queue, and capture timers
+- Deterministic structure names, key prefixes, key-part requirements, expiration policy, and payload-size caps
+- Server-only MemoryStore adapter boundary; gameplay systems must not call raw `MemoryStoreService` directly
+- Durable profile and Giant realm persistence remain ProfileStore-backed and separate from ephemeral MemoryStore coordination
+
+**Current implementation status:** TIN-116 adds a pure server-side `MemoryStoreStructurePolicy` module that defines the first bounded MemoryStore structure/expiration policy without making live MemoryStore calls. The policy fixes structure names, structure kinds (`SortedMap`, `Queue`, `HashMap`), key prefixes, required key parts, per-structure TTLs, per-structure encoded payload caps, and platform guardrails for structure names, keys, expiration seconds, and value bytes. Runtime callers may request shorter TTLs, but cannot extend a record beyond the structure policy default. Deterministic tests cover structure ordering, key generation, TTL validation, payload-size guards, cloning behavior, unsupported structure rejection, and invalid key-part rejection. Admission queue processing, active capacity mutation, rescue queue durability, MessagingService notification fanout, and live MemoryStore adapter wiring remain deferred to their own bounded issues.
+
 ### Trait and Loadout Framework
 - Role-shaped loadout slots (intentionally capped)
 - Data-driven trait definitions
