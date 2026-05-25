@@ -55,7 +55,7 @@ local function makeFakeProfileStoreModule(startSessionImpl: ((string, any) -> an
 		if type(numeric) ~= "number" then
 			return 0
 		end
-		return numeric
+		return numeric :: number
 	end
 
 	local playerStore = {}

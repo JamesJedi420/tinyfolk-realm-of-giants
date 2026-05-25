@@ -35,6 +35,7 @@ $testFiles = @(
     'tests\realm_admission_queue_state.spec.luau',
     'tests\realm_admission_queue_store.spec.luau',
     'tests\realm_admission_queue_processor.spec.luau',
+    'tests\realm_admission_queue_service_runtime_entrypoint.spec.luau',
     'tests\realm_metadata_registry.spec.luau',
     'tests\realm_theme_family_schema.spec.luau',
     'tests\district_placement_assembly_selection_runtime_entrypoint.spec.luau',
