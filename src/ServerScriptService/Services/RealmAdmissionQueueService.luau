@@ -13,6 +13,10 @@ local MemoryStoreStructurePolicy = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
 	else (require :: any)("./MemoryStoreStructurePolicy")
 
+local MemoryStoreAdapter = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreAdapter"))
+	else (require :: any)("./MemoryStoreAdapter")
+
 local RealmAdmissionQueueStore = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmAdmissionQueueStore"))
 	else (require :: any)("./RealmAdmissionQueueStore")
@@ -189,6 +193,13 @@ local function buildRuntime(config: any)
 	local adapter = if type(config) == "table" then config.adapter else nil
 	if adapter == nil then
 		adapter = getGlobalTable("_MemoryStoreAdapter_QueryAPI")
+	end
+	if adapter == nil then
+		local activeCapacityPolicy = MemoryStoreStructurePolicy.GetPolicy("activeRealmCapacity")
+		local mapName = if type(activeCapacityPolicy) == "table" then activeCapacityPolicy.name else nil
+		adapter = MemoryStoreAdapter.CreateDefault({
+			activeRealmCapacityMapName = mapName,
+		})
 	end
 
 	local capacityApi = if type(config) == "table" then config.capacityApi else nil
