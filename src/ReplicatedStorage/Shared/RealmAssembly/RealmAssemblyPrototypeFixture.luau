@@ -1,11 +1,50 @@
 --!strict
 
 local RealmChunkAssemblySchema = require("./RealmChunkAssemblySchema")
+local RealmMetadataRegistry = require("./RealmMetadataRegistry")
 
-local Fixture = {}
+local Fixture: any = {}
 
-function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
-	local startChunk: RealmChunkAssemblySchema.AuthoredChunk = {
+local function hasString(values: { string }, expected: string): boolean
+	for _, value in ipairs(values) do
+		if value == expected then
+			return true
+		end
+	end
+	return false
+end
+
+local function applyMetadataToPrototypeInput(input: any, record: any): any
+	local startChunk = input.chunkLibrary["Chunk_Start"]
+	if startChunk ~= nil then
+		if not hasString(startChunk.tags, record.realmTemplateId) then
+			table.insert(startChunk.tags, record.realmTemplateId)
+		end
+		if not hasString(startChunk.tags, record.themeId) then
+			table.insert(startChunk.tags, record.themeId)
+		end
+		if startChunk.structuralMetadata ~= nil then
+			startChunk.structuralMetadata.recurringStructureTags = table.clone(record.recurringStructureTags)
+			startChunk.structuralMetadata.traversalDensityClass = record.traversalDensity
+		end
+	end
+
+	local exitChunk = input.chunkLibrary["Chunk_Exit"]
+	if exitChunk ~= nil then
+		if not hasString(exitChunk.tags, record.realmTemplateId) then
+			table.insert(exitChunk.tags, record.realmTemplateId)
+		end
+		if exitChunk.structuralMetadata ~= nil then
+			exitChunk.structuralMetadata.recurringStructureTags = table.clone(record.recurringStructureTags)
+			exitChunk.structuralMetadata.traversalDensityClass = record.traversalDensity
+		end
+	end
+
+	return input
+end
+
+function Fixture.GetPrototypeAssemblyInput(): any
+	local startChunk: any = {
 		chunkId = "Chunk_Start",
 		chunkKind = "start",
 		authoringVersion = 1,
@@ -77,7 +116,7 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 		},
 	}
 
-	local exitChunk: RealmChunkAssemblySchema.AuthoredChunk = {
+	local exitChunk: any = {
 		chunkId = "Chunk_Exit",
 		chunkKind = "exit",
 		authoringVersion = 1,
@@ -158,25 +197,25 @@ function Fixture.GetPrototypeAssemblyInput(): RealmChunkAssemblySchema.AssemblyI
 	}
 end
 
-function Fixture.GetMissingChunkAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+function Fixture.GetMissingChunkAssemblyInput(): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	input.chunkLibrary["Chunk_Exit"] = nil
 	return input
 end
 
-function Fixture.GetMissingSocketAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+function Fixture.GetMissingSocketAssemblyInput(): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	input.declaredConnections[1].toSocketId = "missing_socket"
 	return input
 end
 
-function Fixture.GetIncompatibleSocketAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+function Fixture.GetIncompatibleSocketAssemblyInput(): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	input.chunkLibrary["Chunk_Exit"].sockets[1].compatibility.connectionClass = "route_side"
 	return input
 end
 
-function Fixture.GetDuplicateSocketUseAssemblyInput(): RealmChunkAssemblySchema.AssemblyInput
+function Fixture.GetDuplicateSocketUseAssemblyInput(): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	table.insert(input.declaredConnections, {
 		fromPlacementId = "P_Start",
@@ -187,7 +226,7 @@ function Fixture.GetDuplicateSocketUseAssemblyInput(): RealmChunkAssemblySchema.
 	return input
 end
 
-function Fixture.GetSelfConnectionAssemblyInput(allowSelfConnection: boolean?): RealmChunkAssemblySchema.AssemblyInput
+function Fixture.GetSelfConnectionAssemblyInput(allowSelfConnection: boolean?): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	table.insert(input.chunkLibrary["Chunk_Start"].sockets, {
 		socketId = "west_path_self",
@@ -211,6 +250,31 @@ function Fixture.GetSelfConnectionAssemblyInput(allowSelfConnection: boolean?): 
 		},
 	}
 	return input
+end
+
+function Fixture.GetAssemblyInputForTemplate(realmTemplateId: any, registry: any?): (any?, string?)
+	local record, reason = RealmMetadataRegistry.GetRealmMetadataRecord(realmTemplateId, registry)
+	if record == nil then
+		return nil, reason or "realm_metadata_missing"
+	end
+
+	local input = Fixture.GetPrototypeAssemblyInput()
+	return applyMetadataToPrototypeInput(input, record), nil
+end
+
+function Fixture.SelectAssemblyInputFromMetadata(selectionInput: any?, registry: any?): (any, string)
+	local candidates = RealmMetadataRegistry.SelectRealmCandidates(selectionInput, registry)
+	if #candidates == 0 then
+		return Fixture.GetPrototypeAssemblyInput(), "prototype_fallback"
+	end
+
+	local selected = candidates[1]
+	local input, reason = Fixture.GetAssemblyInputForTemplate(selected.realmTemplateId, registry)
+	if input == nil then
+		return Fixture.GetPrototypeAssemblyInput(), reason or "prototype_fallback"
+	end
+
+	return input, selected.realmTemplateId
 end
 
 return Fixture

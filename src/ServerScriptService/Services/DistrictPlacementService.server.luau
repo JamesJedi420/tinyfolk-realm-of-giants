@@ -7,6 +7,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 local DistrictPlacementConfig: any
 local RealmChunkAssemblySchema: any
 local RealmAssemblyPrototypeFixture: any
+local RealmMetadataRegistry: any
 local RealmDistrictPlacementValidator: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -92,6 +93,7 @@ local function resolveDependencies()
 	DistrictPlacementConfig = requireChildModule(config, "DistrictPlacementConfig")
 	RealmChunkAssemblySchema = requireChildModule(realmAssembly, "RealmChunkAssemblySchema")
 	RealmAssemblyPrototypeFixture = requireChildModule(realmAssembly, "RealmAssemblyPrototypeFixture")
+	RealmMetadataRegistry = requireChildModule(realmAssembly, "RealmMetadataRegistry")
 	RealmDistrictPlacementValidator = requireChildModule(realmAssembly, "RealmDistrictPlacementValidator")
 end
 
@@ -106,8 +108,44 @@ debugLog("Dependency resolution complete")
 -- Build prototype assembly output for placement validation.
 -- This is a placeholder: the real assembled realm descriptor will be supplied by the
 -- realm assembly pipeline once that runtime path is defined (out of TIN-188 scope).
+local function resolveAssemblyInputForRuntime(): any
+	local preferredTemplateId = DistrictPlacementConfig.DefaultRealmTemplateId
+	if type(preferredTemplateId) == "string" and preferredTemplateId ~= "" then
+		local input, reason = RealmAssemblyPrototypeFixture.GetAssemblyInputForTemplate(preferredTemplateId)
+		if input ~= nil then
+			debugLog(string.format("Assembly selection template=%s source=config", preferredTemplateId))
+			return input
+		end
+		debugWarn(
+			string.format(
+				"Assembly selection failed template=%s source=config reason=%s",
+				preferredTemplateId,
+				tostring(reason)
+			)
+		)
+	end
+
+	local validRegistry, registryReason =
+		RealmMetadataRegistry.ValidateRealmMetadataRegistry(RealmMetadataRegistry.DEFAULT_REALM_METADATA_REGISTRY)
+	if not validRegistry then
+		debugWarn(string.format("Assembly selection registry_invalid reason=%s", tostring(registryReason)))
+		debugWarn("Assembly selection fallback=prototype")
+		return RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+	end
+
+	local selectedInput, selectedTemplateId = RealmAssemblyPrototypeFixture.SelectAssemblyInputFromMetadata(nil)
+
+	if selectedTemplateId == "prototype_fallback" then
+		debugWarn("Assembly selection fallback=prototype")
+	else
+		debugLog(string.format("Assembly selection template=%s source=registry", selectedTemplateId))
+	end
+
+	return selectedInput
+end
+
 local prototypeOutputBuilt, prototypeOutputOrError = pcall(function()
-	return RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+	return RealmChunkAssemblySchema.BuildAssemblyOutput(resolveAssemblyInputForRuntime())
 end)
 if not prototypeOutputBuilt then
 	debugWarn(string.format("Failed to build prototype assembly output error=%s", tostring(prototypeOutputOrError)))

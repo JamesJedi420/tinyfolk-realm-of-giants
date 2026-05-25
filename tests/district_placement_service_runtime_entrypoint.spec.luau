@@ -150,6 +150,11 @@ addChild(
 )
 addChild(
 	realmAssemblyFolder,
+	"RealmMetadataRegistry",
+	"../../ReplicatedStorage/Shared/RealmAssembly/RealmMetadataRegistry"
+)
+addChild(
+	realmAssemblyFolder,
 	"RealmDistrictPlacementValidator",
 	"../../ReplicatedStorage/Shared/RealmAssembly/RealmDistrictPlacementValidator"
 )
@@ -236,6 +241,18 @@ local function makeRejectedRequest(): any
 end
 
 require("../src/ServerScriptService/Services/DistrictPlacementService.server")
+
+local sawMetadataSelection = false
+for _, line in ipairs(logs) do
+	if
+		type(line) == "string"
+		and string.find(line, "Assembly selection template=FoundryBasin source=config", 1, true)
+	then
+		sawMetadataSelection = true
+		break
+	end
+end
+assertTrue(sawMetadataSelection, "service selects assembly input using metadata template config")
 
 assertTrue(districtRemote._Handler ~= nil, "service binds DistrictPlacementRequest OnServerEvent")
 assertTrue(constructionRemote._Handler == nil, "service does not bind ConstructionBuildRequest OnServerEvent")

@@ -9,4 +9,7 @@ DistrictPlacementConfig.PlacementRemoteName = "DistrictPlacementRequest"
 
 DistrictPlacementConfig.RequestCooldownSeconds = 0.2
 
+-- Optional startup override for selecting assembly input by realm template metadata.
+DistrictPlacementConfig.DefaultRealmTemplateId = "FoundryBasin"
+
 return DistrictPlacementConfig
