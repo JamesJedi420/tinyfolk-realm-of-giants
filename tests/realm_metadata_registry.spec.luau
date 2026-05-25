@@ -117,6 +117,24 @@ local function run()
 
 	do
 		local candidates = RealmMetadataRegistry.SelectRealmCandidates({
+			requiredThemeId = "industrial_frontier",
+			requiredVariantRule = "night_shift",
+			requiredDistrictTag = "vertical_link",
+		})
+		assertEqual(#candidates, 1, "selection filters by theme influence rules")
+		assertEqual(candidates[1].realmTemplateId, "FoundryBasin", "theme influence selects foundry")
+	end
+
+	do
+		local candidates = RealmMetadataRegistry.SelectRealmCandidates({
+			requiredThemeId = "flooded_settlement",
+			requiredVariantRule = "night_shift",
+		})
+		assertEqual(#candidates, 0, "selection rejects conflicting theme and variant")
+	end
+
+	do
+		local candidates = RealmMetadataRegistry.SelectRealmCandidates({
 			minimumTraversalDensity = "sparse",
 		})
 		assertEqual(#candidates, 2, "sparse minimum includes all")

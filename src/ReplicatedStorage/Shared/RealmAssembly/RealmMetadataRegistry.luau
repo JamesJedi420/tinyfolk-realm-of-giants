@@ -60,7 +60,10 @@ export type RealmMetadataRecord = {
 
 export type SelectionInput = {
 	requiredDistrictType: string?,
+	requiredDistrictTag: string?,
 	requiredLandmarkTag: string?,
+	requiredThemeId: string?,
+	requiredVariantRule: string?,
 	minimumTraversalDensity: TraversalDensity?,
 	requiresAlternativeRoutes: boolean?,
 }
@@ -504,6 +507,9 @@ function RealmMetadataRegistry.SelectRealmCandidates(input: SelectionInput?, reg
 	for _, record in ipairs(source :: { any }) do
 		local include = true
 		if selectionInput ~= nil then
+			if selectionInput.requiredThemeId ~= nil and record.themeId ~= selectionInput.requiredThemeId then
+				include = false
+			end
 			if
 				selectionInput.requiredDistrictType ~= nil
 				and not hasString(record.allowedDistrictTypes, selectionInput.requiredDistrictType)
@@ -511,8 +517,20 @@ function RealmMetadataRegistry.SelectRealmCandidates(input: SelectionInput?, reg
 				include = false
 			end
 			if
+				selectionInput.requiredDistrictTag ~= nil
+				and not hasString(record.districtTags, selectionInput.requiredDistrictTag)
+			then
+				include = false
+			end
+			if
 				selectionInput.requiredLandmarkTag ~= nil
 				and not hasString(record.landmarkTags, selectionInput.requiredLandmarkTag)
+			then
+				include = false
+			end
+			if
+				selectionInput.requiredVariantRule ~= nil
+				and not hasString(record.variantRules, selectionInput.requiredVariantRule)
 			then
 				include = false
 			end
