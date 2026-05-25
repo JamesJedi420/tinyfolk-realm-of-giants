@@ -1,4 +1,6 @@
 --!nocheck
 
 local RealmAdmissionQueueService = require(script.Parent.RealmAdmissionQueueService)
-RealmAdmissionQueueService.Start()
+RealmAdmissionQueueService.Start({
+	enableProcessingLoop = true,
+})

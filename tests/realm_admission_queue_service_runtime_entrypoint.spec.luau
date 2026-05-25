@@ -232,4 +232,88 @@ local invalidProcess = RealmAdmissionQueueService.ProcessBatch(0)
 assertEqual(invalidProcess.accepted, false, "invalid process max rejected")
 assertEqual(invalidProcess.reason, "max_items_invalid", "invalid process max reason")
 
+RealmAdmissionQueueService.ResetForTests()
+
+do
+	local loopAdapter, loopRemovedIds = makeQueueAdapter()
+	local loopDispatchCalls = 0
+	local scheduledCallbacks = {}
+	local scheduledDelays = {}
+	local scheduledTokens = {}
+	local cancelledToken = nil
+
+	local configuredLoop = RealmAdmissionQueueService.ConfigureForTests({
+		adapter = loopAdapter,
+		codec = makeCodec(),
+		queueState = RealmAdmissionQueueState,
+		structurePolicy = MemoryStoreStructurePolicy,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+				}
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				loopDispatchCalls += 1
+				return {
+					ok = true,
+					retryable = false,
+				}
+			end,
+		},
+		operationLock = {
+			TryAcquire = function(_operationId: string): boolean
+				return true
+			end,
+			Release = function(_operationId: string)
+				return
+			end,
+		},
+		now = function(): number
+			return 150
+		end,
+		enableProcessingLoop = true,
+		processIntervalSeconds = 2,
+		processBatchSize = 3,
+		processScheduler = {
+			schedule = function(delaySeconds: number, callback: () -> ())
+				table.insert(scheduledDelays, delaySeconds)
+				table.insert(scheduledCallbacks, callback)
+				local token = "token-" .. tostring(#scheduledCallbacks)
+				table.insert(scheduledTokens, token)
+				return token
+			end,
+			cancel = function(token: any)
+				cancelledToken = token
+			end,
+		},
+	})
+
+	assertTrue(configuredLoop.ok, "loop configure accepted")
+	assertEqual(scheduledDelays[1], 2, "loop interval is scheduled")
+	assertTrue(type(scheduledCallbacks[1]) == "function", "loop callback captured")
+
+	assertTrue(
+		RealmAdmissionQueueService.EnqueueAdmission(makeEntry({ operationId = "op-loop", expiration = 220 })).accepted,
+		"loop enqueue accepted"
+	)
+
+	scheduledCallbacks[1]()
+
+	assertEqual(loopDispatchCalls, 1, "scheduled callback processes queued item")
+	assertTrue(loopRemovedIds["receipt-1"] == true, "scheduled callback removes processed receipt")
+	assertEqual(scheduledDelays[2], 2, "loop reschedules after callback")
+
+	RealmAdmissionQueueService.ResetForTests()
+	assertEqual(cancelledToken, scheduledTokens[2], "reset cancels pending scheduled token")
+end
+
 print("realm_admission_queue_service_runtime_entrypoint: all checks passed")

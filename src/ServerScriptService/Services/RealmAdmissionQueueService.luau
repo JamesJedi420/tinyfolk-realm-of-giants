@@ -24,6 +24,14 @@ local RealmAdmissionQueueProcessor = if script ~= nil and script.Parent ~= nil
 local RealmAdmissionQueueService: any = {}
 local globalEnv: any = getfenv()
 
+local DEFAULT_PROCESS_BATCH_SIZE = 25
+local DEFAULT_PROCESS_INTERVAL_SECONDS = 1
+
+type ProcessScheduler = {
+	schedule: (number, () -> ()) -> any,
+	cancel: ((any) -> ())?,
+}
+
 export type EnqueueResult = {
 	accepted: boolean,
 	reason: string,
@@ -45,6 +53,10 @@ export type BatchReadResult = {
 local started = false
 local runtimeQueueStore: any = nil
 local runtimeProcessor: any = nil
+local runtimeProcessScheduler: ProcessScheduler? = nil
+local runtimeProcessToken: any = nil
+local runtimeProcessBatchSize = DEFAULT_PROCESS_BATCH_SIZE
+local runtimeProcessIntervalSeconds = DEFAULT_PROCESS_INTERVAL_SECONDS
 
 local function isPositiveInteger(value: any): boolean
 	if type(value) ~= "number" then
@@ -75,10 +87,75 @@ local function getGlobalTable(name: string): any?
 	return nil
 end
 
+local function defaultProcessSchedule(delaySeconds: number, callback: () -> ()): any
+	return task.delay(delaySeconds, callback)
+end
+
+local function defaultProcessCancel(token: any)
+	if token == nil then
+		return
+	end
+	if type(task.cancel) == "function" then
+		task.cancel(token)
+	end
+end
+
+local function resolveProcessBatchSize(config: any): number
+	local configAny: any = config
+	local requestedBatchSize = if type(configAny) == "table" then rawget(configAny, "processBatchSize") else nil
+	if isPositiveInteger(requestedBatchSize) then
+		return requestedBatchSize
+	end
+	return DEFAULT_PROCESS_BATCH_SIZE
+end
+
+local function resolveProcessIntervalSeconds(config: any): number
+	local configAny: any = config
+	local requestedIntervalSeconds = if type(configAny) == "table"
+		then rawget(configAny, "processIntervalSeconds")
+		else nil
+	if type(requestedIntervalSeconds) == "number" then
+		local value = requestedIntervalSeconds
+		if value > 0 and value == value and value ~= math.huge and value ~= -math.huge then
+			return value
+		end
+	end
+	return DEFAULT_PROCESS_INTERVAL_SECONDS
+end
+
+local function resolveProcessScheduler(config: any): ProcessScheduler
+	local configAny: any = config
+	local requestedScheduler = if type(configAny) == "table" then rawget(configAny, "processScheduler") else nil
+	if type(requestedScheduler) == "table" then
+		local scheduler: any = requestedScheduler
+		if type(scheduler.schedule) == "function" then
+			return scheduler
+		end
+	end
+
+	return {
+		schedule = defaultProcessSchedule,
+		cancel = defaultProcessCancel,
+	}
+end
+
+local function stopProcessingLoop()
+	local scheduler = runtimeProcessScheduler
+	local schedulerAny: any = scheduler
+	if schedulerAny ~= nil and type(schedulerAny.cancel) == "function" and runtimeProcessToken ~= nil then
+		pcall(schedulerAny.cancel, runtimeProcessToken)
+	end
+	runtimeProcessToken = nil
+	runtimeProcessScheduler = nil
+end
+
+local scheduleNextTick: any = nil
+
 local function resolveCodec(config: any): any?
 	local configAny: any = config
-	if type(configAny) == "table" and configAny.codec ~= nil then
-		return configAny.codec
+	local requestedCodec = if type(configAny) == "table" then rawget(configAny, "codec") else nil
+	if requestedCodec ~= nil then
+		return requestedCodec
 	end
 
 	if game == nil or type(game.GetService) ~= "function" then
@@ -106,6 +183,9 @@ local function resolveCodec(config: any): any?
 end
 
 local function buildRuntime(config: any)
+	stopProcessingLoop()
+
+	local configAny: any = config
 	local adapter = if type(config) == "table" then config.adapter else nil
 	if adapter == nil then
 		adapter = getGlobalTable("_MemoryStoreAdapter_QueryAPI")
@@ -151,7 +231,36 @@ local function buildRuntime(config: any)
 		now = nowFn,
 	})
 
+	runtimeProcessBatchSize = resolveProcessBatchSize(configAny)
+	runtimeProcessIntervalSeconds = resolveProcessIntervalSeconds(configAny)
 	started = true
+
+	if type(configAny) == "table" and configAny.enableProcessingLoop == true then
+		runtimeProcessScheduler = resolveProcessScheduler(configAny)
+
+		scheduleNextTick = function()
+			local scheduler = runtimeProcessScheduler
+			local schedulerAny: any = scheduler
+			if not started or scheduler == nil then
+				return
+			end
+
+			runtimeProcessToken = schedulerAny.schedule(runtimeProcessIntervalSeconds, function()
+				runtimeProcessToken = nil
+				if not started then
+					return
+				end
+
+				pcall(function()
+					RealmAdmissionQueueService.ProcessBatch(runtimeProcessBatchSize)
+				end)
+
+				scheduleNextTick()
+			end)
+		end
+
+		scheduleNextTick()
+	end
 end
 
 local function ensureStarted(): boolean
@@ -164,6 +273,7 @@ local function ensureStarted(): boolean
 	end)
 
 	if not ok then
+		stopProcessingLoop()
 		started = false
 		runtimeQueueStore = nil
 		runtimeProcessor = nil
@@ -177,6 +287,10 @@ function RealmAdmissionQueueService.Start(config: any?): { ok: boolean, reason: 
 		buildRuntime(config)
 	end)
 	if not ok then
+		stopProcessingLoop()
+		started = false
+		runtimeQueueStore = nil
+		runtimeProcessor = nil
 		return {
 			ok = false,
 			reason = tostring(err),
@@ -194,6 +308,8 @@ function RealmAdmissionQueueService.ConfigureForTests(config: any): { ok: boolea
 end
 
 function RealmAdmissionQueueService.ResetForTests()
+	stopProcessingLoop()
+	scheduleNextTick = nil
 	started = false
 	runtimeQueueStore = nil
 	runtimeProcessor = nil
