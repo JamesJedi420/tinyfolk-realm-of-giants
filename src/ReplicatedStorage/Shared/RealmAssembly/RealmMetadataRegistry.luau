@@ -1,5 +1,7 @@
 --!strict
 
+local RealmThemeFamilySchema = require("./RealmThemeFamilySchema")
+
 local RealmMetadataRegistry: any = {}
 
 export type TraversalDensity = "sparse" | "balanced" | "dense"
@@ -356,7 +358,8 @@ function RealmMetadataRegistry.ValidateRealmMetadataRecord(record: any): (boolea
 		return false, "size_budget_invalid"
 	end
 
-	if type(record.traversalDensity) ~= "string" or DENSITY_RANK[record.traversalDensity] == nil then
+	local traversalDensityKey = record.traversalDensity
+	if type(traversalDensityKey) ~= "string" or (DENSITY_RANK :: any)[traversalDensityKey] == nil then
 		return false, "traversal_density_invalid"
 	end
 
@@ -394,9 +397,23 @@ function RealmMetadataRegistry.ValidateRealmMetadataRecord(record: any): (boolea
 	return true, nil
 end
 
-function RealmMetadataRegistry.ValidateRealmMetadataRegistry(registry: any): (boolean, string?)
+function RealmMetadataRegistry.ValidateRealmMetadataRegistry(
+	registry: any,
+	themeFamilyRegistry: any?
+): (boolean, string?)
 	if type(registry) ~= "table" then
 		return false, "realm_metadata_registry_invalid"
+	end
+
+	local resolvedThemeRegistry = themeFamilyRegistry
+	if resolvedThemeRegistry == nil then
+		resolvedThemeRegistry = RealmThemeFamilySchema.DEFAULT_THEME_FAMILY_REGISTRY
+	end
+
+	local validThemeRegistry, themeRegistryReason =
+		RealmThemeFamilySchema.ValidateThemeFamilyRegistry(resolvedThemeRegistry)
+	if not validThemeRegistry then
+		return false, themeRegistryReason or "theme_family_registry_invalid"
 	end
 
 	local seenTemplateIds = {}
@@ -405,6 +422,12 @@ function RealmMetadataRegistry.ValidateRealmMetadataRegistry(registry: any): (bo
 		if not valid then
 			return false, string.format("%s index=%d", reason or "realm_metadata_record_invalid", index)
 		end
+
+		local themeLinked, themeReason = RealmThemeFamilySchema.ValidateThemeLink(record, resolvedThemeRegistry)
+		if not themeLinked then
+			return false, string.format("%s index=%d", themeReason or "theme_family_link_invalid", index)
+		end
+
 		if seenTemplateIds[record.realmTemplateId] then
 			return false, string.format("realm_template_id_duplicate index=%d", index)
 		end
@@ -415,13 +438,13 @@ function RealmMetadataRegistry.ValidateRealmMetadataRegistry(registry: any): (bo
 end
 
 function RealmMetadataRegistry.GetAllRealmMetadataRecords(registry: any?): { RealmMetadataRecord }
-	local source = registry
+	local source: any = registry
 	if source == nil then
 		source = RealmMetadataRegistry.DEFAULT_REALM_METADATA_REGISTRY
 	end
 
 	local result = {}
-	for _, record in ipairs(source) do
+	for _, record in ipairs(source :: { any }) do
 		table.insert(result, cloneRecord(record))
 	end
 	table.sort(result, function(a: RealmMetadataRecord, b: RealmMetadataRecord)
@@ -438,12 +461,12 @@ function RealmMetadataRegistry.GetRealmMetadataRecord(
 		return nil, "realm_template_id_invalid"
 	end
 
-	local source = registry
+	local source: any = registry
 	if source == nil then
 		source = RealmMetadataRegistry.DEFAULT_REALM_METADATA_REGISTRY
 	end
 
-	for _, record in ipairs(source) do
+	for _, record in ipairs(source :: { any }) do
 		if record.realmTemplateId == realmTemplateId then
 			return cloneRecord(record), nil
 		end
@@ -466,7 +489,7 @@ local function hasString(values: { string }, expected: string): boolean
 end
 
 function RealmMetadataRegistry.SelectRealmCandidates(input: SelectionInput?, registry: any?): { RealmMetadataRecord }
-	local source = registry
+	local source: any = registry
 	if source == nil then
 		source = RealmMetadataRegistry.DEFAULT_REALM_METADATA_REGISTRY
 	end
@@ -478,7 +501,7 @@ function RealmMetadataRegistry.SelectRealmCandidates(input: SelectionInput?, reg
 	end
 
 	local candidates = {}
-	for _, record in ipairs(source) do
+	for _, record in ipairs(source :: { any }) do
 		local include = true
 		if selectionInput ~= nil then
 			if

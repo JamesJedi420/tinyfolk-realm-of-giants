@@ -1,7 +1,7 @@
 --!strict
 
-local RealmChunkAssemblySchema = require("./RealmChunkAssemblySchema")
 local RealmMetadataRegistry = require("./RealmMetadataRegistry")
+local RealmThemeFamilySchema = require("./RealmThemeFamilySchema")
 
 local Fixture: any = {}
 
@@ -14,7 +14,7 @@ local function hasString(values: { string }, expected: string): boolean
 	return false
 end
 
-local function applyMetadataToPrototypeInput(input: any, record: any): any
+local function applyMetadataToPrototypeInput(input: any, record: any, themeRecord: any): any
 	local startChunk = input.chunkLibrary["Chunk_Start"]
 	if startChunk ~= nil then
 		if not hasString(startChunk.tags, record.realmTemplateId) then
@@ -22,6 +22,9 @@ local function applyMetadataToPrototypeInput(input: any, record: any): any
 		end
 		if not hasString(startChunk.tags, record.themeId) then
 			table.insert(startChunk.tags, record.themeId)
+		end
+		if not hasString(startChunk.tags, "ThemeFamily:" .. themeRecord.themeId) then
+			table.insert(startChunk.tags, "ThemeFamily:" .. themeRecord.themeId)
 		end
 		if startChunk.structuralMetadata ~= nil then
 			startChunk.structuralMetadata.recurringStructureTags = table.clone(record.recurringStructureTags)
@@ -33,6 +36,9 @@ local function applyMetadataToPrototypeInput(input: any, record: any): any
 	if exitChunk ~= nil then
 		if not hasString(exitChunk.tags, record.realmTemplateId) then
 			table.insert(exitChunk.tags, record.realmTemplateId)
+		end
+		if not hasString(exitChunk.tags, "ThemeFamily:" .. themeRecord.themeId) then
+			table.insert(exitChunk.tags, "ThemeFamily:" .. themeRecord.themeId)
 		end
 		if exitChunk.structuralMetadata ~= nil then
 			exitChunk.structuralMetadata.recurringStructureTags = table.clone(record.recurringStructureTags)
@@ -106,8 +112,8 @@ function Fixture.GetPrototypeAssemblyInput(): any
 			},
 			routeGraph = {
 				nodes = {
-					{ name = "StartNode", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn" },
-					{ name = "MidNode", position = { x = 60, y = 0, z = 0 }, nodeType = "waypoint" },
+					{ name = "StartNode", position = { x = 0, y = 0, z = 0 }, nodeType = "spawn", tier = "primary" },
+					{ name = "MidNode", position = { x = 60, y = 0, z = 0 }, nodeType = "waypoint", tier = "primary" },
 				},
 				edges = {
 					{ from = "StartNode", to = "MidNode", distance = 60 },
@@ -160,7 +166,12 @@ function Fixture.GetPrototypeAssemblyInput(): any
 			routeGraph = {
 				nodes = {
 					{ name = "ExitNode", position = { x = 0, y = 0, z = 0 }, nodeType = "escape", tier = "primary" },
-					{ name = "EntryNode", position = { x = -60, y = 0, z = 0 }, nodeType = "waypoint" },
+					{
+						name = "EntryNode",
+						position = { x = -60, y = 0, z = 0 },
+						nodeType = "waypoint",
+						tier = "primary",
+					},
 				},
 				edges = {
 					{ from = "EntryNode", to = "ExitNode", distance = 60 },
@@ -258,8 +269,13 @@ function Fixture.GetAssemblyInputForTemplate(realmTemplateId: any, registry: any
 		return nil, reason or "realm_metadata_missing"
 	end
 
+	local themeRecord, themeReason = RealmThemeFamilySchema.GetThemeFamilyRecord(record.themeId)
+	if themeRecord == nil then
+		return nil, themeReason or "theme_family_missing"
+	end
+
 	local input = Fixture.GetPrototypeAssemblyInput()
-	return applyMetadataToPrototypeInput(input, record), nil
+	return applyMetadataToPrototypeInput(input, record, themeRecord), nil
 end
 
 function Fixture.SelectAssemblyInputFromMetadata(selectionInput: any?, registry: any?): (any, string)

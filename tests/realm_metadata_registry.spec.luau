@@ -1,6 +1,7 @@
 --!strict
 
 local RealmMetadataRegistry = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmMetadataRegistry")
+local RealmThemeFamilySchema = require("../src/ReplicatedStorage/Shared/RealmAssembly/RealmThemeFamilySchema")
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -68,6 +69,30 @@ local function run()
 		table.insert(duplicateRegistry, RealmMetadataRegistry.GetAllRealmMetadataRecords()[1])
 		local valid, reason = RealmMetadataRegistry.ValidateRealmMetadataRegistry(duplicateRegistry)
 		assertInvalid(valid, reason, "realm_template_id_duplicate index=3", "duplicate template ids")
+	end
+
+	do
+		local invalidThemeMetadata = RealmMetadataRegistry.GetAllRealmMetadataRecords()
+		invalidThemeMetadata[1].themeId = "unknown_theme"
+		local valid, reason = RealmMetadataRegistry.ValidateRealmMetadataRegistry(invalidThemeMetadata)
+		assertInvalid(valid, reason, "theme_family_missing index=1", "missing theme family rejected")
+	end
+
+	do
+		local invalidPaletteMetadata = RealmMetadataRegistry.GetAllRealmMetadataRecords()
+		invalidPaletteMetadata[1].assetPaletteId = "palette_invalid"
+		local valid, reason = RealmMetadataRegistry.ValidateRealmMetadataRegistry(invalidPaletteMetadata)
+		assertInvalid(valid, reason, "theme_family_asset_palette_invalid index=1", "invalid palette rejected")
+	end
+
+	do
+		local invalidThemeRegistry = RealmThemeFamilySchema.GetAllThemeFamilyRecords()
+		invalidThemeRegistry[1].audioProfileIds = {}
+		local valid, reason = RealmMetadataRegistry.ValidateRealmMetadataRegistry(
+			RealmMetadataRegistry.GetAllRealmMetadataRecords(),
+			invalidThemeRegistry
+		)
+		assertInvalid(valid, reason, "theme_family_audio_profiles_invalid index=1", "invalid theme registry rejected")
 	end
 
 	do

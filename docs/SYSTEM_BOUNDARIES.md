@@ -94,6 +94,8 @@ Closure evidence for the 2026-05-22 event-log slice is recorded in `docs/TIN-93_
 - Palette, lighting, landmark, district, route, and audio vocabulary
 - Accessibility and readability requirements tied to realm family identity
 
+**Current implementation status:** TIN-178 now provides the canonical realm metadata registry and deterministic selection/lookup seams in `Shared/RealmAssembly/RealmMetadataRegistry`, and TIN-179 adds bounded theme-family schema authority in `Shared/RealmAssembly/RealmThemeFamilySchema` with deterministic cross-validation of metadata theme links (theme id, palette, lighting, audio, district vocabulary, landmark vocabulary, variant rules, and accessibility defaults). Runtime consumption remains read-only through assembly selection seams; broad content-authoring tooling and expanded theme catalogs remain deferred.
+
 **Fold into this bucket:** recurring structure families, landmark identity rules, theme-consistent district growth, realm selection influence rules.
 
 ### District and Placement Validation System (TIN-175)
