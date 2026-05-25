@@ -58,6 +58,7 @@ local loadedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
 local cleanedGiantRealmOwnerUserIds: { [number]: boolean? } = {}
 local activeGiantRealmOwnerUserId: number? = nil
 local downedStates: { [number]: any } = {}
+local pendingSpawnDeferredByUserId: { [number]: boolean? } = {}
 
 Players.CharacterAutoLoads = false
 
@@ -203,6 +204,143 @@ local function getGrabServiceQueryApi(): any?
 		return nil
 	end
 	return queryApi
+end
+
+local function getProfilePersistenceLifecycleQueryApi(): any?
+	-- selene: allow(global_usage)
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._ProfilePersistenceLifecycle_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local function getProfileTeleportHandoffQueryApi(): any?
+	-- selene: allow(global_usage)
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._ProfileTeleportHandoffService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local function canSpawnGameplayForPlayer(player: Player): boolean
+	local queryApi = getProfilePersistenceLifecycleQueryApi()
+	if queryApi == nil or type(queryApi.IsPlayerOwnershipReady) ~= "function" then
+		return true
+	end
+
+	local ok, ready = pcall(function()
+		return queryApi.IsPlayerOwnershipReady(player.UserId)
+	end)
+	if not ok then
+		return true
+	end
+
+	if ready ~= true then
+		return false
+	end
+
+	local handoffQueryApi = getProfileTeleportHandoffQueryApi()
+	if handoffQueryApi == nil or type(handoffQueryApi.CanSpawnGameplayForUserId) ~= "function" then
+		return true
+	end
+
+	local handoffOk, handoffReady = pcall(function()
+		return handoffQueryApi.CanSpawnGameplayForUserId(player.UserId)
+	end)
+	if not handoffOk then
+		return true
+	end
+
+	return handoffReady == true
+end
+
+local function deferSpawnUntilOwnershipReady(player: Player, spawnMethod: string, reason: string)
+	if pendingSpawnDeferredByUserId[player.UserId] then
+		return
+	end
+
+	local queryApi = getProfilePersistenceLifecycleQueryApi()
+	if queryApi == nil or type(queryApi.RegisterOwnershipReadyCallback) ~= "function" then
+		debugWarn(
+			string.format(
+				"Spawn deferred but lifecycle callback unavailable userId=%d reason=%s",
+				player.UserId,
+				reason
+			)
+		)
+		return
+	end
+
+	pendingSpawnDeferredByUserId[player.UserId] = true
+
+	local function trySpawnIfReady()
+		if not pendingSpawnDeferredByUserId[player.UserId] then
+			return
+		end
+
+		if Players:FindFirstChild(player.Name) ~= player then
+			pendingSpawnDeferredByUserId[player.UserId] = nil
+			return
+		end
+
+		if not canSpawnGameplayForPlayer(player) then
+			return
+		end
+
+		pendingSpawnDeferredByUserId[player.UserId] = nil
+
+		if spawnMethod == "LoadCharacterAsync" then
+			(player :: any):LoadCharacterAsync()
+			return
+		end
+
+		(player :: any):LoadCharacter()
+	end
+
+	local registered = queryApi.RegisterOwnershipReadyCallback(
+		player.UserId,
+		function(ready: boolean, _failureReason: string?)
+			if not ready then
+				return
+			end
+
+			trySpawnIfReady()
+		end
+	)
+
+	if not registered then
+		pendingSpawnDeferredByUserId[player.UserId] = nil
+		debugWarn(
+			string.format(
+				"Spawn deferred but lifecycle callback rejected registration userId=%d reason=%s",
+				player.UserId,
+				reason
+			)
+		)
+	end
+
+	local handoffQueryApi = getProfileTeleportHandoffQueryApi()
+	if handoffQueryApi ~= nil and type(handoffQueryApi.RegisterReleaseReadyCallback) == "function" then
+		pcall(function()
+			handoffQueryApi.RegisterReleaseReadyCallback(player.UserId, function(_result: any)
+				trySpawnIfReady()
+			end)
+		end)
+	end
 end
 
 local function isRoleLocked(player: Player): boolean
@@ -371,6 +509,14 @@ local function requestRespawnForLockedPlayer(player: Player, reason: string)
 			if humanoid ~= nil and (humanoid :: Humanoid).Health > 0 then
 				return
 			end
+		end
+
+		if not canSpawnGameplayForPlayer(player) then
+			debugWarn(
+				string.format("Respawn deferred userId=%d reason=ownership_not_ready trigger=%s", player.UserId, reason)
+			)
+			deferSpawnUntilOwnershipReady(player, "LoadCharacterAsync", "respawn_ownership_not_ready")
+			return
 		end
 
 		debugLog(string.format("Respawning locked player userId=%d reason=%s", player.UserId, reason))
@@ -604,6 +750,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	lastRoleChangeAtByUserId[player.UserId] = nil
 	downedStates[player.UserId] = nil
+	pendingSpawnDeferredByUserId[player.UserId] = nil
 	saveAndReleaseGiantRealmForPlayer(player, "player_removing")
 end)
 
@@ -643,6 +790,12 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 		projectActiveGiantRealmOwner()
 	end
 	debugLog(string.format("Accepted role select for %s -> %s (locked)", player.Name, roleName))
+	if not canSpawnGameplayForPlayer(player) then
+		debugWarn(string.format("Role select spawn deferred userId=%d reason=ownership_not_ready", player.UserId))
+		deferSpawnUntilOwnershipReady(player, "LoadCharacter", "role_select_ownership_not_ready")
+		return
+	end
+
 	local playerAny: any = player
 	playerAny:LoadCharacter()
 end)
@@ -768,6 +921,13 @@ _G._RoleService_QueryAPI = {
 	end,
 	GetActiveGiantRealmOwnerUserId = function(): number?
 		return activeGiantRealmOwnerUserId
+	end,
+	CanSpawnGameplayForUserId = function(userId: number): boolean
+		local player = getPlayerByUserId(userId)
+		if player == nil then
+			return false
+		end
+		return canSpawnGameplayForPlayer(player)
 	end,
 }
 

@@ -206,6 +206,7 @@ local playerUpdateOk = makePlayer(2001)
 local playerUpdateFail = makePlayer(2002)
 local playerRealmLoadFail = makePlayer(2003)
 local playerRealmSaveFail = makePlayer(2004)
+local playerOwnershipBlocked = makePlayer(2005)
 
 local playersList = {
 	playerStoredGiant,
@@ -216,6 +217,7 @@ local playersList = {
 	playerUpdateFail,
 	playerRealmLoadFail,
 	playerRealmSaveFail,
+	playerOwnershipBlocked,
 }
 
 local playerAdded = makeSignal()
@@ -271,6 +273,66 @@ _G._GrabService_QueryAPI = {
 	end,
 }
 
+local ownershipReadyByUserId: { [number]: boolean } = {
+	[1001] = true,
+	[1002] = true,
+	[1003] = true,
+	[1004] = true,
+	[2001] = true,
+	[2002] = true,
+	[2003] = true,
+	[2004] = true,
+	[2005] = true,
+}
+local ownershipCallbacksByUserId: { [number]: { (boolean, string?) -> () } } = {}
+_G._ProfilePersistenceLifecycle_QueryAPI = {
+	IsPlayerOwnershipReady = function(userId: number): boolean
+		return ownershipReadyByUserId[userId] == true
+	end,
+	RegisterOwnershipReadyCallback = function(userId: number, callback: any): boolean
+		if type(callback) ~= "function" then
+			return false
+		end
+
+		local callbacks = ownershipCallbacksByUserId[userId]
+		if callbacks == nil then
+			callbacks = {}
+			ownershipCallbacksByUserId[userId] = callbacks
+		end
+
+		table.insert(callbacks, callback)
+		return true
+	end,
+}
+
+local teleportSpawnReadyByUserId: { [number]: boolean } = {
+	[2005] = false,
+}
+local teleportReleaseReadyCallbacksByUserId: { [number]: { (any) -> () } } = {}
+_G._ProfileTeleportHandoffService_QueryAPI = {
+	CanSpawnGameplayForUserId = function(userId: number): boolean
+		local ready = teleportSpawnReadyByUserId[userId]
+		if ready == nil then
+			return true
+		end
+		return ready == true
+	end,
+	RegisterReleaseReadyCallback = function(userId: number, callback: any): boolean
+		if type(callback) ~= "function" then
+			return false
+		end
+
+		local callbacks = teleportReleaseReadyCallbacksByUserId[userId]
+		if callbacks == nil then
+			callbacks = {}
+			teleportReleaseReadyCallbacksByUserId[userId] = callbacks
+		end
+
+		table.insert(callbacks, callback)
+		return true
+	end,
+}
+
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 
@@ -308,6 +370,10 @@ local profileDataByUserId: { [number]: any } = {
 	[2004] = {
 		schemaVersion = 1,
 		userId = 2004,
+	},
+	[2005] = {
+		schemaVersion = 1,
+		userId = 2005,
 	},
 }
 
@@ -551,6 +617,35 @@ assertEqual(
 	2004,
 	"second loaded Giant becomes active realm owner"
 )
+
+roleChangeRemote:FireServer(playerOwnershipBlocked, RoleConfig.Roles.Tinyfolk)
+assertEqual(
+	playerOwnershipBlocked:GetAttribute("Role"),
+	RoleConfig.Roles.Tinyfolk,
+	"ownership-blocked role selection still sets active role"
+)
+assertEqual(playerOwnershipBlocked.loadCharacterCount, 0, "ownership-blocked player spawn is deferred")
+assertTrue(sawWarnContaining("Role select spawn deferred userId=2005"), "ownership deferral warning emitted")
+
+ownershipReadyByUserId[2005] = true
+local ownershipCallbacks = ownershipCallbacksByUserId[2005]
+assertTrue(type(ownershipCallbacks) == "table" and #ownershipCallbacks > 0, "ownership callback registered")
+for _, callback in ipairs(ownershipCallbacks :: { (boolean, string?) -> () }) do
+	callback(true, nil)
+end
+assertEqual(
+	playerOwnershipBlocked.loadCharacterCount,
+	0,
+	"teleport-blocked player stays deferred after ownership callback"
+)
+
+teleportSpawnReadyByUserId[2005] = true
+local teleportCallbacks = teleportReleaseReadyCallbacksByUserId[2005]
+assertTrue(type(teleportCallbacks) == "table" and #teleportCallbacks > 0, "teleport release-ready callback registered")
+for _, callback in ipairs(teleportCallbacks :: { (any) -> () }) do
+	callback({ ok = true, handoffToken = "test-token" })
+end
+assertEqual(playerOwnershipBlocked.loadCharacterCount, 1, "teleport callback resumes blocked spawn")
 
 playerRemoving:Fire(playerRealmSaveFail)
 assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")

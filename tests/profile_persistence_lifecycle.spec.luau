@@ -266,6 +266,22 @@ assertEqual(countCalls(gateway, "ConfigureOwnerLayer"), 1, "configured once")
 assertEqual(countCalls(gateway, "LoadPlayerProfile"), 2, "existing players loaded once")
 assertEqual(#runtimeGame.bindToCloseCallbacks, 1, "bind to close")
 
+local lifecycleQueryApi: any = globalEnv._ProfilePersistenceLifecycle_QueryAPI
+assertTrue(type(lifecycleQueryApi) == "table", "lifecycle query API exposed")
+assertTrue(type(lifecycleQueryApi.IsPlayerOwnershipReady) == "function", "lifecycle ownership readiness query exposed")
+assertEqual(lifecycleQueryApi.IsPlayerOwnershipReady(101), true, "initial ownership ready for tracked player")
+
+local ownershipCallbackReady = false
+local ownershipCallbackReason: string? = nil
+local registeredOwnershipCallback = lifecycleQueryApi.RegisterOwnershipReadyCallback(
+	303,
+	function(ready: boolean, reason: string?)
+		ownershipCallbackReady = ready
+		ownershipCallbackReason = reason
+	end
+)
+assertEqual(registeredOwnershipCallback, true, "register ownership callback")
+
 local duplicateStart = ProfilePersistenceLifecycle.Start({
 	gateway = gateway,
 	ownerLayer = ownerLayer,
@@ -288,10 +304,18 @@ local playerC = makePlayer(303)
 table.insert(players.players, playerC)
 players.PlayerAdded:Fire(playerC)
 assertEqual(countCalls(gateway, "LoadPlayerProfile"), 3, "new join loads")
+assertEqual(ownershipCallbackReady, true, "ownership callback fired for loaded player")
+assertEqual(ownershipCallbackReason, nil, "ownership callback clears failure reason on success")
 
 players.PlayerRemoving:Fire(playerC)
 assertEqual(countCalls(gateway, "SavePlayerProfile"), 1, "removing saves")
 assertEqual(countCalls(gateway, "ReleasePlayerProfile"), 1, "removing releases")
+assertEqual(lifecycleQueryApi.IsPlayerOwnershipReady(303), false, "removed player ownership marked not ready")
+assertEqual(
+	lifecycleQueryApi.GetOwnershipFailureReason(303),
+	"released_or_unloaded",
+	"removed player ownership reason set"
+)
 
 runtimeGame.bindToCloseCallbacks[1]()
 assertEqual(countCalls(gateway, "SavePlayerProfile"), 3, "shutdown saves remaining players only")
@@ -344,6 +368,13 @@ assertTrue(string.find(failureLogger.lines[1], "phase=load", 1, true) ~= nil, "l
 assertTrue(
 	string.find(failureLogger.lines[1], "profile_session_start_failed", 1, true) ~= nil,
 	"load failure logs reason"
+)
+local failureLifecycleQueryApi: any = globalEnv._ProfilePersistenceLifecycle_QueryAPI
+assertEqual(failureLifecycleQueryApi.IsPlayerOwnershipReady(404), false, "failed load ownership not ready")
+assertEqual(
+	failureLifecycleQueryApi.GetOwnershipFailureReason(404),
+	"profile_session_start_failed",
+	"failed load ownership reason set"
 )
 
 failurePlayers.PlayerRemoving:Fire(playerD)

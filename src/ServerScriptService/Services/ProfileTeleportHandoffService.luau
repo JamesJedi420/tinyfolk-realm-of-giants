@@ -1,0 +1,244 @@
+--!strict
+
+local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+	else (require :: any)("./ProfilePersistenceGateway")
+
+local ProfileTeleportHandoffService: any = {}
+local globalEnv: any = getfenv()
+
+export type HandoffResult = {
+	ok: boolean,
+	operation: string,
+	reason: string?,
+	retryable: boolean?,
+	handoffToken: string?,
+	fallbackRoute: string?,
+}
+
+local pendingHandoffByUserId: { [number]: { handoffToken: string }? } = {}
+local releaseReadyCallbacksByUserId: { [number]: { (HandoffResult) -> () }? } = {}
+local handoffCounter = 0
+
+local function isValidUserId(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	if value <= 0 or value % 1 ~= 0 then
+		return false
+	end
+	return true
+end
+
+local function getPlayerUserId(player: any): number?
+	if type(player) ~= "table" and typeof(player) ~= "Instance" then
+		return nil
+	end
+
+	local userId = player.UserId
+	if not isValidUserId(userId) then
+		return nil
+	end
+
+	return userId
+end
+
+local function makeResult(
+	ok: boolean,
+	operation: string,
+	reason: string?,
+	retryable: boolean?,
+	handoffToken: string?,
+	fallbackRoute: string?
+): HandoffResult
+	return {
+		ok = ok,
+		operation = operation,
+		reason = reason,
+		retryable = retryable,
+		handoffToken = handoffToken,
+		fallbackRoute = fallbackRoute,
+	}
+end
+
+local function nextHandoffToken(userId: number): string
+	handoffCounter += 1
+	return string.format("handoff:%d:%d", userId, handoffCounter)
+end
+
+local function getLifecycleQueryApi(): any?
+	local queryApi = globalEnv._ProfilePersistenceLifecycle_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local function isOwnershipReady(userId: number): boolean
+	local queryApi = getLifecycleQueryApi()
+	if queryApi == nil or type(queryApi.IsPlayerOwnershipReady) ~= "function" then
+		return false
+	end
+
+	local ok, ready = pcall(function()
+		return queryApi.IsPlayerOwnershipReady(userId)
+	end)
+	if not ok then
+		return false
+	end
+
+	return ready == true
+end
+
+local function notifyReleaseReadyCallbacks(userId: number, result: HandoffResult)
+	local callbacks = releaseReadyCallbacksByUserId[userId]
+	if callbacks == nil or #callbacks == 0 then
+		return
+	end
+
+	for _, callback in ipairs(callbacks) do
+		pcall(callback, result)
+	end
+end
+
+function ProfileTeleportHandoffService.ResetForTests()
+	pendingHandoffByUserId = {}
+	releaseReadyCallbacksByUserId = {}
+	handoffCounter = 0
+end
+
+function ProfileTeleportHandoffService.RegisterReleaseReadyCallback(userId: any, callback: any): boolean
+	if not isValidUserId(userId) then
+		return false
+	end
+	if type(callback) ~= "function" then
+		return false
+	end
+
+	local callbacks = releaseReadyCallbacksByUserId[userId]
+	if callbacks == nil then
+		callbacks = {}
+		releaseReadyCallbacksByUserId[userId] = callbacks
+	end
+	table.insert(callbacks, callback)
+
+	local pending = pendingHandoffByUserId[userId]
+	if pending ~= nil then
+		pcall(callback, makeResult(true, "BeginCrossServerHandoff", nil, nil, pending.handoffToken, nil))
+	end
+	return true
+end
+
+function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, context: any?): HandoffResult
+	local userId = getPlayerUserId(player)
+	if userId == nil then
+		return makeResult(false, "BeginCrossServerHandoff", "invalid_player_user_id", false, nil, "safe_fallback")
+	end
+
+	local releaseResult = ProfilePersistenceGateway.ReleasePlayerProfile(player)
+	if not releaseResult.ok then
+		return makeResult(
+			false,
+			"BeginCrossServerHandoff",
+			"release_before_transfer_failed",
+			releaseResult.retryable == true,
+			nil,
+			"safe_fallback"
+		)
+	end
+
+	local handoffToken = nextHandoffToken(userId)
+	pendingHandoffByUserId[userId] = {
+		handoffToken = handoffToken,
+	}
+	local _unusedContext = context
+
+	local result = makeResult(true, "BeginCrossServerHandoff", nil, nil, handoffToken, nil)
+	notifyReleaseReadyCallbacks(userId, result)
+	return result
+end
+
+function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, handoffToken: any?): HandoffResult
+	if not isValidUserId(userId) then
+		return makeResult(false, "ConfirmDestinationOwnership", "invalid_user_id", false, nil, "safe_fallback")
+	end
+
+	local pending = pendingHandoffByUserId[userId]
+	local pendingToken: string? = nil
+	if pending ~= nil then
+		pendingToken = pending.handoffToken
+	end
+
+	if pendingToken ~= nil and handoffToken ~= nil and pendingToken ~= handoffToken then
+		return makeResult(false, "ConfirmDestinationOwnership", "handoff_token_mismatch", false, nil, "safe_fallback")
+	end
+
+	if pendingToken == nil and type(handoffToken) ~= "string" then
+		return makeResult(false, "ConfirmDestinationOwnership", "handoff_not_pending", false, nil, "safe_fallback")
+	end
+
+	if not isOwnershipReady(userId) then
+		return makeResult(
+			false,
+			"ConfirmDestinationOwnership",
+			"ownership_not_ready",
+			true,
+			if pendingToken ~= nil then pendingToken else handoffToken,
+			nil
+		)
+	end
+
+	pendingHandoffByUserId[userId] = nil
+	releaseReadyCallbacksByUserId[userId] = nil
+	return makeResult(
+		true,
+		"ConfirmDestinationOwnership",
+		nil,
+		nil,
+		if pendingToken ~= nil then pendingToken else handoffToken,
+		nil
+	)
+end
+
+function ProfileTeleportHandoffService.CanSpawnGameplayForUserId(userId: any): boolean
+	if not isValidUserId(userId) then
+		return false
+	end
+
+	local pending = pendingHandoffByUserId[userId]
+	if pending == nil then
+		return true
+	end
+
+	if isOwnershipReady(userId) then
+		pendingHandoffByUserId[userId] = nil
+		releaseReadyCallbacksByUserId[userId] = nil
+		return true
+	end
+
+	return false
+end
+
+globalEnv._ProfileTeleportHandoffService_QueryAPI = {
+	BeginCrossServerHandoff = function(player: any, context: any?): HandoffResult
+		return ProfileTeleportHandoffService.BeginCrossServerHandoff(player, context)
+	end,
+	ConfirmDestinationOwnership = function(userId: any, handoffToken: any?): HandoffResult
+		return ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId, handoffToken)
+	end,
+	CanSpawnGameplayForUserId = function(userId: any): boolean
+		return ProfileTeleportHandoffService.CanSpawnGameplayForUserId(userId)
+	end,
+	RegisterReleaseReadyCallback = function(userId: any, callback: any): boolean
+		return ProfileTeleportHandoffService.RegisterReleaseReadyCallback(userId, callback)
+	end,
+	ResetForTests = function()
+		ProfileTeleportHandoffService.ResetForTests()
+	end,
+}
+
+return ProfileTeleportHandoffService

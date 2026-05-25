@@ -78,6 +78,9 @@ local globalEnv: any = getfenv()
 local started = false
 local trackedUserIds: { [number]: boolean } = {}
 local cleanedUserIds: { [number]: boolean } = {}
+local ownershipReadyByUserId: { [number]: boolean } = {}
+local ownershipFailureReasonByUserId: { [number]: string? } = {}
+local ownershipReadyCallbacksByUserId: { [number]: { (boolean, string?) -> () }? } = {}
 local autosaveScheduler: AutosaveScheduler? = nil
 local autosaveScheduledToken: any = nil
 local autosaveLoopActive = false
@@ -154,6 +157,63 @@ local function defaultAutosaveCancel(token: any)
 	end
 end
 
+local function notifyOwnershipCallbacks(userId: number)
+	local callbacks = ownershipReadyCallbacksByUserId[userId]
+	if callbacks == nil or #callbacks == 0 then
+		return
+	end
+
+	local ready = ownershipReadyByUserId[userId] == true
+	local reason = ownershipFailureReasonByUserId[userId]
+	for _, callback in ipairs(callbacks) do
+		pcall(callback, ready, reason)
+	end
+end
+
+local function setOwnershipState(userId: number, ready: boolean, reason: string?)
+	ownershipReadyByUserId[userId] = ready
+	ownershipFailureReasonByUserId[userId] = reason
+	notifyOwnershipCallbacks(userId)
+end
+
+local function clearOwnershipCallbacks(userId: number)
+	ownershipReadyCallbacksByUserId[userId] = nil
+end
+
+local function registerOwnershipReadyCallback(userId: number, callback: any): boolean
+	if type(userId) ~= "number" or userId <= 0 or userId % 1 ~= 0 then
+		return false
+	end
+	if type(callback) ~= "function" then
+		return false
+	end
+
+	local callbacks = ownershipReadyCallbacksByUserId[userId]
+	if callbacks == nil then
+		callbacks = {}
+		ownershipReadyCallbacksByUserId[userId] = callbacks
+	end
+	table.insert(callbacks, callback)
+
+	if ownershipReadyByUserId[userId] ~= nil then
+		pcall(callback, ownershipReadyByUserId[userId] == true, ownershipFailureReasonByUserId[userId])
+	end
+
+	return true
+end
+
+globalEnv._ProfilePersistenceLifecycle_QueryAPI = {
+	IsPlayerOwnershipReady = function(userId: number): boolean
+		return ownershipReadyByUserId[userId] == true
+	end,
+	GetOwnershipFailureReason = function(userId: number): string?
+		return ownershipFailureReasonByUserId[userId]
+	end,
+	RegisterOwnershipReadyCallback = function(userId: number, callback: any): boolean
+		return registerOwnershipReadyCallback(userId, callback)
+	end,
+}
+
 local function getAutosaveScheduler(config: StartConfig): AutosaveScheduler
 	if config.autosaveScheduler ~= nil then
 		return config.autosaveScheduler
@@ -198,6 +258,7 @@ local function getActiveGiantRealmOwnerUserId(): number?
 	local ok, ownerUserId = pcall(function()
 		return queryApi.GetActiveGiantRealmOwnerUserId()
 	end)
+
 	if not ok then
 		return nil
 	end
@@ -265,14 +326,20 @@ local function loadPlayer(gateway: Gateway, logger: Logger?, player: any)
 
 	local result = gateway.LoadPlayerProfile(player)
 	if not result.ok then
+		setOwnershipState(userId, false, tostring(result.reason or "load_failed"))
 		logFailure(logger, "load", userId, result)
+		return
 	end
+
+	setOwnershipState(userId, true, nil)
 end
 
 local function saveAndReleasePlayer(gateway: Gateway, logger: Logger?, player: any)
 	local userId = getUserId(player)
 	if userId ~= nil then
 		clearRetryState(makePlayerRetryKey(userId))
+		setOwnershipState(userId, false, "released_or_unloaded")
+		clearOwnershipCallbacks(userId)
 	end
 
 	if userId ~= nil and cleanedUserIds[userId] then
@@ -543,6 +610,9 @@ function ProfilePersistenceLifecycle.ResetForTests()
 	started = false
 	trackedUserIds = {}
 	cleanedUserIds = {}
+	ownershipReadyByUserId = {}
+	ownershipFailureReasonByUserId = {}
+	ownershipReadyCallbacksByUserId = {}
 end
 
 function ProfilePersistenceLifecycle.Start(config: StartConfig?): StartResult

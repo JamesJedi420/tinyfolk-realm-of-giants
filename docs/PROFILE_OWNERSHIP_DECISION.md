@@ -38,6 +38,7 @@ The custom/raw DataStore adapter is not the default because it would remove nati
 - [src/ServerScriptService/Services/ProfilePersistenceGateway.luau](../src/ServerScriptService/Services/ProfilePersistenceGateway.luau)
 - [src/ServerScriptService/Services/ProfileStoreOwnerLayer.luau](../src/ServerScriptService/Services/ProfileStoreOwnerLayer.luau)
 - [src/ServerScriptService/Services/ProfilePersistenceLifecycle.server.luau](../src/ServerScriptService/Services/ProfilePersistenceLifecycle.server.luau)
+- [src/ServerScriptService/Services/ProfileTeleportHandoffService.luau](../src/ServerScriptService/Services/ProfileTeleportHandoffService.luau)
 - [src/ServerScriptService/Services/RoleService.server.luau](../src/ServerScriptService/Services/RoleService.server.luau)
 - [docs/SYSTEM_BOUNDARIES.md](SYSTEM_BOUNDARIES.md)
 - [docs/THIRD_PARTY.md](THIRD_PARTY.md)
@@ -45,6 +46,7 @@ The custom/raw DataStore adapter is not the default because it would remove nati
 - [tests/profile_store_owner_layer.spec.luau](../tests/profile_store_owner_layer.spec.luau)
 - [tests/profile_store_dependency_intake.spec.luau](../tests/profile_store_dependency_intake.spec.luau)
 - [tests/profile_persistence_lifecycle.spec.luau](../tests/profile_persistence_lifecycle.spec.luau)
+- [tests/profile_teleport_handoff_service_runtime_entrypoint.spec.luau](../tests/profile_teleport_handoff_service_runtime_entrypoint.spec.luau)
 - [tests/role_service_runtime_entrypoint.spec.luau](../tests/role_service_runtime_entrypoint.spec.luau)
 - [tests/giant_realm_save_schema.spec.luau](../tests/giant_realm_save_schema.spec.luau)
 - [tests/giant_build_mode_service_runtime_entrypoint.spec.luau](../tests/giant_build_mode_service_runtime_entrypoint.spec.luau)
@@ -53,12 +55,12 @@ The custom/raw DataStore adapter is not the default because it would remove nati
 ## Deferred Work
 - Autosave policy.
 - Schema migration utilities.
-- Cross-server handoff.
 - Multi-realm support.
 
 ## Implemented Since Decision
 - Shrine persistence is now implemented as giant-realm save-root data through the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` path.
 - Rescue/handoff persistence is now implemented as giant-realm save-root data through the existing `BuildSaveSnapshot` / `ApplySaveSnapshot` path.
+- Teleport-aware profile handoff is now implemented through bounded server-only readiness and handoff query seams (`ProfilePersistenceLifecycle`, `ProfileTeleportHandoffService`, and RoleService spawn deferral) to avoid release/load races during cross-server transfer.
 
 ## Contradiction Check
 No gameplay system should write directly to raw `DataStoreService`. The required no-match search excludes owner-layer, bootstrap, and vendored dependency paths, so any result there would indicate a boundary violation rather than an allowed persistence implementation detail.
