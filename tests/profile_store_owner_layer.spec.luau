@@ -46,6 +46,17 @@ end
 local function makeFakeProfileStoreModule(startSessionImpl: ((string, any) -> any)?): any
 	local calls: { any } = {}
 	local profilesByKey: { [string]: any } = {}
+	local function parseUserIdFromProfileKey(profileKey: string): number
+		local value = string.match(profileKey, ":(%d+)$")
+		if value == nil then
+			return 0
+		end
+		local numeric = tonumber(value)
+		if type(numeric) ~= "number" then
+			return 0
+		end
+		return numeric
+	end
 
 	local playerStore = {}
 	function playerStore:StartSessionAsync(profileKey: string, params: any): any
@@ -58,11 +69,20 @@ local function makeFakeProfileStoreModule(startSessionImpl: ((string, any) -> an
 			return startSessionImpl(profileKey, params)
 		end
 
+		local initialData: any = {
+			userId = 0,
+			coins = 0,
+		}
+		if string.sub(profileKey, 1, 18) == "GiantRealmProfile:" then
+			initialData = {
+				schemaVersion = 1,
+				ownerUserId = parseUserIdFromProfileKey(profileKey),
+				placedStructures = {},
+			}
+		end
+
 		local profile = {
-			Data = {
-				userId = 0,
-				coins = 0,
-			},
+			Data = initialData,
 			endSessionCount = 0,
 		}
 		function profile.EndSession(_profile: any)
@@ -134,6 +154,7 @@ assertCreateError({
 }, "giant_realm_profile_template_invalid", "invalid giant realm template")
 
 local fakeProfileStore = makeFakeProfileStoreModule(nil)
+local validatorCalls: { any } = {}
 local ownerLayer = ProfileStoreOwnerLayer.Create({
 	profileStoreModule = fakeProfileStore,
 	playerStoreName = "TinyfolkPlayerProfiles",
@@ -147,6 +168,26 @@ local ownerLayer = ProfileStoreOwnerLayer.Create({
 		ownerUserId = 0,
 		placedStructures = {},
 	},
+	validateGiantRealmSaveRoot = function(saveRoot: any): (boolean, string?)
+		table.insert(validatorCalls, {
+			ownerUserId = saveRoot and saveRoot.ownerUserId,
+			schemaVersion = saveRoot and saveRoot.schemaVersion,
+		})
+		if type(saveRoot) ~= "table" then
+			return false, "save_root_invalid"
+		end
+		if type(saveRoot.schemaVersion) ~= "number" then
+			return false, "schema_version_invalid"
+		end
+		if type(saveRoot.ownerUserId) ~= "number" or saveRoot.ownerUserId <= 0 or saveRoot.ownerUserId % 1 ~= 0 then
+			return false, "owner_user_id_invalid"
+		end
+		if type(saveRoot.placedStructures) ~= "table" then
+			return false, "placed_structures_invalid"
+		end
+
+		return true, nil
+	end,
 })
 
 for methodName in pairs(requiredMethods) do
@@ -214,6 +255,8 @@ assertEqual(failedLoad.retryable, true, "failed start session retryable")
 local giantLoad = ownerLayer.LoadGiantRealmProfile("GiantRealmProfile:9402", 9402)
 assertSuccess(giantLoad, "LoadGiantRealmProfile", "GiantRealmProfile:9402", "giant load")
 assertTrue(type(giantLoad.data) == "table", "giant load returns data")
+assertEqual(#validatorCalls, 1, "giant load validates root")
+assertEqual(validatorCalls[1].ownerUserId, 9402, "giant load validator sees owner")
 
 local giantSaveRoot = {
 	schemaVersion = 1,
@@ -223,6 +266,15 @@ local giantSaveRoot = {
 local giantSave = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, giantSaveRoot)
 assertSuccess(giantSave, "SaveGiantRealmProfile", "GiantRealmProfile:9402", "giant save")
 assertTrue(giantSave.data ~= giantSaveRoot, "giant save clones root")
+assertEqual(#validatorCalls, 2, "giant save validates root")
+assertEqual(validatorCalls[2].ownerUserId, 9402, "giant save validator sees owner")
+
+local invalidGiantSave = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, {
+	ownerUserId = 9402,
+	placedStructures = {},
+})
+assertFailure(invalidGiantSave, "SaveGiantRealmProfile", "schema_version_invalid", "giant save invalid root")
+assertEqual(#validatorCalls, 3, "giant save invalid root still validated")
 
 local duplicateGiantLoad = ownerLayer.LoadGiantRealmProfile("GiantRealmProfile:9402", 9402)
 assertFailure(duplicateGiantLoad, "LoadGiantRealmProfile", "profile_session_already_active", "duplicate giant load")
@@ -232,6 +284,38 @@ assertSuccess(giantRelease, "ReleaseGiantRealmProfile", "GiantRealmProfile:9402"
 
 local giantSaveAfterRelease = ownerLayer.SaveGiantRealmProfile("GiantRealmProfile:9402", 9402, giantSaveRoot)
 assertFailure(giantSaveAfterRelease, "SaveGiantRealmProfile", "profile_session_not_active", "giant save after release")
+
+local invalidLoadOwnerLayer = ProfileStoreOwnerLayer.Create({
+	profileStoreModule = makeFakeProfileStoreModule(function(_profileKey: string, _params: any): any
+		local profile = {
+			Data = {
+				schemaVersion = "bad",
+				ownerUserId = 1111,
+				placedStructures = {},
+			},
+			endSessionCount = 0,
+		}
+		function profile.EndSession(_profile: any)
+			_profile.endSessionCount += 1
+		end
+		return profile
+	end),
+	playerStoreName = "TinyfolkPlayerProfiles",
+	playerProfileTemplate = {},
+	giantRealmStoreName = "TinyfolkGiantRealmProfiles",
+	giantRealmProfileTemplate = {},
+	validateGiantRealmSaveRoot = function(saveRoot: any): (boolean, string?)
+		if type(saveRoot) ~= "table" then
+			return false, "save_root_invalid"
+		end
+		if type(saveRoot.schemaVersion) ~= "number" then
+			return false, "schema_version_invalid"
+		end
+		return true, nil
+	end,
+})
+local invalidGiantLoad = invalidLoadOwnerLayer.LoadGiantRealmProfile("GiantRealmProfile:1111", 1111)
+assertFailure(invalidGiantLoad, "LoadGiantRealmProfile", "schema_version_invalid", "giant load invalid root")
 
 ProfilePersistenceGateway.ResetForTests()
 ProfilePersistenceGateway.ConfigureOwnerLayer(ProfileStoreOwnerLayer.Create({

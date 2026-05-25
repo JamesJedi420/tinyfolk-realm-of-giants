@@ -313,19 +313,12 @@ local function buildPersistenceState(): any
 	}
 end
 
-local function applyPersistenceState(persistedState: any): (boolean, string?)
-	local valid, reason = GiantRealmSaveSchema.ValidateEmergencyReinforcementRecord(persistedState)
-	if not valid then
-		return false, reason or "emergency_reinforcement_persistence_invalid"
-	end
-
+local function normalizePersistenceState(persistedState: any): any
 	if persistedState == nil then
-		serviceState = EmergencyReinforcementState.NewState()
-		applyStateAttributes()
-		return true, nil
+		return EmergencyReinforcementState.NewState()
 	end
 
-	serviceState = {
+	return {
 		used = persistedState.used == true,
 		callStartedAt = persistedState.callStartedAt,
 		cooldownEndsAt = persistedState.cooldownEndsAt,
@@ -334,6 +327,15 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 		lastReason = persistedState.lastReason,
 		lastObjectiveId = persistedState.lastObjectiveId,
 	}
+end
+
+local function applyPersistenceState(persistedState: any): (boolean, string?)
+	local valid, reason = GiantRealmSaveSchema.ValidateEmergencyReinforcementRecord(persistedState)
+	if not valid then
+		return false, reason or "emergency_reinforcement_persistence_invalid"
+	end
+
+	serviceState = normalizePersistenceState(persistedState)
 	applyStateAttributes()
 	return true, nil
 end

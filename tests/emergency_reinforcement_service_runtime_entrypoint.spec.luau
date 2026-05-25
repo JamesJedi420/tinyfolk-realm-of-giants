@@ -1032,6 +1032,46 @@ do
 	reinforcementApi.ResetForTests(0)
 	resetEdgeCaseWorld()
 
+	local appliedSparse, sparseReason = reinforcementApi.ApplyPersistenceState({
+		used = true,
+	})
+	assertTrue(appliedSparse, "apply persistence accepts sparse state")
+	assertEqual(sparseReason, nil, "apply persistence sparse state has no reason")
+
+	local sparseSnapshot = reinforcementApi.GetStateSnapshot(100)
+	assertTrue(sparseSnapshot.used, "apply sparse persistence restores used")
+	assertEqual(sparseSnapshot.triggeredByUserId, nil, "apply sparse persistence defaults requester")
+	assertEqual(sparseSnapshot.spawnedUserId, nil, "apply sparse persistence defaults spawned user")
+	assertEqual(sparseSnapshot.lastReason, nil, "apply sparse persistence defaults last reason")
+	assertEqual(sparseSnapshot.lastObjectiveId, nil, "apply sparse persistence defaults objective id")
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+
+	local accepted = reinforcementApi.RequestReinforcement(requester.UserId, {
+		objectiveId = "CallCenter_A",
+	}, 100)
+	assertTrue(accepted.accepted, "nil apply setup request accepted")
+	assertTrue(reinforcementApi.GetStateSnapshot(100).used, "nil apply setup marks used")
+
+	local appliedNil, nilReason = reinforcementApi.ApplyPersistenceState(nil)
+	assertTrue(appliedNil, "apply persistence accepts nil state")
+	assertEqual(nilReason, nil, "apply persistence nil state has no reason")
+
+	local nilSnapshot = reinforcementApi.GetStateSnapshot(100)
+	assertFalse(nilSnapshot.used, "apply nil persistence resets used")
+	assertEqual(nilSnapshot.triggeredByUserId, nil, "apply nil persistence resets requester")
+	assertEqual(nilSnapshot.spawnedUserId, nil, "apply nil persistence resets spawned user")
+	assertEqual(nilSnapshot.lastReason, nil, "apply nil persistence resets last reason")
+	assertEqual(nilSnapshot.lastObjectiveId, nil, "apply nil persistence resets objective id")
+end
+
+do
+	reinforcementApi.ResetForTests(0)
+	resetEdgeCaseWorld()
+
 	local applied, applyReason = reinforcementApi.ApplyPersistenceState({
 		used = "bad",
 	})

@@ -17,6 +17,7 @@ export type CreateConfig = {
 	playerProfileTemplate: any,
 	giantRealmStoreName: string,
 	giantRealmProfileTemplate: any,
+	validateGiantRealmSaveRoot: ((saveRoot: any) -> (boolean, string?))?,
 }
 
 export type ProfileOwnerLayer = {
@@ -118,6 +119,9 @@ local function validateCreateConfig(config: any): (boolean, string?)
 	if type(config.giantRealmProfileTemplate) ~= "table" then
 		return false, "giant_realm_profile_template_invalid"
 	end
+	if config.validateGiantRealmSaveRoot ~= nil and type(config.validateGiantRealmSaveRoot) ~= "function" then
+		return false, "giant_realm_save_root_validator_invalid"
+	end
 	return true, nil
 end
 
@@ -152,6 +156,14 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 	local activeUserIdByProfileKey: { [string]: number? } = {}
 	local activeGiantRealmProfilesByUserId: { [number]: any } = {}
 	local activeGiantRealmUserIdByProfileKey: { [string]: number? } = {}
+	local validateGiantRealmSaveRoot = config.validateGiantRealmSaveRoot
+		or function(saveRoot: any): (boolean, string?)
+			if type(saveRoot) ~= "table" then
+				return false, "save_root_invalid"
+			end
+
+			return true, nil
+		end
 
 	local ownerLayer = {}
 
@@ -237,10 +249,22 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 			return makeFailure("LoadGiantRealmProfile", "profile_session_start_failed", profileKey, true)
 		end
 
+		local loadedData = profile.Data
+		local validLoadedRoot, loadedReason = validateGiantRealmSaveRoot(loadedData)
+		if not validLoadedRoot then
+			profile:EndSession()
+			return makeFailure(
+				"LoadGiantRealmProfile",
+				loadedReason or "giant_realm_save_root_invalid",
+				profileKey,
+				false
+			)
+		end
+
 		activeGiantRealmProfilesByUserId[ownerUserId] = profile
 		activeGiantRealmUserIdByProfileKey[profileKey] = ownerUserId
 
-		return makeSuccess("LoadGiantRealmProfile", profileKey, profile.Data)
+		return makeSuccess("LoadGiantRealmProfile", profileKey, loadedData)
 	end
 
 	function ownerLayer.SaveGiantRealmProfile(profileKey: string, ownerUserId: number, saveRoot: any): GatewayResult
@@ -255,8 +279,15 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 		if not isProfileObject(profile) or activeGiantRealmUserIdByProfileKey[profileKey] ~= ownerUserId then
 			return makeFailure("SaveGiantRealmProfile", "profile_session_not_active", profileKey, false)
 		end
-		if type(saveRoot) ~= "table" then
-			return makeFailure("SaveGiantRealmProfile", "save_root_invalid", profileKey, false)
+
+		local validSaveRoot, saveRootReason = validateGiantRealmSaveRoot(saveRoot)
+		if not validSaveRoot then
+			return makeFailure(
+				"SaveGiantRealmProfile",
+				saveRootReason or "giant_realm_save_root_invalid",
+				profileKey,
+				false
+			)
 		end
 
 		profile.Data = cloneTable(saveRoot)
@@ -293,6 +324,17 @@ function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): Profile
 		resolvedProfileStoreModule = require(script.Parent.ThirdParty.ProfileStore)
 	end
 
+	local function validateGiantRealmSaveRoot(saveRoot: any): (boolean, string?)
+		local shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+		local giantRealm = shared:WaitForChild("GiantRealm")
+		local schemaModule = require(giantRealm:WaitForChild("GiantRealmSaveSchema"))
+		if type(schemaModule) ~= "table" or type(schemaModule.ValidateSaveRoot) ~= "function" then
+			return false, "giant_realm_save_schema_unavailable"
+		end
+
+		return schemaModule.ValidateSaveRoot(saveRoot)
+	end
+
 	return ProfileStoreOwnerLayer.Create({
 		profileStoreModule = resolvedProfileStoreModule,
 		playerStoreName = "TinyfolkPlayerProfiles",
@@ -305,6 +347,7 @@ function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): Profile
 			ownerUserId = 0,
 			placedStructures = {},
 		},
+		validateGiantRealmSaveRoot = validateGiantRealmSaveRoot,
 	})
 end
 
