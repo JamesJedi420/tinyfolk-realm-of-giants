@@ -378,6 +378,168 @@ do
 	assertEqual(builtPersistence.contracts[1].rescuerUserId, rescuer.UserId, "build persistence contract rescuer")
 	assertEqual(builtPersistence.queueEntries[1].queueEntryId, "PersistedQueue_1", "build persistence queue entry")
 
+	local multiApplyOk, multiApplyReason = rescueApi.ApplyPersistenceState({
+		contracts = {},
+		queueEntries = {
+			{
+				queueEntryId = "PersistedQueue_2",
+				capturedUserId = targetTwo.UserId,
+				realmId = "giant_realm_9002",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 140,
+				rescuerUserId = rescuerTwo.UserId,
+				targetRealmOwnerUserId = 9002,
+				entryRouteId = "RescueEntryRoute_9002",
+				entryRouteKind = "RescueEntry",
+				createdAt = 95,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+			{
+				queueEntryId = "PersistedQueue_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 140,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertTrue(multiApplyOk, "apply persistence accepts multiple queue entries")
+	assertEqual(multiApplyReason, nil, "apply persistence multiple queue entries reason")
+
+	local multiBuiltPersistence = rescueApi.BuildPersistenceState()
+	assertEqual(#multiBuiltPersistence.queueEntries, 2, "build persistence includes both queue entries")
+	assertEqual(
+		multiBuiltPersistence.queueEntries[1].queueEntryId,
+		"PersistedQueue_1",
+		"build persistence orders first queue entry deterministically"
+	)
+	assertEqual(
+		multiBuiltPersistence.queueEntries[2].queueEntryId,
+		"PersistedQueue_2",
+		"build persistence orders second queue entry deterministically"
+	)
+
+	local restoredAcceptOk, restoredAcceptReason = rescueApi.ApplyPersistenceState({
+		contracts = {},
+		queueEntries = {
+			{
+				queueEntryId = "RestoredAcceptQueue_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 210,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertTrue(restoredAcceptOk, "apply persistence accepts restorable queue entry")
+	assertEqual(restoredAcceptReason, nil, "apply persistence restorable queue entry reason")
+
+	local restoredPendingQueue = rescueApi.GetRescueQueueEntries(90.3)
+	assertEqual(#restoredPendingQueue, 1, "restored queue entry is listed pending")
+	local restoredAccept = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, "RestoredAcceptQueue_1", 90.4)
+	assertTrue(restoredAccept.accepted, "restored pending queue entry can be accepted")
+	assertEqual(restoredAccept.reason, "accepted", "restored pending queue accept reason")
+	assertEqual(#rescueApi.GetRescueQueueEntries(90.5), 0, "accepted restored queue entry no longer pending")
+
+	local restoredPruneOk, restoredPruneReason = rescueApi.ApplyPersistenceState({
+		contracts = {},
+		queueEntries = {
+			{
+				queueEntryId = "RestoredExpireQueue_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 95,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertTrue(restoredPruneOk, "apply persistence accepts expirable queue entry")
+	assertEqual(restoredPruneReason, nil, "apply persistence expirable queue entry reason")
+	assertEqual(#rescueApi.GetRescueQueueEntries(110), 0, "restored expired queue entry prunes from pending")
+
+	local prunedBuildPersistence = rescueApi.BuildPersistenceState()
+	assertEqual(#prunedBuildPersistence.queueEntries, 1, "build persistence keeps pruned restored queue entry")
+	assertEqual(prunedBuildPersistence.queueEntries[1].status, "expired", "pruned restored queue entry status")
+	assertEqual(prunedBuildPersistence.queueEntries[1].resolvedReason, "expired", "pruned restored queue entry reason")
+
+	local restoredCollisionOk, restoredCollisionReason = rescueApi.ApplyPersistenceState({
+		contracts = {},
+		queueEntries = {
+			{
+				queueEntryId = "rescue_queue_2101_2102_100000_1",
+				capturedUserId = target.UserId,
+				realmId = "giant_realm_9001",
+				sessionId = "session_test",
+				rewardHint = "rescue_contract",
+				dangerRating = 0.5,
+				expiration = 140,
+				rescuerUserId = rescuer.UserId,
+				targetRealmOwnerUserId = 9001,
+				entryRouteId = "RescueEntryRoute_9001",
+				entryRouteKind = "RescueEntry",
+				createdAt = 90,
+				status = "pending",
+				acceptedAt = nil,
+				acceptedByUserId = nil,
+				resolvedAt = nil,
+				resolvedReason = nil,
+			},
+		},
+	})
+	assertTrue(restoredCollisionOk, "apply persistence accepts queue entry id sequence anchor")
+	assertEqual(restoredCollisionReason, nil, "apply persistence queue id sequence anchor reason")
+
+	local restoredCollisionRequest = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 100)
+	assertTrue(restoredCollisionRequest.accepted, "new rescue request accepted after restore")
+	local collisionEntries = rescueApi.GetRescueQueueEntries(100.1)
+	assertEqual(#collisionEntries, 2, "restored and new queue entries coexist without id collision")
+	assertTrue(
+		collisionEntries[1].queueEntryId ~= collisionEntries[2].queueEntryId,
+		"new queue entry id differs from restored entry id"
+	)
+
 	local clearOk, clearReason = rescueApi.ApplyPersistenceState(nil)
 	assertTrue(clearOk, "apply nil persistence succeeds")
 	assertEqual(clearReason, nil, "apply nil persistence reason")

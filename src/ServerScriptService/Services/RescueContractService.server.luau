@@ -491,10 +491,34 @@ local function readTargetRealmId(target: Player, targetRealmOwnerUserId: number)
 	return string.format("giant_realm_%d", targetRealmOwnerUserId)
 end
 
+local function readQueueSequence(queueEntryId: any): number?
+	if type(queueEntryId) ~= "string" or queueEntryId == "" then
+		return nil
+	end
+
+	local sequenceText = string.match(queueEntryId, "_(%d+)$")
+	if sequenceText == nil then
+		return nil
+	end
+
+	local sequenceValue = tonumber(sequenceText)
+	if type(sequenceValue) ~= "number" or sequenceValue <= 0 or sequenceValue % 1 ~= 0 then
+		return nil
+	end
+
+	return sequenceValue
+end
+
 local function makeQueueEntryId(rescuerUserId: number, targetUserId: number, at: number): string
-	nextQueueSequence += 1
 	local atMillis = math.floor(at * 1000)
-	return string.format("rescue_queue_%d_%d_%d_%d", rescuerUserId, targetUserId, atMillis, nextQueueSequence)
+	while true do
+		nextQueueSequence += 1
+		local queueEntryId =
+			string.format("rescue_queue_%d_%d_%d_%d", rescuerUserId, targetUserId, atMillis, nextQueueSequence)
+		if rescueQueueState.entriesById[queueEntryId] == nil then
+			return queueEntryId
+		end
+	end
 end
 
 local function publishRescueQueueEntry(contract: any, target: Player?, at: number)
@@ -878,7 +902,7 @@ end
 local function buildPersistenceState(): any
 	local contracts = RescueContractState.GetContracts(state)
 	local queueEntries: { any } = {}
-	for _, entry in pairs(rescueQueueState.entriesById) do
+	for _, entry in ipairs(RescueContractQueueState.GetEntries(rescueQueueState)) do
 		table.insert(queueEntries, {
 			queueEntryId = entry.queueEntryId,
 			capturedUserId = entry.capturedUserId,
@@ -973,6 +997,11 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 			resolvedAt = entry.resolvedAt,
 			resolvedReason = entry.resolvedReason,
 		}
+
+		local restoredSequence = readQueueSequence(entry.queueEntryId)
+		if type(restoredSequence) == "number" and restoredSequence > nextQueueSequence then
+			nextQueueSequence = restoredSequence
+		end
 	end
 
 	rescueQueueState = {

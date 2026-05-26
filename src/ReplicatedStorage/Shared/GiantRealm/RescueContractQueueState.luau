@@ -123,6 +123,22 @@ function RescueContractQueueState.GetPendingEntries(state: State): { QueueEntry 
 	return pending
 end
 
+function RescueContractQueueState.GetEntries(state: State): { QueueEntry }
+	local entries: { QueueEntry } = {}
+	for _, entry in pairs(state.entriesById) do
+		table.insert(entries, cloneEntry(entry))
+	end
+
+	table.sort(entries, function(a, b)
+		if a.createdAt == b.createdAt then
+			return a.queueEntryId < b.queueEntryId
+		end
+		return a.createdAt < b.createdAt
+	end)
+
+	return entries
+end
+
 function RescueContractQueueState.GetEntry(state: State, queueEntryId: string): QueueEntry?
 	if type(queueEntryId) ~= "string" or queueEntryId == "" then
 		return nil
