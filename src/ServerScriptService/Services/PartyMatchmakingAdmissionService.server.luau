@@ -44,23 +44,34 @@ local function getRealmAdmissionQueueQueryApi(): any?
 	return queryApi
 end
 
+local function getPartyMatchmakingRealmResolverQueryApi(): any?
+	if targetRealmResolverOverride ~= nil then
+		return targetRealmResolverOverride
+	end
+
+	local envAny: any = globalEnv
+	if type(envAny) ~= "table" then
+		return nil
+	end
+
+	local queryApi = envAny._PartyMatchmakingRealmResolver_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function resolveTargetRealmId(input: any): (string?, string?)
 	if type(input) ~= "table" then
 		return nil, "request_invalid"
 	end
 
-	if isNonEmptyString(input.targetRealmId) then
-		return input.targetRealmId, nil
-	end
-
-	local resolver = targetRealmResolverOverride
-	if resolver == nil then
-		local envAny: any = globalEnv
-		if type(envAny) == "table" then
-			resolver = envAny._PartyMatchmakingRealmResolver_QueryAPI
-		end
-	end
+	local resolver = getPartyMatchmakingRealmResolverQueryApi()
 	if type(resolver) ~= "table" or type((resolver :: any).ResolveTargetRealmId) ~= "function" then
+		if isNonEmptyString(input.targetRealmId) then
+			return input.targetRealmId, nil
+		end
 		return nil, "target_realm_unavailable"
 	end
 
@@ -70,11 +81,15 @@ local function resolveTargetRealmId(input: any): (string?, string?)
 	if not ok or type(result) ~= "table" then
 		return nil, "target_realm_unavailable"
 	end
-	if result.accepted ~= true or not isNonEmptyString(result.targetRealmId) then
+	if result.accepted ~= true then
 		if type(result.reason) == "string" then
 			return nil, result.reason
 		end
 		return nil, "target_realm_unavailable"
+	end
+
+	if not isNonEmptyString(result.targetRealmId) then
+		return nil, "target_realm_invalid"
 	end
 
 	return result.targetRealmId, nil
