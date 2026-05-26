@@ -12,6 +12,9 @@ local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
+local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
+	else (require :: any)("./AdmissionQueueProducer")
 local QueueNotificationFanout = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("QueueNotificationFanout"))
 	else (require :: any)("./QueueNotificationFanout")
@@ -307,6 +310,12 @@ local function getRealmAdmissionQueueQueryApi(): any?
 
 	return queryApi
 end
+
+local admissionQueueProducer = AdmissionQueueProducer.Create({
+	queryApiResolver = function()
+		return getRealmAdmissionQueueQueryApi()
+	end,
+})
 
 local defaultQueueNotificationFanout = QueueNotificationFanout.CreateDefault()
 
@@ -944,11 +953,6 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		return { accepted = false, reason = rejectedReason }
 	end
 
-	local admissionQueueApi = getRealmAdmissionQueueQueryApi()
-	if admissionQueueApi == nil or type(admissionQueueApi.EnqueueAdmission) ~= "function" then
-		return { accepted = false, reason = "admission_queue_unavailable" }
-	end
-
 	local admissionMemberUserIds = buildAdmissionPartyMemberUserIds(queueEntry, acceptedByUserId)
 	if #admissionMemberUserIds <= 0 then
 		return { accepted = false, reason = "admission_party_members_invalid" }
@@ -966,18 +970,9 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		retryCount = 0,
 	}
 
-	local enqueueOk, enqueueResult = pcall(function()
-		return admissionQueueApi.EnqueueAdmission(admissionPayload)
-	end)
-	if not enqueueOk then
-		return { accepted = false, reason = "admission_enqueue_failed" }
-	end
-	if type(enqueueResult) ~= "table" or enqueueResult.accepted ~= true then
-		local enqueueRejectedReason = "admission_enqueue_failed"
-		if type(enqueueResult) == "table" and type((enqueueResult :: any).reason) == "string" then
-			enqueueRejectedReason = (enqueueResult :: any).reason
-		end
-		return { accepted = false, reason = enqueueRejectedReason }
+	local enqueueResult = admissionQueueProducer.Enqueue(admissionPayload)
+	if enqueueResult.accepted ~= true then
+		return { accepted = false, reason = enqueueResult.reason }
 	end
 
 	local acceptedTransition: boolean? = nil
