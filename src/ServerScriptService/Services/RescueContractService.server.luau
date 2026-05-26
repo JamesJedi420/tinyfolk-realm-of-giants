@@ -294,6 +294,20 @@ local function getQueueNotificationFanoutQueryApi(): any?
 	return queryApi
 end
 
+local function getRealmAdmissionQueueQueryApi(): any?
+	local globalValue: any = globalEnv
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._RealmAdmissionQueue_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local defaultQueueNotificationFanout = QueueNotificationFanout.CreateDefault()
 
 local function emitRescueQueueFanout(eventName: string, payload: any)
@@ -306,6 +320,29 @@ local function emitRescueQueueFanout(eventName: string, payload: any)
 	end
 
 	pcall(fanout.PublishRescue, eventName, payload)
+end
+
+local function buildAdmissionPartyMemberUserIds(queueEntry: any, acceptedByUserId: number): { number }
+	local members: { number } = {}
+	local seen: { [number]: boolean } = {}
+
+	local function append(userId: any)
+		if type(userId) ~= "number" or userId <= 0 or userId % 1 ~= 0 then
+			return
+		end
+		if seen[userId] == true then
+			return
+		end
+		seen[userId] = true
+		table.insert(members, userId)
+	end
+
+	append(queueEntry.rescuerUserId)
+	append(queueEntry.capturedUserId)
+	append(acceptedByUserId)
+
+	table.sort(members)
+	return members
 end
 
 local function evaluateTargetSafeZoneProtection(target: Player, at: number): boolean
@@ -905,6 +942,42 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 			rejectedReason = (lockResult :: any).reason
 		end
 		return { accepted = false, reason = rejectedReason }
+	end
+
+	local admissionQueueApi = getRealmAdmissionQueueQueryApi()
+	if admissionQueueApi == nil or type(admissionQueueApi.EnqueueAdmission) ~= "function" then
+		return { accepted = false, reason = "admission_queue_unavailable" }
+	end
+
+	local admissionMemberUserIds = buildAdmissionPartyMemberUserIds(queueEntry, acceptedByUserId)
+	if #admissionMemberUserIds <= 0 then
+		return { accepted = false, reason = "admission_party_members_invalid" }
+	end
+
+	local admissionPayload = {
+		operationId = string.format("rescue_accept_%s", queueEntry.queueEntryId),
+		partyId = string.format("rescue_party_%s", queueEntry.queueEntryId),
+		targetRealmId = queueEntry.realmId,
+		entryType = "rescue_contract",
+		createdAt = resolvedNow,
+		expiration = queueEntry.expiration,
+		partySize = #admissionMemberUserIds,
+		partyMemberUserIds = admissionMemberUserIds,
+		retryCount = 0,
+	}
+
+	local enqueueOk, enqueueResult = pcall(function()
+		return admissionQueueApi.EnqueueAdmission(admissionPayload)
+	end)
+	if not enqueueOk then
+		return { accepted = false, reason = "admission_enqueue_failed" }
+	end
+	if type(enqueueResult) ~= "table" or enqueueResult.accepted ~= true then
+		local enqueueRejectedReason = "admission_enqueue_failed"
+		if type(enqueueResult) == "table" and type((enqueueResult :: any).reason) == "string" then
+			enqueueRejectedReason = (enqueueResult :: any).reason
+		end
+		return { accepted = false, reason = enqueueRejectedReason }
 	end
 
 	local acceptedTransition: boolean? = nil

@@ -245,6 +245,9 @@ local handoffRequests: { any } = {}
 local handoffShouldReject = false
 local handoffExpiryProbeAt: number? = nil
 local rescueFanoutEvents: { any } = {}
+local admissionEnqueueRequests: { any } = {}
+local admissionEnqueueRejectReason: string? = nil
+local admissionEnqueueThrow = false
 globalEnv._RescueHandoffService_QueryAPI = {
 	CreateHandoffLock = function(payload: any): any
 		table.insert(handoffRequests, payload)
@@ -263,6 +266,26 @@ globalEnv._RescueHandoffService_QueryAPI = {
 		return { accepted = true, reason = "accepted" }
 	end,
 }
+
+local defaultAdmissionQueueApi = {
+	EnqueueAdmission = function(payload: any): any
+		table.insert(admissionEnqueueRequests, payload)
+		if admissionEnqueueThrow then
+			error("enqueue_failed")
+		end
+		if type(admissionEnqueueRejectReason) == "string" and admissionEnqueueRejectReason ~= "" then
+			return {
+				accepted = false,
+				reason = admissionEnqueueRejectReason,
+			}
+		end
+		return {
+			accepted = true,
+			reason = "accepted",
+		}
+	end,
+}
+globalEnv._RealmAdmissionQueue_QueryAPI = defaultAdmissionQueueApi
 
 globalEnv._QueueNotificationFanout_QueryAPI = {
 	PublishRescue = function(eventName: string, payload: any): any
@@ -335,6 +358,10 @@ local function resetState()
 	handoffShouldReject = false
 	handoffExpiryProbeAt = nil
 	rescueFanoutEvents = {}
+	admissionEnqueueRequests = {}
+	admissionEnqueueRejectReason = nil
+	admissionEnqueueThrow = false
+	globalEnv._RealmAdmissionQueue_QueryAPI = defaultAdmissionQueueApi
 end
 
 do
@@ -657,6 +684,18 @@ do
 	assertEqual(handoffRequests[1].queueEntryId, queueEntryId, "handoff request receives queue entry id")
 	assertEqual(handoffRequests[1].capturedUserId, target.UserId, "handoff request receives captured user")
 	assertEqual(handoffRequests[1].acceptedByUserId, rescuerTwo.UserId, "handoff request receives acceptor")
+	assertEqual(#admissionEnqueueRequests, 1, "queue accept enqueues one admission entry")
+	assertEqual(
+		admissionEnqueueRequests[1].operationId,
+		"rescue_accept_" .. queueEntryId,
+		"admission enqueue operation id"
+	)
+	assertEqual(admissionEnqueueRequests[1].entryType, "rescue_contract", "admission enqueue entry type")
+	assertEqual(admissionEnqueueRequests[1].targetRealmId, "giant_realm_9001", "admission enqueue target realm")
+	assertEqual(admissionEnqueueRequests[1].partySize, 3, "admission enqueue party size")
+	assertEqual(admissionEnqueueRequests[1].partyMemberUserIds[1], rescuer.UserId, "admission enqueue member first")
+	assertEqual(admissionEnqueueRequests[1].partyMemberUserIds[2], target.UserId, "admission enqueue member second")
+	assertEqual(admissionEnqueueRequests[1].partyMemberUserIds[3], rescuerTwo.UserId, "admission enqueue member third")
 	assertEqual(#rescueFanoutEvents, 2, "fanout emits publish and accept events")
 	assertEqual(rescueFanoutEvents[1].eventName, "rescue_queue_published", "fanout first event is publish")
 	assertEqual(rescueFanoutEvents[2].eventName, "rescue_queue_accepted", "fanout second event is accepted")
@@ -664,6 +703,42 @@ do
 
 	local pendingAfterAccept = rescueApi.GetRescueQueueEntries(140.3)
 	assertEqual(#pendingAfterAccept, 0, "accepted queue entry no longer returned as pending")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 144)
+	assertTrue(accepted.accepted, "accepted before admission queue unavailable check")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(144.1)
+	local queueEntryId = queueEntries[1].queueEntryId
+	globalEnv._RealmAdmissionQueue_QueryAPI = nil
+
+	local queueReject = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 144.2)
+	assertFalse(queueReject.accepted, "queue accept rejects when admission queue api unavailable")
+	assertEqual(queueReject.reason, "admission_queue_unavailable", "admission queue unavailable reason")
+	assertEqual(#handoffRequests, 1, "handoff lock still attempted before admission queue failure")
+	assertEqual(#admissionEnqueueRequests, 0, "no admission enqueue request when api unavailable")
+	assertEqual(#rescueApi.GetRescueQueueEntries(144.3), 1, "queue remains pending when admission queue unavailable")
+
+	globalEnv._RealmAdmissionQueue_QueryAPI = defaultAdmissionQueueApi
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 144.5)
+	assertTrue(accepted.accepted, "accepted before admission enqueue rejection check")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(144.6)
+	local queueEntryId = queueEntries[1].queueEntryId
+	admissionEnqueueRejectReason = "queue_store_unavailable"
+
+	local queueReject = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 144.7)
+	assertFalse(queueReject.accepted, "queue accept rejects when admission enqueue rejects")
+	assertEqual(queueReject.reason, "queue_store_unavailable", "admission enqueue rejected reason passthrough")
+	assertEqual(#handoffRequests, 1, "handoff lock attempted before admission enqueue rejection")
+	assertEqual(#admissionEnqueueRequests, 1, "admission enqueue request attempted before rejection")
+	assertEqual(#rescueApi.GetRescueQueueEntries(144.8), 1, "queue remains pending when admission enqueue rejects")
 end
 
 do
