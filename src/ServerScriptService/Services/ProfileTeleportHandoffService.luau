@@ -3,6 +3,9 @@
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else (require :: any)("./ProfilePersistenceGateway")
+local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
+	else (require :: any)("./AdmissionQueueProducer")
 
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
@@ -46,6 +49,10 @@ local function getPlayerUserId(player: any): number?
 	return userId
 end
 
+local function isNonEmptyString(value: any): boolean
+	return type(value) == "string" and value ~= ""
+end
+
 local function makeResult(
 	ok: boolean,
 	operation: string,
@@ -67,6 +74,25 @@ end
 local function nextHandoffToken(userId: number): string
 	handoffCounter += 1
 	return string.format("handoff:%d:%d", userId, handoffCounter)
+end
+
+local function getRealmAdmissionQueueQueryApi(): any?
+	local queryApi = globalEnv._RealmAdmissionQueue_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local admissionProducer = AdmissionQueueProducer.Create({
+	queryApiResolver = function()
+		return getRealmAdmissionQueueQueryApi()
+	end,
+})
+
+local function isRetryableEnqueueReason(reason: string?): boolean
+	return reason == "admission_queue_unavailable" or reason == "admission_enqueue_failed"
 end
 
 local function getLifecycleQueryApi(): any?
@@ -139,6 +165,12 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 		return makeResult(false, "BeginCrossServerHandoff", "invalid_player_user_id", false, nil, "safe_fallback")
 	end
 
+	local contextAny: any = context
+	local targetRealmId = if type(contextAny) == "table" then contextAny.targetRealmId else nil
+	if not isNonEmptyString(targetRealmId) then
+		return makeResult(false, "BeginCrossServerHandoff", "target_realm_id_invalid", false, nil, "safe_fallback")
+	end
+
 	local releaseResult = ProfilePersistenceGateway.ReleasePlayerProfile(player)
 	if not releaseResult.ok then
 		return makeResult(
@@ -152,10 +184,27 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 	end
 
 	local handoffToken = nextHandoffToken(userId)
+	local enqueueResult = admissionProducer.Enqueue({
+		operationId = handoffToken,
+		partyId = string.format("handoff_party:%d:%s", userId, handoffToken),
+		targetRealmId = targetRealmId,
+		entryType = "standard",
+		partyMemberUserIds = { userId },
+	})
+	if enqueueResult.accepted ~= true then
+		return makeResult(
+			false,
+			"BeginCrossServerHandoff",
+			enqueueResult.reason,
+			isRetryableEnqueueReason(enqueueResult.reason),
+			nil,
+			"safe_fallback"
+		)
+	end
+
 	pendingHandoffByUserId[userId] = {
 		handoffToken = handoffToken,
 	}
-	local _unusedContext = context
 
 	local result = makeResult(true, "BeginCrossServerHandoff", nil, nil, handoffToken, nil)
 	notifyReleaseReadyCallbacks(userId, result)

@@ -32,6 +32,39 @@ globalEnv._ProfilePersistenceLifecycle_QueryAPI = {
 	end,
 }
 
+local enqueueFailureReasonByUserId: { [number]: string? } = {
+	[4003] = "admission_queue_unavailable",
+}
+local admissionQueuePayloads: { any } = {}
+local function makeAdmissionQueueQueryApi(): any
+	return {
+		EnqueueAdmission = function(payload: any): any
+			table.insert(admissionQueuePayloads, payload)
+			local memberUserIds = payload.partyMemberUserIds
+			local userId = if type(memberUserIds) == "table" then memberUserIds[1] else nil
+			if type(userId) == "number" then
+				local failureReason = enqueueFailureReasonByUserId[userId]
+				if type(failureReason) == "string" then
+					return {
+						accepted = false,
+						reason = failureReason,
+					}
+				end
+			end
+
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					depth = #admissionQueuePayloads,
+				},
+			}
+		end,
+	}
+end
+
+globalEnv._RealmAdmissionQueue_QueryAPI = makeAdmissionQueueQueryApi()
+
 ProfilePersistenceGateway.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
@@ -67,19 +100,101 @@ assertEqual(callbackRegistered, true, "register callback")
 
 local failedHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4002), {
 	flow = "realm_entry",
+	targetRealmId = "realm-main-01",
 })
 assertEqual(failedHandoff.ok, false, "failed handoff returns failure")
 assertEqual(failedHandoff.reason, "release_before_transfer_failed", "failed handoff reason")
 assertEqual(failedHandoff.fallbackRoute, "safe_fallback", "failed handoff fallback route")
 assertEqual(releaseAttemptCountByUserId[4002], 1, "failed handoff attempted one release")
 
+local invalidTargetRealmHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4004), {
+	flow = "hub_to_realm",
+})
+assertEqual(invalidTargetRealmHandoff.ok, false, "invalid target realm handoff returns failure")
+assertEqual(invalidTargetRealmHandoff.reason, "target_realm_id_invalid", "invalid target realm reason")
+assertEqual(invalidTargetRealmHandoff.retryable, false, "invalid target realm not retryable")
+assertEqual(invalidTargetRealmHandoff.handoffToken, nil, "invalid target realm has no token")
+assertEqual(invalidTargetRealmHandoff.fallbackRoute, "safe_fallback", "invalid target realm fallback route")
+assertEqual(releaseAttemptCountByUserId[4004], nil, "invalid target realm avoids release attempt")
+
+local queueUnavailableCallbackResult: any = nil
+local queueUnavailableCallbackRegistered = ProfileTeleportHandoffService.RegisterReleaseReadyCallback(
+	4005,
+	function(result: any)
+		queueUnavailableCallbackResult = result
+	end
+)
+assertEqual(queueUnavailableCallbackRegistered, true, "register queue-unavailable callback")
+
+ownershipReadyByUserId[4005] = true
+globalEnv._RealmAdmissionQueue_QueryAPI = nil
+local queueUnavailableHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4005), {
+	flow = "hub_to_realm",
+	targetRealmId = "realm-main-01",
+})
+assertEqual(queueUnavailableHandoff.ok, false, "queue-unavailable handoff returns failure")
+assertEqual(queueUnavailableHandoff.reason, "admission_queue_unavailable", "queue-unavailable handoff reason")
+assertEqual(queueUnavailableHandoff.retryable, true, "queue-unavailable handoff retryable")
+assertEqual(queueUnavailableHandoff.handoffToken, nil, "queue-unavailable handoff has no token")
+assertEqual(queueUnavailableHandoff.fallbackRoute, "safe_fallback", "queue-unavailable handoff fallback route")
+assertEqual(releaseAttemptCountByUserId[4005], 1, "queue-unavailable handoff still performs release attempt")
+assertEqual(queueUnavailableCallbackResult, nil, "queue-unavailable handoff does not trigger callback")
+assertEqual(
+	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4005),
+	true,
+	"queue-unavailable handoff leaves no pending spawn block"
+)
+globalEnv._RealmAdmissionQueue_QueryAPI = makeAdmissionQueueQueryApi()
+
 local firstHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
 	flow = "hub_to_realm",
+	targetRealmId = "realm-main-01",
 })
 assertEqual(firstHandoff.ok, true, "first handoff succeeds")
 assertTrue(type(firstHandoff.handoffToken) == "string", "first handoff token assigned")
 assertEqual(releaseAttemptCountByUserId[4001], 1, "first handoff release attempted")
 assertEqual(callbackResult.handoffToken, firstHandoff.handoffToken, "release-ready callback receives token")
+
+local firstPayload = admissionQueuePayloads[#admissionQueuePayloads]
+assertTrue(type(firstPayload) == "table", "first handoff enqueue payload captured")
+assertEqual(firstPayload.operationId, firstHandoff.handoffToken, "first handoff operation id maps to token")
+assertEqual(
+	firstPayload.partyId,
+	string.format("handoff_party:%d:%s", 4001, firstHandoff.handoffToken),
+	"first handoff deterministic party id"
+)
+assertEqual(firstPayload.targetRealmId, "realm-main-01", "first handoff target realm mapped")
+assertEqual(firstPayload.entryType, "standard", "first handoff entry type")
+assertEqual(type(firstPayload.partyMemberUserIds), "table", "first handoff member list type")
+assertEqual(#firstPayload.partyMemberUserIds, 1, "first handoff member list size")
+assertEqual(firstPayload.partyMemberUserIds[1], 4001, "first handoff member id")
+
+local enqueueFailureCallbackResult: any = nil
+local enqueueFailureCallbackRegistered = ProfileTeleportHandoffService.RegisterReleaseReadyCallback(
+	4003,
+	function(result: any)
+		enqueueFailureCallbackResult = result
+	end
+)
+assertEqual(enqueueFailureCallbackRegistered, true, "register enqueue-failure callback")
+
+ownershipReadyByUserId[4003] = true
+local enqueueFailedHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4003), {
+	flow = "hub_to_realm",
+	targetRealmId = "realm-main-01",
+})
+assertEqual(enqueueFailedHandoff.ok, false, "enqueue-failed handoff returns failure")
+assertEqual(enqueueFailedHandoff.reason, "admission_queue_unavailable", "enqueue-failed handoff reason")
+assertEqual(enqueueFailedHandoff.retryable, true, "enqueue-failed handoff retryable")
+assertEqual(enqueueFailedHandoff.handoffToken, nil, "enqueue-failed handoff has no token")
+assertEqual(enqueueFailedHandoff.fallbackRoute, "safe_fallback", "enqueue-failed handoff fallback route")
+assertEqual(releaseAttemptCountByUserId[4003], 1, "enqueue-failed handoff still performs release attempt")
+assertEqual(enqueueFailureCallbackResult, nil, "enqueue-failed handoff does not trigger callback")
+assertEqual(
+	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4003),
+	true,
+	"enqueue-failed handoff leaves no pending spawn block"
+)
 
 local replayedCallbackToken: string? = nil
 local replayRegistered = ProfileTeleportHandoffService.RegisterReleaseReadyCallback(4001, function(result: any)
@@ -104,6 +219,7 @@ assertEqual(ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4001), true,
 ownershipReadyByUserId[4001] = false
 local secondHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
 	flow = "realm_to_hub",
+	targetRealmId = "realm-main-01",
 })
 assertEqual(secondHandoff.ok, true, "second chain handoff succeeds")
 assertTrue(secondHandoff.handoffToken ~= firstHandoff.handoffToken, "second handoff token differs")
