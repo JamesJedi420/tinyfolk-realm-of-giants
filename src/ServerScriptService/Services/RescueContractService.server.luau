@@ -12,6 +12,9 @@ local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
+local QueueNotificationFanout = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("QueueNotificationFanout"))
+	else (require :: any)("./QueueNotificationFanout")
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local REQUEST_REMOTE_NAME = "RescueContractRequest"
@@ -277,6 +280,34 @@ local function getRescueHandoffQueryApi(): any?
 	return queryApi
 end
 
+local function getQueueNotificationFanoutQueryApi(): any?
+	local globalValue: any = globalEnv
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._QueueNotificationFanout_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local defaultQueueNotificationFanout = QueueNotificationFanout.CreateDefault()
+
+local function emitRescueQueueFanout(eventName: string, payload: any)
+	local fanout = getQueueNotificationFanoutQueryApi()
+	if fanout == nil then
+		fanout = defaultQueueNotificationFanout
+	end
+	if fanout == nil or type(fanout.PublishRescue) ~= "function" then
+		return
+	end
+
+	pcall(fanout.PublishRescue, eventName, payload)
+end
+
 local function evaluateTargetSafeZoneProtection(target: Player, at: number): boolean
 	local safeZoneState = target:GetAttribute(EscapeConfig.SafeZoneAttribute) == true
 	local safeZoneType = target:GetAttribute(EscapeConfig.SafeZoneTypeAttribute)
@@ -461,21 +492,30 @@ local function pruneExpiredQueueEntries(at: number)
 	end
 
 	local handoffApi = getRescueHandoffQueryApi()
-	if handoffApi == nil or type(handoffApi.OnRescueQueueExpired) ~= "function" then
-		return
-	end
+	local hasHandoffExpiryHook = handoffApi ~= nil and type(handoffApi.OnRescueQueueExpired) == "function"
 
 	for _, expiredEntry in ipairs(expiredEntries) do
-		pcall(function()
-			handoffApi.OnRescueQueueExpired({
-				queueEntryId = expiredEntry.queueEntryId,
-				capturedUserId = expiredEntry.capturedUserId,
-				realmId = expiredEntry.realmId,
-				sessionId = expiredEntry.sessionId,
-				reason = "expired",
-				at = at,
-			})
-		end)
+		emitRescueQueueFanout("rescue_queue_expired", {
+			queueEntryId = expiredEntry.queueEntryId,
+			capturedUserId = expiredEntry.capturedUserId,
+			realmId = expiredEntry.realmId,
+			sessionId = expiredEntry.sessionId,
+			resolvedReason = "expired",
+			at = at,
+		})
+
+		if hasHandoffExpiryHook then
+			pcall(function()
+				handoffApi.OnRescueQueueExpired({
+					queueEntryId = expiredEntry.queueEntryId,
+					capturedUserId = expiredEntry.capturedUserId,
+					realmId = expiredEntry.realmId,
+					sessionId = expiredEntry.sessionId,
+					reason = "expired",
+					at = at,
+				})
+			end)
+		end
 	end
 end
 
@@ -586,6 +626,16 @@ local function publishRescueQueueEntry(contract: any, target: Player?, at: numbe
 	}
 
 	rescueQueueState = RescueContractQueueState.UpsertPending(rescueQueueState, queueEntry)
+	emitRescueQueueFanout("rescue_queue_published", {
+		queueEntryId = queueEntry.queueEntryId,
+		capturedUserId = queueEntry.capturedUserId,
+		realmId = queueEntry.realmId,
+		sessionId = queueEntry.sessionId,
+		rescuerUserId = queueEntry.rescuerUserId,
+		targetRealmOwnerUserId = queueEntry.targetRealmOwnerUserId,
+		createdAt = queueEntry.createdAt,
+		expiration = queueEntry.expiration,
+	})
 end
 
 local function applyContractAttributesFromState()
@@ -863,6 +913,15 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 	if acceptedTransition ~= true or queueEntry == nil or queueEntry.status ~= "accepted" then
 		return { accepted = false, reason = "queue_entry_not_pending" }
 	end
+
+	emitRescueQueueFanout("rescue_queue_accepted", {
+		queueEntryId = queueEntry.queueEntryId,
+		capturedUserId = queueEntry.capturedUserId,
+		realmId = queueEntry.realmId,
+		sessionId = queueEntry.sessionId,
+		acceptedByUserId = acceptedByUserId,
+		acceptedAt = resolvedNow,
+	})
 
 	return {
 		accepted = true,

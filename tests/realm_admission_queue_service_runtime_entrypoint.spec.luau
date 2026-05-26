@@ -146,6 +146,7 @@ local adapter, removedIds = makeQueueAdapter()
 local reserveCalls = 0
 local releaseCalls = 0
 local dispatchCalls = 0
+local admissionFanoutEvents = {}
 
 local configured = RealmAdmissionQueueService.ConfigureForTests({
 	adapter = adapter,
@@ -194,6 +195,18 @@ local configured = RealmAdmissionQueueService.ConfigureForTests({
 	now = function(): number
 		return 150
 	end,
+	queueNotificationFanout = {
+		PublishAdmission = function(eventName: string, payload: any)
+			table.insert(admissionFanoutEvents, {
+				eventName = eventName,
+				payload = payload,
+			})
+			return {
+				accepted = true,
+				reason = "accepted",
+			}
+		end,
+	},
 })
 assertTrue(configured.ok, "configure for tests accepted")
 
@@ -220,6 +233,14 @@ assertEqual(processed.outcome.retryDeferred, 0, "retry deferred count")
 assertEqual(reserveCalls, 2, "reserve called for non-expired entries")
 assertEqual(releaseCalls, 1, "release called for non-retryable dispatch rejection")
 assertEqual(dispatchCalls, 2, "dispatch called for non-expired entries")
+assertEqual(#admissionFanoutEvents, 4, "fanout emits enqueue and batch events")
+assertEqual(admissionFanoutEvents[1].eventName, "admission_enqueue", "fanout event for first enqueue")
+assertEqual(admissionFanoutEvents[2].eventName, "admission_enqueue", "fanout event for second enqueue")
+assertEqual(admissionFanoutEvents[3].eventName, "admission_enqueue", "fanout event for third enqueue")
+assertEqual(admissionFanoutEvents[4].eventName, "admission_batch_processed", "fanout event for batch process")
+assertEqual(admissionFanoutEvents[4].payload.processed, 3, "fanout batch payload processed")
+assertEqual(admissionFanoutEvents[4].payload.succeeded, 1, "fanout batch payload succeeded")
+assertEqual(admissionFanoutEvents[4].payload.failed, 1, "fanout batch payload failed")
 
 local readAfterProcess = RealmAdmissionQueueService.ReadBatch(10)
 assertTrue(readAfterProcess.accepted, "read after process accepted")

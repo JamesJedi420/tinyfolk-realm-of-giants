@@ -25,6 +25,10 @@ local RealmAdmissionQueueProcessor = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmAdmissionQueueProcessor"))
 	else (require :: any)("./RealmAdmissionQueueProcessor")
 
+local QueueNotificationFanout: any = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("QueueNotificationFanout"))
+	else (require :: any)("./QueueNotificationFanout")
+
 local RealmAdmissionQueueService: any = {}
 local globalEnv: any = getfenv()
 
@@ -61,6 +65,7 @@ local runtimeProcessScheduler: ProcessScheduler? = nil
 local runtimeProcessToken: any = nil
 local runtimeProcessBatchSize = DEFAULT_PROCESS_BATCH_SIZE
 local runtimeProcessIntervalSeconds = DEFAULT_PROCESS_INTERVAL_SECONDS
+local runtimeQueueNotificationFanout: any = nil
 
 local function isPositiveInteger(value: any): boolean
 	if type(value) ~= "number" then
@@ -217,6 +222,14 @@ local function buildRuntime(config: any)
 		operationLock = getGlobalTable("_TransferLock_QueryAPI")
 	end
 
+	local queueNotificationFanout = if type(config) == "table" then config.queueNotificationFanout else nil
+	if queueNotificationFanout == nil then
+		queueNotificationFanout = getGlobalTable("_QueueNotificationFanout_QueryAPI")
+	end
+	if queueNotificationFanout == nil and type(QueueNotificationFanout) == "table" then
+		queueNotificationFanout = (QueueNotificationFanout :: any).CreateDefault()
+	end
+
 	local queueState = if type(config) == "table" and config.queueState ~= nil
 		then config.queueState
 		else RealmAdmissionQueueState
@@ -244,6 +257,7 @@ local function buildRuntime(config: any)
 
 	runtimeProcessBatchSize = resolveProcessBatchSize(configAny)
 	runtimeProcessIntervalSeconds = resolveProcessIntervalSeconds(configAny)
+	runtimeQueueNotificationFanout = queueNotificationFanout
 	started = true
 
 	if type(configAny) == "table" and configAny.enableProcessingLoop == true then
@@ -288,6 +302,7 @@ local function ensureStarted(): boolean
 		started = false
 		runtimeQueueStore = nil
 		runtimeProcessor = nil
+		runtimeQueueNotificationFanout = nil
 	end
 
 	return started
@@ -302,6 +317,7 @@ function RealmAdmissionQueueService.Start(config: any?): { ok: boolean, reason: 
 		started = false
 		runtimeQueueStore = nil
 		runtimeProcessor = nil
+		runtimeQueueNotificationFanout = nil
 		return {
 			ok = false,
 			reason = tostring(err),
@@ -324,6 +340,7 @@ function RealmAdmissionQueueService.ResetForTests()
 	started = false
 	runtimeQueueStore = nil
 	runtimeProcessor = nil
+	runtimeQueueNotificationFanout = nil
 end
 
 function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
@@ -352,11 +369,25 @@ function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
 		}
 	end
 
-	return {
+	local response = {
 		accepted = result.accepted == true,
 		reason = if type(result.reason) == "string" then result.reason else "queue_store_result_invalid",
 		snapshot = result.snapshot,
 	}
+
+	local fanoutAny: any = runtimeQueueNotificationFanout
+	if type(fanoutAny) == "table" and type(fanoutAny.PublishAdmission) == "function" then
+		pcall((fanoutAny :: any).PublishAdmission, "admission_enqueue", {
+			accepted = response.accepted,
+			reason = response.reason,
+			operationId = if type(input) == "table" then input.operationId else nil,
+			targetRealmId = if type(input) == "table" then input.targetRealmId else nil,
+			partyId = if type(input) == "table" then input.partyId else nil,
+			entryType = if type(input) == "table" then input.entryType else nil,
+		})
+	end
+
+	return response
 end
 
 function RealmAdmissionQueueService.ReadBatch(maxItems: any): BatchReadResult
@@ -424,6 +455,18 @@ function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 			reason = "queue_processor_result_invalid",
 			outcome = nil,
 		}
+	end
+
+	local fanoutAny: any = runtimeQueueNotificationFanout
+	if type(fanoutAny) == "table" and type(fanoutAny.PublishAdmission) == "function" then
+		pcall((fanoutAny :: any).PublishAdmission, "admission_batch_processed", {
+			requestedMaxItems = maxItems,
+			processed = outcome.processed,
+			succeeded = outcome.succeeded,
+			expired = outcome.expired,
+			retryDeferred = outcome.retryDeferred,
+			failed = outcome.failed,
+		})
 	end
 
 	return {

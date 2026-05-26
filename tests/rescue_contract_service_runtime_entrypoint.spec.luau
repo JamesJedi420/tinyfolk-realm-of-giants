@@ -244,6 +244,7 @@ globalEnv._ScoreService_QueryAPI = {
 local handoffRequests: { any } = {}
 local handoffShouldReject = false
 local handoffExpiryProbeAt: number? = nil
+local rescueFanoutEvents: { any } = {}
 globalEnv._RescueHandoffService_QueryAPI = {
 	CreateHandoffLock = function(payload: any): any
 		table.insert(handoffRequests, payload)
@@ -260,6 +261,19 @@ globalEnv._RescueHandoffService_QueryAPI = {
 			return { accepted = false, reason = "handoff_lock_busy" }
 		end
 		return { accepted = true, reason = "accepted" }
+	end,
+}
+
+globalEnv._QueueNotificationFanout_QueryAPI = {
+	PublishRescue = function(eventName: string, payload: any): any
+		table.insert(rescueFanoutEvents, {
+			eventName = eventName,
+			payload = payload,
+		})
+		return {
+			accepted = true,
+			reason = "accepted",
+		}
 	end,
 }
 
@@ -320,6 +334,7 @@ local function resetState()
 	handoffRequests = {}
 	handoffShouldReject = false
 	handoffExpiryProbeAt = nil
+	rescueFanoutEvents = {}
 end
 
 do
@@ -616,6 +631,14 @@ do
 	assertEqual(queueEntries[1].capturedUserId, target.UserId, "queue entry stores captured user")
 	assertEqual(queueEntries[1].realmId, "giant_realm_9001", "queue entry stores fallback realm id")
 	assertEqual(queueEntries[1].rewardHint, "rescue_contract", "queue entry stores reward hint")
+	assertTrue(#rescueFanoutEvents >= 1, "fanout emits publish event")
+	local latestFanoutEvent = rescueFanoutEvents[#rescueFanoutEvents]
+	assertEqual(latestFanoutEvent.eventName, "rescue_queue_published", "fanout publish event name")
+	assertEqual(
+		latestFanoutEvent.payload.queueEntryId,
+		queueEntries[1].queueEntryId,
+		"fanout publish payload queue entry id"
+	)
 end
 
 do
@@ -634,6 +657,10 @@ do
 	assertEqual(handoffRequests[1].queueEntryId, queueEntryId, "handoff request receives queue entry id")
 	assertEqual(handoffRequests[1].capturedUserId, target.UserId, "handoff request receives captured user")
 	assertEqual(handoffRequests[1].acceptedByUserId, rescuerTwo.UserId, "handoff request receives acceptor")
+	assertEqual(#rescueFanoutEvents, 2, "fanout emits publish and accept events")
+	assertEqual(rescueFanoutEvents[1].eventName, "rescue_queue_published", "fanout first event is publish")
+	assertEqual(rescueFanoutEvents[2].eventName, "rescue_queue_accepted", "fanout second event is accepted")
+	assertEqual(rescueFanoutEvents[2].payload.acceptedByUserId, rescuerTwo.UserId, "fanout accept payload accepts user")
 
 	local pendingAfterAccept = rescueApi.GetRescueQueueEntries(140.3)
 	assertEqual(#pendingAfterAccept, 0, "accepted queue entry no longer returned as pending")
@@ -701,6 +728,9 @@ do
 
 	local pendingAfterExpiry = rescueApi.GetRescueQueueEntries(163)
 	assertEqual(#pendingAfterExpiry, 0, "expired queue entry pruned from pending list")
+	assertEqual(#rescueFanoutEvents, 2, "fanout emits publish and expiry events")
+	assertEqual(rescueFanoutEvents[1].eventName, "rescue_queue_published", "fanout expiry flow publish event")
+	assertEqual(rescueFanoutEvents[2].eventName, "rescue_queue_expired", "fanout expiry flow expired event")
 end
 
 do
