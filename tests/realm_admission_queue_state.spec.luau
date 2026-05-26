@@ -63,6 +63,13 @@ assertEqual(valid.entry.priority, 100, "default priority derived")
 assertEqual(valid.entry.partySize, 2, "party size accepted")
 assertEqual(valid.entry.retryCount, 0, "retry count default")
 
+local validWithMembers = RealmAdmissionQueueState.NewEntry(makeEntry({
+	partyMemberUserIds = { 9202, 9201, 9202 },
+}))
+assertTrue(validWithMembers.ok, "entry with member identities accepted")
+assertEqual(validWithMembers.entry.partyMemberUserIds[1], 9201, "member identities normalized and sorted first")
+assertEqual(validWithMembers.entry.partyMemberUserIds[2], 9202, "member identities normalized and sorted second")
+
 local rescueInput = makeEntry({
 	entryType = "rescue_contract",
 	priority = 250,
@@ -87,12 +94,31 @@ local invalidRetry = RealmAdmissionQueueState.NewEntry(makeEntry({ retryCount = 
 assertFalse(invalidRetry.ok, "negative retry rejected")
 assertEqual(invalidRetry.reason, "retry_count_invalid", "negative retry reason")
 
+local invalidPartyMembers = RealmAdmissionQueueState.NewEntry(makeEntry({
+	partyMemberUserIds = { 0, 1234 },
+}))
+assertFalse(invalidPartyMembers.ok, "invalid member identities rejected")
+assertEqual(invalidPartyMembers.reason, "party_member_user_ids_invalid", "invalid member identities reason")
+
+local mismatchedPartyMembers = RealmAdmissionQueueState.NewEntry(makeEntry({
+	partySize = 3,
+	partyMemberUserIds = { 1001, 1002 },
+}))
+assertFalse(mismatchedPartyMembers.ok, "member identity count mismatch rejected")
+assertEqual(mismatchedPartyMembers.reason, "party_member_user_ids_mismatch", "member identity mismatch reason")
+
 local snapshot = RealmAdmissionQueueState.GetSnapshot(valid.entry)
 assertTrue(snapshot ~= nil, "snapshot exists")
 assertEqual(snapshot.operationId, valid.entry.operationId, "snapshot operation id")
 local snapshotAny: any = snapshot
 snapshotAny.operationId = "mutated"
 assertEqual(valid.entry.operationId, "op-9001", "snapshot clone isolation")
+
+local memberSnapshot = RealmAdmissionQueueState.GetSnapshot(validWithMembers.entry)
+assertTrue(memberSnapshot ~= nil, "member snapshot exists")
+local memberSnapshotAny: any = memberSnapshot
+memberSnapshotAny.partyMemberUserIds[1] = 9999
+assertEqual(validWithMembers.entry.partyMemberUserIds[1], 9201, "snapshot keeps member identity clone isolation")
 
 assertFalse(RealmAdmissionQueueState.IsExpired(valid.entry, 219), "entry before expiration")
 assertTrue(RealmAdmissionQueueState.IsExpired(valid.entry, 220), "entry at expiration")

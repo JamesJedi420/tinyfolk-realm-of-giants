@@ -39,6 +39,10 @@ end
 local function makeCodec()
 	return {
 		Encode = function(entry: any): string
+			local memberSegment = ""
+			if type(entry.partyMemberUserIds) == "table" then
+				memberSegment = table.concat(entry.partyMemberUserIds, ",")
+			end
 			return table.concat({
 				entry.operationId,
 				entry.partyId,
@@ -49,10 +53,18 @@ local function makeCodec()
 				tostring(entry.expiration),
 				tostring(entry.partySize),
 				tostring(entry.retryCount),
+				memberSegment,
 			}, "|")
 		end,
 		Decode = function(encoded: string): any
 			local parts = string.split(encoded, "|")
+			local memberIds = nil
+			if type(parts[10]) == "string" and parts[10] ~= "" then
+				memberIds = {}
+				for _, token in ipairs(string.split(parts[10], ",")) do
+					table.insert(memberIds, tonumber(token))
+				end
+			end
 			return {
 				operationId = parts[1],
 				partyId = parts[2],
@@ -63,6 +75,7 @@ local function makeCodec()
 				expiration = tonumber(parts[7]),
 				partySize = tonumber(parts[8]),
 				retryCount = tonumber(parts[9]),
+				partyMemberUserIds = memberIds,
 			}
 		end,
 	}
@@ -254,6 +267,129 @@ assertEqual(invalidProcess.accepted, false, "invalid process max rejected")
 assertEqual(invalidProcess.reason, "max_items_invalid", "invalid process max reason")
 
 RealmAdmissionQueueService.ResetForTests()
+
+do
+	local e2eAdapter, e2eRemovedIds = makeQueueAdapter()
+	local resolverMembersByPartyId: { [string]: { number } } = {}
+	local registerCalls = 0
+	local unregisterCalls = 0
+	local e2eDispatchCalls = 0
+
+	local configuredE2E = RealmAdmissionQueueService.ConfigureForTests({
+		adapter = e2eAdapter,
+		codec = makeCodec(),
+		queueState = RealmAdmissionQueueState,
+		structurePolicy = MemoryStoreStructurePolicy,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+				}
+			end,
+		},
+		partyResolver = {
+			RegisterPartyMembers = function(input: any)
+				registerCalls += 1
+				if
+					type(input) ~= "table"
+					or type(input.partyId) ~= "string"
+					or type(input.memberUserIds) ~= "table"
+				then
+					return {
+						accepted = false,
+						reason = "input_invalid",
+					}
+				end
+				local normalized = {}
+				for _, userId in ipairs(input.memberUserIds) do
+					table.insert(normalized, userId)
+				end
+				table.sort(normalized)
+				resolverMembersByPartyId[input.partyId] = normalized
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ResolvePartyMemberUserIds = function(partyId: string): { number }
+				local members = resolverMembersByPartyId[partyId]
+				if type(members) ~= "table" then
+					return {}
+				end
+				local cloned = {}
+				for _, userId in ipairs(members) do
+					table.insert(cloned, userId)
+				end
+				return cloned
+			end,
+			UnregisterParty = function(partyId: string)
+				unregisterCalls += 1
+				resolverMembersByPartyId[partyId] = nil
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(entry: any)
+				e2eDispatchCalls += 1
+				local members = resolverMembersByPartyId[entry.partyId]
+				if type(members) ~= "table" or #members <= 0 then
+					return {
+						ok = false,
+						retryable = true,
+						reason = "party_members_unavailable",
+					}
+				end
+				return {
+					ok = true,
+					retryable = false,
+					reason = "accepted",
+				}
+			end,
+		},
+		operationLock = {
+			TryAcquire = function(_operationId: string): boolean
+				return true
+			end,
+			Release = function(_operationId: string)
+				return
+			end,
+		},
+		now = function(): number
+			return 150
+		end,
+	})
+	assertTrue(configuredE2E.ok, "e2e configure accepted")
+
+	local enqueueE2E = RealmAdmissionQueueService.EnqueueAdmission(makeEntry({
+		operationId = "op-e2e-party",
+		partyId = "party-e2e",
+		expiration = 220,
+		partySize = 2,
+		partyMemberUserIds = { 7102, 7101 },
+	}))
+	assertTrue(enqueueE2E.accepted, "e2e enqueue accepted")
+	assertEqual(registerCalls, 1, "e2e register called on enqueue acceptance")
+
+	local processedE2E = RealmAdmissionQueueService.ProcessBatch(10)
+	assertTrue(processedE2E.accepted, "e2e process accepted")
+	assertEqual(processedE2E.outcome.succeeded, 1, "e2e process succeeds with resolver members")
+	assertEqual(processedE2E.outcome.retryDeferred, 0, "e2e process has no retry deferral")
+	assertEqual(e2eDispatchCalls, 1, "e2e dispatch called once")
+	assertEqual(unregisterCalls, 1, "e2e unregister called on terminal success")
+	assertTrue(resolverMembersByPartyId["party-e2e"] == nil, "e2e unregister clears resolver state")
+	assertTrue(e2eRemovedIds["receipt-1"] == true, "e2e success removes queue entry")
+
+	RealmAdmissionQueueService.ResetForTests()
+end
 
 do
 	local loopAdapter, loopRemovedIds = makeQueueAdapter()

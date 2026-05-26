@@ -66,6 +66,7 @@ local runtimeProcessToken: any = nil
 local runtimeProcessBatchSize = DEFAULT_PROCESS_BATCH_SIZE
 local runtimeProcessIntervalSeconds = DEFAULT_PROCESS_INTERVAL_SECONDS
 local runtimeQueueNotificationFanout: any = nil
+local runtimePartyResolver: any = nil
 
 local function isPositiveInteger(value: any): boolean
 	if type(value) ~= "number" then
@@ -191,6 +192,29 @@ local function resolveCodec(config: any): any?
 	}
 end
 
+local function resolvePartyResolver(config: any): any?
+	local configAny: any = config
+	local requestedResolver = if type(configAny) == "table" then rawget(configAny, "partyResolver") else nil
+	if requestedResolver ~= nil then
+		return requestedResolver
+	end
+
+	return getGlobalTable("_RealmAdmissionPartyResolver_QueryAPI")
+end
+
+local function unregisterResolverParty(partyId: any)
+	if type(partyId) ~= "string" or partyId == "" then
+		return
+	end
+
+	local resolverAny: any = runtimePartyResolver
+	if type(resolverAny) ~= "table" or type((resolverAny :: any).UnregisterParty) ~= "function" then
+		return
+	end
+
+	pcall((resolverAny :: any).UnregisterParty, partyId)
+end
+
 local function buildRuntime(config: any)
 	stopProcessingLoop()
 
@@ -233,6 +257,7 @@ local function buildRuntime(config: any)
 	local queueState = if type(config) == "table" and config.queueState ~= nil
 		then config.queueState
 		else RealmAdmissionQueueState
+	local partyResolver = resolvePartyResolver(config)
 	local structurePolicy = if type(config) == "table" and config.structurePolicy ~= nil
 		then config.structurePolicy
 		else MemoryStoreStructurePolicy
@@ -252,12 +277,14 @@ local function buildRuntime(config: any)
 		capacityApi = capacityApi,
 		teleportDispatcher = teleportDispatcher,
 		operationLock = operationLock,
+		partyResolver = partyResolver,
 		now = nowFn,
 	})
 
 	runtimeProcessBatchSize = resolveProcessBatchSize(configAny)
 	runtimeProcessIntervalSeconds = resolveProcessIntervalSeconds(configAny)
 	runtimeQueueNotificationFanout = queueNotificationFanout
+	runtimePartyResolver = partyResolver
 	started = true
 
 	if type(configAny) == "table" and configAny.enableProcessingLoop == true then
@@ -303,6 +330,7 @@ local function ensureStarted(): boolean
 		runtimeQueueStore = nil
 		runtimeProcessor = nil
 		runtimeQueueNotificationFanout = nil
+		runtimePartyResolver = nil
 	end
 
 	return started
@@ -318,6 +346,7 @@ function RealmAdmissionQueueService.Start(config: any?): { ok: boolean, reason: 
 		runtimeQueueStore = nil
 		runtimeProcessor = nil
 		runtimeQueueNotificationFanout = nil
+		runtimePartyResolver = nil
 		return {
 			ok = false,
 			reason = tostring(err),
@@ -341,6 +370,7 @@ function RealmAdmissionQueueService.ResetForTests()
 	runtimeQueueStore = nil
 	runtimeProcessor = nil
 	runtimeQueueNotificationFanout = nil
+	runtimePartyResolver = nil
 end
 
 function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
@@ -360,13 +390,63 @@ function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
 		}
 	end
 
+	local resolverAny: any = runtimePartyResolver
+	local inputAny: any = input
+	local partyMemberUserIds = if type(inputAny) == "table" and type(inputAny.partyMemberUserIds) == "table"
+		then inputAny.partyMemberUserIds
+		else nil
+	local registrationReason: string? = nil
+	local registeredPartyId: string? = nil
+
+	if partyMemberUserIds ~= nil then
+		if type(resolverAny) ~= "table" or type((resolverAny :: any).RegisterPartyMembers) ~= "function" then
+			return {
+				accepted = false,
+				reason = "party_resolver_unavailable",
+				snapshot = nil,
+			}
+		end
+
+		local registerInput = {
+			partyId = if type(inputAny) == "table" then inputAny.partyId else nil,
+			memberUserIds = partyMemberUserIds,
+			at = if type(inputAny) == "table" then inputAny.createdAt else nil,
+		}
+		local ok, registrationResult = pcall((resolverAny :: any).RegisterPartyMembers, registerInput)
+		if not ok or type(registrationResult) ~= "table" or registrationResult.accepted ~= true then
+			registrationReason = if type(registrationResult) == "table"
+					and type(registrationResult.reason) == "string"
+				then registrationResult.reason
+				else "party_member_registration_failed"
+			return {
+				accepted = false,
+				reason = registrationReason or "party_member_registration_failed",
+				snapshot = nil,
+			}
+		end
+
+		registrationReason = if type(registrationResult.reason) == "string"
+			then registrationResult.reason
+			else "accepted"
+		if type(registerInput.partyId) == "string" and registerInput.partyId ~= "" then
+			registeredPartyId = registerInput.partyId
+		end
+	end
+
 	local result = runtimeQueueStore.Enqueue(input)
 	if type(result) ~= "table" then
+		if registeredPartyId ~= nil then
+			unregisterResolverParty(registeredPartyId)
+		end
 		return {
 			accepted = false,
 			reason = "queue_store_result_invalid",
 			snapshot = nil,
 		}
+	end
+
+	if result.accepted ~= true and registeredPartyId ~= nil then
+		unregisterResolverParty(registeredPartyId)
 	end
 
 	local response = {
@@ -380,6 +460,8 @@ function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
 		pcall((fanoutAny :: any).PublishAdmission, "admission_enqueue", {
 			accepted = response.accepted,
 			reason = response.reason,
+			partyMemberRegistrationReason = registrationReason,
+			partyMemberCount = if type(partyMemberUserIds) == "table" then #partyMemberUserIds else nil,
 			operationId = if type(input) == "table" then input.operationId else nil,
 			targetRealmId = if type(input) == "table" then input.targetRealmId else nil,
 			partyId = if type(input) == "table" then input.partyId else nil,

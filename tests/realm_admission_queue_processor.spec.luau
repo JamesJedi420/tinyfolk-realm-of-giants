@@ -10,7 +10,7 @@ local function assertEqual(actual: any, expected: any, label: string)
 	end
 end
 
-local function assertTrue(value: boolean, label: string)
+local function _assertTrue(value: boolean, label: string)
 	assertEqual(value, true, label)
 end
 
@@ -112,6 +112,7 @@ do
 	local capacityCalls: { any } = {}
 	local dispatchCalls: { any } = {}
 	local lockCalls: { any } = {}
+	local unregisterCalls: { any } = {}
 
 	local processor = RealmAdmissionQueueProcessor.Create({
 		queueStore = queueStore,
@@ -161,6 +162,15 @@ do
 				table.insert(lockCalls, { method = "Release", operationId = operationId })
 			end,
 		},
+		partyResolver = {
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
 		now = function(): number
 			return 160
 		end,
@@ -180,6 +190,8 @@ do
 	assertEqual(dispatchCalls[1].operationId, "op-ok", "dispatch called for valid entry")
 	assertEqual(lockCalls[1].method, "TryAcquire", "lock acquired")
 	assertEqual(lockCalls[2].method, "Release", "lock released")
+	assertEqual(unregisterCalls[1], "party-1", "expired entry unregisters party")
+	assertEqual(unregisterCalls[2], "party-1", "success entry unregisters party")
 end
 
 do
@@ -191,6 +203,7 @@ do
 
 	local capacityCalls: { any } = {}
 	local dispatchCalls: { any } = {}
+	local unregisterCalls: { any } = {}
 
 	local lockBusyIds = {
 		op_busy = true,
@@ -240,6 +253,15 @@ do
 			end,
 			Release = function(_operationId: string) end,
 		},
+		partyResolver = {
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
 		now = function(): number
 			return 120
 		end,
@@ -255,6 +277,7 @@ do
 	assertEqual(#dispatchCalls, 2, "dispatch not called for lock-busy item")
 	assertEqual(#capacityCalls, 4, "capacity reserve+release for dispatch failures")
 	assertEqual(queueCalls[2].receiptId, "fatal-1", "fatal item removed")
+	assertEqual(#unregisterCalls, 1, "only terminal non-retryable failure unregisters")
 end
 
 do
@@ -266,6 +289,7 @@ do
 
 	local capacityCalls: { any } = {}
 	local dispatchCalls: { any } = {}
+	local unregisterCalls: { any } = {}
 
 	local processor = RealmAdmissionQueueProcessor.Create({
 		queueStore = queueStore,
@@ -289,6 +313,15 @@ do
 				}
 			end,
 		},
+		partyResolver = {
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
 		now = function(): number
 			return 120
 		end,
@@ -302,6 +335,7 @@ do
 	assertEqual(#dispatchCalls, 1, "remove failure path still dispatched once")
 	assertEqual(#capacityCalls, 2, "remove failure path compensates capacity")
 	assertEqual(queueCalls[2].method, "Remove", "remove attempted on success path")
+	assertEqual(#unregisterCalls, 0, "remove-failure retry path does not unregister")
 end
 
 do
@@ -312,6 +346,7 @@ do
 
 	local dispatchCalls: { any } = {}
 	local lockCalls: { any } = {}
+	local unregisterCalls: { any } = {}
 
 	local processor = RealmAdmissionQueueProcessor.Create({
 		queueStore = queueStore,
@@ -348,6 +383,15 @@ do
 				table.insert(lockCalls, { method = "Release", operationId = operationId })
 			end,
 		},
+		partyResolver = {
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
 		now = function(): number
 			return 110
 		end,
@@ -360,6 +404,7 @@ do
 	assertEqual(outcome.failed, 0, "concurrency no hard failures")
 	assertEqual(#dispatchCalls, 1, "concurrency lock prevents duplicate dispatch")
 	assertEqual(queueCalls[2].receiptId, "concurrent-1", "only first concurrent receipt removed")
+	assertEqual(#unregisterCalls, 1, "concurrency unregister only on terminal success")
 end
 
 print("realm_admission_queue_processor: all checks passed")

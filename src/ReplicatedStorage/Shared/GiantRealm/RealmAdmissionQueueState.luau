@@ -13,6 +13,7 @@ export type QueueEntry = {
 	createdAt: number,
 	expiration: number,
 	partySize: number,
+	partyMemberUserIds: { number }?,
 	retryCount: number,
 }
 
@@ -72,6 +73,15 @@ local function isNonNegativeInteger(value: any): boolean
 end
 
 local function cloneEntry(entry: QueueEntry): QueueEntry
+	local clonedPartyMemberUserIds: { number }? = nil
+	if type(entry.partyMemberUserIds) == "table" then
+		local clonedMembers: { number } = {}
+		for _, userId in ipairs(entry.partyMemberUserIds) do
+			table.insert(clonedMembers, userId)
+		end
+		clonedPartyMemberUserIds = clonedMembers
+	end
+
 	return {
 		operationId = entry.operationId,
 		partyId = entry.partyId,
@@ -81,8 +91,42 @@ local function cloneEntry(entry: QueueEntry): QueueEntry
 		createdAt = entry.createdAt,
 		expiration = entry.expiration,
 		partySize = entry.partySize,
+		partyMemberUserIds = clonedPartyMemberUserIds,
 		retryCount = entry.retryCount,
 	}
+end
+
+local function normalizePartyMemberUserIds(values: any, partySize: number): ({ number }?, string?)
+	if values == nil then
+		return nil, nil
+	end
+	if type(values) ~= "table" then
+		return nil, "party_member_user_ids_invalid"
+	end
+
+	local seen: { [number]: boolean } = {}
+	local normalized: { number } = {}
+	for _, value in ipairs(values) do
+		if not isPositiveInteger(value) then
+			return nil, "party_member_user_ids_invalid"
+		end
+		local userId = value :: number
+		if seen[userId] ~= true then
+			seen[userId] = true
+			table.insert(normalized, userId)
+		end
+	end
+
+	if #normalized <= 0 then
+		return nil, "party_member_user_ids_invalid"
+	end
+	table.sort(normalized)
+
+	if #normalized ~= partySize then
+		return nil, "party_member_user_ids_mismatch"
+	end
+
+	return normalized, nil
 end
 
 function RealmAdmissionQueueState.ResolvePriority(entryType: any, requestedPriority: any?): (number?, string?)
@@ -140,6 +184,11 @@ function RealmAdmissionQueueState.ValidateEntry(input: any): ValidationResult
 		return { ok = false, reason = "party_size_invalid", entry = nil }
 	end
 
+	local partyMemberUserIds, memberReason = normalizePartyMemberUserIds(input.partyMemberUserIds, partySize)
+	if memberReason ~= nil then
+		return { ok = false, reason = memberReason, entry = nil }
+	end
+
 	local retryCount = if input.retryCount == nil then 0 else input.retryCount
 	if not isNonNegativeInteger(retryCount) then
 		return { ok = false, reason = "retry_count_invalid", entry = nil }
@@ -154,6 +203,7 @@ function RealmAdmissionQueueState.ValidateEntry(input: any): ValidationResult
 		createdAt = input.createdAt,
 		expiration = input.expiration,
 		partySize = partySize,
+		partyMemberUserIds = partyMemberUserIds,
 		retryCount = retryCount,
 	}
 

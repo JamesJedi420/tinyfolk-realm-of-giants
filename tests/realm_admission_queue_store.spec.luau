@@ -43,6 +43,10 @@ end
 local function makeCodec()
 	return {
 		Encode = function(entry: any): string
+			local memberSegment = ""
+			if type(entry.partyMemberUserIds) == "table" then
+				memberSegment = table.concat(entry.partyMemberUserIds, ",")
+			end
 			return table.concat({
 				entry.operationId,
 				entry.partyId,
@@ -53,10 +57,18 @@ local function makeCodec()
 				tostring(entry.expiration),
 				tostring(entry.partySize),
 				tostring(entry.retryCount),
+				memberSegment,
 			}, "|")
 		end,
 		Decode = function(encoded: string): any
 			local parts = string.split(encoded, "|")
+			local memberIds = nil
+			if type(parts[10]) == "string" and parts[10] ~= "" then
+				memberIds = {}
+				for _, token in ipairs(string.split(parts[10], ",")) do
+					table.insert(memberIds, tonumber(token))
+				end
+			end
 			return {
 				operationId = parts[1],
 				partyId = parts[2],
@@ -67,6 +79,7 @@ local function makeCodec()
 				expiration = tonumber(parts[7]),
 				partySize = tonumber(parts[8]),
 				retryCount = tonumber(parts[9]),
+				partyMemberUserIds = memberIds,
 			}
 		end,
 	}
@@ -159,9 +172,12 @@ local secondEnqueue = store.Enqueue(makeEntry({
 	operationId = "op-101",
 	entryType = "rescue_contract",
 	expiration = 210,
+	partyMemberUserIds = { 2002, 2001 },
 }))
 assertTrue(secondEnqueue.accepted, "second enqueue accepted")
 assertEqual(secondEnqueue.snapshot.priority, 300, "rescue priority applied")
+assertEqual(secondEnqueue.snapshot.partyMemberUserIds[1], 2001, "second enqueue member ids normalized first")
+assertEqual(secondEnqueue.snapshot.partyMemberUserIds[2], 2002, "second enqueue member ids normalized second")
 
 assertEqual(calls[1].method, "QueueAddAsync", "first adapter call add")
 assertEqual(calls[1].queueName, "tin_realm_admission_queue_v1", "queue name from policy")
@@ -171,6 +187,8 @@ local read = store.ReadBatch(2)
 assertTrue(read.accepted, "read accepted")
 assertEqual(#read.items, 2, "read returns two items")
 assertEqual(read.items[1].entry.entryType, "rescue_contract", "higher priority read first")
+assertEqual(read.items[1].entry.partyMemberUserIds[1], 2001, "read preserves party member ids first")
+assertEqual(read.items[1].entry.partyMemberUserIds[2], 2002, "read preserves party member ids second")
 assertEqual(read.items[2].entry.entryType, "standard", "lower priority read second")
 assertEqual(calls[3].waitTimeout, 5, "read uses non-zero visibility timeout")
 

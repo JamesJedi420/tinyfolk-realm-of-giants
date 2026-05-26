@@ -41,6 +41,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 	local capacityApi = if type(depsAny) == "table" then depsAny.capacityApi else nil
 	local teleportDispatcher = if type(depsAny) == "table" then depsAny.teleportDispatcher else nil
 	local operationLock = if type(depsAny) == "table" then depsAny.operationLock else nil
+	local partyResolver = if type(depsAny) == "table" then depsAny.partyResolver else nil
 	local nowFn = if type(depsAny) == "table" and type(depsAny.now) == "function" then depsAny.now else defaultNow
 
 	local processor: any = {}
@@ -117,6 +118,16 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 		return removeResult.accepted == true
 	end
 
+	local function unregisterParty(partyId: any)
+		if type(partyId) ~= "string" or partyId == "" then
+			return
+		end
+		if type(partyResolver) ~= "table" or type((partyResolver :: any).UnregisterParty) ~= "function" then
+			return
+		end
+		pcall((partyResolver :: any).UnregisterParty, partyId)
+	end
+
 	function processor.ProcessBatch(maxItems: any): ProcessOutcome
 		local outcome = makeOutcome()
 		if not isFiniteNumber(maxItems) or maxItems <= 0 or maxItems % 1 ~= 0 then
@@ -158,6 +169,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 			end
 			if queueState.IsExpired(entry, nowAt) then
 				if removeFromQueue(queued.receiptId) then
+					unregisterParty(entry.partyId)
 					outcome.expired += 1
 				else
 					outcome.failed += 1
@@ -185,6 +197,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					outcome.retryDeferred += 1
 					continue
 				end
+				unregisterParty(entry.partyId)
 				releaseOperationLock(entry.operationId)
 				outcome.succeeded += 1
 				continue
@@ -200,6 +213,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					outcome.retryDeferred += 1
 					continue
 				end
+				unregisterParty(entry.partyId)
 				releaseOperationLock(entry.operationId)
 				outcome.failed += 1
 			end
