@@ -2,113 +2,253 @@
   "className": "Model",
   "children": [
     {
-      "name": "RouteNorth",
+      "name": "RouteSpineNorth",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.55, 0.55, 0.55],
-        "Size": [22, 1, 80],
-        "Position": [0, 0, -90]
+        "Color": [
+          0.55,
+          0.55,
+          0.55
+        ],
+        "Size": [
+          26,
+          1,
+          110
+        ],
+        "Position": [
+          0,
+          0,
+          -88
+        ]
       }
     },
     {
-      "name": "RouteEast",
+      "name": "RouteSpineSouth",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.55, 0.55, 0.55],
-        "Size": [80, 1, 22],
-        "Position": [90, 0, 0]
+        "Color": [
+          0.55,
+          0.55,
+          0.55
+        ],
+        "Size": [
+          26,
+          1,
+          118
+        ],
+        "Position": [
+          0,
+          0,
+          70
+        ]
       }
     },
     {
-      "name": "RouteSouth",
+      "name": "RouteEastArc",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.55, 0.55, 0.55],
-        "Size": [22, 1, 80],
-        "Position": [0, 0, 90]
+        "Color": [
+          0.55,
+          0.55,
+          0.55
+        ],
+        "Size": [
+          126,
+          1,
+          24
+        ],
+        "Position": [
+          92,
+          0,
+          18
+        ]
       }
     },
     {
-      "name": "RouteWest",
+      "name": "RouteWestArc",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.55, 0.55, 0.55],
-        "Size": [80, 1, 22],
-        "Position": [-90, 0, 0]
+        "Color": [
+          0.55,
+          0.55,
+          0.55
+        ],
+        "Size": [
+          144,
+          1,
+          24
+        ],
+        "Position": [
+          -102,
+          0,
+          24
+        ]
       }
     },
     {
-      "name": "LoopConnectorNE",
+      "name": "RouteConnectorWorkyardToPlaza",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [22, 1, 22],
-        "Position": [90, 0, -90]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          76,
+          1,
+          18
+        ],
+        "Orientation": [
+          0,
+          -24,
+          0
+        ],
+        "Position": [
+          -46,
+          0,
+          -24
+        ]
       }
     },
     {
-      "name": "LoopConnectorSE",
+      "name": "RouteConnectorQuarryToPlaza",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [22, 1, 22],
-        "Position": [90, 0, 90]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          76,
+          1,
+          18
+        ],
+        "Orientation": [
+          0,
+          28,
+          0
+        ],
+        "Position": [
+          50,
+          0,
+          -18
+        ]
       }
     },
     {
-      "name": "LoopConnectorSW",
+      "name": "RouteConnectorEconomyToPlaza",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [22, 1, 22],
-        "Position": [-90, 0, 90]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          84,
+          1,
+          18
+        ],
+        "Orientation": [
+          0,
+          18,
+          0
+        ],
+        "Position": [
+          -28,
+          0,
+          50
+        ]
       }
     },
     {
-      "name": "LoopConnectorNW",
+      "name": "RouteConnectorShrineToPlaza",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [22, 1, 22],
-        "Position": [-90, 0, -90]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          92,
+          1,
+          18
+        ],
+        "Orientation": [
+          0,
+          -30,
+          0
+        ],
+        "Position": [
+          42,
+          0,
+          52
+        ]
       }
     },
     {
-      "name": "RouteRoomNorth",
+      "name": "RouteRoomEscapeWest",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.52, 0.52, 0.52],
-        "Size": [34, 1, 34],
-        "Position": [0, 0, -145]
+        "Color": [
+          0.52,
+          0.52,
+          0.52
+        ],
+        "Size": [
+          36,
+          1,
+          36
+        ],
+        "Position": [
+          -170,
+          0,
+          22
+        ]
       }
     },
     {
-      "name": "RouteRoomSouth",
+      "name": "RouteRoomTradeDock",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.52, 0.52, 0.52],
-        "Size": [34, 1, 34],
-        "Position": [0, 0, 145]
+        "Color": [
+          0.52,
+          0.52,
+          0.52
+        ],
+        "Size": [
+          42,
+          1,
+          34
+        ],
+        "Position": [
+          122,
+          0,
+          130
+        ]
       }
     }
   ]

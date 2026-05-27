@@ -10,14 +10,360 @@
           "className": "Folder",
           "properties": {
             "Name": "Nodes"
-          }
+          },
+          "children": [
+            {
+              "name": "TinyfolkSpawn",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.2,
+                  0.8,
+                  0.2
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  -118,
+                  1,
+                  18
+                ]
+              },
+              "attributes": {
+                "NodeType": "spawn",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "RouteWestVillage",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.85,
+                  0.75,
+                  0.2
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  -92,
+                  1,
+                  20
+                ]
+              },
+              "attributes": {
+                "NodeType": "waypoint",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "RouteMacroPlaza",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.85,
+                  0.75,
+                  0.2
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  0,
+                  1,
+                  0
+                ]
+              },
+              "attributes": {
+                "NodeType": "waypoint",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "RouteQuarry",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.85,
+                  0.75,
+                  0.2
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  86,
+                  1,
+                  -28
+                ]
+              },
+              "attributes": {
+                "NodeType": "waypoint",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "RouteShrine",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.85,
+                  0.75,
+                  0.2
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  66,
+                  1,
+                  62
+                ]
+              },
+              "attributes": {
+                "NodeType": "waypoint",
+                "Tier": "secondary"
+              }
+            },
+            {
+              "name": "EscapeRoute_A",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.2,
+                  0.8,
+                  0.9
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  -170,
+                  1,
+                  22
+                ]
+              },
+              "attributes": {
+                "NodeType": "escape",
+                "Tier": "fallback"
+              }
+            },
+            {
+              "name": "EscapeRoute_ControlA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.2,
+                  0.8,
+                  0.9
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  96,
+                  1,
+                  18
+                ]
+              },
+              "attributes": {
+                "NodeType": "escape",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "EscapeRoute_Dock",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.2,
+                  0.8,
+                  0.9
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  122,
+                  1,
+                  130
+                ]
+              },
+              "attributes": {
+                "NodeType": "escape",
+                "Tier": "primary"
+              }
+            },
+            {
+              "name": "EscapeRoute_NorthTunnel",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "Transparency": 0.8,
+                "Color": [
+                  0.2,
+                  0.8,
+                  0.9
+                ],
+                "Size": [
+                  2,
+                  2,
+                  2
+                ],
+                "Position": [
+                  0,
+                  1,
+                  -140
+                ]
+              },
+              "attributes": {
+                "NodeType": "escape",
+                "Tier": "fallback"
+              }
+            }
+          ]
         },
         {
           "name": "Edges",
           "className": "Folder",
           "properties": {
             "Name": "Edges"
-          }
+          },
+          "children": [
+            {
+              "name": "Edge_TinyfolkSpawn_To_RouteWestVillage",
+              "className": "Folder",
+              "attributes": {
+                "From": "TinyfolkSpawn",
+                "To": "RouteWestVillage",
+                "Distance": 26
+              }
+            },
+            {
+              "name": "Edge_RouteWestVillage_To_RouteMacroPlaza",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteWestVillage",
+                "To": "RouteMacroPlaza",
+                "Distance": 94
+              }
+            },
+            {
+              "name": "Edge_RouteMacroPlaza_To_RouteQuarry",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteMacroPlaza",
+                "To": "RouteQuarry",
+                "Distance": 90
+              }
+            },
+            {
+              "name": "Edge_RouteMacroPlaza_To_RouteShrine",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteMacroPlaza",
+                "To": "RouteShrine",
+                "Distance": 90
+              }
+            },
+            {
+              "name": "Edge_RouteWestVillage_To_EscapeRoute_A",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteWestVillage",
+                "To": "EscapeRoute_A",
+                "Distance": 78
+              }
+            },
+            {
+              "name": "Edge_RouteQuarry_To_EscapeRoute_ControlA",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteQuarry",
+                "To": "EscapeRoute_ControlA",
+                "Distance": 48
+              }
+            },
+            {
+              "name": "Edge_RouteShrine_To_EscapeRoute_Dock",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteShrine",
+                "To": "EscapeRoute_Dock",
+                "Distance": 88
+              }
+            },
+            {
+              "name": "Edge_RouteMacroPlaza_To_EscapeRoute_NorthTunnel",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteMacroPlaza",
+                "To": "EscapeRoute_NorthTunnel",
+                "Distance": 140
+              }
+            },
+            {
+              "name": "Edge_RouteQuarry_To_RouteMacroPlaza",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteQuarry",
+                "To": "RouteMacroPlaza",
+                "Distance": 90
+              }
+            },
+            {
+              "name": "Edge_RouteShrine_To_RouteMacroPlaza",
+              "className": "Folder",
+              "attributes": {
+                "From": "RouteShrine",
+                "To": "RouteMacroPlaza",
+                "Distance": 90
+              }
+            }
+          ]
         }
       ]
     }

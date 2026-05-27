@@ -8,9 +8,21 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "Metal",
-        "Color": [0.35, 0.18, 0.55],
-        "Size": [8, 5, 6],
-        "Position": [12, 2.5, -18]
+        "Color": [
+          0.35,
+          0.18,
+          0.55
+        ],
+        "Size": [
+          8,
+          5,
+          6
+        ],
+        "Position": [
+          96,
+          2.5,
+          8
+        ]
       },
       "attributes": {
         "RemoteControlZoneId": "GiantControlZone_A"

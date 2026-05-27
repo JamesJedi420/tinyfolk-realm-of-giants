@@ -8,9 +8,21 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "Concrete",
-        "Color": [0.45, 0.45, 0.5],
-        "Size": [10, 7, 10],
-        "Position": [52, 3.5, 0]
+        "Color": [
+          0.45,
+          0.45,
+          0.5
+        ],
+        "Size": [
+          10,
+          7,
+          10
+        ],
+        "Position": [
+          -22,
+          3.5,
+          58
+        ]
       }
     }
   ]

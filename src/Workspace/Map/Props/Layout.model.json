@@ -8,9 +8,21 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "SmoothPlastic",
-        "Color": [0.4, 0.4, 0.6],
-        "Size": [4, 3, 4],
-        "Position": [-8, 0.5, 0]
+        "Color": [
+          0.4,
+          0.4,
+          0.6
+        ],
+        "Size": [
+          4,
+          3,
+          4
+        ],
+        "Position": [
+          -94,
+          0.5,
+          -32
+        ]
       }
     },
     {
@@ -20,9 +32,69 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "SmoothPlastic",
-        "Color": [0.4, 0.4, 0.6],
-        "Size": [4, 3, 4],
-        "Position": [0, 0.5, 165]
+        "Color": [
+          0.4,
+          0.4,
+          0.6
+        ],
+        "Size": [
+          4,
+          3,
+          4
+        ],
+        "Position": [
+          92,
+          0.5,
+          -26
+        ]
+      }
+    },
+    {
+      "name": "Cover_C",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.42,
+          0.38,
+          0.58
+        ],
+        "Size": [
+          6,
+          4,
+          4
+        ],
+        "Position": [
+          64,
+          0.5,
+          58
+        ]
+      }
+    },
+    {
+      "name": "Cover_D",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.42,
+          0.38,
+          0.58
+        ],
+        "Size": [
+          6,
+          4,
+          4
+        ],
+        "Position": [
+          -28,
+          0.5,
+          60
+        ]
       }
     }
   ]

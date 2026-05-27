@@ -9,20 +9,77 @@
         "CanCollide": false,
         "Transparency": 0.8,
         "Material": "Neon",
-        "Color": [1, 0.2, 0.2],
-        "Size": [60, 1, 60],
-        "Position": [12, 0.5, 0]
+        "Color": [
+          1,
+          0.2,
+          0.2
+        ],
+        "Size": [
+          80,
+          1,
+          80
+        ],
+        "Position": [
+          96,
+          0.5,
+          18
+        ]
       },
       "children": [
         {
           "name": "Radius",
           "className": "NumberValue",
-          "properties": { "Value": 30 }
+          "properties": {
+            "Value": 40
+          }
         },
         {
           "name": "ZoneTag",
           "className": "StringValue",
-          "properties": { "Value": "GiantControl" }
+          "properties": {
+            "Value": "GiantControl"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GiantControlZone_B",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.84,
+        "Material": "Neon",
+        "Color": [
+          0.95,
+          0.35,
+          0.35
+        ],
+        "Size": [
+          56,
+          1,
+          56
+        ],
+        "Position": [
+          34,
+          0.5,
+          -28
+        ]
+      },
+      "children": [
+        {
+          "name": "Radius",
+          "className": "NumberValue",
+          "properties": {
+            "Value": 28
+          }
+        },
+        {
+          "name": "ZoneTag",
+          "className": "StringValue",
+          "properties": {
+            "Value": "MacroPressure"
+          }
         }
       ]
     }

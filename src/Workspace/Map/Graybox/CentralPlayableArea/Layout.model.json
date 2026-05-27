@@ -7,9 +7,21 @@
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.45, 0.45, 0.45],
-        "Size": [120, 1, 120],
-        "Position": [0, 0, 0]
+        "Color": [
+          0.45,
+          0.45,
+          0.45
+        ],
+        "Size": [
+          320,
+          1,
+          320
+        ],
+        "Position": [
+          0,
+          0,
+          0
+        ]
       }
     },
     {
@@ -18,9 +30,21 @@
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.35, 0.35, 0.35],
-        "Size": [20, 8, 2],
-        "Position": [0, 4, -48]
+        "Color": [
+          0.35,
+          0.35,
+          0.35
+        ],
+        "Size": [
+          48,
+          12,
+          3
+        ],
+        "Position": [
+          0,
+          6,
+          -136
+        ]
       }
     },
     {
@@ -29,9 +53,21 @@
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.35, 0.35, 0.35],
-        "Size": [20, 8, 2],
-        "Position": [0, 4, 48]
+        "Color": [
+          0.35,
+          0.35,
+          0.35
+        ],
+        "Size": [
+          48,
+          12,
+          3
+        ],
+        "Position": [
+          0,
+          6,
+          136
+        ]
       }
     },
     {
@@ -40,9 +76,21 @@
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.35, 0.35, 0.35],
-        "Size": [2, 8, 20],
-        "Position": [48, 4, 0]
+        "Color": [
+          0.35,
+          0.35,
+          0.35
+        ],
+        "Size": [
+          3,
+          12,
+          44
+        ],
+        "Position": [
+          136,
+          6,
+          0
+        ]
       }
     },
     {
@@ -51,9 +99,74 @@
       "properties": {
         "Anchored": true,
         "Material": "Concrete",
-        "Color": [0.35, 0.35, 0.35],
-        "Size": [2, 8, 20],
-        "Position": [-48, 4, 0]
+        "Color": [
+          0.35,
+          0.35,
+          0.35
+        ],
+        "Size": [
+          3,
+          12,
+          44
+        ],
+        "Position": [
+          -136,
+          6,
+          0
+        ]
+      }
+    },
+    {
+      "name": "MacroPlazaDisk",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.62,
+          0.54,
+          0.34
+        ],
+        "Shape": "Cylinder",
+        "Size": [
+          2,
+          78,
+          78
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "name": "SouthRiver",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Water",
+        "Color": [
+          0.1,
+          0.35,
+          0.7
+        ],
+        "Size": [
+          340,
+          2,
+          36
+        ],
+        "Position": [
+          0,
+          -0.25,
+          118
+        ]
       }
     }
   ]

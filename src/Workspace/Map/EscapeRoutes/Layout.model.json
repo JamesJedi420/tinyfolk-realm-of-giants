@@ -8,9 +8,30 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "Concrete",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [10, 2, 10],
-        "Position": [0, 1, 170]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          10,
+          2,
+          10
+        ],
+        "Position": [
+          -170,
+          1,
+          22
+        ]
+      },
+      "attributes": {
+        "RouteEnabled": true,
+        "TinyfolkOnlyRoute": true,
+        "FinalExitManaged": false,
+        "ThroughGapReachAllowed": true,
+        "RouteType": "TraversalGap",
+        "TraversalGapBlockExempt": false,
+        "FallbackEscapeCandidate": true
       }
     },
     {
@@ -20,9 +41,21 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "Concrete",
-        "Color": [0.42, 0.42, 0.5],
-        "Size": [10, 2, 10],
-        "Position": [12, 1, 18]
+        "Color": [
+          0.42,
+          0.42,
+          0.5
+        ],
+        "Size": [
+          10,
+          2,
+          10
+        ],
+        "Position": [
+          96,
+          1,
+          18
+        ]
       },
       "attributes": {
         "RouteEnabled": true,
@@ -31,6 +64,72 @@
         "ThroughGapReachAllowed": true,
         "RouteType": "TraversalGap",
         "TraversalGapBlockExempt": false
+      }
+    },
+    {
+      "name": "EscapeRoute_Dock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [
+          0.45,
+          0.45,
+          0.48
+        ],
+        "Size": [
+          10,
+          2,
+          10
+        ],
+        "Position": [
+          122,
+          1,
+          130
+        ]
+      },
+      "attributes": {
+        "RouteEnabled": true,
+        "TinyfolkOnlyRoute": true,
+        "FinalExitManaged": true,
+        "ThroughGapReachAllowed": true,
+        "RouteType": "TraversalGap",
+        "TraversalGapBlockExempt": false,
+        "FallbackEscapeCandidate": false
+      }
+    },
+    {
+      "name": "EscapeRoute_NorthTunnel",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [
+          0.46,
+          0.46,
+          0.46
+        ],
+        "Size": [
+          10,
+          2,
+          10
+        ],
+        "Position": [
+          0,
+          1,
+          -140
+        ]
+      },
+      "attributes": {
+        "RouteEnabled": true,
+        "TinyfolkOnlyRoute": true,
+        "FinalExitManaged": false,
+        "ThroughGapReachAllowed": true,
+        "RouteType": "TraversalGap",
+        "TraversalGapBlockExempt": false,
+        "FallbackEscapeCandidate": true
       }
     }
   ]

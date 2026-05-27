@@ -8,9 +8,21 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "SmoothPlastic",
-        "Color": [1, 0.4, 0.4],
-        "Size": [30, 3, 30],
-        "Position": [50, 0.5, 75]
+        "Color": [
+          1,
+          0.4,
+          0.4
+        ],
+        "Size": [
+          46,
+          3,
+          46
+        ],
+        "Position": [
+          40,
+          0.5,
+          -8
+        ]
       }
     }
   ]

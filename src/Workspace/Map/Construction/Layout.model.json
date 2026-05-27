@@ -8,9 +8,69 @@
         "Anchored": true,
         "CanCollide": true,
         "Material": "Concrete",
-        "Color": [0.7, 0.6, 0.45],
-        "Size": [12, 1, 12],
-        "Position": [12, 0.5, 32]
+        "Color": [
+          0.7,
+          0.6,
+          0.45
+        ],
+        "Size": [
+          12,
+          1,
+          12
+        ],
+        "Position": [
+          -22,
+          0.5,
+          64
+        ]
+      }
+    },
+    {
+      "name": "ConstructionSite_B",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [
+          0.66,
+          0.58,
+          0.42
+        ],
+        "Size": [
+          12,
+          1,
+          12
+        ],
+        "Position": [
+          70,
+          0.5,
+          62
+        ]
+      }
+    },
+    {
+      "name": "ConstructionSite_C",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [
+          0.7,
+          0.62,
+          0.46
+        ],
+        "Size": [
+          12,
+          1,
+          12
+        ],
+        "Position": [
+          86,
+          0.5,
+          -26
+        ]
       }
     }
   ]

@@ -6,6 +6,7 @@
 
 ## Source of Truth
 - Treat `docs/GAME_SPEC.md` as the primary design direction document.
+- Treat `docs/VISUAL_BIBLE_TEMPLATE.md` as the required output contract for AI-generated visual design proposals and visual map/asset edits.
 - Keep issue work bounded to the current slice contract.
 
 ## Documentation Style
@@ -62,3 +63,8 @@
 ## Future Labor Scope Boundary
 - Do not document or imply implemented full AI labor behavior or full job scheduling unless those systems are actually shipped in code.
 - Do not document specialist-gated production beyond WorkStation_A as implemented until those runtime couplings exist.
+
+## Visual Design AI Contract
+- For any environment visual concept, graybox replacement, or visual map asset edit, AI outputs should be structured using `docs/VISUAL_BIBLE_TEMPLATE.md`.
+- AI should include explicit PASS/FAIL outcomes for the template checks before proposing completion.
+- If any hard-stop check in the template fails, AI should return FAIL with revision actions instead of presenting the design as done.

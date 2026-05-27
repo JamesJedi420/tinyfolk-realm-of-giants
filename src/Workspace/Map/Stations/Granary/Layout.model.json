@@ -1,17 +1,2852 @@
 {
   "className": "Model",
+  "attributes": {
+    "AssetType": "Granary",
+    "BuildCategory": "Economy",
+    "VisualVersion": 7
+  },
   "children": [
     {
       "name": "Granary_A",
       "className": "Part",
+      "attributes": {
+        "AssetType": "Granary",
+        "BuildCategory": "Economy",
+        "VisualVersion": 7
+      },
       "properties": {
         "Anchored": true,
         "CanCollide": true,
-        "Material": "Wood",
-        "Color": [0.6, 0.5, 0.35],
-        "Size": [10, 7, 10],
-        "Position": [4, 3.5, 0]
+        "CanTouch": false,
+        "CanQuery": true,
+        "Transparency": 1,
+        "Material": "SmoothPlastic",
+        "Color": [
+          1,
+          1,
+          1
+        ],
+        "Size": [
+          24,
+          12,
+          18
+        ],
+        "Position": [
+          -36.0,
+          6.0,
+          66.0
+        ]
       }
+    },
+    {
+      "name": "Visual",
+      "className": "Folder",
+      "children": [
+        {
+          "name": "Foundation",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "StonePlinth_Main",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Slate",
+                "Color": [
+                  0.25,
+                  0.24,
+                  0.22
+                ],
+                "Size": [
+                  25.5,
+                  1.2,
+                  19.5
+                ],
+                "Position": [
+                  -36.0,
+                  0.6,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "StonePlinth_LipFront",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.4,
+                  0.38,
+                  0.33
+                ],
+                "Size": [
+                  23,
+                  0.7,
+                  1.2
+                ],
+                "Position": [
+                  -36.0,
+                  1.45,
+                  75.85
+                ]
+              }
+            },
+            {
+              "name": "StonePlinth_LipBack",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.34,
+                  0.33,
+                  0.3
+                ],
+                "Size": [
+                  23,
+                  0.7,
+                  1.2
+                ],
+                "Position": [
+                  -36.0,
+                  1.45,
+                  56.15
+                ]
+              }
+            },
+            {
+              "name": "LoadingDock_Giant",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.53,
+                  0.39,
+                  0.22
+                ],
+                "Size": [
+                  10,
+                  0.8,
+                  4
+                ],
+                "Position": [
+                  -36.0,
+                  1.95,
+                  77.25
+                ]
+              }
+            },
+            {
+              "name": "TinyStep_Service",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.39,
+                  0.28,
+                  0.17
+                ],
+                "Size": [
+                  3.2,
+                  0.35,
+                  1.2
+                ],
+                "Position": [
+                  -43.4,
+                  0.35,
+                  76.65
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Walls",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Wall_Front",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.51,
+                  0.48,
+                  0.4
+                ],
+                "Size": [
+                  24,
+                  10.5,
+                  0.8
+                ],
+                "Position": [
+                  -36.0,
+                  6.35,
+                  75.0
+                ]
+              }
+            },
+            {
+              "name": "Wall_Back",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.45,
+                  0.43,
+                  0.37
+                ],
+                "Size": [
+                  24,
+                  10.5,
+                  0.8
+                ],
+                "Position": [
+                  -36.0,
+                  6.35,
+                  57.0
+                ]
+              }
+            },
+            {
+              "name": "Wall_Left",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.47,
+                  0.45,
+                  0.38
+                ],
+                "Size": [
+                  0.8,
+                  10.5,
+                  18
+                ],
+                "Position": [
+                  -48.0,
+                  6.35,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Wall_Right",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.47,
+                  0.45,
+                  0.38
+                ],
+                "Size": [
+                  0.8,
+                  10.5,
+                  18
+                ],
+                "Position": [
+                  -24.0,
+                  6.35,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Wall_InsetFrontLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.43,
+                  0.41,
+                  0.35
+                ],
+                "Size": [
+                  5.5,
+                  5.7,
+                  0.3
+                ],
+                "Position": [
+                  -43.4,
+                  6.1,
+                  75.45
+                ]
+              }
+            },
+            {
+              "name": "Wall_InsetFrontRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Concrete",
+                "Color": [
+                  0.43,
+                  0.41,
+                  0.35
+                ],
+                "Size": [
+                  5.5,
+                  5.7,
+                  0.3
+                ],
+                "Position": [
+                  -28.6,
+                  6.1,
+                  75.45
+                ]
+              }
+            },
+            {
+              "name": "Vent_LeftSlats",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.32,
+                  0.22,
+                  0.13
+                ],
+                "Size": [
+                  0.35,
+                  2.2,
+                  4.8
+                ],
+                "Position": [
+                  -48.45,
+                  8.1,
+                  62.8
+                ]
+              }
+            },
+            {
+              "name": "Vent_RightSlats",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.32,
+                  0.22,
+                  0.13
+                ],
+                "Size": [
+                  0.35,
+                  2.2,
+                  4.8
+                ],
+                "Position": [
+                  -23.55,
+                  8.1,
+                  69.2
+                ]
+              }
+            },
+            {
+              "name": "Back_ServiceDoorFrame",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.5,
+                  0.36,
+                  0.2
+                ],
+                "Size": [
+                  5.6,
+                  4.4,
+                  0.45
+                ],
+                "Position": [
+                  -39.9,
+                  4.25,
+                  56.45
+                ]
+              }
+            },
+            {
+              "name": "Back_ServiceDoor",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.26,
+                  0.17,
+                  0.1
+                ],
+                "Size": [
+                  4.6,
+                  3.5,
+                  0.35
+                ],
+                "Position": [
+                  -39.9,
+                  4.05,
+                  56.15
+                ]
+              }
+            },
+            {
+              "name": "Back_HighVent",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.31,
+                  0.21,
+                  0.13
+                ],
+                "Size": [
+                  7.8,
+                  1.2,
+                  0.35
+                ],
+                "Position": [
+                  -31.3,
+                  8.9,
+                  56.28
+                ]
+              }
+            },
+            {
+              "name": "Back_HighVentSlatA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.56,
+                  0.4,
+                  0.22
+                ],
+                "Size": [
+                  8.2,
+                  0.18,
+                  0.4
+                ],
+                "Position": [
+                  -31.3,
+                  9.25,
+                  56.05
+                ]
+              }
+            },
+            {
+              "name": "Back_HighVentSlatB",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.56,
+                  0.4,
+                  0.22
+                ],
+                "Size": [
+                  8.2,
+                  0.18,
+                  0.4
+                ],
+                "Position": [
+                  -31.3,
+                  8.55,
+                  56.05
+                ]
+              }
+            },
+            {
+              "name": "Left_WallBarnSign",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.49,
+                  0.34,
+                  0.18
+                ],
+                "Size": [
+                  0.35,
+                  2.6,
+                  5.8
+                ],
+                "Position": [
+                  -48.5,
+                  5.4,
+                  69.6
+                ]
+              }
+            },
+            {
+              "name": "Right_GrainLedger",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  0.35,
+                  1.1,
+                  10.5
+                ],
+                "Position": [
+                  -23.5,
+                  4.8,
+                  64.4
+                ]
+              }
+            },
+            {
+              "name": "Right_GrainLedgerPins",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.55,
+                  0.51,
+                  0.42
+                ],
+                "Size": [
+                  0.45,
+                  0.35,
+                  7.8
+                ],
+                "Position": [
+                  -23.25,
+                  5.45,
+                  64.4
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Roof",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Roof_WestPlane",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Slate",
+                "Color": [
+                  0.4274509804,
+                  0.2901960784,
+                  0.2470588235
+                ],
+                "Size": [
+                  12.6,
+                  0.55,
+                  19.4
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  20
+                ],
+                "Position": [
+                  -41.5,
+                  13.55,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_EastPlane",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Slate",
+                "Color": [
+                  0.2823529412,
+                  0.3764705882,
+                  0.4784313725
+                ],
+                "Size": [
+                  13.2,
+                  0.55,
+                  20.2
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -20
+                ],
+                "Position": [
+                  -30.5,
+                  14.15,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_RidgeCap",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.34,
+                  0.34,
+                  0.36
+                ],
+                "Size": [
+                  20.5,
+                  0.45,
+                  0.45
+                ],
+                "Position": [
+                  -36.0,
+                  16.7,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontEave",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.25,
+                  0.17,
+                  0.1
+                ],
+                "Size": [
+                  27.2,
+                  0.42,
+                  0.55
+                ],
+                "Position": [
+                  -36.0,
+                  12.35,
+                  76.15
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontCanopy",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  12.5,
+                  0.35,
+                  4.2
+                ],
+                "Position": [
+                  -36.0,
+                  8.55,
+                  77.65
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontCanopyBraceLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.29,
+                  0.2,
+                  0.11
+                ],
+                "Size": [
+                  0.45,
+                  2.9,
+                  0.45
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  22
+                ],
+                "Position": [
+                  -41.85,
+                  7.4,
+                  76.95
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontCanopyBraceRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.29,
+                  0.2,
+                  0.11
+                ],
+                "Size": [
+                  0.45,
+                  2.9,
+                  0.45
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -22
+                ],
+                "Position": [
+                  -30.15,
+                  7.4,
+                  76.95
+                ]
+              }
+            },
+            {
+              "name": "Roof_BackEave",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.23,
+                  0.16,
+                  0.1
+                ],
+                "Size": [
+                  24.8,
+                  0.42,
+                  0.55
+                ],
+                "Position": [
+                  -36.0,
+                  11.85,
+                  56.05
+                ]
+              }
+            },
+            {
+              "name": "Roof_WeatherVane",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.45,
+                  0.42,
+                  0.33
+                ],
+                "Size": [
+                  0.14,
+                  1.1,
+                  0.14
+                ],
+                "Position": [
+                  -36.0,
+                  16.45,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_WeatherVaneArrow",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.45,
+                  0.42,
+                  0.33
+                ],
+                "Size": [
+                  1.7,
+                  0.1,
+                  0.1
+                ],
+                "Position": [
+                  -36.0,
+                  16.95,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontGableTrim",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.43,
+                  0.29,
+                  0.16
+                ],
+                "Size": [
+                  0.4,
+                  4.2,
+                  0.45
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -32
+                ],
+                "Position": [
+                  -38.1,
+                  13.95,
+                  75.82
+                ]
+              }
+            },
+            {
+              "name": "Roof_FrontGableTrimMirror",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.43,
+                  0.29,
+                  0.16
+                ],
+                "Size": [
+                  0.4,
+                  4.2,
+                  0.45
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  32
+                ],
+                "Position": [
+                  -33.9,
+                  13.95,
+                  75.82
+                ]
+              }
+            },
+            {
+              "name": "Roof_BackGableTrim",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.36,
+                  0.24,
+                  0.14
+                ],
+                "Size": [
+                  0.35,
+                  4,
+                  0.4
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -32
+                ],
+                "Position": [
+                  -38.05,
+                  13.9,
+                  56.18
+                ]
+              }
+            },
+            {
+              "name": "Roof_BackGableTrimMirror",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.36,
+                  0.24,
+                  0.14
+                ],
+                "Size": [
+                  0.35,
+                  4,
+                  0.4
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  32
+                ],
+                "Position": [
+                  -33.95,
+                  13.9,
+                  56.18
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GiantLoadingFace",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Door_Frame_Giant",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.67,
+                  0.51,
+                  0.29
+                ],
+                "Size": [
+                  8.5,
+                  7.2,
+                  0.8
+                ],
+                "Position": [
+                  -36.0,
+                  5.65,
+                  75.65
+                ]
+              }
+            },
+            {
+              "name": "Door_LeftSlab",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.27,
+                  0.18,
+                  0.1
+                ],
+                "Size": [
+                  3.25,
+                  6.1,
+                  0.45
+                ],
+                "Position": [
+                  -37.8,
+                  5.35,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Door_RightSlab",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.3,
+                  0.2,
+                  0.11
+                ],
+                "Size": [
+                  3.55,
+                  6.7,
+                  0.45
+                ],
+                "Position": [
+                  -33.95,
+                  5.65,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Door_ThresholdBeam",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  9.6,
+                  0.45,
+                  0.7
+                ],
+                "Position": [
+                  -36.0,
+                  9.05,
+                  76.15
+                ]
+              }
+            },
+            {
+              "name": "Door_CenterIron",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.12,
+                  0.12,
+                  0.13
+                ],
+                "Size": [
+                  0.28,
+                  5.9,
+                  0.55
+                ],
+                "Position": [
+                  -36.0,
+                  5.2,
+                  76.16
+                ]
+              }
+            },
+            {
+              "name": "Upper_GrainHatch",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.29,
+                  0.19,
+                  0.1
+                ],
+                "Size": [
+                  6.8,
+                  2.9,
+                  0.6
+                ],
+                "Position": [
+                  -36.0,
+                  9.65,
+                  75.9
+                ]
+              }
+            },
+            {
+              "name": "GrainChute_Spout",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.55,
+                  0.39,
+                  0.2
+                ],
+                "Size": [
+                  1.25,
+                  3.4,
+                  1.25
+                ],
+                "Orientation": [
+                  -18,
+                  0,
+                  0
+                ],
+                "Position": [
+                  -36.0,
+                  7.35,
+                  76.75
+                ]
+              }
+            },
+            {
+              "name": "Hoist_Beam",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.3,
+                  0.2,
+                  0.12
+                ],
+                "Size": [
+                  8.8,
+                  0.5,
+                  0.7
+                ],
+                "Position": [
+                  -36.0,
+                  10.7,
+                  76.35
+                ]
+              }
+            },
+            {
+              "name": "Hoist_Hook",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.45,
+                  0.45,
+                  0.46
+                ],
+                "Size": [
+                  0.32,
+                  1.6,
+                  0.32
+                ],
+                "Position": [
+                  -36.0,
+                  9.65,
+                  76.85
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TinyfolkAccess",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Tiny_HatchFrame",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.62,
+                  0.46,
+                  0.25
+                ],
+                "Size": [
+                  2.8,
+                  2.6,
+                  0.45
+                ],
+                "Position": [
+                  -43.4,
+                  2.9,
+                  75.78
+                ]
+              }
+            },
+            {
+              "name": "Tiny_HatchDoor",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.28,
+                  0.18,
+                  0.1
+                ],
+                "Size": [
+                  2.1,
+                  1.9,
+                  0.35
+                ],
+                "Position": [
+                  -43.4,
+                  2.8,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Tiny_ServiceLantern",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Neon",
+                "Color": [
+                  1,
+                  0.72,
+                  0.28
+                ],
+                "Size": [
+                  0.45,
+                  0.6,
+                  0.35
+                ],
+                "Position": [
+                  -41.75,
+                  4.15,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Tiny_RailLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.37,
+                  0.25,
+                  0.14
+                ],
+                "Size": [
+                  0.25,
+                  1.4,
+                  0.25
+                ],
+                "Position": [
+                  -45.1,
+                  1.4,
+                  76.55
+                ]
+              }
+            },
+            {
+              "name": "Tiny_RailRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.37,
+                  0.25,
+                  0.14
+                ],
+                "Size": [
+                  0.25,
+                  1.4,
+                  0.25
+                ],
+                "Position": [
+                  -41.7,
+                  1.4,
+                  76.55
+                ]
+              }
+            },
+            {
+              "name": "Tiny_RailTop",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.37,
+                  0.25,
+                  0.14
+                ],
+                "Size": [
+                  3.65,
+                  0.22,
+                  0.22
+                ],
+                "Position": [
+                  -43.4,
+                  2.1,
+                  76.55
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TimberFrame",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Post_FrontLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.55,
+                  0.39,
+                  0.2
+                ],
+                "Size": [
+                  1.2,
+                  10.8,
+                  1.2
+                ],
+                "Position": [
+                  -47.55,
+                  6.55,
+                  75.5
+                ]
+              }
+            },
+            {
+              "name": "Post_FrontRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.55,
+                  0.39,
+                  0.2
+                ],
+                "Size": [
+                  1.2,
+                  10.8,
+                  1.2
+                ],
+                "Position": [
+                  -24.45,
+                  6.55,
+                  75.5
+                ]
+              }
+            },
+            {
+              "name": "Post_BackLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.43,
+                  0.31,
+                  0.18
+                ],
+                "Size": [
+                  1.2,
+                  10.8,
+                  1.2
+                ],
+                "Position": [
+                  -47.55,
+                  6.55,
+                  56.5
+                ]
+              }
+            },
+            {
+              "name": "Post_BackRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.43,
+                  0.31,
+                  0.18
+                ],
+                "Size": [
+                  1.2,
+                  10.8,
+                  1.2
+                ],
+                "Position": [
+                  -24.45,
+                  6.55,
+                  56.5
+                ]
+              }
+            },
+            {
+              "name": "Band_FrontBase",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.32,
+                  0.22,
+                  0.13
+                ],
+                "Size": [
+                  24.2,
+                  0.8,
+                  0.75
+                ],
+                "Position": [
+                  -36.0,
+                  2.25,
+                  75.55
+                ]
+              }
+            },
+            {
+              "name": "Band_FrontUpper",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.47,
+                  0.34,
+                  0.19
+                ],
+                "Size": [
+                  23,
+                  0.65,
+                  0.75
+                ],
+                "Position": [
+                  -36.0,
+                  10.9,
+                  75.55
+                ]
+              }
+            },
+            {
+              "name": "Crossbrace_Left",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.45,
+                  0.31,
+                  0.17
+                ],
+                "Size": [
+                  0.75,
+                  8.2,
+                  0.65
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -31
+                ],
+                "Position": [
+                  -45.8,
+                  6.4,
+                  75.75
+                ]
+              }
+            },
+            {
+              "name": "Crossbrace_Right",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.45,
+                  0.31,
+                  0.17
+                ],
+                "Size": [
+                  0.75,
+                  8.2,
+                  0.65
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  31
+                ],
+                "Position": [
+                  -26.2,
+                  6.4,
+                  75.75
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HarvestProps",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "CrateStack_Left",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.43,
+                  0.3,
+                  0.17
+                ],
+                "Size": [
+                  3,
+                  2.8,
+                  3
+                ],
+                "Position": [
+                  -44.4,
+                  2.9,
+                  72.9
+                ]
+              }
+            },
+            {
+              "name": "CrateStack_Top",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.5,
+                  0.36,
+                  0.2
+                ],
+                "Size": [
+                  2.4,
+                  2,
+                  2.4
+                ],
+                "Position": [
+                  -44.7,
+                  5.3,
+                  73.2
+                ]
+              }
+            },
+            {
+              "name": "Sack_GrainA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.63,
+                  0.5,
+                  0.28
+                ],
+                "Size": [
+                  2.3,
+                  1.2,
+                  1.8
+                ],
+                "Position": [
+                  -28.8,
+                  2.55,
+                  73.9
+                ]
+              }
+            },
+            {
+              "name": "Sack_GrainB",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.56,
+                  0.44,
+                  0.25
+                ],
+                "Size": [
+                  1.8,
+                  1,
+                  1.5
+                ],
+                "Orientation": [
+                  0,
+                  18,
+                  0
+                ],
+                "Position": [
+                  -27.1,
+                  2.45,
+                  73.35
+                ]
+              }
+            },
+            {
+              "name": "GrainSpill",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Sand",
+                "Color": [
+                  0.84,
+                  0.68,
+                  0.32
+                ],
+                "Size": [
+                  3.2,
+                  0.12,
+                  2.1
+                ],
+                "Position": [
+                  -36.0,
+                  2.42,
+                  78.05
+                ]
+              }
+            },
+            {
+              "name": "ScaleCue_TinyBarrel",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.42,
+                  0.28,
+                  0.15
+                ],
+                "Size": [
+                  0.9,
+                  1.2,
+                  0.9
+                ],
+                "Position": [
+                  -45.6,
+                  1.25,
+                  76.15
+                ]
+              }
+            },
+            {
+              "name": "Handcart_Bed",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.38,
+                  0.25,
+                  0.14
+                ],
+                "Size": [
+                  3.5,
+                  0.35,
+                  2.1
+                ],
+                "Orientation": [
+                  0,
+                  12,
+                  0
+                ],
+                "Position": [
+                  -30.3,
+                  1.2,
+                  77.3
+                ]
+              }
+            },
+            {
+              "name": "Handcart_Handle",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.29,
+                  0.19,
+                  0.11
+                ],
+                "Size": [
+                  0.35,
+                  0.35,
+                  3.2
+                ],
+                "Orientation": [
+                  0,
+                  12,
+                  0
+                ],
+                "Position": [
+                  -28.4,
+                  1.25,
+                  78.2
+                ]
+              }
+            },
+            {
+              "name": "Handcart_WheelLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.18,
+                  0.12,
+                  0.08
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  0.35,
+                  1,
+                  1
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  90
+                ],
+                "Position": [
+                  -31.4,
+                  0.75,
+                  76.45
+                ]
+              }
+            },
+            {
+              "name": "Handcart_WheelRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.18,
+                  0.12,
+                  0.08
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  0.35,
+                  1,
+                  1
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  90
+                ],
+                "Position": [
+                  -29.2,
+                  0.75,
+                  76.9
+                ]
+              }
+            },
+            {
+              "name": "Back_Barrel",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.34,
+                  0.22,
+                  0.12
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  1.6,
+                  1.8,
+                  1.8
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  90
+                ],
+                "Position": [
+                  -26.6,
+                  1.65,
+                  55.4
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GrainSilos",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Silo_TallBin",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.4941176471,
+                  0.4862745098,
+                  0.4392156863
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  3.4,
+                  10.2,
+                  3.4
+                ],
+                "Position": [
+                  -50.7,
+                  6.1,
+                  61.1
+                ]
+              }
+            },
+            {
+              "name": "Silo_TallBinCap",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Slate",
+                "Color": [
+                  0.2235294118,
+                  0.2274509804,
+                  0.2392156863
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  3.75,
+                  1.4,
+                  3.75
+                ],
+                "Position": [
+                  -50.7,
+                  11.75,
+                  61.1
+                ]
+              }
+            },
+            {
+              "name": "Silo_TallBinBandUpper",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.2980392157,
+                  0.2862745098,
+                  0.2666666667
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  3.55,
+                  0.18,
+                  3.55
+                ],
+                "Position": [
+                  -50.7,
+                  8.7,
+                  61.1
+                ]
+              }
+            },
+            {
+              "name": "Silo_TallBinBandLower",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.2980392157,
+                  0.2862745098,
+                  0.2666666667
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  3.55,
+                  0.18,
+                  3.55
+                ],
+                "Position": [
+                  -50.7,
+                  4.25,
+                  61.1
+                ]
+              }
+            },
+            {
+              "name": "Silo_ShortBin",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.568627451,
+                  0.5450980392,
+                  0.4666666667
+                ],
+                "Shape": "Cylinder",
+                "Size": [
+                  2.7,
+                  7.6,
+                  2.7
+                ],
+                "Position": [
+                  -50.65,
+                  4.8,
+                  69.8
+                ]
+              }
+            },
+            {
+              "name": "Silo_ShortBinCap",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Slate",
+                "Color": [
+                  0.2431372549,
+                  0.2431372549,
+                  0.2509803922
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  3,
+                  1.1,
+                  3
+                ],
+                "Position": [
+                  -50.65,
+                  9.1,
+                  69.8
+                ]
+              }
+            },
+            {
+              "name": "Silo_CrossPipe",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.3882352941,
+                  0.3764705882,
+                  0.3450980392
+                ],
+                "Size": [
+                  0.5,
+                  0.5,
+                  7.8
+                ],
+                "Position": [
+                  -49.05,
+                  8.25,
+                  65.5
+                ]
+              }
+            },
+            {
+              "name": "Silo_ServiceLadder",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.2470588235,
+                  0.2392156863,
+                  0.2274509804
+                ],
+                "Size": [
+                  0.22,
+                  7.4,
+                  0.22
+                ],
+                "Position": [
+                  -48.8,
+                  5.7,
+                  59.15
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RoofDetail",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "RoofDetail_PennantPole",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.2901960784,
+                  0.1960784314,
+                  0.1098039216
+                ],
+                "Size": [
+                  0.16,
+                  2.6,
+                  0.16
+                ],
+                "Position": [
+                  -33.2,
+                  17.45,
+                  66.2
+                ]
+              }
+            },
+            {
+              "name": "RoofDetail_PennantFlag",
+              "className": "WedgePart",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.6588235294,
+                  0.2431372549,
+                  0.1921568627
+                ],
+                "Size": [
+                  1.8,
+                  1,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  90
+                ],
+                "Position": [
+                  -32.3,
+                  17.2,
+                  66.2
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_WestA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.3058823529,
+                  0.3215686275,
+                  0.3450980392
+                ],
+                "Size": [
+                  10.8,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  20
+                ],
+                "Position": [
+                  -41.8,
+                  14.1,
+                  60.2
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_WestB",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.2823529412,
+                  0.2980392157,
+                  0.3215686275
+                ],
+                "Size": [
+                  11.4,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  20
+                ],
+                "Position": [
+                  -41.55,
+                  13.6,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_WestC",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.3058823529,
+                  0.3215686275,
+                  0.3450980392
+                ],
+                "Size": [
+                  10.8,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  20
+                ],
+                "Position": [
+                  -41.8,
+                  14.1,
+                  71.8
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_EastA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.3058823529,
+                  0.3215686275,
+                  0.3450980392
+                ],
+                "Size": [
+                  10.8,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -20
+                ],
+                "Position": [
+                  -30.2,
+                  14.1,
+                  60.2
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_EastB",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.2823529412,
+                  0.2980392157,
+                  0.3215686275
+                ],
+                "Size": [
+                  11.4,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -20
+                ],
+                "Position": [
+                  -30.45,
+                  13.6,
+                  66.0
+                ]
+              }
+            },
+            {
+              "name": "Roof_ShingleRib_EastC",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Metal",
+                "Color": [
+                  0.3058823529,
+                  0.3215686275,
+                  0.3450980392
+                ],
+                "Size": [
+                  10.8,
+                  0.12,
+                  0.18
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -20
+                ],
+                "Position": [
+                  -30.2,
+                  14.1,
+                  71.8
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "WallDressing",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Front_BattenLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  0.28,
+                  7.8,
+                  0.28
+                ],
+                "Position": [
+                  -44.9,
+                  6.4,
+                  75.82
+                ]
+              }
+            },
+            {
+              "name": "Front_BattenRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  0.28,
+                  7.8,
+                  0.28
+                ],
+                "Position": [
+                  -27.1,
+                  6.4,
+                  75.82
+                ]
+              }
+            },
+            {
+              "name": "Front_SignBoard",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "WoodPlanks",
+                "Color": [
+                  0.8392156863,
+                  0.7764705882,
+                  0.6274509804
+                ],
+                "Size": [
+                  4.7,
+                  0.55,
+                  0.35
+                ],
+                "Position": [
+                  -36.0,
+                  11.45,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Front_SignGrainMark",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Neon",
+                "Color": [
+                  0.8588235294,
+                  0.6823529412,
+                  0.2941176471
+                ],
+                "Size": [
+                  1.4,
+                  0.18,
+                  0.4
+                ],
+                "Position": [
+                  -36.0,
+                  11.5,
+                  76.3
+                ]
+              }
+            },
+            {
+              "name": "Wall_BuntingLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.3098039216,
+                  0.462745098,
+                  0.6392156863
+                ],
+                "Size": [
+                  3.2,
+                  0.16,
+                  0.16
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  -12
+                ],
+                "Position": [
+                  -39.6,
+                  10.75,
+                  76.12
+                ]
+              }
+            },
+            {
+              "name": "Wall_BuntingCenter",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.8392156863,
+                  0.6784313725,
+                  0.3215686275
+                ],
+                "Size": [
+                  3.4,
+                  0.16,
+                  0.16
+                ],
+                "Position": [
+                  -36.0,
+                  10.15,
+                  76.12
+                ]
+              }
+            },
+            {
+              "name": "Wall_BuntingRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Fabric",
+                "Color": [
+                  0.6588235294,
+                  0.2431372549,
+                  0.1921568627
+                ],
+                "Size": [
+                  3.2,
+                  0.16,
+                  0.16
+                ],
+                "Orientation": [
+                  0,
+                  0,
+                  12
+                ],
+                "Position": [
+                  -32.4,
+                  10.75,
+                  76.12
+                ]
+              }
+            },
+            {
+              "name": "Back_BattenA",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.3607843137,
+                  0.2392156863,
+                  0.1411764706
+                ],
+                "Size": [
+                  0.25,
+                  8,
+                  0.25
+                ],
+                "Position": [
+                  -45.8,
+                  6.4,
+                  56.18
+                ]
+              }
+            },
+            {
+              "name": "Back_BattenB",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.3607843137,
+                  0.2392156863,
+                  0.1411764706
+                ],
+                "Size": [
+                  0.25,
+                  8,
+                  0.25
+                ],
+                "Position": [
+                  -26.0,
+                  6.4,
+                  56.18
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBox",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Wood",
+                "Color": [
+                  0.4,
+                  0.27,
+                  0.15
+                ],
+                "Size": [
+                  4.8,
+                  0.4,
+                  0.7
+                ],
+                "Position": [
+                  -36.0,
+                  7.95,
+                  76.05
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBushLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Grass",
+                "Color": [
+                  0.368627451,
+                  0.5215686275,
+                  0.2901960784
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  1.15,
+                  0.7,
+                  0.7
+                ],
+                "Position": [
+                  -37.4,
+                  8.35,
+                  76.25
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBushCenter",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Grass",
+                "Color": [
+                  0.368627451,
+                  0.5215686275,
+                  0.2901960784
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  1.3,
+                  0.8,
+                  0.7
+                ],
+                "Position": [
+                  -36.0,
+                  8.45,
+                  76.25
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBushRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Grass",
+                "Color": [
+                  0.368627451,
+                  0.5215686275,
+                  0.2901960784
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  1.15,
+                  0.7,
+                  0.7
+                ],
+                "Position": [
+                  -34.6,
+                  8.35,
+                  76.25
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBloomLeft",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Neon",
+                "Color": [
+                  0.7882352941,
+                  0.4156862745,
+                  0.4980392157
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  0.3,
+                  0.3,
+                  0.3
+                ],
+                "Position": [
+                  -37.8,
+                  8.65,
+                  76.45
+                ]
+              }
+            },
+            {
+              "name": "Wall_FlowerBloomRight",
+              "className": "Part",
+              "properties": {
+                "Anchored": true,
+                "CanCollide": false,
+                "CanTouch": false,
+                "CanQuery": false,
+                "Material": "Neon",
+                "Color": [
+                  0.7882352941,
+                  0.4156862745,
+                  0.4980392157
+                ],
+                "Shape": "Ball",
+                "Size": [
+                  0.3,
+                  0.3,
+                  0.3
+                ],
+                "Position": [
+                  -34.2,
+                  8.65,
+                  76.45
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

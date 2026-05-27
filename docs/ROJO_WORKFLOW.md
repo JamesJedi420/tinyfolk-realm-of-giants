@@ -81,6 +81,14 @@ Do **not** treat manual Studio edits to generated instances as durable source un
 
 If a change matters long-term, it should exist in repo-managed source.
 
+## Workspace model move rule
+
+For assembled workspace models authored as `Layout.model.json` (for example station layouts), move the parent `Layout` model as a unit in Studio.
+
+Do not move only a single child anchor part (for example `Granary_A` or `WorkStation_A`) unless you also update every sibling part in source.
+
+Moving one child part by itself can make roof/decorative parts appear detached in Studio even though source JSON is valid.
+
 ## Generated file rule
 
 Do not hand-edit generated artifacts unless a bounded issue explicitly requires it.
@@ -214,6 +222,17 @@ Fix:
 
 * move the change into repo-managed source
 * avoid relying on manual Studio edits as durable implementation
+
+### 6. Detached roof/decor parts after moving a building
+
+Symptom:
+
+* anchor/interaction part moved, but roof or trim appears left behind
+
+Fix:
+
+* move the parent `Layout` model, not a single child part
+* if already split by manual moves, realign positions in source so all child parts share the same intended model offset
 
 ## Validation boundary
 
