@@ -206,6 +206,11 @@ local replicatedStorageService: any = {
 									FallbackEscapeCueBandAttribute = "FallbackEscapeCueBand",
 									FallbackEscapeClosedEndsAtAttribute = "FallbackEscapeClosedEndsAt",
 									FallbackEscapeClosedByUserIdAttribute = "FallbackEscapeClosedByUserId",
+									PlayerCreatedRouteAttribute = "PlayerCreatedRoute",
+									RouteCreatedByUserIdAttribute = "RouteCreatedByUserId",
+									RouteCreationTimestampAttribute = "RouteCreationTimestamp",
+									PlayerCreatedRouteExpiresAtAttribute = "PlayerCreatedRouteExpiresAt",
+									RouteEnabledAttribute = "RouteEnabled",
 									FinalExitPoweredDurationSeconds = 1,
 									FinalExitOpeningDurationSeconds = 1,
 									FinalExitBlockedDurationSeconds = 2,
@@ -366,6 +371,10 @@ local function resetRouteDefaults()
 	routeAttributes.FinalExitBlockedEndsAt = nil
 	routeAttributes.FinalExitResolvedAt = nil
 	routeAttributes.FinalExitBlockedByUserId = nil
+	routeAttributes.PlayerCreatedRoute = nil
+	routeAttributes.RouteCreatedByUserId = nil
+	routeAttributes.RouteCreationTimestamp = nil
+	routeAttributes.PlayerCreatedRouteExpiresAt = nil
 	fallbackRouteAttributes.FallbackEscapeCandidate = true
 	fallbackRouteAttributes.FinalExitManaged = false
 	fallbackRouteAttributes.RouteEnabled = false
@@ -522,6 +531,40 @@ do
 	assertEqual(metadata.isEnabled, true, "objective route metadata includes enabled flag")
 	assertTrue(metadata.position == nil, "objective route metadata omits exact position")
 	assertTrue(metadata.blockedByUserId == nil, "objective route metadata omits blocker identity")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	routeAttributes.PlayerCreatedRoute = true
+	routeAttributes.RouteCreatedByUserId = 915
+	routeAttributes.RouteCreationTimestamp = 95
+
+	local allRoutes = EscapeService.getPlayerCreatedRoutes(nil)
+	assertTrue(type(allRoutes) == "table", "player-created route query returns table for nil route id")
+	assertTrue(allRoutes.EscapeRoute_A ~= nil, "player-created route query includes active route")
+	assertEqual(allRoutes.EscapeRoute_A.createdByUserId, 915, "player-created route query projects createdByUserId")
+
+	local byRoute = globalEnv._EscapeService_QueryAPI.GetPlayerCreatedRoutes("EscapeRoute_A")
+	assertTrue(byRoute ~= nil, "player-created route query api returns route record")
+	assertEqual(byRoute.routeId, "EscapeRoute_A", "player-created route query api projects route id")
+
+	routeAttributes.RouteEnabled = false
+	local disabledRoute = EscapeService.getPlayerCreatedRoutes("EscapeRoute_A")
+	assertTrue(disabledRoute == nil, "player-created route query excludes disabled route")
+
+	routeAttributes.RouteEnabled = true
+	routeAttributes.RouteCreationTimestamp = 200
+	local futureRoute = EscapeService.getPlayerCreatedRoutes("EscapeRoute_A")
+	assertTrue(futureRoute == nil, "player-created route query excludes future-created route")
+
+	routeAttributes.RouteCreationTimestamp = 95
+	routeAttributes.PlayerCreatedRouteExpiresAt = 100
+	local expiredRoute = EscapeService.getPlayerCreatedRoutes("EscapeRoute_A")
+	assertTrue(expiredRoute == nil, "player-created route query excludes expired route")
+
+	local invalidRouteRequest = EscapeService.getPlayerCreatedRoutes(123)
+	assertTrue(invalidRouteRequest == nil, "player-created route query rejects non-string route id")
 end
 
 do

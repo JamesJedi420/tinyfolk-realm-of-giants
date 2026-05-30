@@ -32,6 +32,7 @@ $testFiles = @(
     'tests\timed_condition_states_runtime_entrypoint.spec.luau',
     'tests\fallback_escape_state.spec.luau',
     'tests\final_exit_state.spec.luau',
+    'tests\player_created_route_state.spec.luau',
     'tests\snare_trap_state.spec.luau',
     'tests\escape_service_runtime_entrypoint.spec.luau',
     'tests\tinyfolk_status_service_runtime_entrypoint.spec.luau',

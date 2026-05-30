@@ -48,6 +48,11 @@ EscapeConfig.FallbackEscapePhaseAttribute = "FallbackEscapePhase" -- Last-Tinyfo
 EscapeConfig.FallbackEscapeCueBandAttribute = "FallbackEscapeCueBand" -- Coarse cue band for local search
 EscapeConfig.FallbackEscapeClosedEndsAtAttribute = "FallbackEscapeClosedEndsAt" -- Giant closure expiry timestamp
 EscapeConfig.FallbackEscapeClosedByUserIdAttribute = "FallbackEscapeClosedByUserId" -- UserId that closed fallback route
+EscapeConfig.PlayerCreatedRouteAttribute = "PlayerCreatedRoute" -- If true, route metadata is owned by player-created tooling
+EscapeConfig.RouteCreatedByUserIdAttribute = "RouteCreatedByUserId" -- UserId of the player who created the route
+EscapeConfig.RouteCreationTimestampAttribute = "RouteCreationTimestamp" -- Epoch/clock timestamp when route metadata was authored
+EscapeConfig.PlayerCreatedRouteExpiresAtAttribute = "PlayerCreatedRouteExpiresAt" -- Optional expiration timestamp for player-created route metadata
+EscapeConfig.RouteEnabledAttribute = "RouteEnabled" -- Attribute that controls route enabled/disabled projection
 
 -- Final exit raid-escalation timings
 EscapeConfig.FinalExitPoweredDurationSeconds = 2 -- Delay between objective threshold and opening start

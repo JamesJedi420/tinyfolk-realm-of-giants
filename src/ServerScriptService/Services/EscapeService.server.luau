@@ -109,6 +109,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"FallbackEscapeState",
 		"../../ReplicatedStorage/Shared/GiantRealm/FallbackEscapeState"
 	)
+	local PlayerCreatedRouteState = resolveDependency(
+		GiantRealm,
+		"PlayerCreatedRouteState",
+		"../../ReplicatedStorage/Shared/GiantRealm/PlayerCreatedRouteState"
+	)
 
 	local TinyfolkMovementTraitService: any = nil
 	if options ~= nil and type(options.tinyfolkMovementTraitService) == "table" then
@@ -134,6 +139,23 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local fallbackEscapeStateByRouteId: { [string]: any? } = {}
 	local lastDashRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
+
+	local function resolveAttributeName(configValue: any, fallback: string): string
+		if type(configValue) == "string" and configValue ~= "" then
+			return configValue
+		end
+		return fallback
+	end
+
+	local playerCreatedRouteAttribute =
+		resolveAttributeName(EscapeConfig.PlayerCreatedRouteAttribute, "PlayerCreatedRoute")
+	local routeCreatedByUserIdAttribute =
+		resolveAttributeName(EscapeConfig.RouteCreatedByUserIdAttribute, "RouteCreatedByUserId")
+	local routeCreationTimestampAttribute =
+		resolveAttributeName(EscapeConfig.RouteCreationTimestampAttribute, "RouteCreationTimestamp")
+	local playerCreatedRouteExpiresAtAttribute =
+		resolveAttributeName(EscapeConfig.PlayerCreatedRouteExpiresAtAttribute, "PlayerCreatedRouteExpiresAt")
+	local routeEnabledAttribute = resolveAttributeName(EscapeConfig.RouteEnabledAttribute, ROUTE_ENABLED_ATTRIBUTE)
 
 	local function getScoreServiceQueryApi(): any?
 		local globalValue: any = globalEnv
@@ -1163,6 +1185,26 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		}
 	end
 
+	local function buildPlayerCreatedRouteRecord(routeId: string, routePart: BasePart): any?
+		if routePart:GetAttribute(playerCreatedRouteAttribute) ~= true then
+			return nil
+		end
+
+		local record = {
+			routeId = routeId,
+			createdByUserId = routePart:GetAttribute(routeCreatedByUserIdAttribute),
+			createdAt = routePart:GetAttribute(routeCreationTimestampAttribute),
+			enabled = routePart:GetAttribute(routeEnabledAttribute) ~= false,
+			expiresAt = routePart:GetAttribute(playerCreatedRouteExpiresAtAttribute),
+		}
+		local validation = PlayerCreatedRouteState.ValidateRouteRecord(record)
+		if validation.valid ~= true then
+			return nil
+		end
+
+		return record
+	end
+
 	local function buildRouteDebugPayload(routeId: string, routePart: BasePart, userId: number?): any
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
@@ -1811,6 +1853,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return routes
 	end
 
+	function service.getPlayerCreatedRoutes(routeId: any?): any
+		registerEscapeRoutesFromWorkspace()
+		if routeId ~= nil and type(routeId) ~= "string" then
+			return nil
+		end
+
+		local recordsByRouteId: { [string]: any } = {}
+		if type(routeId) == "string" then
+			local routePart = resolveRoutePart(routeId)
+			if routePart == nil then
+				return nil
+			end
+			local record = buildPlayerCreatedRouteRecord(routeId, routePart)
+			if record ~= nil then
+				recordsByRouteId[routeId] = record
+			end
+			return PlayerCreatedRouteState.QueryActivePlayerRoutes(recordsByRouteId, now())[routeId]
+		end
+
+		for registeredRouteId in escapeRouteById do
+			local routePart = resolveRoutePart(registeredRouteId)
+			if routePart ~= nil then
+				local record = buildPlayerCreatedRouteRecord(registeredRouteId, routePart)
+				if record ~= nil then
+					recordsByRouteId[registeredRouteId] = record
+				end
+			end
+		end
+
+		return PlayerCreatedRouteState.QueryActivePlayerRoutes(recordsByRouteId, now())
+	end
+
 	function service.resolveRescueEntryRoute(_targetUserId: any, targetRealmOwnerUserId: any): any
 		if
 			type(targetRealmOwnerUserId) ~= "number"
@@ -2174,6 +2248,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		GetObjectiveSafeRouteMetadata = function(routeId: string?): any
 			return service.getObjectiveSafeRouteMetadata(routeId)
+		end,
+		GetPlayerCreatedRoutes = function(routeId: string?): any
+			return service.getPlayerCreatedRoutes(routeId)
 		end,
 		ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
 			return service.resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
