@@ -668,26 +668,31 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 		return makeResponse(false, transition.reason, resolvedNow)
 	end
 
+	local function rejectTokenStage(reason: string): any
+		serviceState.lastReason = reason
+		if type(objectiveId) == "string" then
+			serviceState.lastObjectiveId = objectiveId
+		end
+		markRejectedRequest(player.UserId, resolvedNow)
+		applyStateAttributes()
+		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, reason))
+		return makeResponse(false, reason, resolvedNow)
+	end
+
 	local tokenSnapshotOk, tokenSnapshotResultOrError = pcall(function()
 		return requestEmergencyTokenSnapshot(objectiveId or "", resolvedNow)
 	end)
 
 	if not tokenSnapshotOk or type(tokenSnapshotResultOrError) ~= "table" then
-		markRejectedRequest(player.UserId, resolvedNow)
-		applyStateAttributes()
-		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=token_snapshot_failed", player.UserId))
-		return makeResponse(false, "token_snapshot_failed", resolvedNow)
+		return rejectTokenStage("token_snapshot_failed")
 	end
 
 	local tokenSnapshotResult = tokenSnapshotResultOrError
 	if tokenSnapshotResult.accepted ~= true then
-		markRejectedRequest(player.UserId, resolvedNow)
-		applyStateAttributes()
 		local snapshotReason = if type(tokenSnapshotResult.reason) == "string"
 			then tokenSnapshotResult.reason
 			else "token_snapshot_failed"
-		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, snapshotReason))
-		return makeResponse(false, snapshotReason, resolvedNow)
+		return rejectTokenStage(snapshotReason)
 	end
 
 	local tokenConsumeOk, tokenConsumeResultOrError = pcall(function()
@@ -695,21 +700,15 @@ local function requestReinforcement(player: Player, payload: any, at: number?): 
 	end)
 
 	if not tokenConsumeOk or type(tokenConsumeResultOrError) ~= "table" then
-		markRejectedRequest(player.UserId, resolvedNow)
-		applyStateAttributes()
-		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=token_consume_failed", player.UserId))
-		return makeResponse(false, "token_consume_failed", resolvedNow)
+		return rejectTokenStage("token_consume_failed")
 	end
 
 	local tokenConsumeResult = tokenConsumeResultOrError
 	if tokenConsumeResult.accepted ~= true then
-		markRejectedRequest(player.UserId, resolvedNow)
-		applyStateAttributes()
 		local tokenReason = if type(tokenConsumeResult.reason) == "string"
 			then tokenConsumeResult.reason
 			else "token_consume_failed"
-		debugWarn(string.format("Rejected reinforcement callerUserId=%d reason=%s", player.UserId, tokenReason))
-		return makeResponse(false, tokenReason, resolvedNow)
+		return rejectTokenStage(tokenReason)
 	end
 
 	local compensationTrace = {

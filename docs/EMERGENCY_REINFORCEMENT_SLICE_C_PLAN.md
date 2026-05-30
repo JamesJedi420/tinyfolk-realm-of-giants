@@ -56,6 +56,9 @@ Reinforcement service preserves this ordering:
   - headless_match_simulation.spec.luau
   - final_exit_state.spec.luau
 
+## Regression Gate Wiring Status
+- The default scripted suite (`scripts/run-tests.ps1`) now includes both `tests/escape_service_runtime_entrypoint.spec.luau` and `tests/final_exit_state.spec.luau` so Slice C regression checks run in baseline CI-style local validation.
+
 ## Out of Scope (Slice C)
 - HUD/icon/countdown presentation
 - multi-reinforcement variants

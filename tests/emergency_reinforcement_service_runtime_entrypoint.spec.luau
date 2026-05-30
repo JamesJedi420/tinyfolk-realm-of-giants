@@ -680,6 +680,16 @@ do
 
 	assertFalse(rejected.accepted, "request rejects when objective token API is unavailable")
 	assertEqual(rejected.reason, "objective_token_api_unavailable", "objective token API unavailable reason")
+	assertEqual(
+		rejected.snapshot.lastReason,
+		"objective_token_api_unavailable",
+		"objective token API unavailable updates snapshot reason"
+	)
+	assertEqual(
+		rejected.snapshot.lastObjectiveId,
+		"CallCenter_A",
+		"objective token API unavailable snapshots objective"
+	)
 
 	_G._RealmObjectiveService_QueryAPI = {
 		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
@@ -708,6 +718,12 @@ do
 
 	assertFalse(rejected.accepted, "request rejects when token snapshot method is unavailable")
 	assertEqual(rejected.reason, "objective_token_api_unavailable", "token snapshot missing method reason")
+	assertEqual(
+		rejected.snapshot.lastReason,
+		"objective_token_api_unavailable",
+		"token snapshot missing method updates snapshot reason"
+	)
+	assertEqual(rejected.snapshot.lastObjectiveId, "CallCenter_A", "token snapshot missing method snapshots objective")
 
 	_G._RealmObjectiveService_QueryAPI = {
 		RequestConsumeEmergencyToken = function(_requesterUserId: number, _objectiveId: string, _at: number): any
@@ -740,6 +756,12 @@ do
 
 	assertFalse(rejected.accepted, "token snapshot exception rejects reinforcement")
 	assertEqual(rejected.reason, "token_snapshot_failed", "token snapshot exception rejection reason")
+	assertEqual(
+		rejected.snapshot.lastReason,
+		"token_snapshot_failed",
+		"token snapshot exception updates snapshot reason"
+	)
+	assertEqual(rejected.snapshot.lastObjectiveId, "CallCenter_A", "token snapshot exception snapshots objective")
 	assertFalse(rejected.snapshot.used, "token snapshot exception does not consume one-time-use")
 	assertEqual(tokenConsumeCallCount, 0, "token consume not called when token snapshot faults")
 
@@ -774,6 +796,8 @@ do
 
 	assertFalse(rejected.accepted, "token consume exception rejects reinforcement")
 	assertEqual(rejected.reason, "token_consume_failed", "token consume exception rejection reason")
+	assertEqual(rejected.snapshot.lastReason, "token_consume_failed", "token consume exception updates snapshot reason")
+	assertEqual(rejected.snapshot.lastObjectiveId, "CallCenter_A", "token consume exception snapshots objective")
 	assertFalse(rejected.snapshot.used, "token consume exception does not consume one-time-use")
 	assertEqual(tokenConsumeCallCount, 1, "token consume is attempted before consume-fault rejection")
 
@@ -817,6 +841,12 @@ do
 
 	assertFalse(rejected.accepted, "token snapshot rejection propagates to reinforcement")
 	assertEqual(rejected.reason, "objective_token_inactive", "token snapshot rejection reason preserved")
+	assertEqual(
+		rejected.snapshot.lastReason,
+		"objective_token_inactive",
+		"token snapshot rejection updates snapshot reason"
+	)
+	assertEqual(rejected.snapshot.lastObjectiveId, "CallCenter_A", "token snapshot rejection snapshots objective")
 	assertFalse(rejected.snapshot.used, "token snapshot rejection does not consume one-time-use")
 	assertEqual(tokenConsumeCallCount, 0, "token consume is not called when snapshot rejects")
 end
@@ -911,6 +941,12 @@ do
 
 	assertFalse(rejected.accepted, "token consume rejection propagates to reinforcement")
 	assertEqual(rejected.reason, "token_already_consumed", "token consume rejection reason preserved")
+	assertEqual(
+		rejected.snapshot.lastReason,
+		"token_already_consumed",
+		"token consume rejection updates snapshot reason"
+	)
+	assertEqual(rejected.snapshot.lastObjectiveId, "CallCenter_A", "token consume rejection snapshots objective")
 	assertTrue(type(rejected.snapshot) == "table", "token rejection includes snapshot")
 	assertFalse(rejected.snapshot.used, "token reject does not consume one-time-use")
 
