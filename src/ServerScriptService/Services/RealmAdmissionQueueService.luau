@@ -67,6 +67,17 @@ local runtimeProcessBatchSize = DEFAULT_PROCESS_BATCH_SIZE
 local runtimeProcessIntervalSeconds = DEFAULT_PROCESS_INTERVAL_SECONDS
 local runtimeQueueNotificationFanout: any = nil
 local runtimePartyResolver: any = nil
+local runtimeProcessingDiagnostics = {
+	totalBatches = 0,
+	totalProcessed = 0,
+	totalSucceeded = 0,
+	totalExpired = 0,
+	totalRetryDeferred = 0,
+	totalFailed = 0,
+	lastOutcome = nil,
+	lastReason = "not_started",
+	lastProcessedAt = nil,
+}
 
 local function isPositiveInteger(value: any): boolean
 	if type(value) ~= "number" then
@@ -149,6 +160,57 @@ local function resolveProcessScheduler(config: any): ProcessScheduler
 	}
 end
 
+local function resetProcessingDiagnostics(reason: string)
+	runtimeProcessingDiagnostics = {
+		totalBatches = 0,
+		totalProcessed = 0,
+		totalSucceeded = 0,
+		totalExpired = 0,
+		totalRetryDeferred = 0,
+		totalFailed = 0,
+		lastOutcome = nil,
+		lastReason = reason,
+		lastProcessedAt = nil,
+	}
+end
+
+local function cloneTable(source: any): any
+	if type(source) ~= "table" then
+		return nil
+	end
+	local cloned = {}
+	for key, value in pairs(source) do
+		if type(value) == "table" then
+			cloned[key] = cloneTable(value)
+		else
+			cloned[key] = value
+		end
+	end
+	return cloned
+end
+
+local function updateProcessingDiagnostics(outcome: any, nowAt: number, reason: string)
+	if type(outcome) == "table" then
+		runtimeProcessingDiagnostics.totalBatches += 1
+		runtimeProcessingDiagnostics.totalProcessed += if type(outcome.processed) == "number"
+			then outcome.processed
+			else 0
+		runtimeProcessingDiagnostics.totalSucceeded += if type(outcome.succeeded) == "number"
+			then outcome.succeeded
+			else 0
+		runtimeProcessingDiagnostics.totalExpired += if type(outcome.expired) == "number" then outcome.expired else 0
+		runtimeProcessingDiagnostics.totalRetryDeferred += if type(outcome.retryDeferred) == "number"
+			then outcome.retryDeferred
+			else 0
+		runtimeProcessingDiagnostics.totalFailed += if type(outcome.failed) == "number" then outcome.failed else 0
+		runtimeProcessingDiagnostics.lastOutcome = cloneTable(outcome)
+	else
+		runtimeProcessingDiagnostics.lastOutcome = nil
+	end
+	runtimeProcessingDiagnostics.lastReason = reason
+	runtimeProcessingDiagnostics.lastProcessedAt = nowAt
+end
+
 local function stopProcessingLoop()
 	local scheduler = runtimeProcessScheduler
 	local schedulerAny: any = scheduler
@@ -217,6 +279,7 @@ end
 
 local function buildRuntime(config: any)
 	stopProcessingLoop()
+	resetProcessingDiagnostics("started")
 
 	local configAny: any = config
 	local adapter = if type(config) == "table" then config.adapter else nil
@@ -331,6 +394,7 @@ local function ensureStarted(): boolean
 		runtimeProcessor = nil
 		runtimeQueueNotificationFanout = nil
 		runtimePartyResolver = nil
+		resetProcessingDiagnostics("service_start_failed")
 	end
 
 	return started
@@ -347,6 +411,7 @@ function RealmAdmissionQueueService.Start(config: any?): { ok: boolean, reason: 
 		runtimeProcessor = nil
 		runtimeQueueNotificationFanout = nil
 		runtimePartyResolver = nil
+		resetProcessingDiagnostics("service_start_failed")
 		return {
 			ok = false,
 			reason = tostring(err),
@@ -371,6 +436,25 @@ function RealmAdmissionQueueService.ResetForTests()
 	runtimeProcessor = nil
 	runtimeQueueNotificationFanout = nil
 	runtimePartyResolver = nil
+	resetProcessingDiagnostics("reset")
+end
+
+function RealmAdmissionQueueService.GetProcessingDiagnostics(): any
+	return {
+		started = started,
+		processBatchSize = runtimeProcessBatchSize,
+		processIntervalSeconds = runtimeProcessIntervalSeconds,
+		processingLoopEnabled = runtimeProcessScheduler ~= nil,
+		totalBatches = runtimeProcessingDiagnostics.totalBatches,
+		totalProcessed = runtimeProcessingDiagnostics.totalProcessed,
+		totalSucceeded = runtimeProcessingDiagnostics.totalSucceeded,
+		totalExpired = runtimeProcessingDiagnostics.totalExpired,
+		totalRetryDeferred = runtimeProcessingDiagnostics.totalRetryDeferred,
+		totalFailed = runtimeProcessingDiagnostics.totalFailed,
+		lastOutcome = cloneTable(runtimeProcessingDiagnostics.lastOutcome),
+		lastReason = runtimeProcessingDiagnostics.lastReason,
+		lastProcessedAt = runtimeProcessingDiagnostics.lastProcessedAt,
+	}
 end
 
 function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
@@ -507,6 +591,7 @@ end
 
 function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 	if not isPositiveInteger(maxItems) then
+		updateProcessingDiagnostics(nil, os.clock(), "max_items_invalid")
 		return {
 			accepted = false,
 			reason = "max_items_invalid",
@@ -515,6 +600,7 @@ function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 	end
 
 	if not ensureStarted() then
+		updateProcessingDiagnostics(nil, os.clock(), "service_start_failed")
 		return {
 			accepted = false,
 			reason = "service_start_failed",
@@ -523,6 +609,7 @@ function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 	end
 
 	if type(runtimeProcessor) ~= "table" or type(runtimeProcessor.ProcessBatch) ~= "function" then
+		updateProcessingDiagnostics(nil, os.clock(), "queue_processor_unavailable")
 		return {
 			accepted = false,
 			reason = "queue_processor_unavailable",
@@ -532,12 +619,15 @@ function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 
 	local outcome = runtimeProcessor.ProcessBatch(maxItems)
 	if type(outcome) ~= "table" then
+		updateProcessingDiagnostics(nil, os.clock(), "queue_processor_result_invalid")
 		return {
 			accepted = false,
 			reason = "queue_processor_result_invalid",
 			outcome = nil,
 		}
 	end
+
+	updateProcessingDiagnostics(outcome, os.clock(), "accepted")
 
 	local fanoutAny: any = runtimeQueueNotificationFanout
 	if type(fanoutAny) == "table" and type(fanoutAny.PublishAdmission) == "function" then
@@ -567,6 +657,9 @@ globalEnv._RealmAdmissionQueue_QueryAPI = {
 	end,
 	ProcessBatch = function(maxItems: any): ProcessResult
 		return RealmAdmissionQueueService.ProcessBatch(maxItems)
+	end,
+	GetProcessingDiagnostics = function(): any
+		return RealmAdmissionQueueService.GetProcessingDiagnostics()
 	end,
 	ConfigureForTests = function(config: any)
 		return RealmAdmissionQueueService.ConfigureForTests(config)

@@ -120,7 +120,7 @@ local admissionProducer = AdmissionQueueProducer.Create({
 
 local PartyMatchmakingAdmissionService: any = {}
 
-function PartyMatchmakingAdmissionService.RequestPartyAdmission(input: any): any
+local function requestAdmissionWithEntryType(input: any, entryType: string, operationPrefix: string): any
 	if type(input) ~= "table" then
 		return { accepted = false, reason = "request_invalid" }
 	end
@@ -136,14 +136,14 @@ function PartyMatchmakingAdmissionService.RequestPartyAdmission(input: any): any
 	local createdAt = resolveNow()
 	local operationId = input.operationId
 	if not isNonEmptyString(operationId) then
-		operationId = string.format("party_match_%s_%d", input.partyId, math.floor(createdAt * 1000))
+		operationId = string.format("%s_%s_%d", operationPrefix, input.partyId, math.floor(createdAt * 1000))
 	end
 
 	local result = admissionProducer.Enqueue({
 		operationId = operationId,
 		partyId = input.partyId,
 		targetRealmId = targetRealmId,
-		entryType = "direct_invite",
+		entryType = entryType,
 		partyMemberUserIds = resolveMemberUserIds(input),
 		priority = input.priority,
 		createdAt = createdAt,
@@ -168,6 +168,14 @@ function PartyMatchmakingAdmissionService.RequestPartyAdmission(input: any): any
 	}
 end
 
+function PartyMatchmakingAdmissionService.RequestPartyAdmission(input: any): any
+	return requestAdmissionWithEntryType(input, "direct_invite", "party_match")
+end
+
+function PartyMatchmakingAdmissionService.RequestPartyMatchAdmission(input: any): any
+	return requestAdmissionWithEntryType(input, "matchmaking_queue", "party_queue_match")
+end
+
 function PartyMatchmakingAdmissionService.ConfigureForTests(config: any)
 	local configAny: any = config
 	queryApiOverride = if type(configAny) == "table" then configAny.admissionQueueApi else nil
@@ -184,6 +192,9 @@ end
 globalEnv._PartyMatchmakingAdmissionService_QueryAPI = {
 	RequestPartyAdmission = function(input: any): any
 		return PartyMatchmakingAdmissionService.RequestPartyAdmission(input)
+	end,
+	RequestPartyMatchAdmission = function(input: any): any
+		return PartyMatchmakingAdmissionService.RequestPartyMatchAdmission(input)
 	end,
 	ConfigureForTests = function(config: any)
 		PartyMatchmakingAdmissionService.ConfigureForTests(config)

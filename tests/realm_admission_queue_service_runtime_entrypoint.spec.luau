@@ -139,6 +139,10 @@ assertTrue(type(_G._RealmAdmissionQueue_QueryAPI) == "table", "service stores gl
 assertTrue(type(RealmAdmissionQueueService.Start) == "function", "service exposes Start")
 assertTrue(type(RealmAdmissionQueueService.EnqueueAdmission) == "function", "service exposes EnqueueAdmission")
 assertTrue(type(RealmAdmissionQueueService.ProcessBatch) == "function", "service exposes ProcessBatch")
+assertTrue(
+	type(RealmAdmissionQueueService.GetProcessingDiagnostics) == "function",
+	"service exposes processing diagnostics"
+)
 
 local startWithoutAdapter = RealmAdmissionQueueService.Start({
 	codec = makeCodec(),
@@ -154,6 +158,10 @@ assertEqual(unavailableEnqueue.reason, "adapter_unavailable", "enqueue unavailab
 local unavailableProcess = RealmAdmissionQueueService.ProcessBatch(5)
 assertTrue(unavailableProcess.accepted, "process returns outcome even when read fails")
 assertEqual(unavailableProcess.outcome.failed, 1, "process captures adapter-unavailable read failure")
+local unavailableDiagnostics = RealmAdmissionQueueService.GetProcessingDiagnostics()
+assertEqual(unavailableDiagnostics.totalBatches, 1, "diagnostics increments total batches")
+assertEqual(unavailableDiagnostics.totalFailed, 1, "diagnostics captures failed read")
+assertEqual(unavailableDiagnostics.lastReason, "accepted", "diagnostics tracks accepted process invocation")
 
 local adapter, removedIds = makeQueueAdapter()
 local reserveCalls = 0
@@ -254,6 +262,19 @@ assertEqual(admissionFanoutEvents[4].eventName, "admission_batch_processed", "fa
 assertEqual(admissionFanoutEvents[4].payload.processed, 3, "fanout batch payload processed")
 assertEqual(admissionFanoutEvents[4].payload.succeeded, 1, "fanout batch payload succeeded")
 assertEqual(admissionFanoutEvents[4].payload.failed, 1, "fanout batch payload failed")
+local diagnostics = RealmAdmissionQueueService.GetProcessingDiagnostics()
+assertEqual(diagnostics.processBatchSize, 25, "diagnostics include batch size")
+assertEqual(diagnostics.processIntervalSeconds, 1, "diagnostics include default interval")
+assertEqual(diagnostics.processingLoopEnabled, false, "diagnostics loop disabled by default")
+assertEqual(diagnostics.totalBatches, 1, "diagnostics total batches after process")
+assertEqual(diagnostics.totalProcessed, 3, "diagnostics total processed")
+assertEqual(diagnostics.totalSucceeded, 1, "diagnostics total succeeded")
+assertEqual(diagnostics.totalExpired, 1, "diagnostics total expired")
+assertEqual(diagnostics.totalRetryDeferred, 0, "diagnostics total retry deferred")
+assertEqual(diagnostics.totalFailed, 1, "diagnostics total failed")
+assertEqual(diagnostics.lastOutcome.processed, 3, "diagnostics last outcome processed")
+assertEqual(diagnostics.lastReason, "accepted", "diagnostics last reason accepted")
+assertTrue(type(diagnostics.lastProcessedAt) == "number", "diagnostics last processed timestamp set")
 
 local readAfterProcess = RealmAdmissionQueueService.ReadBatch(10)
 assertTrue(readAfterProcess.accepted, "read after process accepted")
@@ -265,6 +286,8 @@ assertTrue(removedIds["receipt-3"] == true, "fatal entry removed")
 local invalidProcess = RealmAdmissionQueueService.ProcessBatch(0)
 assertEqual(invalidProcess.accepted, false, "invalid process max rejected")
 assertEqual(invalidProcess.reason, "max_items_invalid", "invalid process max reason")
+local invalidDiagnostics = RealmAdmissionQueueService.GetProcessingDiagnostics()
+assertEqual(invalidDiagnostics.lastReason, "max_items_invalid", "invalid process updates diagnostics reason")
 
 RealmAdmissionQueueService.ResetForTests()
 
@@ -457,6 +480,10 @@ do
 	assertTrue(configuredLoop.ok, "loop configure accepted")
 	assertEqual(scheduledDelays[1], 2, "loop interval is scheduled")
 	assertTrue(type(scheduledCallbacks[1]) == "function", "loop callback captured")
+	local loopDiagnostics = RealmAdmissionQueueService.GetProcessingDiagnostics()
+	assertEqual(loopDiagnostics.processBatchSize, 3, "loop diagnostics include configured batch size")
+	assertEqual(loopDiagnostics.processIntervalSeconds, 2, "loop diagnostics include configured interval")
+	assertEqual(loopDiagnostics.processingLoopEnabled, true, "loop diagnostics indicate enabled loop")
 
 	assertTrue(
 		RealmAdmissionQueueService.EnqueueAdmission(makeEntry({ operationId = "op-loop", expiration = 220 })).accepted,

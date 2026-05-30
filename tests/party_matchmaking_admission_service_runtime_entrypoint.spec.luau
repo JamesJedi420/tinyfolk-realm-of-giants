@@ -31,6 +31,7 @@ assertTrue(type(resolverApi.ResolveTargetRealmId) == "function", "resolver funct
 local serviceApi = globalEnv._PartyMatchmakingAdmissionService_QueryAPI
 assertTrue(type(serviceApi) == "table", "service query api published")
 assertTrue(type(serviceApi.RequestPartyAdmission) == "function", "request function published")
+assertTrue(type(serviceApi.RequestPartyMatchAdmission) == "function", "match admission function published")
 
 local enqueuePayloads = {}
 local admissionQueueApi = {
@@ -69,6 +70,20 @@ assertEqual(accepted.payload.partyMemberUserIds[1], 19, "normalized member order
 assertEqual(accepted.payload.partyMemberUserIds[2], 44, "normalized member ordering second")
 assertEqual(#enqueuePayloads, 1, "enqueue invoked once")
 
+local queueAccepted = serviceApi.RequestPartyMatchAdmission({
+	partyId = "party-queue-alpha",
+	targetRealmId = "realm-17",
+	memberUserIds = { 88, 77, 88 },
+})
+assertEqual(queueAccepted.accepted, true, "queue-match accepted")
+assertEqual(queueAccepted.reason, "accepted", "queue-match accepted reason")
+assertEqual(queueAccepted.payload.entryType, "matchmaking_queue", "queue-match entry type")
+assertEqual(queueAccepted.payload.partySize, 2, "queue-match deduped party size")
+assertEqual(queueAccepted.payload.operationId, "party_queue_match_party-queue-alpha_123000", "queue-match operation id")
+assertEqual(queueAccepted.payload.partyMemberUserIds[1], 77, "queue-match normalized member ordering first")
+assertEqual(queueAccepted.payload.partyMemberUserIds[2], 88, "queue-match normalized member ordering second")
+assertEqual(#enqueuePayloads, 2, "queue-match enqueue invoked")
+
 resolverApi.ConfigureForTests({
 	resolveFallbackTargetRealmId = function(input: any)
 		assertEqual(input.partyId, "party-resolved", "resolver receives party id")
@@ -82,7 +97,7 @@ local resolvedAccepted = serviceApi.RequestPartyAdmission({
 })
 assertEqual(resolvedAccepted.accepted, true, "resolver accepted request")
 assertEqual(resolvedAccepted.payload.targetRealmId, "realm-from-resolver", "resolver target realm applied")
-assertEqual(#enqueuePayloads, 2, "resolver accepted path enqueues")
+assertEqual(#enqueuePayloads, 3, "resolver accepted path enqueues")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -128,7 +143,7 @@ local resolverUnavailable = serviceApi.RequestPartyAdmission({
 })
 assertEqual(resolverUnavailable.accepted, false, "resolver unavailable rejected")
 assertEqual(resolverUnavailable.reason, "target_realm_unavailable", "resolver unavailable reason")
-assertEqual(#enqueuePayloads, 2, "resolver unavailable does not enqueue")
+assertEqual(#enqueuePayloads, 3, "resolver unavailable does not enqueue")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -150,7 +165,7 @@ local unresolvedRealm = serviceApi.RequestPartyAdmission({
 })
 assertEqual(unresolvedRealm.accepted, false, "unresolved realm rejected")
 assertEqual(unresolvedRealm.reason, "target_realm_missing", "unresolved realm reason")
-assertEqual(#enqueuePayloads, 2, "resolver rejection does not enqueue")
+assertEqual(#enqueuePayloads, 3, "resolver rejection does not enqueue")
 
 serviceApi.ConfigureForTests({
 	now = function()

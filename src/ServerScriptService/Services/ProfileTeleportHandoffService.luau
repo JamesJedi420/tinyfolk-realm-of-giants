@@ -3,9 +3,6 @@
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else (require :: any)("./ProfilePersistenceGateway")
-local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
-	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
-	else (require :: any)("./AdmissionQueueProducer")
 
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
@@ -76,23 +73,59 @@ local function nextHandoffToken(userId: number): string
 	return string.format("handoff:%d:%d", userId, handoffCounter)
 end
 
-local function getRealmAdmissionQueueQueryApi(): any?
-	local queryApi = globalEnv._RealmAdmissionQueue_QueryAPI
+local function getPartyMatchmakingAdmissionQueryApi(): any?
+	local queryApi = globalEnv._PartyMatchmakingAdmissionService_QueryAPI
 	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	if type((queryApi :: any).RequestPartyMatchAdmission) ~= "function" then
 		return nil
 	end
 
 	return queryApi
 end
 
-local admissionProducer = AdmissionQueueProducer.Create({
-	queryApiResolver = function()
-		return getRealmAdmissionQueueQueryApi()
-	end,
-})
-
 local function isRetryableEnqueueReason(reason: string?): boolean
 	return reason == "admission_queue_unavailable" or reason == "admission_enqueue_failed"
+end
+
+local function requestAdmissionHandoff(userId: number, handoffToken: string, targetRealmId: string): any
+	local admissionApi = getPartyMatchmakingAdmissionQueryApi()
+	if type(admissionApi) ~= "table" then
+		return {
+			accepted = false,
+			reason = "admission_queue_unavailable",
+		}
+	end
+
+	local ok, result = pcall(function()
+		return (admissionApi :: any).RequestPartyMatchAdmission({
+			operationId = handoffToken,
+			partyId = string.format("handoff_party:%d:%s", userId, handoffToken),
+			targetRealmId = targetRealmId,
+			partyMemberUserIds = { userId },
+		})
+	end)
+
+	if not ok or type(result) ~= "table" then
+		return {
+			accepted = false,
+			reason = "admission_enqueue_failed",
+		}
+	end
+
+	if result.accepted ~= true then
+		return {
+			accepted = false,
+			reason = if type(result.reason) == "string" then result.reason else "admission_enqueue_failed",
+		}
+	end
+
+	return {
+		accepted = true,
+		reason = if type(result.reason) == "string" then result.reason else "accepted",
+	}
 end
 
 local function getLifecycleQueryApi(): any?
@@ -184,13 +217,7 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 	end
 
 	local handoffToken = nextHandoffToken(userId)
-	local enqueueResult = admissionProducer.Enqueue({
-		operationId = handoffToken,
-		partyId = string.format("handoff_party:%d:%s", userId, handoffToken),
-		targetRealmId = targetRealmId,
-		entryType = "standard",
-		partyMemberUserIds = { userId },
-	})
+	local enqueueResult = requestAdmissionHandoff(userId, handoffToken, targetRealmId)
 	if enqueueResult.accepted ~= true then
 		return makeResult(
 			false,

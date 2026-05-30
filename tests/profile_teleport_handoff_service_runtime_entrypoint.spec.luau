@@ -36,9 +36,9 @@ local enqueueFailureReasonByUserId: { [number]: string? } = {
 	[4003] = "admission_queue_unavailable",
 }
 local admissionQueuePayloads: { any } = {}
-local function makeAdmissionQueueQueryApi(): any
+local function makePartyMatchmakingAdmissionQueryApi(): any
 	return {
-		EnqueueAdmission = function(payload: any): any
+		RequestPartyMatchAdmission = function(payload: any): any
 			table.insert(admissionQueuePayloads, payload)
 			local memberUserIds = payload.partyMemberUserIds
 			local userId = if type(memberUserIds) == "table" then memberUserIds[1] else nil
@@ -63,7 +63,7 @@ local function makeAdmissionQueueQueryApi(): any
 	}
 end
 
-globalEnv._RealmAdmissionQueue_QueryAPI = makeAdmissionQueueQueryApi()
+globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmissionQueryApi()
 
 ProfilePersistenceGateway.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
@@ -127,7 +127,7 @@ local queueUnavailableCallbackRegistered = ProfileTeleportHandoffService.Registe
 assertEqual(queueUnavailableCallbackRegistered, true, "register queue-unavailable callback")
 
 ownershipReadyByUserId[4005] = true
-globalEnv._RealmAdmissionQueue_QueryAPI = nil
+globalEnv._PartyMatchmakingAdmissionService_QueryAPI = nil
 local queueUnavailableHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4005), {
 	flow = "hub_to_realm",
 	targetRealmId = "realm-main-01",
@@ -144,7 +144,7 @@ assertEqual(
 	true,
 	"queue-unavailable handoff leaves no pending spawn block"
 )
-globalEnv._RealmAdmissionQueue_QueryAPI = makeAdmissionQueueQueryApi()
+globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmissionQueryApi()
 
 local firstHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
 	flow = "hub_to_realm",
@@ -164,7 +164,6 @@ assertEqual(
 	"first handoff deterministic party id"
 )
 assertEqual(firstPayload.targetRealmId, "realm-main-01", "first handoff target realm mapped")
-assertEqual(firstPayload.entryType, "standard", "first handoff entry type")
 assertEqual(type(firstPayload.partyMemberUserIds), "table", "first handoff member list type")
 assertEqual(#firstPayload.partyMemberUserIds, 1, "first handoff member list size")
 assertEqual(firstPayload.partyMemberUserIds[1], 4001, "first handoff member id")
