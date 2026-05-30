@@ -89,29 +89,25 @@ local function getPartyMatchmakingAdmissionQueryApi(): any?
 	return queryApi
 end
 
+local function getProfileTeleportAdmissionQueryApi(): any?
+	local queryApi = globalEnv._ProfileTeleportAdmissionService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	if type((queryApi :: any).RequestTeleportHandoffAdmission) ~= "function" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function isRetryableEnqueueReason(reason: string?): boolean
 	return reason == "admission_queue_unavailable" or reason == "admission_enqueue_failed"
 end
 
-local function requestAdmissionHandoff(userId: number, handoffToken: string, targetRealmId: string): any
-	local admissionApi = getPartyMatchmakingAdmissionQueryApi()
-	if type(admissionApi) ~= "table" then
-		return {
-			accepted = false,
-			reason = "admission_queue_unavailable",
-		}
-	end
-
-	local ok, result = pcall(function()
-		return (admissionApi :: any).RequestPartyMatchAdmission({
-			operationId = handoffToken,
-			partyId = string.format("handoff_party:%d:%s", userId, handoffToken),
-			targetRealmId = targetRealmId,
-			partyMemberUserIds = { userId },
-		})
-	end)
-
-	if not ok or type(result) ~= "table" then
+local function finalizeAdmissionResult(result: any): any
+	if type(result) ~= "table" then
 		return {
 			accepted = false,
 			reason = "admission_enqueue_failed",
@@ -129,6 +125,82 @@ local function requestAdmissionHandoff(userId: number, handoffToken: string, tar
 		accepted = true,
 		reason = if type(result.reason) == "string" then result.reason else "accepted",
 	}
+end
+
+local function requestAdmissionViaProfileTeleportService(
+	userId: number,
+	handoffToken: string,
+	targetRealmId: string
+): any
+	local admissionApi = getProfileTeleportAdmissionQueryApi()
+	if type(admissionApi) ~= "table" then
+		return {
+			accepted = false,
+			reason = "admission_queue_unavailable",
+		}
+	end
+
+	local ok, result = pcall(function()
+		return (admissionApi :: any).RequestTeleportHandoffAdmission({
+			userId = userId,
+			handoffToken = handoffToken,
+			targetRealmId = targetRealmId,
+		})
+	end)
+
+	if not ok then
+		return {
+			accepted = false,
+			reason = "admission_enqueue_failed",
+		}
+	end
+
+	return finalizeAdmissionResult(result)
+end
+
+local function requestAdmissionViaPartyMatchmakingService(
+	userId: number,
+	handoffToken: string,
+	targetRealmId: string
+): any
+	local admissionApi = getPartyMatchmakingAdmissionQueryApi()
+	if type(admissionApi) ~= "table" then
+		return {
+			accepted = false,
+			reason = "admission_queue_unavailable",
+		}
+	end
+
+	local ok, result = pcall(function()
+		return (admissionApi :: any).RequestPartyMatchAdmission({
+			operationId = handoffToken,
+			partyId = string.format("handoff_party:%d:%s", userId, handoffToken),
+			targetRealmId = targetRealmId,
+			partyMemberUserIds = { userId },
+		})
+	end)
+
+	if not ok then
+		return {
+			accepted = false,
+			reason = "admission_enqueue_failed",
+		}
+	end
+
+	return finalizeAdmissionResult(result)
+end
+
+local function requestAdmissionHandoff(userId: number, handoffToken: string, targetRealmId: string): any
+	local primaryResult = requestAdmissionViaProfileTeleportService(userId, handoffToken, targetRealmId)
+	if primaryResult.accepted == true then
+		return primaryResult
+	end
+
+	if primaryResult.reason ~= "admission_queue_unavailable" then
+		return primaryResult
+	end
+
+	return requestAdmissionViaPartyMatchmakingService(userId, handoffToken, targetRealmId)
 end
 
 local function getLifecycleQueryApi(): any?

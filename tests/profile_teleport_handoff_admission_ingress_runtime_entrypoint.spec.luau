@@ -42,8 +42,8 @@ ProfilePersistenceGateway.ReleasePlayerProfile = function(_player: any): any
 end
 
 local ingressPayloads = {}
-globalEnv._PartyMatchmakingAdmissionService_QueryAPI = {
-	RequestPartyMatchAdmission = function(payload: any): any
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = {
+	RequestTeleportHandoffAdmission = function(payload: any): any
 		table.insert(ingressPayloads, payload)
 		return {
 			accepted = true,
@@ -60,16 +60,38 @@ local accepted = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlaye
 assertEqual(accepted.ok, true, "handoff accepted")
 assertTrue(type(accepted.handoffToken) == "string", "handoff token assigned")
 assertEqual(#ingressPayloads, 1, "ingress payload emitted")
-assertEqual(ingressPayloads[1].operationId, accepted.handoffToken, "operation id maps to handoff token")
-assertEqual(
-	ingressPayloads[1].partyId,
-	string.format("handoff_party:%d:%s", 6101, accepted.handoffToken),
-	"deterministic handoff party id"
-)
+assertEqual(ingressPayloads[1].handoffToken, accepted.handoffToken, "handoff token maps to ingress payload")
+assertEqual(ingressPayloads[1].userId, 6101, "ingress payload user id")
 assertEqual(ingressPayloads[1].targetRealmId, "realm-77", "handoff target realm propagated")
-assertEqual(type(ingressPayloads[1].partyMemberUserIds), "table", "member user ids table")
-assertEqual(#ingressPayloads[1].partyMemberUserIds, 1, "single member handoff")
-assertEqual(ingressPayloads[1].partyMemberUserIds[1], 6101, "handoff member user id")
+
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = nil
+local fallbackIngressPayloads = {}
+globalEnv._PartyMatchmakingAdmissionService_QueryAPI = {
+	RequestPartyMatchAdmission = function(payload: any): any
+		table.insert(fallbackIngressPayloads, payload)
+		return {
+			accepted = true,
+			reason = "accepted",
+			payload = payload,
+		}
+	end,
+}
+
+local fallbackAccepted = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(6102), {
+	flow = "hub_to_realm",
+	targetRealmId = "realm-77",
+})
+assertEqual(fallbackAccepted.ok, true, "fallback handoff accepted")
+assertTrue(type(fallbackAccepted.handoffToken) == "string", "fallback token assigned")
+assertEqual(#fallbackIngressPayloads, 1, "fallback ingress payload emitted")
+assertEqual(fallbackIngressPayloads[1].operationId, fallbackAccepted.handoffToken, "fallback operation id")
+assertEqual(
+	fallbackIngressPayloads[1].partyId,
+	string.format("handoff_party:%d:%s", 6102, fallbackAccepted.handoffToken),
+	"fallback deterministic handoff party id"
+)
+assertEqual(fallbackIngressPayloads[1].targetRealmId, "realm-77", "fallback target realm propagated")
+assertEqual(fallbackIngressPayloads[1].partyMemberUserIds[1], 6102, "fallback handoff member user id")
 
 globalEnv._PartyMatchmakingAdmissionService_QueryAPI = nil
 local unavailable = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(6102), {
@@ -80,8 +102,8 @@ assertEqual(unavailable.ok, false, "missing ingress api rejected")
 assertEqual(unavailable.reason, "admission_queue_unavailable", "missing ingress api reason")
 assertEqual(unavailable.retryable, true, "missing ingress api retryable")
 
-globalEnv._PartyMatchmakingAdmissionService_QueryAPI = {
-	RequestPartyMatchAdmission = function(_payload: any): any
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = {
+	RequestTeleportHandoffAdmission = function(_payload: any): any
 		error("boom")
 	end,
 }

@@ -36,6 +36,32 @@ local enqueueFailureReasonByUserId: { [number]: string? } = {
 	[4003] = "admission_queue_unavailable",
 }
 local admissionQueuePayloads: { any } = {}
+local function makeProfileTeleportAdmissionQueryApi(): any
+	return {
+		RequestTeleportHandoffAdmission = function(payload: any): any
+			table.insert(admissionQueuePayloads, payload)
+			local userId = payload.userId
+			if type(userId) == "number" then
+				local failureReason = enqueueFailureReasonByUserId[userId]
+				if type(failureReason) == "string" then
+					return {
+						accepted = false,
+						reason = failureReason,
+					}
+				end
+			end
+
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					depth = #admissionQueuePayloads,
+				},
+			}
+		end,
+	}
+end
+
 local function makePartyMatchmakingAdmissionQueryApi(): any
 	return {
 		RequestPartyMatchAdmission = function(payload: any): any
@@ -63,6 +89,7 @@ local function makePartyMatchmakingAdmissionQueryApi(): any
 	}
 end
 
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = makeProfileTeleportAdmissionQueryApi()
 globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmissionQueryApi()
 
 ProfilePersistenceGateway.ResetForTests()
@@ -127,6 +154,7 @@ local queueUnavailableCallbackRegistered = ProfileTeleportHandoffService.Registe
 assertEqual(queueUnavailableCallbackRegistered, true, "register queue-unavailable callback")
 
 ownershipReadyByUserId[4005] = true
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = nil
 globalEnv._PartyMatchmakingAdmissionService_QueryAPI = nil
 local queueUnavailableHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4005), {
 	flow = "hub_to_realm",
@@ -144,6 +172,7 @@ assertEqual(
 	true,
 	"queue-unavailable handoff leaves no pending spawn block"
 )
+globalEnv._ProfileTeleportAdmissionService_QueryAPI = makeProfileTeleportAdmissionQueryApi()
 globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmissionQueryApi()
 
 local firstHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
@@ -157,16 +186,9 @@ assertEqual(callbackResult.handoffToken, firstHandoff.handoffToken, "release-rea
 
 local firstPayload = admissionQueuePayloads[#admissionQueuePayloads]
 assertTrue(type(firstPayload) == "table", "first handoff enqueue payload captured")
-assertEqual(firstPayload.operationId, firstHandoff.handoffToken, "first handoff operation id maps to token")
-assertEqual(
-	firstPayload.partyId,
-	string.format("handoff_party:%d:%s", 4001, firstHandoff.handoffToken),
-	"first handoff deterministic party id"
-)
+assertEqual(firstPayload.handoffToken, firstHandoff.handoffToken, "first handoff token maps to payload")
+assertEqual(firstPayload.userId, 4001, "first handoff user id maps to payload")
 assertEqual(firstPayload.targetRealmId, "realm-main-01", "first handoff target realm mapped")
-assertEqual(type(firstPayload.partyMemberUserIds), "table", "first handoff member list type")
-assertEqual(#firstPayload.partyMemberUserIds, 1, "first handoff member list size")
-assertEqual(firstPayload.partyMemberUserIds[1], 4001, "first handoff member id")
 
 local enqueueFailureCallbackResult: any = nil
 local enqueueFailureCallbackRegistered = ProfileTeleportHandoffService.RegisterReleaseReadyCallback(

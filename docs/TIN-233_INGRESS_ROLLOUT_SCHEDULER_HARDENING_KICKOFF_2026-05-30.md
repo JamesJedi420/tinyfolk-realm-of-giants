@@ -53,8 +53,22 @@
 	- targeted queue runtime spec pass: `tests/realm_admission_queue_service_runtime_entrypoint.spec.luau`
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 3:
+	- Concrete `ProfileTeleportAdmissionService` query seam added in `src/ServerScriptService/Services/ProfileTeleportAdmissionService.server.luau`.
+	- `ProfileTeleportHandoffService` admission ingress now consumes `_ProfileTeleportAdmissionService_QueryAPI.RequestTeleportHandoffAdmission` as primary seam.
+	- Deterministic compatibility fallback retained to `_PartyMatchmakingAdmissionService_QueryAPI.RequestPartyMatchAdmission` only when the new primary seam is unavailable.
+	- Focused runtime coverage added/expanded:
+		- `tests/profile_teleport_admission_service_runtime_entrypoint.spec.luau`
+		- `tests/profile_teleport_handoff_admission_ingress_runtime_entrypoint.spec.luau`
+		- `tests/profile_teleport_handoff_service_runtime_entrypoint.spec.luau`
+	- Default scripted suite wiring updated in `scripts/run-tests.ps1`.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted teleport admission/handoff ingress/runtime specs pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Enumerate the next non-rescue admission ingress surface and migrate one bounded caller batch through the shared query seam while preserving deterministic fallback compatibility.
+- Extend bounded ingress observability parity by adding explicit primary-vs-fallback path diagnostics for teleport and party admission caller seams, then assert those diagnostics in focused runtime specs.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.
