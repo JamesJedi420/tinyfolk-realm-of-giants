@@ -43,6 +43,7 @@ $testFiles = @(
     'tests\realm_admission_queue_service_runtime_entrypoint.spec.luau',
     'tests\party_matchmaking_realm_resolver_service_runtime_entrypoint.spec.luau',
     'tests\party_matchmaking_admission_service_runtime_entrypoint.spec.luau',
+    'tests\rescue_admission_service_runtime_entrypoint.spec.luau',
     'tests\realm_metadata_registry.spec.luau',
     'tests\realm_theme_family_schema.spec.luau',
     'tests\district_placement_assembly_selection_runtime_entrypoint.spec.luau',
