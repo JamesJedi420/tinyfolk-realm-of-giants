@@ -96,6 +96,306 @@
           60
         ]
       }
+    },
+    {
+      "name": "VillageMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.55,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.48,
+          0.35,
+          0.2
+        ],
+        "Size": [
+          40,
+          12,
+          24
+        ],
+        "Position": [
+          -126,
+          6,
+          14
+        ]
+      }
+    },
+    {
+      "name": "WorkYardMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.55,
+        "Material": "Slate",
+        "Color": [
+          0.38,
+          0.3,
+          0.2
+        ],
+        "Size": [
+          30,
+          14,
+          22
+        ],
+        "Position": [
+          -102,
+          7,
+          -54
+        ]
+      }
+    },
+    {
+      "name": "QuarryMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.55,
+        "Material": "Slate",
+        "Color": [
+          0.4,
+          0.4,
+          0.42
+        ],
+        "Size": [
+          36,
+          18,
+          24
+        ],
+        "Position": [
+          92,
+          9,
+          -56
+        ]
+      }
+    },
+    {
+      "name": "EconomyYardMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.55,
+        "Material": "Concrete",
+        "Color": [
+          0.42,
+          0.38,
+          0.3
+        ],
+        "Size": [
+          30,
+          12,
+          22
+        ],
+        "Position": [
+          -54,
+          6,
+          46
+        ]
+      }
+    },
+    {
+      "name": "ShrineFieldMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.55,
+        "Material": "Grass",
+        "Color": [
+          0.32,
+          0.5,
+          0.24
+        ],
+        "Size": [
+          30,
+          10,
+          24
+        ],
+        "Position": [
+          40,
+          5,
+          60
+        ]
+      }
+    },
+    {
+      "name": "ContainmentPressureMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.6,
+        "Material": "Neon",
+        "Color": [
+          0.55,
+          0.12,
+          0.12
+        ],
+        "Size": [
+          40,
+          10,
+          26
+        ],
+        "Position": [
+          70,
+          5,
+          -18
+        ]
+      }
+    },
+    {
+      "name": "MacroPlazaMarker",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.82,
+        "Material": "Neon",
+        "Color": [
+          0.92,
+          0.72,
+          0.3
+        ],
+        "Size": [
+          18,
+          2,
+          18
+        ],
+        "Position": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "name": "ControlStationMarker",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.84,
+        "Material": "Neon",
+        "Color": [
+          0.74,
+          0.24,
+          0.86
+        ],
+        "Size": [
+          12,
+          2,
+          12
+        ],
+        "Position": [
+          80,
+          1,
+          5
+        ]
+      }
+    },
+    {
+      "name": "EscapePadMarker",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.82,
+        "Material": "Neon",
+        "Color": [
+          0.35,
+          0.78,
+          0.42
+        ],
+        "Size": [
+          12,
+          2,
+          12
+        ],
+        "Position": [
+          -150,
+          1,
+          16
+        ]
+      }
+    },
+    {
+      "name": "TradeDockMass",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.7,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.53,
+          0.39,
+          0.22
+        ],
+        "Size": [
+          28,
+          14,
+          14
+        ],
+        "Position": [
+          103,
+          7,
+          80
+        ]
+      }
+    },
+    {
+      "name": "NorthBoundaryMarker",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.85,
+        "Material": "Grass",
+        "Color": [
+          0.25,
+          0.42,
+          0.18
+        ],
+        "Size": [
+          2048,
+          2,
+          24
+        ],
+        "Position": [
+          0,
+          1,
+          -756
+        ]
+      }
+    },
+    {
+      "name": "SouthCreekEdge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.72,
+        "Material": "Water",
+        "Color": [
+          0.1,
+          0.35,
+          0.7
+        ],
+        "Size": [
+          2048,
+          2,
+          24
+        ],
+        "Position": [
+          0,
+          0.5,
+          756
+        ]
+      }
     }
   ]
 }

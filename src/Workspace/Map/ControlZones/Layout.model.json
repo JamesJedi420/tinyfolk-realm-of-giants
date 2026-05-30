@@ -15,14 +15,14 @@
           0.2
         ],
         "Size": [
-          80,
+          45,
           1,
-          80
+          52
         ],
         "Position": [
-          96,
+          80,
           0.5,
-          18
+          5
         ]
       },
       "children": [
@@ -30,7 +30,7 @@
           "name": "Radius",
           "className": "NumberValue",
           "properties": {
-            "Value": 40
+            "Value": 26
           }
         },
         {
@@ -56,14 +56,14 @@
           0.35
         ],
         "Size": [
-          56,
+          38,
           1,
-          56
+          22
         ],
         "Position": [
-          34,
+          55,
           0.5,
-          -28
+          -78
         ]
       },
       "children": [
@@ -71,7 +71,7 @@
           "name": "Radius",
           "className": "NumberValue",
           "properties": {
-            "Value": 28
+            "Value": 19
           }
         },
         {

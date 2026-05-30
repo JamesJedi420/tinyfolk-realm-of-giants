@@ -2,254 +2,1830 @@
   "className": "Model",
   "children": [
     {
-      "name": "RouteSpineNorth",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.55,
-          0.55,
-          0.55
-        ],
-        "Size": [
-          26,
-          1,
-          110
-        ],
-        "Position": [
-          0,
-          0,
-          -88
-        ]
-      }
+      "name": "R-001_OuterServiceRing",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-001",
+        "RoadName": "Outer Service Ring",
+        "RoadKind": "primary_loop",
+        "WidthStuds": 56.0,
+        "Closed": true,
+        "Surface": "packed_earth_or_stone"
+      },
+      "children": [
+        {
+          "name": "R-001_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              544.94
+            ],
+            "Orientation": [
+              0,
+              93.366,
+              0
+            ],
+            "Position": [
+              -528.0,
+              0.7,
+              -592.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              512.0
+            ],
+            "Orientation": [
+              0,
+              90.0,
+              0
+            ],
+            "Position": [
+              0.0,
+              0.7,
+              -608.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              544.94
+            ],
+            "Orientation": [
+              0,
+              86.634,
+              0
+            ],
+            "Position": [
+              528.0,
+              0.7,
+              -592.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              452.548
+            ],
+            "Orientation": [
+              0,
+              8.13,
+              0
+            ],
+            "Position": [
+              832.0,
+              0.7,
+              -352.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S05",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              448.0
+            ],
+            "Orientation": [
+              0,
+              0.0,
+              0
+            ],
+            "Position": [
+              864.0,
+              0.7,
+              96.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S06",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              340.165
+            ],
+            "Orientation": [
+              0,
+              -41.186,
+              0
+            ],
+            "Position": [
+              752.0,
+              0.7,
+              448.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S07",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              641.797
+            ],
+            "Orientation": [
+              0,
+              -85.711,
+              0
+            ],
+            "Position": [
+              320.0,
+              0.7,
+              600.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S08",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              641.797
+            ],
+            "Orientation": [
+              0,
+              -94.289,
+              0
+            ],
+            "Position": [
+              -320.0,
+              0.7,
+              600.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S09",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              340.165
+            ],
+            "Orientation": [
+              0,
+              -138.814,
+              0
+            ],
+            "Position": [
+              -752.0,
+              0.7,
+              448.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S10",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              448.0
+            ],
+            "Orientation": [
+              0,
+              180.0,
+              0
+            ],
+            "Position": [
+              -864.0,
+              0.7,
+              96.0
+            ]
+          }
+        },
+        {
+          "name": "R-001_S11",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.2,
+              0.2,
+              0.2
+            ],
+            "Size": [
+              56.0,
+              1.2,
+              452.548
+            ],
+            "Orientation": [
+              0,
+              171.87,
+              0
+            ],
+            "Position": [
+              -832.0,
+              0.7,
+              -352.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteSpineSouth",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.55,
-          0.55,
-          0.55
-        ],
-        "Size": [
-          26,
-          1,
-          118
-        ],
-        "Position": [
-          0,
-          0,
-          70
-        ]
-      }
+      "name": "R-002_NorthSouthSpine",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-002",
+        "RoadName": "North-South Spine",
+        "RoadKind": "primary_arterial",
+        "WidthStuds": 64.0,
+        "Closed": false,
+        "Surface": "main_road"
+      },
+      "children": [
+        {
+          "name": "R-002_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              288.998
+            ],
+            "Orientation": [
+              0,
+              -4.764,
+              0
+            ],
+            "Position": [
+              -12.0,
+              0.7,
+              -528.0
+            ]
+          }
+        },
+        {
+          "name": "R-002_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              385.331
+            ],
+            "Orientation": [
+              0,
+              4.764,
+              0
+            ],
+            "Position": [
+              -8.0,
+              0.7,
+              -192.0
+            ]
+          }
+        },
+        {
+          "name": "R-002_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              384.749
+            ],
+            "Orientation": [
+              0,
+              -3.576,
+              0
+            ],
+            "Position": [
+              -4.0,
+              0.7,
+              192.0
+            ]
+          }
+        },
+        {
+          "name": "R-002_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              288.444
+            ],
+            "Orientation": [
+              0,
+              3.18,
+              0
+            ],
+            "Position": [
+              -8.0,
+              0.7,
+              528.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteEastArc",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.55,
-          0.55,
-          0.55
-        ],
-        "Size": [
-          126,
-          1,
-          24
-        ],
-        "Position": [
-          92,
-          0,
-          18
-        ]
-      }
+      "name": "R-003_EastWestSpine",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-003",
+        "RoadName": "East-West Spine",
+        "RoadKind": "primary_arterial",
+        "WidthStuds": 64.0,
+        "Closed": false,
+        "Surface": "main_road"
+      },
+      "children": [
+        {
+          "name": "R-003_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              417.229
+            ],
+            "Orientation": [
+              0,
+              94.399,
+              0
+            ],
+            "Position": [
+              -720.0,
+              0.7,
+              -16.0
+            ]
+          }
+        },
+        {
+          "name": "R-003_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              512.999
+            ],
+            "Orientation": [
+              0,
+              86.424,
+              0
+            ],
+            "Position": [
+              -256.0,
+              0.7,
+              -16.0
+            ]
+          }
+        },
+        {
+          "name": "R-003_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              512.999
+            ],
+            "Orientation": [
+              0,
+              86.424,
+              0
+            ],
+            "Position": [
+              256.0,
+              0.7,
+              16.0
+            ]
+          }
+        },
+        {
+          "name": "R-003_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.19,
+              0.19,
+              0.19
+            ],
+            "Size": [
+              64.0,
+              1.2,
+              417.229
+            ],
+            "Orientation": [
+              0,
+              94.399,
+              0
+            ],
+            "Position": [
+              720.0,
+              0.7,
+              16.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteWestArc",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.55,
-          0.55,
-          0.55
-        ],
-        "Size": [
-          144,
-          1,
-          24
-        ],
-        "Position": [
-          -102,
-          0,
-          24
-        ]
-      }
+      "name": "R-004_GiantDiagonalCauseway",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-004",
+        "RoadName": "Giant Diagonal Causeway",
+        "RoadKind": "giant_route",
+        "WidthStuds": 80.0,
+        "Closed": false,
+        "Surface": "broad_causeway"
+      },
+      "children": [
+        {
+          "name": "R-004_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.28,
+              0.28,
+              0.3
+            ],
+            "Size": [
+              80.0,
+              1.2,
+              421.578
+            ],
+            "Orientation": [
+              0,
+              56.611,
+              0
+            ],
+            "Position": [
+              -560.0,
+              0.7,
+              -364.0
+            ]
+          }
+        },
+        {
+          "name": "R-004_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.28,
+              0.28,
+              0.3
+            ],
+            "Size": [
+              80.0,
+              1.2,
+              406.841
+            ],
+            "Orientation": [
+              0,
+              59.906,
+              0
+            ],
+            "Position": [
+              -208.0,
+              0.7,
+              -146.0
+            ]
+          }
+        },
+        {
+          "name": "R-004_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.28,
+              0.28,
+              0.3
+            ],
+            "Size": [
+              80.0,
+              1.2,
+              437.173
+            ],
+            "Orientation": [
+              0,
+              57.328,
+              0
+            ],
+            "Position": [
+              152.0,
+              0.7,
+              74.0
+            ]
+          }
+        },
+        {
+          "name": "R-004_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.28,
+              0.28,
+              0.3
+            ],
+            "Size": [
+              80.0,
+              1.2,
+              492.893
+            ],
+            "Orientation": [
+              0,
+              54.246,
+              0
+            ],
+            "Position": [
+              536.0,
+              0.7,
+              336.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteConnectorWorkyardToPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "Size": [
-          76,
-          1,
-          18
-        ],
-        "Orientation": [
-          0,
-          -24,
-          0
-        ],
-        "Position": [
-          -46,
-          0,
-          -24
-        ]
-      }
+      "name": "R-005_NorthMarketConnector",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-005",
+        "RoadName": "North Market Connector",
+        "RoadKind": "secondary_connector",
+        "WidthStuds": 36.0,
+        "Closed": false,
+        "Surface": "secondary_road"
+      },
+      "children": [
+        {
+          "name": "R-005_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              200.16
+            ],
+            "Orientation": [
+              0,
+              2.291,
+              0
+            ],
+            "Position": [
+              -508.0,
+              0.7,
+              -476.0
+            ]
+          }
+        },
+        {
+          "name": "R-005_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              175.454
+            ],
+            "Orientation": [
+              0,
+              43.152,
+              0
+            ],
+            "Position": [
+              -444.0,
+              0.7,
+              -312.0
+            ]
+          }
+        },
+        {
+          "name": "R-005_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              193.659
+            ],
+            "Orientation": [
+              0,
+              38.29,
+              0
+            ],
+            "Position": [
+              -324.0,
+              0.7,
+              -172.0
+            ]
+          }
+        },
+        {
+          "name": "R-005_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              280.913
+            ],
+            "Orientation": [
+              0,
+              70.017,
+              0
+            ],
+            "Position": [
+              -132.0,
+              0.7,
+              -48.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteConnectorQuarryToPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "Size": [
-          76,
-          1,
-          18
-        ],
-        "Orientation": [
-          0,
-          28,
-          0
-        ],
-        "Position": [
-          50,
-          0,
-          -18
-        ]
-      }
+      "name": "R-006_EastRidgeConnector",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-006",
+        "RoadName": "East Ridge Connector",
+        "RoadKind": "secondary_connector",
+        "WidthStuds": 36.0,
+        "Closed": false,
+        "Surface": "secondary_road"
+      },
+      "children": [
+        {
+          "name": "R-006_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              217.624
+            ],
+            "Orientation": [
+              0,
+              -53.973,
+              0
+            ],
+            "Position": [
+              712.0,
+              0.7,
+              -320.0
+            ]
+          }
+        },
+        {
+          "name": "R-006_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              309.011
+            ],
+            "Orientation": [
+              0,
+              -21.251,
+              0
+            ],
+            "Position": [
+              568.0,
+              0.7,
+              -112.0
+            ]
+          }
+        },
+        {
+          "name": "R-006_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              245.177
+            ],
+            "Orientation": [
+              0,
+              -28.237,
+              0
+            ],
+            "Position": [
+              454.0,
+              0.7,
+              140.0
+            ]
+          }
+        },
+        {
+          "name": "R-006_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              36.0,
+              1.2,
+              408.803
+            ],
+            "Orientation": [
+              0,
+              36.646,
+              0
+            ],
+            "Position": [
+              518.0,
+              0.7,
+              412.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteConnectorEconomyToPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "Size": [
-          84,
-          1,
-          18
-        ],
-        "Orientation": [
-          0,
-          18,
-          0
-        ],
-        "Position": [
-          -28,
-          0,
-          50
-        ]
-      }
+      "name": "R-007_SouthVillageConnector",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-007",
+        "RoadName": "South Village Connector",
+        "RoadKind": "secondary_connector",
+        "WidthStuds": 32.0,
+        "Closed": false,
+        "Surface": "secondary_road"
+      },
+      "children": [
+        {
+          "name": "R-007_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              32.0,
+              1.2,
+              284.872
+            ],
+            "Orientation": [
+              0,
+              128.157,
+              0
+            ],
+            "Position": [
+              -528.0,
+              0.7,
+              488.0
+            ]
+          }
+        },
+        {
+          "name": "R-007_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              32.0,
+              1.2,
+              259.106
+            ],
+            "Orientation": [
+              0,
+              98.881,
+              0
+            ],
+            "Position": [
+              -288.0,
+              0.7,
+              380.0
+            ]
+          }
+        },
+        {
+          "name": "R-007_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              32.0,
+              1.2,
+              145.986
+            ],
+            "Orientation": [
+              0,
+              80.538,
+              0
+            ],
+            "Position": [
+              -88.0,
+              0.7,
+              372.0
+            ]
+          }
+        },
+        {
+          "name": "R-007_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              32.0,
+              1.2,
+              225.282
+            ],
+            "Orientation": [
+              0,
+              73.496,
+              0
+            ],
+            "Position": [
+              92.0,
+              0.7,
+              416.0
+            ]
+          }
+        },
+        {
+          "name": "R-007_S05",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "Size": [
+              32.0,
+              1.2,
+              458.24
+            ],
+            "Orientation": [
+              0,
+              73.78,
+              0
+            ],
+            "Position": [
+              420.0,
+              0.7,
+              512.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteConnectorShrineToPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "Size": [
-          92,
-          1,
-          18
-        ],
-        "Orientation": [
-          0,
-          -30,
-          0
-        ],
-        "Position": [
-          42,
-          0,
-          52
-        ]
-      }
+      "name": "R-008_WestServiceSpur",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-008",
+        "RoadName": "West Service Spur",
+        "RoadKind": "minor_spur",
+        "WidthStuds": 24.0,
+        "Closed": false,
+        "Surface": "small_road"
+      },
+      "children": [
+        {
+          "name": "R-008_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.36,
+              0.36,
+              0.36
+            ],
+            "Size": [
+              24.0,
+              1.2,
+              203.961
+            ],
+            "Orientation": [
+              0,
+              101.31,
+              0
+            ],
+            "Position": [
+              -764.0,
+              0.7,
+              -148.0
+            ]
+          }
+        },
+        {
+          "name": "R-008_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.36,
+              0.36,
+              0.36
+            ],
+            "Size": [
+              24.0,
+              1.2,
+              203.961
+            ],
+            "Orientation": [
+              0,
+              48.18,
+              0
+            ],
+            "Position": [
+              -588.0,
+              0.7,
+              -100.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteRoomEscapeWest",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.52,
-          0.52,
-          0.52
-        ],
-        "Size": [
-          36,
-          1,
-          36
-        ],
-        "Position": [
-          -170,
-          0,
-          22
-        ]
-      }
+      "name": "R-009_NortheastSpur",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-009",
+        "RoadName": "Northeast Spur",
+        "RoadKind": "minor_spur",
+        "WidthStuds": 24.0,
+        "Closed": false,
+        "Surface": "small_road"
+      },
+      "children": [
+        {
+          "name": "R-009_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.36,
+              0.36,
+              0.36
+            ],
+            "Size": [
+              24.0,
+              1.2,
+              215.407
+            ],
+            "Orientation": [
+              0,
+              21.801,
+              0
+            ],
+            "Position": [
+              296.0,
+              0.7,
+              -508.0
+            ]
+          }
+        },
+        {
+          "name": "R-009_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.36,
+              0.36,
+              0.36
+            ],
+            "Size": [
+              24.0,
+              1.2,
+              325.65
+            ],
+            "Orientation": [
+              0,
+              62.176,
+              0
+            ],
+            "Position": [
+              480.0,
+              0.7,
+              -332.0
+            ]
+          }
+        }
+      ]
     },
     {
-      "name": "RouteRoomTradeDock",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "Material": "Concrete",
-        "Color": [
-          0.52,
-          0.52,
-          0.52
-        ],
-        "Size": [
-          42,
-          1,
-          34
-        ],
-        "Position": [
-          122,
-          0,
-          130
-        ]
-      }
+      "name": "R-010_CentralTinyfolkLane",
+      "className": "Model",
+      "attributes": {
+        "RoadId": "R-010",
+        "RoadName": "Central Tinyfolk Lane",
+        "RoadKind": "tinyfolk_lane",
+        "WidthStuds": 18.0,
+        "Closed": false,
+        "Surface": "lane"
+      },
+      "children": [
+        {
+          "name": "R-010_S01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.44,
+              0.44,
+              0.44
+            ],
+            "Size": [
+              18.0,
+              1.2,
+              138.636
+            ],
+            "Orientation": [
+              0,
+              116.565,
+              0
+            ],
+            "Position": [
+              -202.0,
+              0.7,
+              -127.0
+            ]
+          }
+        },
+        {
+          "name": "R-010_S02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.44,
+              0.44,
+              0.44
+            ],
+            "Size": [
+              18.0,
+              1.2,
+              119.817
+            ],
+            "Orientation": [
+              0,
+              75.5,
+              0
+            ],
+            "Position": [
+              -82.0,
+              0.7,
+              -143.0
+            ]
+          }
+        },
+        {
+          "name": "R-010_S03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.44,
+              0.44,
+              0.44
+            ],
+            "Size": [
+              18.0,
+              1.2,
+              144.222
+            ],
+            "Orientation": [
+              0,
+              70.56,
+              0
+            ],
+            "Position": [
+              44.0,
+              0.7,
+              -104.0
+            ]
+          }
+        },
+        {
+          "name": "R-010_S04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Asphalt",
+            "Transparency": 0.04,
+            "Color": [
+              0.44,
+              0.44,
+              0.44
+            ],
+            "Size": [
+              18.0,
+              1.2,
+              352.363
+            ],
+            "Orientation": [
+              0,
+              39.472,
+              0
+            ],
+            "Position": [
+              224.0,
+              0.7,
+              56.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoadJunctions",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Junction_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -16.0,
+              0.9,
+              384.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              0.0,
+              0.9,
+              0.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              256.0,
+              0.9,
+              -608.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              336.0,
+              0.9,
+              192.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_05",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              512.0,
+              0.9,
+              32.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_06",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -864.0,
+              0.9,
+              -128.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_07",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              624.0,
+              0.9,
+              -256.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_08",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              640.0,
+              0.9,
+              576.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_09",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -640.0,
+              0.9,
+              576.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_10",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -512.0,
+              0.9,
+              -32.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_11",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -384.0,
+              0.9,
+              -248.0
+            ]
+          }
+        },
+        {
+          "name": "Junction_12",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Material": "Concrete",
+            "Color": [
+              0.14,
+              0.14,
+              0.14
+            ],
+            "Shape": "Cylinder",
+            "Size": [
+              1.4,
+              34,
+              34
+            ],
+            "Orientation": [
+              0,
+              0,
+              90
+            ],
+            "Position": [
+              -264.0,
+              0.9,
+              -96.0
+            ]
+          }
+        }
+      ]
     }
   ]
 }

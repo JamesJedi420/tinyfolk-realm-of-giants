@@ -30,9 +30,9 @@
                   2
                 ],
                 "Position": [
-                  -118,
+                  -112,
                   1,
-                  18
+                  8
                 ]
               },
               "attributes": {
@@ -58,9 +58,9 @@
                   2
                 ],
                 "Position": [
-                  -92,
+                  -90,
                   1,
-                  20
+                  10
                 ]
               },
               "attributes": {
@@ -114,9 +114,9 @@
                   2
                 ],
                 "Position": [
-                  86,
+                  78,
                   1,
-                  -28
+                  -43
                 ]
               },
               "attributes": {
@@ -142,9 +142,9 @@
                   2
                 ],
                 "Position": [
-                  66,
+                  45,
                   1,
-                  62
+                  66
                 ]
               },
               "attributes": {
@@ -170,9 +170,9 @@
                   2
                 ],
                 "Position": [
-                  -170,
+                  -150,
                   1,
-                  22
+                  16
                 ]
               },
               "attributes": {
@@ -198,9 +198,9 @@
                   2
                 ],
                 "Position": [
-                  96,
+                  88,
                   1,
-                  18
+                  8
                 ]
               },
               "attributes": {
@@ -226,9 +226,9 @@
                   2
                 ],
                 "Position": [
-                  122,
+                  103,
                   1,
-                  130
+                  80
                 ]
               },
               "attributes": {
@@ -254,9 +254,9 @@
                   2
                 ],
                 "Position": [
-                  0,
+                  8,
                   1,
-                  -140
+                  -108
                 ]
               },
               "attributes": {
@@ -279,7 +279,7 @@
               "attributes": {
                 "From": "TinyfolkSpawn",
                 "To": "RouteWestVillage",
-                "Distance": 26
+                "Distance": 24
               }
             },
             {
@@ -288,7 +288,7 @@
               "attributes": {
                 "From": "RouteWestVillage",
                 "To": "RouteMacroPlaza",
-                "Distance": 94
+                "Distance": 90
               }
             },
             {
@@ -297,7 +297,7 @@
               "attributes": {
                 "From": "RouteMacroPlaza",
                 "To": "RouteQuarry",
-                "Distance": 90
+                "Distance": 89
               }
             },
             {
@@ -306,7 +306,7 @@
               "attributes": {
                 "From": "RouteMacroPlaza",
                 "To": "RouteShrine",
-                "Distance": 90
+                "Distance": 80
               }
             },
             {
@@ -315,7 +315,7 @@
               "attributes": {
                 "From": "RouteWestVillage",
                 "To": "EscapeRoute_A",
-                "Distance": 78
+                "Distance": 60
               }
             },
             {
@@ -324,7 +324,7 @@
               "attributes": {
                 "From": "RouteQuarry",
                 "To": "EscapeRoute_ControlA",
-                "Distance": 48
+                "Distance": 52
               }
             },
             {
@@ -333,7 +333,7 @@
               "attributes": {
                 "From": "RouteShrine",
                 "To": "EscapeRoute_Dock",
-                "Distance": 88
+                "Distance": 60
               }
             },
             {
@@ -342,7 +342,7 @@
               "attributes": {
                 "From": "RouteMacroPlaza",
                 "To": "EscapeRoute_NorthTunnel",
-                "Distance": 140
+                "Distance": 108
               }
             },
             {
@@ -351,7 +351,7 @@
               "attributes": {
                 "From": "RouteQuarry",
                 "To": "RouteMacroPlaza",
-                "Distance": 90
+                "Distance": 89
               }
             },
             {
@@ -360,7 +360,7 @@
               "attributes": {
                 "From": "RouteShrine",
                 "To": "RouteMacroPlaza",
-                "Distance": 90
+                "Distance": 80
               }
             }
           ]
