@@ -93,4 +93,77 @@ do
 	assertTrue(active.EscapeRoute_Player_D == nil, "query excludes expired route")
 end
 
+do
+	local upserted = PlayerCreatedRouteState.UpsertRouteRecord(nil, {
+		routeId = "EscapeRoute_Player_A",
+		requesterUserId = 2001,
+		createdAt = 20,
+		expiresAt = 50,
+	})
+	assertTrue(upserted.accepted, "upsert accepts valid create request")
+	assertEqual(upserted.reason, "accepted", "upsert accepted reason")
+	assertEqual(upserted.record.createdByUserId, 2001, "upsert sets owner from requester")
+
+	local ownerMismatch = PlayerCreatedRouteState.UpsertRouteRecord(upserted.record, {
+		routeId = "EscapeRoute_Player_A",
+		requesterUserId = 2002,
+		createdAt = 21,
+	})
+	assertFalse(ownerMismatch.accepted, "upsert rejects non-owner requester")
+	assertEqual(ownerMismatch.reason, "player_route_owner_mismatch", "upsert owner mismatch reason")
+
+	local invalidCreatedAt = PlayerCreatedRouteState.UpsertRouteRecord(nil, {
+		routeId = "EscapeRoute_Player_A",
+		requesterUserId = 2001,
+		createdAt = -10,
+	})
+	assertFalse(invalidCreatedAt.accepted, "upsert rejects invalid createdAt")
+	assertEqual(invalidCreatedAt.reason, "created_at_invalid", "upsert invalid createdAt reason")
+
+	local invalidExpiresAt = PlayerCreatedRouteState.UpsertRouteRecord(nil, {
+		routeId = "EscapeRoute_Player_A",
+		requesterUserId = 2001,
+		createdAt = 10,
+		expiresAt = -1,
+	})
+	assertFalse(invalidExpiresAt.accepted, "upsert rejects invalid expiresAt")
+	assertEqual(invalidExpiresAt.reason, "expires_at_invalid", "upsert invalid expiresAt reason")
+
+	local expiresBeforeCreated = PlayerCreatedRouteState.UpsertRouteRecord(nil, {
+		routeId = "EscapeRoute_Player_A",
+		requesterUserId = 2001,
+		createdAt = 10,
+		expiresAt = 9,
+	})
+	assertFalse(expiresBeforeCreated.accepted, "upsert rejects expiresAt before createdAt")
+	assertEqual(expiresBeforeCreated.reason, "expires_before_created", "upsert expires-before-created reason")
+end
+
+do
+	local existing = {
+		routeId = "EscapeRoute_Player_A",
+		createdByUserId = 3001,
+		createdAt = 15,
+		enabled = true,
+		expiresAt = 45,
+	}
+
+	local disabled = PlayerCreatedRouteState.DisableRouteRecord(existing, 3001)
+	assertTrue(disabled.accepted, "disable accepts owner requester")
+	assertEqual(disabled.reason, "accepted", "disable accepted reason")
+	assertFalse(disabled.record.enabled, "disable projects enabled=false")
+
+	local mismatch = PlayerCreatedRouteState.DisableRouteRecord(existing, 3002)
+	assertFalse(mismatch.accepted, "disable rejects non-owner requester")
+	assertEqual(mismatch.reason, "player_route_owner_mismatch", "disable owner mismatch reason")
+
+	local missing = PlayerCreatedRouteState.DisableRouteRecord(nil, 3001)
+	assertFalse(missing.accepted, "disable rejects missing owner record")
+	assertEqual(missing.reason, "player_route_owner_mismatch", "disable missing record mismatch reason")
+
+	local invalidRequester = PlayerCreatedRouteState.DisableRouteRecord(existing, 0)
+	assertFalse(invalidRequester.accepted, "disable rejects invalid requester id")
+	assertEqual(invalidRequester.reason, "requester_user_id_invalid", "disable invalid requester reason")
+end
+
 print("player_created_route_state: all checks passed")

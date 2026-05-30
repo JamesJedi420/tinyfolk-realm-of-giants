@@ -450,6 +450,17 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return routePart:GetAttribute(EscapeConfig.FinalExitManagedAttribute) ~= false
 	end
 
+	local function isRescueEntryRoute(routePart: BasePart): boolean
+		local rescueEntryAttribute = RescueContractConfig.RescueEntryRouteAttribute
+		if type(rescueEntryAttribute) == "string" and rescueEntryAttribute ~= "" then
+			if routePart:GetAttribute(rescueEntryAttribute) == true then
+				return true
+			end
+		end
+
+		return routePart:GetAttribute(EscapeConfig.RouteTypeAttribute) == RescueContractConfig.RescueEntryRouteKind
+	end
+
 	local function finalExitRejectReason(phase: string?): string
 		if phase == FinalExitState.Phases.Powered then
 			return "final_exit_powered"
@@ -1205,6 +1216,38 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return record
 	end
 
+	local function resolveActivePlayerCreatedRoute(routeId: string, routePart: BasePart): (any?, string?)
+		if routePart:GetAttribute(playerCreatedRouteAttribute) ~= true then
+			return nil, nil
+		end
+
+		local record = buildPlayerCreatedRouteRecord(routeId, routePart)
+		if record == nil then
+			return nil, "player_created_route_invalid"
+		end
+		if record.enabled ~= true then
+			return nil, "route_disabled"
+		end
+
+		local currentTime = now()
+		if record.createdAt > currentTime then
+			return nil, "player_created_route_inactive"
+		end
+		if record.expiresAt ~= nil and currentTime >= record.expiresAt then
+			return nil, "player_created_route_inactive"
+		end
+
+		return record, nil
+	end
+
+	local function applyPlayerCreatedRouteRecord(routePart: BasePart, record: any)
+		routePart:SetAttribute(playerCreatedRouteAttribute, true)
+		routePart:SetAttribute(routeCreatedByUserIdAttribute, record.createdByUserId)
+		routePart:SetAttribute(routeCreationTimestampAttribute, record.createdAt)
+		routePart:SetAttribute(routeEnabledAttribute, record.enabled == true)
+		routePart:SetAttribute(playerCreatedRouteExpiresAtAttribute, record.expiresAt)
+	end
+
 	local function buildRouteDebugPayload(routeId: string, routePart: BasePart, userId: number?): any
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local finalExitSnapshot = refreshFinalExitState(routeId, routePart)
@@ -1552,6 +1595,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = tostring(routeSafeZoneDecision.reason or "route_in_safe_zone") }
 		end
 
+		local _, playerCreatedRouteReason = resolveActivePlayerCreatedRoute(routeId, routePart)
+		if playerCreatedRouteReason ~= nil then
+			return { accepted = false, reason = playerCreatedRouteReason }
+		end
+
 		local fallbackEscapeSnapshot = nil
 		if isFallbackEscapeCandidate(routePart) then
 			fallbackEscapeSnapshot = refreshFallbackEscapeState(routeId, routePart)
@@ -1866,6 +1914,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				return nil
 			end
 			local record = buildPlayerCreatedRouteRecord(routeId, routePart)
+			if record == nil and routePart:GetAttribute(playerCreatedRouteAttribute) == true then
+				debugWarn(string.format("Invalid player-created route metadata: %s", routeId))
+			end
 			if record ~= nil then
 				recordsByRouteId[routeId] = record
 			end
@@ -1876,6 +1927,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			local routePart = resolveRoutePart(registeredRouteId)
 			if routePart ~= nil then
 				local record = buildPlayerCreatedRouteRecord(registeredRouteId, routePart)
+				if record == nil and routePart:GetAttribute(playerCreatedRouteAttribute) == true then
+					debugWarn(string.format("Invalid player-created route metadata: %s", registeredRouteId))
+				end
 				if record ~= nil then
 					recordsByRouteId[registeredRouteId] = record
 				end
@@ -1883,6 +1937,96 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end
 
 		return PlayerCreatedRouteState.QueryActivePlayerRoutes(recordsByRouteId, now())
+	end
+
+	function service.requestUpsertPlayerCreatedRoute(player: any, payload: any): any
+		if type(payload) ~= "table" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+		if type(payload.routeId) ~= "string" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+		if player == nil or type(player.UserId) ~= "number" then
+			return { accepted = false, reason = "requester_user_id_invalid" }
+		end
+
+		local routeId = payload.routeId
+		local routePart = resolveRoutePart(routeId)
+		if routePart == nil then
+			return { accepted = false, reason = "route_not_found" }
+		end
+		if isFinalExitManaged(routePart) then
+			return { accepted = false, reason = "player_created_route_final_exit_managed" }
+		end
+		if isFallbackEscapeCandidate(routePart) then
+			return { accepted = false, reason = "player_created_route_fallback_candidate" }
+		end
+		if isRescueEntryRoute(routePart) then
+			return { accepted = false, reason = "player_created_route_rescue_entry_route" }
+		end
+		if routePart:GetAttribute(playerCreatedRouteAttribute) == true then
+			local existingValidated, existingReason = resolveActivePlayerCreatedRoute(routeId, routePart)
+			if existingValidated == nil and existingReason == "player_created_route_invalid" then
+				return { accepted = false, reason = "player_created_route_invalid" }
+			end
+		end
+
+		local existingRecord = buildPlayerCreatedRouteRecord(routeId, routePart)
+		local upserted = PlayerCreatedRouteState.UpsertRouteRecord(existingRecord, {
+			routeId = routeId,
+			requesterUserId = player.UserId,
+			createdAt = payload.createdAt,
+			expiresAt = payload.expiresAt,
+		})
+		if upserted.accepted ~= true then
+			return {
+				accepted = false,
+				reason = tostring(upserted.reason),
+			}
+		end
+
+		applyPlayerCreatedRouteRecord(routePart, upserted.record)
+		return {
+			accepted = true,
+			reason = "accepted",
+			route = upserted.record,
+		}
+	end
+
+	function service.requestDisablePlayerCreatedRoute(player: any, routeId: any): any
+		if type(routeId) ~= "string" then
+			return { accepted = false, reason = "route_id_invalid" }
+		end
+		if player == nil or type(player.UserId) ~= "number" then
+			return { accepted = false, reason = "requester_user_id_invalid" }
+		end
+
+		local routePart = resolveRoutePart(routeId)
+		if routePart == nil then
+			return { accepted = false, reason = "route_not_found" }
+		end
+		if routePart:GetAttribute(playerCreatedRouteAttribute) == true then
+			local existingValidated, existingReason = resolveActivePlayerCreatedRoute(routeId, routePart)
+			if existingValidated == nil and existingReason == "player_created_route_invalid" then
+				return { accepted = false, reason = "player_created_route_invalid" }
+			end
+		end
+
+		local existingRecord = buildPlayerCreatedRouteRecord(routeId, routePart)
+		local disabled = PlayerCreatedRouteState.DisableRouteRecord(existingRecord, player.UserId)
+		if disabled.accepted ~= true then
+			return {
+				accepted = false,
+				reason = tostring(disabled.reason),
+			}
+		end
+
+		applyPlayerCreatedRouteRecord(routePart, disabled.record)
+		return {
+			accepted = true,
+			reason = "accepted",
+			route = disabled.record,
+		}
 	end
 
 	function service.resolveRescueEntryRoute(_targetUserId: any, targetRealmOwnerUserId: any): any
@@ -2251,6 +2395,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		GetPlayerCreatedRoutes = function(routeId: string?): any
 			return service.getPlayerCreatedRoutes(routeId)
+		end,
+		RequestUpsertPlayerCreatedRoute = function(player: any, payload: any): any
+			return service.requestUpsertPlayerCreatedRoute(player, payload)
+		end,
+		RequestDisablePlayerCreatedRoute = function(player: any, routeId: string): any
+			return service.requestDisablePlayerCreatedRoute(player, routeId)
 		end,
 		ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
 			return service.resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)

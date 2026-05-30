@@ -569,6 +569,210 @@ end
 
 do
 	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+
+	local owner = MockPlayer.new(915, "PlayerRouteOwner", { role = "Tinyfolk" })
+	local other = MockPlayer.new(916, "PlayerRouteOther", { role = "Tinyfolk" })
+
+	local invalidRouteId = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = 123,
+		createdAt = 95,
+	})
+	assertEqual(invalidRouteId.accepted, false, "player-created route upsert rejects invalid route id")
+	assertEqual(invalidRouteId.reason, "route_id_invalid", "player-created route upsert invalid route id reason")
+
+	local invalidRequester = EscapeService.requestUpsertPlayerCreatedRoute({} :: any, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(invalidRequester.accepted, false, "player-created route upsert rejects invalid requester")
+	assertEqual(
+		invalidRequester.reason,
+		"requester_user_id_invalid",
+		"player-created route upsert invalid requester reason"
+	)
+
+	globalEnv._routePartPresent = false
+	routePart.Parent = nil
+	local missingRoute = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(missingRoute.accepted, false, "player-created route upsert rejects missing route")
+	assertEqual(missingRoute.reason, "route_not_found", "player-created route upsert missing route reason")
+	globalEnv._routePartPresent = true
+	routePart.Parent = escapeRoutesFolder
+
+	local created = globalEnv._EscapeService_QueryAPI.RequestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+		expiresAt = 130,
+	})
+	assertEqual(created.accepted, true, "player-created route upsert accepts valid payload")
+	assertEqual(routeAttributes.PlayerCreatedRoute, true, "player-created route upsert sets ownership marker")
+	assertEqual(routeAttributes.RouteCreatedByUserId, 915, "player-created route upsert sets owner")
+	assertEqual(routeAttributes.RouteCreationTimestamp, 95, "player-created route upsert sets creation timestamp")
+	assertEqual(routeAttributes.RouteEnabled, true, "player-created route upsert sets route enabled")
+	assertEqual(routeAttributes.PlayerCreatedRouteExpiresAt, 130, "player-created route upsert sets expiration")
+
+	routeAttributes.FinalExitManaged = true
+	routeAttributes.PlayerCreatedRoute = nil
+	routeAttributes.RouteCreatedByUserId = nil
+	routeAttributes.RouteCreationTimestamp = nil
+	routeAttributes.PlayerCreatedRouteExpiresAt = nil
+	local finalExitManagedUpsert = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(finalExitManagedUpsert.accepted, false, "player-created route upsert rejects final-exit managed route")
+	assertEqual(
+		finalExitManagedUpsert.reason,
+		"player_created_route_final_exit_managed",
+		"player-created route upsert final-exit managed reason"
+	)
+	routeAttributes.FinalExitManaged = false
+
+	routeAttributes.RescueEntryRoute = true
+	local rescueEntryUpsert = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(rescueEntryUpsert.accepted, false, "player-created route upsert rejects rescue-entry route")
+	assertEqual(
+		rescueEntryUpsert.reason,
+		"player_created_route_rescue_entry_route",
+		"player-created route upsert rescue-entry reason"
+	)
+	routeAttributes.RescueEntryRoute = false
+
+	routeAttributes.FallbackEscapeCandidate = true
+	local fallbackCandidateUpsert = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(fallbackCandidateUpsert.accepted, false, "player-created route upsert rejects fallback candidate")
+	assertEqual(
+		fallbackCandidateUpsert.reason,
+		"player_created_route_fallback_candidate",
+		"player-created route upsert fallback candidate reason"
+	)
+	routeAttributes.FallbackEscapeCandidate = nil
+
+	routeAttributes.PlayerCreatedRoute = true
+	routeAttributes.RouteCreatedByUserId = nil
+	routeAttributes.RouteCreationTimestamp = 95
+	routeAttributes.RouteEnabled = true
+	routeAttributes.PlayerCreatedRouteExpiresAt = 130
+	local invalidMetadataUpsert = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+	})
+	assertEqual(invalidMetadataUpsert.accepted, false, "player-created route upsert rejects invalid metadata")
+	assertEqual(
+		invalidMetadataUpsert.reason,
+		"player_created_route_invalid",
+		"player-created route upsert invalid metadata reason"
+	)
+	local invalidMetadataDisable = EscapeService.requestDisablePlayerCreatedRoute(owner, "EscapeRoute_A")
+	assertEqual(invalidMetadataDisable.accepted, false, "player-created route disable rejects invalid metadata")
+	assertEqual(
+		invalidMetadataDisable.reason,
+		"player_created_route_invalid",
+		"player-created route disable invalid metadata reason"
+	)
+
+	routeAttributes.PlayerCreatedRoute = true
+	routeAttributes.RouteCreatedByUserId = 915
+	routeAttributes.RouteCreationTimestamp = 95
+	routeAttributes.RouteEnabled = true
+	routeAttributes.PlayerCreatedRouteExpiresAt = 130
+
+	local ownerMismatch = EscapeService.requestUpsertPlayerCreatedRoute(other, {
+		routeId = "EscapeRoute_A",
+		createdAt = 96,
+	})
+	assertEqual(ownerMismatch.accepted, false, "player-created route upsert rejects non-owner")
+	assertEqual(
+		ownerMismatch.reason,
+		"player_route_owner_mismatch",
+		"player-created route upsert owner mismatch reason"
+	)
+
+	local invalidCreatedAt = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = -1,
+	})
+	assertEqual(invalidCreatedAt.accepted, false, "player-created route upsert rejects invalid createdAt")
+	assertEqual(invalidCreatedAt.reason, "created_at_invalid", "player-created route upsert invalid createdAt reason")
+
+	local invalidExpiresAt = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+		expiresAt = -1,
+	})
+	assertEqual(invalidExpiresAt.accepted, false, "player-created route upsert rejects invalid expiresAt")
+	assertEqual(invalidExpiresAt.reason, "expires_at_invalid", "player-created route upsert invalid expiresAt reason")
+
+	local expiresBeforeCreated = EscapeService.requestUpsertPlayerCreatedRoute(owner, {
+		routeId = "EscapeRoute_A",
+		createdAt = 95,
+		expiresAt = 94,
+	})
+	assertEqual(expiresBeforeCreated.accepted, false, "player-created route upsert rejects expires before createdAt")
+	assertEqual(
+		expiresBeforeCreated.reason,
+		"expires_before_created",
+		"player-created route upsert expires-before-created reason"
+	)
+
+	local disabled = EscapeService.requestDisablePlayerCreatedRoute(owner, "EscapeRoute_A")
+	assertEqual(disabled.accepted, true, "player-created route disable accepts owner")
+	assertEqual(routeAttributes.RouteEnabled, false, "player-created route disable flips route enabled false")
+	assertTrue(
+		EscapeService.getPlayerCreatedRoutes("EscapeRoute_A") == nil,
+		"player-created route disable removes record from active query"
+	)
+	local disabledEscapeAttempt = EscapeService.requestEscapeAttempt(owner, "EscapeRoute_A")
+	assertEqual(disabledEscapeAttempt.accepted, false, "disabled player-created route rejects escape attempt")
+	assertEqual(disabledEscapeAttempt.reason, "route_disabled", "disabled player-created route escape reason")
+
+	local disableMismatch = EscapeService.requestDisablePlayerCreatedRoute(other, "EscapeRoute_A")
+	assertEqual(disableMismatch.accepted, false, "player-created route disable rejects non-owner")
+	assertEqual(
+		disableMismatch.reason,
+		"player_route_owner_mismatch",
+		"player-created route disable owner mismatch reason"
+	)
+
+	local disableInvalidRoute = EscapeService.requestDisablePlayerCreatedRoute(owner, 123)
+	assertEqual(disableInvalidRoute.accepted, false, "player-created route disable rejects invalid route id")
+	assertEqual(disableInvalidRoute.reason, "route_id_invalid", "player-created route disable invalid route id reason")
+
+	local disableInvalidRequester = EscapeService.requestDisablePlayerCreatedRoute({} :: any, "EscapeRoute_A")
+	assertEqual(disableInvalidRequester.accepted, false, "player-created route disable rejects invalid requester")
+	assertEqual(
+		disableInvalidRequester.reason,
+		"requester_user_id_invalid",
+		"player-created route disable invalid requester reason"
+	)
+
+	routeAttributes.RouteEnabled = true
+	routeAttributes.PlayerCreatedRoute = true
+	routeAttributes.RouteCreatedByUserId = 915
+	routeAttributes.RouteCreationTimestamp = 95
+	routeAttributes.PlayerCreatedRouteExpiresAt = 100
+	currentTime = 105
+	local expiredEscapeAttempt = EscapeService.requestEscapeAttempt(owner, "EscapeRoute_A")
+	assertEqual(expiredEscapeAttempt.accepted, false, "expired player-created route rejects escape attempt")
+	assertEqual(
+		expiredEscapeAttempt.reason,
+		"player_created_route_inactive",
+		"expired player-created route escape reason"
+	)
+end
+
+do
+	resetRouteDefaults()
 	local tinyfolk = MockPlayer.new(64, "DormantAccessTinyfolk", { role = "Tinyfolk" })
 	local access = EscapeService.getRouteAccess(tinyfolk, "EscapeRoute_A")
 	assertEqual(access.accepted, false, "managed dormant final exit rejects route access")
