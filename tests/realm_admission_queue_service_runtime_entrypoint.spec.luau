@@ -84,6 +84,7 @@ end
 local function makeQueueAdapter()
 	local queueByName: { [string]: { any } } = {}
 	local removedIds: { [string]: boolean } = {}
+	local hashMapByName: { [string]: { [string]: any } } = {}
 	local adapter: any = {}
 
 	adapter.QueueAddAsync = function(queueName: string, encoded: string, _ttlSeconds: number, priority: number)
@@ -129,6 +130,15 @@ local function makeQueueAdapter()
 
 	adapter.QueueRemoveAsync = function(_queueName: string, receiptId: string)
 		removedIds[receiptId] = true
+	end
+
+	adapter.HashMapUpdateAsync = function(mapName: string, key: string, transform: (any) -> any, _ttlSeconds: number)
+		if hashMapByName[mapName] == nil then
+			hashMapByName[mapName] = {}
+		end
+		local nextValue = transform(hashMapByName[mapName][key])
+		hashMapByName[mapName][key] = nextValue
+		return nextValue
 	end
 
 	return adapter, removedIds
@@ -272,7 +282,11 @@ assertEqual(diagnostics.totalSucceeded, 1, "diagnostics total succeeded")
 assertEqual(diagnostics.totalExpired, 1, "diagnostics total expired")
 assertEqual(diagnostics.totalRetryDeferred, 0, "diagnostics total retry deferred")
 assertEqual(diagnostics.totalFailed, 1, "diagnostics total failed")
+assertEqual(diagnostics.totalDuplicatesSkipped, 0, "diagnostics total duplicates skipped")
+assertEqual(diagnostics.totalCleanupDeferred, 0, "diagnostics total cleanup deferred")
 assertEqual(diagnostics.lastOutcome.processed, 3, "diagnostics last outcome processed")
+assertEqual(diagnostics.lastOutcome.duplicatesSkipped, 0, "diagnostics last outcome duplicate skips")
+assertEqual(diagnostics.lastOutcome.cleanupDeferred, 0, "diagnostics last outcome cleanup deferred")
 assertEqual(diagnostics.lastReason, "accepted", "diagnostics last reason accepted")
 assertTrue(type(diagnostics.lastProcessedAt) == "number", "diagnostics last processed timestamp set")
 

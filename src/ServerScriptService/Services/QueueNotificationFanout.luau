@@ -1,23 +1,29 @@
 --!strict
 
+local MessagingServiceAdapter = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MessagingServiceAdapter"))
+	else (require :: any)("./MessagingServiceAdapter")
+
 local QueueNotificationFanout: any = {}
+local globalEnv: any = getfenv()
 
 local ADMISSION_TOPIC = "tin_queue_admission_v1"
 local RESCUE_TOPIC = "tin_queue_rescue_v1"
 
-local function hasMethod(target: any, methodName: string): boolean
-	if target == nil then
-		return false
+local function getGlobalTable(name: string): any?
+	local fromEnv = rawget(globalEnv, name)
+	if type(fromEnv) == "table" then
+		return fromEnv
 	end
 
-	local ok, member = pcall(function()
-		return (target :: any)[methodName]
-	end)
-	if not ok then
-		return false
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, name)
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
 	end
 
-	return type(member) == "function"
+	return nil
 end
 
 local function sanitizeEventName(eventName: any): string?
@@ -40,15 +46,18 @@ end
 function QueueNotificationFanout.Create(config: any?): any?
 	local configAny: any = config
 	local messagingService = if type(configAny) == "table" then configAny.messagingService else nil
+	local messagingAdapter = if type(configAny) == "table" then configAny.messagingAdapter else nil
 	local encode = if type(configAny) == "table" then configAny.encode else nil
 
-	if messagingService == nil then
-		return nil
-	end
-	if not hasMethod(messagingService, "PublishAsync") then
-		return nil
+	if messagingAdapter == nil and messagingService ~= nil then
+		messagingAdapter = MessagingServiceAdapter.Create({
+			messagingService = messagingService,
+		})
 	end
 	if type(encode) ~= "function" then
+		return nil
+	end
+	if type(messagingAdapter) ~= "table" or type(messagingAdapter.Publish) ~= "function" then
 		return nil
 	end
 
@@ -76,13 +85,22 @@ function QueueNotificationFanout.Create(config: any?): any?
 			}
 		end
 
-		local publishOk = pcall(function()
-			messagingService:PublishAsync(topic, encodedOrError)
-		end)
-		if not publishOk then
+		local publishResult = messagingAdapter.Publish({
+			topic = topic,
+			message = encodedOrError,
+			messageType = resolvedEventName,
+			operationId = if type(payload) == "table" then payload.operationId else nil,
+		})
+		if type(publishResult) ~= "table" then
 			return {
 				accepted = false,
 				reason = "publish_failed",
+			}
+		end
+		if publishResult.accepted ~= true then
+			return {
+				accepted = false,
+				reason = if type(publishResult.reason) == "string" then publishResult.reason else "publish_failed",
 			}
 		end
 
@@ -108,14 +126,12 @@ function QueueNotificationFanout.CreateDefault(): any?
 		return nil
 	end
 
-	local messagingService: any? = nil
-	local messagingOk, messagingOrError = pcall(function()
-		return game:GetService("MessagingService")
-	end)
-	if messagingOk and messagingOrError ~= nil then
-		messagingService = messagingOrError
+	local messagingAdapter = getGlobalTable("_MessagingServiceAdapter_QueryAPI")
+	if messagingAdapter == nil then
+		messagingAdapter = MessagingServiceAdapter.CreateDefault()
 	end
-	if messagingService == nil then
+
+	if messagingAdapter == nil then
 		return nil
 	end
 
@@ -131,7 +147,7 @@ function QueueNotificationFanout.CreateDefault(): any?
 	end
 
 	return QueueNotificationFanout.Create({
-		messagingService = messagingService,
+		messagingAdapter = messagingAdapter,
 		encode = function(value: any): string
 			return httpService:JSONEncode(value)
 		end,

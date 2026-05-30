@@ -78,6 +78,7 @@ function MemoryStoreAdapter.Create(config: any?): any?
 	end
 
 	local queueByName: { [string]: any } = {}
+	local hashMapByName: { [string]: any } = {}
 	local activeCapacityMap: any? = nil
 
 	local function getQueue(queueName: any): any?
@@ -111,6 +112,22 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			return nil
 		end
 		activeCapacityMap = hashMap
+		return hashMap
+	end
+
+	local function getHashMap(mapName: any): any?
+		if not isNonEmptyString(mapName) then
+			return nil
+		end
+		if hashMapByName[mapName] ~= nil then
+			return hashMapByName[mapName]
+		end
+
+		local hashMap = memoryStoreService:GetHashMap(mapName)
+		if hashMap == nil or not hasMethod(hashMap, "GetAsync") or not hasMethod(hashMap, "UpdateAsync") then
+			return nil
+		end
+		hashMapByName[mapName] = hashMap
 		return hashMap
 	end
 
@@ -200,6 +217,44 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		end
 
 		local hashMap = getActiveCapacityMap()
+		if hashMap == nil or type(hashMap.UpdateAsync) ~= "function" then
+			error("hash_map_unavailable")
+		end
+
+		return hashMap:UpdateAsync(key, transform, ttlSeconds)
+	end
+
+	function adapter.HashMapGetAsync(mapName: any, key: any): any
+		if not isNonEmptyString(mapName) then
+			error("map_name_invalid")
+		end
+		if not isNonEmptyString(key) then
+			error("key_invalid")
+		end
+
+		local hashMap = getHashMap(mapName)
+		if hashMap == nil or type(hashMap.GetAsync) ~= "function" then
+			error("hash_map_unavailable")
+		end
+
+		return hashMap:GetAsync(key)
+	end
+
+	function adapter.HashMapUpdateAsync(mapName: any, key: any, transform: any, ttlSeconds: any): any
+		if not isNonEmptyString(mapName) then
+			error("map_name_invalid")
+		end
+		if not isNonEmptyString(key) then
+			error("key_invalid")
+		end
+		if type(transform) ~= "function" then
+			error("transform_invalid")
+		end
+		if not isPositiveInteger(ttlSeconds) then
+			error("ttl_seconds_invalid")
+		end
+
+		local hashMap = getHashMap(mapName)
 		if hashMap == nil or type(hashMap.UpdateAsync) ~= "function" then
 			error("hash_map_unavailable")
 		end

@@ -25,6 +25,10 @@ local RealmAdmissionQueueProcessor = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmAdmissionQueueProcessor"))
 	else (require :: any)("./RealmAdmissionQueueProcessor")
 
+local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("QueueProcessingIdempotencyStore"))
+	else (require :: any)("./QueueProcessingIdempotencyStore")
+
 local QueueNotificationFanout: any = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("QueueNotificationFanout"))
 	else (require :: any)("./QueueNotificationFanout")
@@ -65,6 +69,8 @@ type ProcessingDiagnostics = {
 	totalExpired: number,
 	totalRetryDeferred: number,
 	totalFailed: number,
+	totalDuplicatesSkipped: number,
+	totalCleanupDeferred: number,
 	loopScheduleAttempts: number,
 	loopScheduleSucceeded: number,
 	loopScheduleFailed: number,
@@ -95,6 +101,8 @@ local runtimeProcessingDiagnostics: ProcessingDiagnostics = {
 	totalExpired = 0,
 	totalRetryDeferred = 0,
 	totalFailed = 0,
+	totalDuplicatesSkipped = 0,
+	totalCleanupDeferred = 0,
 	loopScheduleAttempts = 0,
 	loopScheduleSucceeded = 0,
 	loopScheduleFailed = 0,
@@ -198,6 +206,8 @@ local function resetProcessingDiagnostics(reason: string)
 		totalExpired = 0,
 		totalRetryDeferred = 0,
 		totalFailed = 0,
+		totalDuplicatesSkipped = 0,
+		totalCleanupDeferred = 0,
 		loopScheduleAttempts = 0,
 		loopScheduleSucceeded = 0,
 		loopScheduleFailed = 0,
@@ -272,6 +282,12 @@ local function updateProcessingDiagnostics(outcome: any, nowAt: number, reason: 
 			then outcomeAny.retryDeferred
 			else 0
 		runtimeProcessingDiagnostics.totalFailed += if type(outcomeAny.failed) == "number" then outcomeAny.failed else 0
+		runtimeProcessingDiagnostics.totalDuplicatesSkipped += if type(outcomeAny.duplicatesSkipped) == "number"
+			then outcomeAny.duplicatesSkipped
+			else 0
+		runtimeProcessingDiagnostics.totalCleanupDeferred += if type(outcomeAny.cleanupDeferred) == "number"
+			then outcomeAny.cleanupDeferred
+			else 0
 		runtimeProcessingDiagnostics.lastOutcome = cloneTable(outcome)
 	else
 		runtimeProcessingDiagnostics.lastOutcome = nil
@@ -389,6 +405,7 @@ local function buildRuntime(config: any)
 	local queueState = if type(config) == "table" and config.queueState ~= nil
 		then config.queueState
 		else RealmAdmissionQueueState
+	local idempotencyStore = if type(config) == "table" then config.idempotencyStore else nil
 	local partyResolver = resolvePartyResolver(config)
 	local structurePolicy = if type(config) == "table" and config.structurePolicy ~= nil
 		then config.structurePolicy
@@ -403,12 +420,21 @@ local function buildRuntime(config: any)
 		structurePolicy = structurePolicy,
 	})
 
+	if idempotencyStore == nil then
+		idempotencyStore = QueueProcessingIdempotencyStore.Create({
+			adapter = adapter,
+			structurePolicy = structurePolicy,
+			now = nowFn,
+		})
+	end
+
 	runtimeProcessor = RealmAdmissionQueueProcessor.Create({
 		queueStore = runtimeQueueStore,
 		queueState = queueState,
 		capacityApi = capacityApi,
 		teleportDispatcher = teleportDispatcher,
 		operationLock = operationLock,
+		idempotencyStore = idempotencyStore,
 		partyResolver = partyResolver,
 		now = nowFn,
 	})
@@ -552,6 +578,8 @@ function RealmAdmissionQueueService.GetProcessingDiagnostics(): any
 		totalExpired = runtimeProcessingDiagnostics.totalExpired,
 		totalRetryDeferred = runtimeProcessingDiagnostics.totalRetryDeferred,
 		totalFailed = runtimeProcessingDiagnostics.totalFailed,
+		totalDuplicatesSkipped = runtimeProcessingDiagnostics.totalDuplicatesSkipped,
+		totalCleanupDeferred = runtimeProcessingDiagnostics.totalCleanupDeferred,
 		loopScheduleAttempts = runtimeProcessingDiagnostics.loopScheduleAttempts,
 		loopScheduleSucceeded = runtimeProcessingDiagnostics.loopScheduleSucceeded,
 		loopScheduleFailed = runtimeProcessingDiagnostics.loopScheduleFailed,
@@ -748,6 +776,8 @@ function RealmAdmissionQueueService.ProcessBatch(maxItems: any): ProcessResult
 			expired = outcome.expired,
 			retryDeferred = outcome.retryDeferred,
 			failed = outcome.failed,
+			duplicatesSkipped = outcome.duplicatesSkipped,
+			cleanupDeferred = outcome.cleanupDeferred,
 		})
 	end
 

@@ -8,6 +8,8 @@ export type ProcessOutcome = {
 	expired: number,
 	retryDeferred: number,
 	failed: number,
+	duplicatesSkipped: number,
+	cleanupDeferred: number,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -31,6 +33,8 @@ local function makeOutcome(): ProcessOutcome
 		expired = 0,
 		retryDeferred = 0,
 		failed = 0,
+		duplicatesSkipped = 0,
+		cleanupDeferred = 0,
 	}
 end
 
@@ -41,6 +45,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 	local capacityApi = if type(depsAny) == "table" then depsAny.capacityApi else nil
 	local teleportDispatcher = if type(depsAny) == "table" then depsAny.teleportDispatcher else nil
 	local operationLock = if type(depsAny) == "table" then depsAny.operationLock else nil
+	local idempotencyStore = if type(depsAny) == "table" then depsAny.idempotencyStore else nil
 	local partyResolver = if type(depsAny) == "table" then depsAny.partyResolver else nil
 	local nowFn = if type(depsAny) == "table" and type(depsAny.now) == "function" then depsAny.now else defaultNow
 
@@ -118,6 +123,40 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 		return removeResult.accepted == true
 	end
 
+	local function tryBeginProcessing(operationId: any): any
+		if type(idempotencyStore) ~= "table" or type(idempotencyStore.TryBegin) ~= "function" then
+			return {
+				accepted = true,
+				status = "begun",
+				reason = "accepted",
+			}
+		end
+		local ok, result = pcall(idempotencyStore.TryBegin, operationId)
+		if not ok or type(result) ~= "table" then
+			return {
+				accepted = false,
+				status = nil,
+				reason = "idempotency_try_begin_failed",
+			}
+		end
+		return result
+	end
+
+	local function markCompleted(operationId: any): boolean
+		if type(idempotencyStore) ~= "table" or type(idempotencyStore.MarkCompleted) ~= "function" then
+			return true
+		end
+		local ok, result = pcall(idempotencyStore.MarkCompleted, operationId)
+		return ok and type(result) == "table" and result.accepted == true
+	end
+
+	local function releaseProcessing(operationId: any)
+		if type(idempotencyStore) ~= "table" or type(idempotencyStore.ReleaseProcessing) ~= "function" then
+			return
+		end
+		pcall(idempotencyStore.ReleaseProcessing, operationId)
+	end
+
 	local function unregisterParty(partyId: any)
 		if type(partyId) ~= "string" or partyId == "" then
 			return
@@ -182,8 +221,26 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 				continue
 			end
 
+			local beginResult = tryBeginProcessing(entry.operationId)
+			if beginResult.accepted == true and beginResult.status == "completed" then
+				if removeFromQueue(queued.receiptId) then
+					unregisterParty(entry.partyId)
+					outcome.duplicatesSkipped += 1
+				else
+					outcome.cleanupDeferred += 1
+				end
+				releaseOperationLock(entry.operationId)
+				continue
+			end
+			if beginResult.accepted ~= true then
+				releaseOperationLock(entry.operationId)
+				outcome.retryDeferred += 1
+				continue
+			end
+
 			local reserveResult = reserveCapacity(entry, nowAt)
 			if reserveResult.accepted ~= true then
+				releaseProcessing(entry.operationId)
 				releaseOperationLock(entry.operationId)
 				outcome.retryDeferred += 1
 				continue
@@ -191,10 +248,17 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 
 			local dispatchResult = dispatchTeleport(entry)
 			if dispatchResult.ok == true then
+				if not markCompleted(entry.operationId) then
+					releaseReservedCapacity(entry, nowAt)
+					releaseProcessing(entry.operationId)
+					releaseOperationLock(entry.operationId)
+					outcome.retryDeferred += 1
+					continue
+				end
 				if not removeFromQueue(queued.receiptId) then
 					releaseReservedCapacity(entry, nowAt)
 					releaseOperationLock(entry.operationId)
-					outcome.retryDeferred += 1
+					outcome.cleanupDeferred += 1
 					continue
 				end
 				unregisterParty(entry.partyId)
@@ -205,12 +269,19 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 
 			releaseReservedCapacity(entry, nowAt)
 			if dispatchResult.retryable == true then
+				releaseProcessing(entry.operationId)
 				releaseOperationLock(entry.operationId)
 				outcome.retryDeferred += 1
 			else
-				if not removeFromQueue(queued.receiptId) then
+				if not markCompleted(entry.operationId) then
+					releaseProcessing(entry.operationId)
 					releaseOperationLock(entry.operationId)
 					outcome.retryDeferred += 1
+					continue
+				end
+				if not removeFromQueue(queued.receiptId) then
+					releaseOperationLock(entry.operationId)
+					outcome.cleanupDeferred += 1
 					continue
 				end
 				unregisterParty(entry.partyId)

@@ -135,6 +135,20 @@ end, 120)
 assertEqual(updated, "encoded-entry", "hash map update result")
 assertEqual(adapter.GetAsync("capacity:realm-1"), "encoded-entry", "hash map persisted value")
 
+local namedUpdated = adapter.HashMapUpdateAsync(
+	"tin_queue_processing_idempotency_v1",
+	"queueop:op-1",
+	function(_current: any)
+		return {
+			status = "processing",
+		}
+	end,
+	600
+)
+assertEqual(namedUpdated.status, "processing", "named hash map update result")
+local namedPrevious = adapter.HashMapGetAsync("tin_queue_processing_idempotency_v1", "queueop:op-1")
+assertEqual(namedPrevious.status, "processing", "named hash map get result")
+
 local threw = pcall(function()
 	adapter.QueueAddAsync("tin_realm_admission_queue_v1", "payload", 0, 100)
 end)
@@ -144,5 +158,10 @@ local threwUpdate = pcall(function()
 	adapter.UpdateAsync("capacity:realm-1", "bad" :: any, 120)
 end)
 assertFalse(threwUpdate, "invalid transform rejects update")
+
+local threwNamedUpdate = pcall(function()
+	adapter.HashMapUpdateAsync("tin_queue_processing_idempotency_v1", "queueop:op-1", "bad" :: any, 600)
+end)
+assertFalse(threwNamedUpdate, "invalid transform rejects named update")
 
 print("memory_store_adapter: all checks passed")
