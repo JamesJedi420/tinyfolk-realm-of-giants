@@ -49,6 +49,7 @@ $testFiles = @(
     'tests\active_realm_capacity_state.spec.luau',
     'tests\active_realm_capacity_store.spec.luau',
     'tests\rescue_contract_state.spec.luau',
+    'tests\rescue_contract_admission_ingress_runtime_entrypoint.spec.luau',
     'tests\rescue_contract_service_runtime_entrypoint.spec.luau',
     'tests\headless_match_simulation.spec.luau'
 )

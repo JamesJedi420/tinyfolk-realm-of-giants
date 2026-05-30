@@ -311,11 +311,49 @@ local function getRealmAdmissionQueueQueryApi(): any?
 	return queryApi
 end
 
+local function getRescueAdmissionQueryApi(): any?
+	local globalValue: any = globalEnv
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._RescueAdmissionService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local admissionQueueProducer = AdmissionQueueProducer.Create({
 	queryApiResolver = function()
 		return getRealmAdmissionQueueQueryApi()
 	end,
 })
+
+local function requestRescueContractAdmission(payload: any): any
+	local queryApi = getRescueAdmissionQueryApi()
+	if queryApi ~= nil and type(queryApi.RequestRescueContractAdmission) == "function" then
+		local ok, result = pcall(function()
+			return queryApi.RequestRescueContractAdmission(payload)
+		end)
+		if not ok then
+			return { accepted = false, reason = "admission_enqueue_failed" }
+		end
+		if type(result) ~= "table" then
+			return { accepted = false, reason = "admission_enqueue_failed" }
+		end
+		if result.accepted == true then
+			return { accepted = true, reason = "accepted" }
+		end
+		local reason = if type(result.reason) == "string" and result.reason ~= ""
+			then result.reason
+			else "admission_enqueue_failed"
+		return { accepted = false, reason = reason }
+	end
+
+	return admissionQueueProducer.Enqueue(payload)
+end
 
 local defaultQueueNotificationFanout = QueueNotificationFanout.CreateDefault()
 
@@ -970,7 +1008,7 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		retryCount = 0,
 	}
 
-	local enqueueResult = admissionQueueProducer.Enqueue(admissionPayload)
+	local enqueueResult = requestRescueContractAdmission(admissionPayload)
 	if enqueueResult.accepted ~= true then
 		return { accepted = false, reason = enqueueResult.reason }
 	end
