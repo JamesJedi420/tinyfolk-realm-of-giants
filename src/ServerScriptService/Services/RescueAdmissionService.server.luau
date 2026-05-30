@@ -11,6 +11,29 @@ local DEFAULT_EXPIRATION_SECONDS = 600
 local queryApiOverride: any = nil
 local nowFnOverride: (() -> number)? = nil
 
+type AdmissionDiagnostics = {
+	enqueueAttempts: number,
+	enqueueSucceeded: number,
+	enqueueFailed: number,
+	lastReason: string,
+}
+
+local admissionDiagnostics: AdmissionDiagnostics = {
+	enqueueAttempts = 0,
+	enqueueSucceeded = 0,
+	enqueueFailed = 0,
+	lastReason = "not_started",
+}
+
+local function cloneAdmissionDiagnostics(): AdmissionDiagnostics
+	return {
+		enqueueAttempts = admissionDiagnostics.enqueueAttempts,
+		enqueueSucceeded = admissionDiagnostics.enqueueSucceeded,
+		enqueueFailed = admissionDiagnostics.enqueueFailed,
+		lastReason = admissionDiagnostics.lastReason,
+	}
+end
+
 local function resolveNow(): number
 	if type(nowFnOverride) == "function" then
 		local at = nowFnOverride()
@@ -70,12 +93,15 @@ local RescueAdmissionService: any = {}
 
 function RescueAdmissionService.RequestRescueContractAdmission(input: any): any
 	if type(input) ~= "table" then
+		admissionDiagnostics.lastReason = "request_invalid"
 		return { accepted = false, reason = "request_invalid" }
 	end
 	if not isNonEmptyString(input.partyId) then
+		admissionDiagnostics.lastReason = "party_id_invalid"
 		return { accepted = false, reason = "party_id_invalid" }
 	end
 	if not isNonEmptyString(input.targetRealmId) then
+		admissionDiagnostics.lastReason = "target_realm_id_invalid"
 		return { accepted = false, reason = "target_realm_id_invalid" }
 	end
 
@@ -98,7 +124,13 @@ function RescueAdmissionService.RequestRescueContractAdmission(input: any): any
 		retryCount = input.retryCount,
 	})
 
+	admissionDiagnostics.enqueueAttempts += 1
+
 	if result.accepted ~= true then
+		admissionDiagnostics.enqueueFailed += 1
+		admissionDiagnostics.lastReason = if type(result.reason) == "string"
+			then result.reason
+			else "admission_enqueue_failed"
 		return {
 			accepted = false,
 			reason = result.reason,
@@ -106,12 +138,19 @@ function RescueAdmissionService.RequestRescueContractAdmission(input: any): any
 		}
 	end
 
+	admissionDiagnostics.enqueueSucceeded += 1
+	admissionDiagnostics.lastReason = if type(result.reason) == "string" then result.reason else "accepted"
+
 	return {
 		accepted = true,
 		reason = result.reason,
 		payload = result.payload,
 		snapshot = result.snapshot,
 	}
+end
+
+function RescueAdmissionService.GetAdmissionDiagnostics(): AdmissionDiagnostics
+	return cloneAdmissionDiagnostics()
 end
 
 function RescueAdmissionService.ConfigureForTests(config: any)
@@ -123,11 +162,20 @@ end
 function RescueAdmissionService.ResetForTests()
 	queryApiOverride = nil
 	nowFnOverride = nil
+	admissionDiagnostics = {
+		enqueueAttempts = 0,
+		enqueueSucceeded = 0,
+		enqueueFailed = 0,
+		lastReason = "not_started",
+	}
 end
 
 globalEnv._RescueAdmissionService_QueryAPI = {
 	RequestRescueContractAdmission = function(input: any): any
 		return RescueAdmissionService.RequestRescueContractAdmission(input)
+	end,
+	GetAdmissionDiagnostics = function(): AdmissionDiagnostics
+		return RescueAdmissionService.GetAdmissionDiagnostics()
 	end,
 	ConfigureForTests = function(config: any)
 		RescueAdmissionService.ConfigureForTests(config)

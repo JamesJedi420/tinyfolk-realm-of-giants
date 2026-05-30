@@ -107,8 +107,17 @@
 	- targeted rescue ingress + rescue admission runtime specs pass
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 7:
+	- `RescueAdmissionService` now emits bounded enqueue diagnostics snapshots (`enqueueAttempts`, `enqueueSucceeded`, `enqueueFailed`, `lastReason`).
+	- Focused rescue admission runtime coverage expanded to assert service-local diagnostics across accepted, unavailable, invalid-members, and enqueue rejection paths.
+	- Rescue ingress runtime coverage now uses the concrete `RescueAdmissionService` seam for primary-path scenarios and asserts parity between service-local enqueue diagnostics and `RescueContractService` primary ingress diagnostics.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted rescue admission + rescue ingress runtime specs pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Add bounded summary diagnostics to `RescueAdmissionService` itself (enqueue attempt-success-failure counters + last reason) and assert parity against `RescueContractService` primary ingress diagnostics in focused runtime specs.
+- Evaluate whether any remaining admission seams still lack deterministic diagnostics snapshots; if not, pivot the next TIN-233 slice to closure evidence and checklist completion.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.
