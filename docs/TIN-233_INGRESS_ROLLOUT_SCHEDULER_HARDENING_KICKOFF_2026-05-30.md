@@ -93,8 +93,22 @@
 	- targeted party admission runtime diagnostics spec pass
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 6:
+	- `RescueContractService` admission ingress diagnostics now include parity fields for total attempts plus per-path last reason snapshots (`lastPrimaryReason`, `lastFallbackReason`).
+	- Focused rescue ingress coverage expanded to assert cross-service reason consistency between rescue admission seam outcomes and rescue contract ingress diagnostics for:
+		- primary success
+		- primary exception failure
+		- primary rejection with explicit reason
+		- fallback success
+		- fallback rejection with explicit reason
+	- Existing rescue admission focused runtime coverage remains green without contract drift.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted rescue ingress + rescue admission runtime specs pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Extend ingress observability parity to rescue admission caller seams by asserting cross-service diagnostics consistency between `RescueContractService` ingress diagnostics and `RescueAdmissionService` enqueue outcomes in focused runtime specs.
+- Add bounded summary diagnostics to `RescueAdmissionService` itself (enqueue attempt-success-failure counters + last reason) and assert parity against `RescueContractService` primary ingress diagnostics in focused runtime specs.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.

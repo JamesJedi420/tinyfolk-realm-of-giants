@@ -34,6 +34,7 @@ local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
 local nextQueueSequence = 0
 local admissionIngressDiagnostics = {
+	totalAttempts = 0,
 	primaryAttempts = 0,
 	primarySucceeded = 0,
 	primaryFailed = 0,
@@ -42,6 +43,8 @@ local admissionIngressDiagnostics = {
 	fallbackFailed = 0,
 	lastPath = "not_started",
 	lastReason = "not_started",
+	lastPrimaryReason = "not_started",
+	lastFallbackReason = "not_started",
 }
 
 local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.PostRescueProtected
@@ -342,6 +345,7 @@ local admissionQueueProducer = AdmissionQueueProducer.Create({
 })
 
 local function requestRescueContractAdmission(payload: any): any
+	admissionIngressDiagnostics.totalAttempts += 1
 	local queryApi = getRescueAdmissionQueryApi()
 	if queryApi ~= nil and type(queryApi.RequestRescueContractAdmission) == "function" then
 		admissionIngressDiagnostics.primaryAttempts += 1
@@ -352,18 +356,21 @@ local function requestRescueContractAdmission(payload: any): any
 			admissionIngressDiagnostics.primaryFailed += 1
 			admissionIngressDiagnostics.lastPath = "primary"
 			admissionIngressDiagnostics.lastReason = "admission_enqueue_failed"
+			admissionIngressDiagnostics.lastPrimaryReason = "admission_enqueue_failed"
 			return { accepted = false, reason = "admission_enqueue_failed" }
 		end
 		if type(result) ~= "table" then
 			admissionIngressDiagnostics.primaryFailed += 1
 			admissionIngressDiagnostics.lastPath = "primary"
 			admissionIngressDiagnostics.lastReason = "admission_enqueue_failed"
+			admissionIngressDiagnostics.lastPrimaryReason = "admission_enqueue_failed"
 			return { accepted = false, reason = "admission_enqueue_failed" }
 		end
 		if result.accepted == true then
 			admissionIngressDiagnostics.primarySucceeded += 1
 			admissionIngressDiagnostics.lastPath = "primary"
 			admissionIngressDiagnostics.lastReason = "accepted"
+			admissionIngressDiagnostics.lastPrimaryReason = "accepted"
 			return { accepted = true, reason = "accepted" }
 		end
 		local reason = if type(result.reason) == "string" and result.reason ~= ""
@@ -372,6 +379,7 @@ local function requestRescueContractAdmission(payload: any): any
 		admissionIngressDiagnostics.primaryFailed += 1
 		admissionIngressDiagnostics.lastPath = "primary"
 		admissionIngressDiagnostics.lastReason = reason
+		admissionIngressDiagnostics.lastPrimaryReason = reason
 		return { accepted = false, reason = reason }
 	end
 
@@ -381,12 +389,14 @@ local function requestRescueContractAdmission(payload: any): any
 		admissionIngressDiagnostics.fallbackSucceeded += 1
 		admissionIngressDiagnostics.lastPath = "fallback"
 		admissionIngressDiagnostics.lastReason = "accepted"
+		admissionIngressDiagnostics.lastFallbackReason = "accepted"
 	else
 		admissionIngressDiagnostics.fallbackFailed += 1
 		admissionIngressDiagnostics.lastPath = "fallback"
 		admissionIngressDiagnostics.lastReason = if type(fallbackResult.reason) == "string"
 			then fallbackResult.reason
 			else "admission_enqueue_failed"
+		admissionIngressDiagnostics.lastFallbackReason = admissionIngressDiagnostics.lastReason
 	end
 
 	return fallbackResult
@@ -1304,6 +1314,7 @@ globalEnv._RescueContractService_QueryAPI = {
 	end,
 	GetAdmissionIngressDiagnostics = function(): any
 		return {
+			totalAttempts = admissionIngressDiagnostics.totalAttempts,
 			primaryAttempts = admissionIngressDiagnostics.primaryAttempts,
 			primarySucceeded = admissionIngressDiagnostics.primarySucceeded,
 			primaryFailed = admissionIngressDiagnostics.primaryFailed,
@@ -1312,6 +1323,8 @@ globalEnv._RescueContractService_QueryAPI = {
 			fallbackFailed = admissionIngressDiagnostics.fallbackFailed,
 			lastPath = admissionIngressDiagnostics.lastPath,
 			lastReason = admissionIngressDiagnostics.lastReason,
+			lastPrimaryReason = admissionIngressDiagnostics.lastPrimaryReason,
+			lastFallbackReason = admissionIngressDiagnostics.lastFallbackReason,
 		}
 	end,
 	ResetForTests = function()
@@ -1322,6 +1335,7 @@ globalEnv._RescueContractService_QueryAPI = {
 		lastRejectedRequestAtByUserId = {}
 		rescueAccelerationExpiresAtByUserId = {}
 		admissionIngressDiagnostics = {
+			totalAttempts = 0,
 			primaryAttempts = 0,
 			primarySucceeded = 0,
 			primaryFailed = 0,
@@ -1330,6 +1344,8 @@ globalEnv._RescueContractService_QueryAPI = {
 			fallbackFailed = 0,
 			lastPath = "not_started",
 			lastReason = "not_started",
+			lastPrimaryReason = "not_started",
+			lastFallbackReason = "not_started",
 		}
 		for _, player in Players:GetPlayers() do
 			clearRescueAcceleration(player)

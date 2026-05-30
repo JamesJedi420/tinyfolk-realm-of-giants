@@ -13,6 +13,15 @@ local function assertEqual(actual: any, expected: any, label: string)
 	end
 end
 
+local function findQueueEntryForRescuer(entries: { any }, rescuerUserId: number): any
+	for _, entry in ipairs(entries) do
+		if type(entry) == "table" and entry.rescuerUserId == rescuerUserId then
+			return entry
+		end
+	end
+	return nil
+end
+
 local function makeSignal()
 	local callbacks: { (...any) -> () } = {}
 	return {
@@ -121,13 +130,36 @@ local acceptedByOne = MockPlayer.new(7103, "AcceptedByOne", { role = "Tinyfolk",
 local rescuerTwo = MockPlayer.new(7111, "RescuerTwo", { role = "Tinyfolk", positionZ = 0, health = 100 })
 local targetTwo = MockPlayer.new(7112, "TargetTwo", { role = "Tinyfolk", positionZ = 4, health = 100 })
 local acceptedByTwo = MockPlayer.new(7113, "AcceptedByTwo", { role = "Tinyfolk", positionZ = 2, health = 100 })
+local rescuerThree = MockPlayer.new(7121, "RescuerThree", { role = "Tinyfolk", positionZ = 0, health = 100 })
+local targetThree = MockPlayer.new(7122, "TargetThree", { role = "Tinyfolk", positionZ = 4, health = 100 })
+local acceptedByThree = MockPlayer.new(7123, "AcceptedByThree", { role = "Tinyfolk", positionZ = 2, health = 100 })
+local rescuerFour = MockPlayer.new(7131, "RescuerFour", { role = "Tinyfolk", positionZ = 0, health = 100 })
+local targetFour = MockPlayer.new(7132, "TargetFour", { role = "Tinyfolk", positionZ = 4, health = 100 })
+local acceptedByFour = MockPlayer.new(7133, "AcceptedByFour", { role = "Tinyfolk", positionZ = 2, health = 100 })
 
 targetOne:SetAttribute("DownedIsDowned", true)
 targetOne:SetAttribute("GiantRealmOwnerUserId", 9011)
 targetTwo:SetAttribute("DownedIsDowned", true)
 targetTwo:SetAttribute("GiantRealmOwnerUserId", 9012)
+targetThree:SetAttribute("DownedIsDowned", true)
+targetThree:SetAttribute("GiantRealmOwnerUserId", 9013)
+targetFour:SetAttribute("DownedIsDowned", true)
+targetFour:SetAttribute("GiantRealmOwnerUserId", 9014)
 
-local playersList: { any } = { rescuerOne, targetOne, acceptedByOne, rescuerTwo, targetTwo, acceptedByTwo }
+local playersList: { any } = {
+	rescuerOne,
+	targetOne,
+	acceptedByOne,
+	rescuerTwo,
+	targetTwo,
+	acceptedByTwo,
+	rescuerThree,
+	targetThree,
+	acceptedByThree,
+	rescuerFour,
+	targetFour,
+	acceptedByFour,
+}
 local playersService: any = { PlayerRemoving = makeSignal() }
 
 function playersService:GetPlayers(): { any }
@@ -212,12 +244,14 @@ assertEqual(ingressPayloads[1].partyMemberUserIds[1], rescuerOne.UserId, "ingres
 assertEqual(ingressPayloads[1].partyMemberUserIds[2], targetOne.UserId, "ingress member 2")
 assertEqual(ingressPayloads[1].partyMemberUserIds[3], acceptedByOne.UserId, "ingress member 3")
 local diagnosticsAfterPrimary = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterPrimary.totalAttempts, 1, "total attempts tracked")
 assertEqual(diagnosticsAfterPrimary.primaryAttempts, 1, "primary attempts tracked")
 assertEqual(diagnosticsAfterPrimary.primarySucceeded, 1, "primary success tracked")
 assertEqual(diagnosticsAfterPrimary.primaryFailed, 0, "primary failures baseline")
 assertEqual(diagnosticsAfterPrimary.fallbackAttempts, 0, "fallback attempts baseline")
 assertEqual(diagnosticsAfterPrimary.lastPath, "primary", "primary path tracked")
 assertEqual(diagnosticsAfterPrimary.lastReason, "accepted", "primary reason tracked")
+assertEqual(diagnosticsAfterPrimary.lastPrimaryReason, "accepted", "primary last reason tracked")
 
 globalEnv._RescueAdmissionService_QueryAPI = {
 	RequestRescueContractAdmission = function(_payload: any): any
@@ -234,12 +268,46 @@ local acceptTwo = queryApi.AcceptRescueQueueEntry(acceptedByTwo.UserId, pendingT
 assertEqual(acceptTwo.accepted, false, "ingress exception rejected")
 assertEqual(acceptTwo.reason, "admission_enqueue_failed", "ingress exception reason")
 local diagnosticsAfterPrimaryFailure = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterPrimaryFailure.totalAttempts, 2, "total attempts include primary failure")
 assertEqual(diagnosticsAfterPrimaryFailure.primaryAttempts, 2, "primary attempts include failure")
 assertEqual(diagnosticsAfterPrimaryFailure.primarySucceeded, 1, "primary success count preserved")
 assertEqual(diagnosticsAfterPrimaryFailure.primaryFailed, 1, "primary failure tracked")
 assertEqual(diagnosticsAfterPrimaryFailure.fallbackAttempts, 0, "fallback still unused")
 assertEqual(diagnosticsAfterPrimaryFailure.lastPath, "primary", "primary failure path tracked")
 assertEqual(diagnosticsAfterPrimaryFailure.lastReason, "admission_enqueue_failed", "primary failure reason tracked")
+assertEqual(
+	diagnosticsAfterPrimaryFailure.lastPrimaryReason,
+	"admission_enqueue_failed",
+	"primary failure last primary reason tracked"
+)
+
+globalEnv._RescueAdmissionService_QueryAPI = {
+	RequestRescueContractAdmission = function(_payload: any): any
+		return { accepted = false, reason = "queue_backpressure" }
+	end,
+}
+
+local requestThree = queryApi.RequestRescueContract(rescuerThree.UserId, targetThree.UserId, 30)
+assertEqual(requestThree.accepted, true, "request three accepted")
+local pendingThree = queryApi.GetRescueQueueEntries(30)
+local pendingThreeEntry = findQueueEntryForRescuer(pendingThree, rescuerThree.UserId)
+assertEqual(type(pendingThreeEntry), "table", "third request queue entry exists")
+
+local acceptRejectedByPrimary =
+	queryApi.AcceptRescueQueueEntry(acceptedByThree.UserId, pendingThreeEntry.queueEntryId, 30.5)
+assertEqual(acceptRejectedByPrimary.accepted, false, "primary rejected enqueue is propagated")
+assertEqual(acceptRejectedByPrimary.reason, "queue_backpressure", "primary rejected reason propagated")
+local diagnosticsAfterPrimaryRejected = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterPrimaryRejected.totalAttempts, 3, "total attempts include primary rejection")
+assertEqual(diagnosticsAfterPrimaryRejected.primaryAttempts, 3, "primary attempts include primary rejection")
+assertEqual(diagnosticsAfterPrimaryRejected.primaryFailed, 2, "primary failure count includes rejection")
+assertEqual(diagnosticsAfterPrimaryRejected.lastPath, "primary", "primary rejection path tracked")
+assertEqual(diagnosticsAfterPrimaryRejected.lastReason, "queue_backpressure", "primary rejection reason tracked")
+assertEqual(
+	diagnosticsAfterPrimaryRejected.lastPrimaryReason,
+	"queue_backpressure",
+	"primary rejection last primary reason tracked"
+)
 
 globalEnv._RescueAdmissionService_QueryAPI = nil
 globalEnv._RealmAdmissionQueue_QueryAPI = {
@@ -254,10 +322,44 @@ globalEnv._RealmAdmissionQueue_QueryAPI = {
 local acceptThree = queryApi.AcceptRescueQueueEntry(acceptedByTwo.UserId, pendingTwo[1].queueEntryId, 30.5)
 assertEqual(acceptThree.accepted, true, "fallback enqueue accepted")
 local diagnosticsAfterFallback = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterFallback.totalAttempts, 4, "total attempts include fallback success")
 assertEqual(diagnosticsAfterFallback.fallbackAttempts, 1, "fallback attempt tracked")
 assertEqual(diagnosticsAfterFallback.fallbackSucceeded, 1, "fallback success tracked")
 assertEqual(diagnosticsAfterFallback.fallbackFailed, 0, "fallback failure baseline")
 assertEqual(diagnosticsAfterFallback.lastPath, "fallback", "fallback path tracked")
 assertEqual(diagnosticsAfterFallback.lastReason, "accepted", "fallback reason tracked")
+assertEqual(diagnosticsAfterFallback.lastFallbackReason, "accepted", "fallback last reason tracked")
+
+globalEnv._RealmAdmissionQueue_QueryAPI = {
+	EnqueueAdmission = function(_payload: any): any
+		return {
+			accepted = false,
+			reason = "queue_backpressure",
+		}
+	end,
+}
+
+local requestFour = queryApi.RequestRescueContract(rescuerFour.UserId, targetFour.UserId, 40)
+assertEqual(requestFour.accepted, true, "request four accepted")
+local pendingFour = queryApi.GetRescueQueueEntries(40)
+local pendingFourEntry = findQueueEntryForRescuer(pendingFour, rescuerFour.UserId)
+assertEqual(type(pendingFourEntry), "table", "fourth request queue entry exists")
+
+local acceptFallbackRejected =
+	queryApi.AcceptRescueQueueEntry(acceptedByFour.UserId, pendingFourEntry.queueEntryId, 40.5)
+assertEqual(acceptFallbackRejected.accepted, false, "fallback rejection propagated")
+assertEqual(acceptFallbackRejected.reason, "queue_backpressure", "fallback rejection reason propagated")
+local diagnosticsAfterFallbackRejected = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterFallbackRejected.totalAttempts, 5, "total attempts include fallback rejection")
+assertEqual(diagnosticsAfterFallbackRejected.fallbackAttempts, 2, "fallback attempts include rejection")
+assertEqual(diagnosticsAfterFallbackRejected.fallbackSucceeded, 1, "fallback success count preserved")
+assertEqual(diagnosticsAfterFallbackRejected.fallbackFailed, 1, "fallback failure tracked")
+assertEqual(diagnosticsAfterFallbackRejected.lastPath, "fallback", "fallback rejection path tracked")
+assertEqual(diagnosticsAfterFallbackRejected.lastReason, "queue_backpressure", "fallback rejection reason tracked")
+assertEqual(
+	diagnosticsAfterFallbackRejected.lastFallbackReason,
+	"queue_backpressure",
+	"fallback rejection last fallback reason tracked"
+)
 
 print("rescue_contract_admission_ingress_runtime_entrypoint: all checks passed")
