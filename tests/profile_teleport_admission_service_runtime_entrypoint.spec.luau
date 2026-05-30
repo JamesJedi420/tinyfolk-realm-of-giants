@@ -25,6 +25,7 @@ require("../src/ServerScriptService/Services/ProfileTeleportAdmissionService.ser
 local serviceApi = globalEnv._ProfileTeleportAdmissionService_QueryAPI
 assertTrue(type(serviceApi) == "table", "service query api published")
 assertTrue(type(serviceApi.RequestTeleportHandoffAdmission) == "function", "request function published")
+assertTrue(type(serviceApi.GetAdmissionDiagnostics) == "function", "diagnostics function published")
 
 local enqueuePayloads = {}
 local admissionQueueApi = {
@@ -64,6 +65,11 @@ assertEqual(
 assertEqual(accepted.payload.partyMemberUserIds[1], 8101, "single handoff member id")
 assertEqual(accepted.payload.targetRealmId, "realm-42", "target realm propagated")
 assertEqual(#enqueuePayloads, 1, "enqueue invoked once")
+local diagnosticsAfterAccepted = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterAccepted.enqueueAttempts, 1, "accepted diagnostics enqueue attempts")
+assertEqual(diagnosticsAfterAccepted.enqueueSucceeded, 1, "accepted diagnostics enqueue success")
+assertEqual(diagnosticsAfterAccepted.enqueueFailed, 0, "accepted diagnostics enqueue failures")
+assertEqual(diagnosticsAfterAccepted.lastReason, "accepted", "accepted diagnostics last reason")
 
 local explicit = serviceApi.RequestTeleportHandoffAdmission({
 	userId = 8102,
@@ -75,6 +81,10 @@ local explicit = serviceApi.RequestTeleportHandoffAdmission({
 assertEqual(explicit.accepted, true, "explicit payload accepted")
 assertEqual(explicit.payload.operationId, "operation_custom_2", "explicit operation id preserved")
 assertEqual(explicit.payload.partyId, "party_custom_2", "explicit party id preserved")
+local diagnosticsAfterExplicit = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterExplicit.enqueueAttempts, 2, "explicit diagnostics enqueue attempts")
+assertEqual(diagnosticsAfterExplicit.enqueueSucceeded, 2, "explicit diagnostics enqueue success")
+assertEqual(diagnosticsAfterExplicit.lastReason, "accepted", "explicit diagnostics last reason")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -89,6 +99,15 @@ local missingQueue = serviceApi.RequestTeleportHandoffAdmission({
 })
 assertEqual(missingQueue.accepted, false, "missing queue rejected")
 assertEqual(missingQueue.reason, "admission_queue_unavailable", "missing queue reason")
+local diagnosticsAfterMissingQueue = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterMissingQueue.enqueueAttempts, 3, "missing queue diagnostics enqueue attempts")
+assertEqual(diagnosticsAfterMissingQueue.enqueueSucceeded, 2, "missing queue diagnostics enqueue success")
+assertEqual(diagnosticsAfterMissingQueue.enqueueFailed, 1, "missing queue diagnostics enqueue failures")
+assertEqual(
+	diagnosticsAfterMissingQueue.lastReason,
+	"admission_queue_unavailable",
+	"missing queue diagnostics last reason"
+)
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -103,6 +122,10 @@ local invalidUser = serviceApi.RequestTeleportHandoffAdmission({
 })
 assertEqual(invalidUser.accepted, false, "invalid user rejected")
 assertEqual(invalidUser.reason, "admission_user_id_invalid", "invalid user reason")
+local diagnosticsAfterInvalidUser = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterInvalidUser.enqueueAttempts, 3, "invalid user diagnostics enqueue attempts unchanged")
+assertEqual(diagnosticsAfterInvalidUser.enqueueFailed, 1, "invalid user diagnostics enqueue failures unchanged")
+assertEqual(diagnosticsAfterInvalidUser.lastReason, "admission_user_id_invalid", "invalid user diagnostics last reason")
 
 local invalidToken = serviceApi.RequestTeleportHandoffAdmission({
 	userId = 8104,
@@ -110,6 +133,10 @@ local invalidToken = serviceApi.RequestTeleportHandoffAdmission({
 })
 assertEqual(invalidToken.accepted, false, "invalid token rejected")
 assertEqual(invalidToken.reason, "handoff_token_invalid", "invalid token reason")
+local diagnosticsAfterInvalidToken = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterInvalidToken.enqueueAttempts, 3, "invalid token diagnostics enqueue attempts unchanged")
+assertEqual(diagnosticsAfterInvalidToken.enqueueFailed, 1, "invalid token diagnostics enqueue failures unchanged")
+assertEqual(diagnosticsAfterInvalidToken.lastReason, "handoff_token_invalid", "invalid token diagnostics last reason")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -131,6 +158,11 @@ local enqueueRejected = serviceApi.RequestTeleportHandoffAdmission({
 })
 assertEqual(enqueueRejected.accepted, false, "enqueue rejection propagated")
 assertEqual(enqueueRejected.reason, "queue_backpressure", "enqueue rejection reason")
+local diagnosticsAfterRejected = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterRejected.enqueueAttempts, 4, "rejected diagnostics enqueue attempts")
+assertEqual(diagnosticsAfterRejected.enqueueSucceeded, 2, "rejected diagnostics enqueue success")
+assertEqual(diagnosticsAfterRejected.enqueueFailed, 2, "rejected diagnostics enqueue failures")
+assertEqual(diagnosticsAfterRejected.lastReason, "queue_backpressure", "rejected diagnostics last reason")
 
 serviceApi.ResetForTests()
 resetGlobals()

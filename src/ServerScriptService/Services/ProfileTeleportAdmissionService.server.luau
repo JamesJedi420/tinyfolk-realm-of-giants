@@ -11,6 +11,29 @@ local DEFAULT_EXPIRATION_SECONDS = 600
 local queryApiOverride: any = nil
 local nowFnOverride: (() -> number)? = nil
 
+type AdmissionDiagnostics = {
+	enqueueAttempts: number,
+	enqueueSucceeded: number,
+	enqueueFailed: number,
+	lastReason: string,
+}
+
+local admissionDiagnostics: AdmissionDiagnostics = {
+	enqueueAttempts = 0,
+	enqueueSucceeded = 0,
+	enqueueFailed = 0,
+	lastReason = "not_started",
+}
+
+local function cloneAdmissionDiagnostics(): AdmissionDiagnostics
+	return {
+		enqueueAttempts = admissionDiagnostics.enqueueAttempts,
+		enqueueSucceeded = admissionDiagnostics.enqueueSucceeded,
+		enqueueFailed = admissionDiagnostics.enqueueFailed,
+		lastReason = admissionDiagnostics.lastReason,
+	}
+end
+
 local function resolveNow(): number
 	if type(nowFnOverride) == "function" then
 		local at = nowFnOverride()
@@ -70,16 +93,20 @@ local ProfileTeleportAdmissionService: any = {}
 
 function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: any): any
 	if type(input) ~= "table" then
+		admissionDiagnostics.lastReason = "request_invalid"
 		return { accepted = false, reason = "request_invalid" }
 	end
 
 	if not isValidUserId(input.userId) then
+		admissionDiagnostics.lastReason = "admission_user_id_invalid"
 		return { accepted = false, reason = "admission_user_id_invalid" }
 	end
 	if not isNonEmptyString(input.handoffToken) then
+		admissionDiagnostics.lastReason = "handoff_token_invalid"
 		return { accepted = false, reason = "handoff_token_invalid" }
 	end
 	if not isNonEmptyString(input.targetRealmId) then
+		admissionDiagnostics.lastReason = "target_realm_id_invalid"
 		return { accepted = false, reason = "target_realm_id_invalid" }
 	end
 
@@ -104,7 +131,13 @@ function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: 
 		retryCount = 0,
 	})
 
+	admissionDiagnostics.enqueueAttempts += 1
+
 	if result.accepted ~= true then
+		admissionDiagnostics.enqueueFailed += 1
+		admissionDiagnostics.lastReason = if type(result.reason) == "string"
+			then result.reason
+			else "admission_enqueue_failed"
 		return {
 			accepted = false,
 			reason = result.reason,
@@ -112,12 +145,19 @@ function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: 
 		}
 	end
 
+	admissionDiagnostics.enqueueSucceeded += 1
+	admissionDiagnostics.lastReason = if type(result.reason) == "string" then result.reason else "accepted"
+
 	return {
 		accepted = true,
 		reason = result.reason,
 		payload = result.payload,
 		snapshot = result.snapshot,
 	}
+end
+
+function ProfileTeleportAdmissionService.GetAdmissionDiagnostics(): AdmissionDiagnostics
+	return cloneAdmissionDiagnostics()
 end
 
 function ProfileTeleportAdmissionService.ConfigureForTests(config: any)
@@ -129,11 +169,20 @@ end
 function ProfileTeleportAdmissionService.ResetForTests()
 	queryApiOverride = nil
 	nowFnOverride = nil
+	admissionDiagnostics = {
+		enqueueAttempts = 0,
+		enqueueSucceeded = 0,
+		enqueueFailed = 0,
+		lastReason = "not_started",
+	}
 end
 
 globalEnv._ProfileTeleportAdmissionService_QueryAPI = {
 	RequestTeleportHandoffAdmission = function(input: any): any
 		return ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input)
+	end,
+	GetAdmissionDiagnostics = function(): AdmissionDiagnostics
+		return ProfileTeleportAdmissionService.GetAdmissionDiagnostics()
 	end,
 	ConfigureForTests = function(config: any)
 		ProfileTeleportAdmissionService.ConfigureForTests(config)

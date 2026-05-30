@@ -116,8 +116,17 @@
 	- targeted rescue admission + rescue ingress runtime specs pass
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 8:
+	- `ProfileTeleportAdmissionService` now emits bounded enqueue diagnostics snapshots (`enqueueAttempts`, `enqueueSucceeded`, `enqueueFailed`, `lastReason`) via `_ProfileTeleportAdmissionService_QueryAPI.GetAdmissionDiagnostics`.
+	- Focused teleport admission runtime coverage expanded to assert service-local diagnostics across accepted, queue-unavailable, invalid-input, and enqueue rejection paths.
+	- Focused teleport handoff ingress coverage expanded to assert deterministic reason parity between `ProfileTeleportHandoffService` primary ingress diagnostics and `ProfileTeleportAdmissionService` service-local diagnostics for both primary success and explicit primary rejection outcomes.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted teleport admission + teleport handoff ingress runtime specs pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Evaluate whether any remaining admission seams still lack deterministic diagnostics snapshots; if not, pivot the next TIN-233 slice to closure evidence and checklist completion.
+- Execute TIN-233 closure checklist with explicit evidence for implementation gaps, validation strength, required docs updates, related-issue boundary checks, and cleanup/deferred follow-ups before moving to Done.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.
