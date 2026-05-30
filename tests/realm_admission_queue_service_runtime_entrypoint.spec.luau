@@ -484,6 +484,14 @@ do
 	assertEqual(loopDiagnostics.processBatchSize, 3, "loop diagnostics include configured batch size")
 	assertEqual(loopDiagnostics.processIntervalSeconds, 2, "loop diagnostics include configured interval")
 	assertEqual(loopDiagnostics.processingLoopEnabled, true, "loop diagnostics indicate enabled loop")
+	assertEqual(loopDiagnostics.loopScheduleAttempts, 1, "loop diagnostics schedule attempts after start")
+	assertEqual(loopDiagnostics.loopScheduleSucceeded, 1, "loop diagnostics schedule success after start")
+	assertEqual(loopDiagnostics.loopScheduleFailed, 0, "loop diagnostics schedule failures baseline")
+	assertEqual(loopDiagnostics.loopTickAttempts, 0, "loop diagnostics tick attempts baseline")
+	assertEqual(loopDiagnostics.loopTickSucceeded, 0, "loop diagnostics tick success baseline")
+	assertEqual(loopDiagnostics.loopTickFailed, 0, "loop diagnostics tick failures baseline")
+	assertTrue(type(loopDiagnostics.loopLastScheduledAt) == "number", "loop diagnostics last scheduled timestamp")
+	assertEqual(loopDiagnostics.loopLastErrorReason, "accepted", "loop diagnostics last schedule reason")
 
 	assertTrue(
 		RealmAdmissionQueueService.EnqueueAdmission(makeEntry({ operationId = "op-loop", expiration = 220 })).accepted,
@@ -495,9 +503,80 @@ do
 	assertEqual(loopDispatchCalls, 1, "scheduled callback processes queued item")
 	assertTrue(loopRemovedIds["receipt-1"] == true, "scheduled callback removes processed receipt")
 	assertEqual(scheduledDelays[2], 2, "loop reschedules after callback")
+	local loopAfterTick = RealmAdmissionQueueService.GetProcessingDiagnostics()
+	assertEqual(loopAfterTick.loopScheduleAttempts, 2, "loop diagnostics schedule attempts after reschedule")
+	assertEqual(loopAfterTick.loopScheduleSucceeded, 2, "loop diagnostics schedule success after reschedule")
+	assertEqual(loopAfterTick.loopTickAttempts, 1, "loop diagnostics tick attempts after callback")
+	assertEqual(loopAfterTick.loopTickSucceeded, 1, "loop diagnostics tick success after callback")
+	assertEqual(loopAfterTick.loopTickFailed, 0, "loop diagnostics tick failures remain zero")
+	assertTrue(type(loopAfterTick.loopLastTickAt) == "number", "loop diagnostics last tick timestamp")
+	assertEqual(loopAfterTick.loopLastErrorReason, "accepted", "loop diagnostics last tick reason")
 
 	RealmAdmissionQueueService.ResetForTests()
 	assertEqual(cancelledToken, scheduledTokens[2], "reset cancels pending scheduled token")
+end
+
+do
+	local failedScheduleAdapter, _failedScheduleRemovedIds = makeQueueAdapter()
+	local configuredFailedSchedule = RealmAdmissionQueueService.ConfigureForTests({
+		adapter = failedScheduleAdapter,
+		codec = makeCodec(),
+		queueState = RealmAdmissionQueueState,
+		structurePolicy = MemoryStoreStructurePolicy,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+				}
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				return {
+					ok = true,
+					retryable = false,
+				}
+			end,
+		},
+		operationLock = {
+			TryAcquire = function(_operationId: string): boolean
+				return true
+			end,
+			Release = function(_operationId: string)
+				return
+			end,
+		},
+		now = function(): number
+			return 150
+		end,
+		enableProcessingLoop = true,
+		processIntervalSeconds = 2,
+		processBatchSize = 3,
+		processScheduler = {
+			schedule = function(_delaySeconds: number, _callback: () -> ())
+				error("schedule_boom")
+			end,
+			cancel = function(_token: any)
+				return
+			end,
+		},
+	})
+
+	assertTrue(configuredFailedSchedule.ok, "loop configure with failed scheduler accepted")
+	local failedScheduleDiagnostics = RealmAdmissionQueueService.GetProcessingDiagnostics()
+	assertEqual(failedScheduleDiagnostics.loopScheduleAttempts, 1, "failed schedule attempt tracked")
+	assertEqual(failedScheduleDiagnostics.loopScheduleSucceeded, 0, "failed schedule success remains zero")
+	assertEqual(failedScheduleDiagnostics.loopScheduleFailed, 1, "failed schedule count tracked")
+	assertEqual(failedScheduleDiagnostics.loopTickAttempts, 0, "failed schedule has no tick attempts")
+	assertEqual(failedScheduleDiagnostics.loopLastErrorReason, "loop_schedule_failed", "failed schedule reason tracked")
+
+	RealmAdmissionQueueService.ResetForTests()
 end
 
 print("realm_admission_queue_service_runtime_entrypoint: all checks passed")

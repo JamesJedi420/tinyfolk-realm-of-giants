@@ -65,6 +65,15 @@ type ProcessingDiagnostics = {
 	totalExpired: number,
 	totalRetryDeferred: number,
 	totalFailed: number,
+	loopScheduleAttempts: number,
+	loopScheduleSucceeded: number,
+	loopScheduleFailed: number,
+	loopTickAttempts: number,
+	loopTickSucceeded: number,
+	loopTickFailed: number,
+	loopLastScheduledAt: number?,
+	loopLastTickAt: number?,
+	loopLastErrorReason: string,
 	lastOutcome: any?,
 	lastReason: string,
 	lastProcessedAt: number?,
@@ -86,6 +95,15 @@ local runtimeProcessingDiagnostics: ProcessingDiagnostics = {
 	totalExpired = 0,
 	totalRetryDeferred = 0,
 	totalFailed = 0,
+	loopScheduleAttempts = 0,
+	loopScheduleSucceeded = 0,
+	loopScheduleFailed = 0,
+	loopTickAttempts = 0,
+	loopTickSucceeded = 0,
+	loopTickFailed = 0,
+	loopLastScheduledAt = nil,
+	loopLastTickAt = nil,
+	loopLastErrorReason = "not_started",
 	lastOutcome = nil,
 	lastReason = "not_started",
 	lastProcessedAt = nil,
@@ -180,10 +198,45 @@ local function resetProcessingDiagnostics(reason: string)
 		totalExpired = 0,
 		totalRetryDeferred = 0,
 		totalFailed = 0,
+		loopScheduleAttempts = 0,
+		loopScheduleSucceeded = 0,
+		loopScheduleFailed = 0,
+		loopTickAttempts = 0,
+		loopTickSucceeded = 0,
+		loopTickFailed = 0,
+		loopLastScheduledAt = nil,
+		loopLastTickAt = nil,
+		loopLastErrorReason = reason,
 		lastOutcome = nil,
 		lastReason = reason,
 		lastProcessedAt = nil,
 	}
+end
+
+local function nowSeconds(): number
+	return os.clock()
+end
+
+local function recordLoopSchedule(at: number, success: boolean, reason: string)
+	runtimeProcessingDiagnostics.loopScheduleAttempts += 1
+	runtimeProcessingDiagnostics.loopLastScheduledAt = at
+	if success then
+		runtimeProcessingDiagnostics.loopScheduleSucceeded += 1
+	else
+		runtimeProcessingDiagnostics.loopScheduleFailed += 1
+	end
+	runtimeProcessingDiagnostics.loopLastErrorReason = reason
+end
+
+local function recordLoopTick(at: number, success: boolean, reason: string)
+	runtimeProcessingDiagnostics.loopTickAttempts += 1
+	runtimeProcessingDiagnostics.loopLastTickAt = at
+	if success then
+		runtimeProcessingDiagnostics.loopTickSucceeded += 1
+	else
+		runtimeProcessingDiagnostics.loopTickFailed += 1
+	end
+	runtimeProcessingDiagnostics.loopLastErrorReason = reason
 end
 
 local cloneTable: (source: any) -> any
@@ -376,18 +429,50 @@ local function buildRuntime(config: any)
 				return
 			end
 
-			runtimeProcessToken = schedulerAny.schedule(runtimeProcessIntervalSeconds, function()
-				runtimeProcessToken = nil
-				if not started then
-					return
-				end
+			local scheduledAt = nowSeconds()
+			local scheduleOk, scheduleToken = pcall(function()
+				return schedulerAny.schedule(runtimeProcessIntervalSeconds, function()
+					runtimeProcessToken = nil
+					if not started then
+						return
+					end
 
-				pcall(function()
-					RealmAdmissionQueueService.ProcessBatch(runtimeProcessBatchSize)
+					local tickAt = nowSeconds()
+					local processOk, processResult = pcall(function()
+						return RealmAdmissionQueueService.ProcessBatch(runtimeProcessBatchSize)
+					end)
+					if not processOk then
+						recordLoopTick(tickAt, false, "loop_tick_process_batch_throw")
+					elseif type(processResult) ~= "table" then
+						recordLoopTick(tickAt, false, "loop_tick_process_batch_result_invalid")
+					elseif processResult.accepted == true then
+						recordLoopTick(tickAt, true, "accepted")
+					else
+						local tickReason = if type(processResult.reason) == "string"
+								and processResult.reason ~= ""
+							then processResult.reason
+							else "loop_tick_process_batch_rejected"
+						recordLoopTick(tickAt, false, tickReason)
+					end
+
+					scheduleNextTick()
 				end)
-
-				scheduleNextTick()
 			end)
+
+			if not scheduleOk then
+				runtimeProcessToken = nil
+				recordLoopSchedule(scheduledAt, false, "loop_schedule_failed")
+				return
+			end
+
+			if scheduleToken == nil then
+				runtimeProcessToken = nil
+				recordLoopSchedule(scheduledAt, false, "loop_schedule_token_invalid")
+				return
+			end
+
+			runtimeProcessToken = scheduleToken
+			recordLoopSchedule(scheduledAt, true, "accepted")
 		end
 
 		scheduleNextTick()
@@ -467,6 +552,15 @@ function RealmAdmissionQueueService.GetProcessingDiagnostics(): any
 		totalExpired = runtimeProcessingDiagnostics.totalExpired,
 		totalRetryDeferred = runtimeProcessingDiagnostics.totalRetryDeferred,
 		totalFailed = runtimeProcessingDiagnostics.totalFailed,
+		loopScheduleAttempts = runtimeProcessingDiagnostics.loopScheduleAttempts,
+		loopScheduleSucceeded = runtimeProcessingDiagnostics.loopScheduleSucceeded,
+		loopScheduleFailed = runtimeProcessingDiagnostics.loopScheduleFailed,
+		loopTickAttempts = runtimeProcessingDiagnostics.loopTickAttempts,
+		loopTickSucceeded = runtimeProcessingDiagnostics.loopTickSucceeded,
+		loopTickFailed = runtimeProcessingDiagnostics.loopTickFailed,
+		loopLastScheduledAt = runtimeProcessingDiagnostics.loopLastScheduledAt,
+		loopLastTickAt = runtimeProcessingDiagnostics.loopLastTickAt,
+		loopLastErrorReason = runtimeProcessingDiagnostics.loopLastErrorReason,
 		lastOutcome = cloneTable(runtimeProcessingDiagnostics.lastOutcome),
 		lastReason = runtimeProcessingDiagnostics.lastReason,
 		lastProcessedAt = runtimeProcessingDiagnostics.lastProcessedAt,

@@ -44,8 +44,17 @@
 	- `a6337c11` ingress caller migration + focused ingress spec
 	- `253ac60f` concrete `RescueAdmissionService` seam + focused service spec
 
+- Completed batch 2:
+	- `RealmAdmissionQueueService` process-loop telemetry now records schedule/tick attempt-success-failure counters and last schedule/tick timestamps.
+	- Loop diagnostics now emit bounded reason fields for schedule and tick failure paths.
+	- Focused runtime coverage expanded in `tests/realm_admission_queue_service_runtime_entrypoint.spec.luau` for successful schedule/tick cadence and scheduler-throw failure snapshots.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted queue runtime spec pass: `tests/realm_admission_queue_service_runtime_entrypoint.spec.luau`
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Add explicit observability signals for rescue admission ingress path selection and fallback behavior (primary seam vs producer fallback), then assert those signals in focused runtime specs.
+- Enumerate the next non-rescue admission ingress surface and migrate one bounded caller batch through the shared query seam while preserving deterministic fallback compatibility.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.
