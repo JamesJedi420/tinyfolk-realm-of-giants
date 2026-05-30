@@ -47,7 +47,10 @@ local function getPlayerUserId(player: any): number?
 end
 
 local function isNonEmptyString(value: any): boolean
-	return type(value) == "string" and value ~= ""
+	if type(value) ~= "string" then
+		return false
+	end
+	return value ~= ""
 end
 
 local function makeResult(

@@ -58,6 +58,18 @@ export type BatchReadResult = {
 	items: { any },
 }
 
+type ProcessingDiagnostics = {
+	totalBatches: number,
+	totalProcessed: number,
+	totalSucceeded: number,
+	totalExpired: number,
+	totalRetryDeferred: number,
+	totalFailed: number,
+	lastOutcome: any?,
+	lastReason: string,
+	lastProcessedAt: number?,
+}
+
 local started = false
 local runtimeQueueStore: any = nil
 local runtimeProcessor: any = nil
@@ -67,7 +79,7 @@ local runtimeProcessBatchSize = DEFAULT_PROCESS_BATCH_SIZE
 local runtimeProcessIntervalSeconds = DEFAULT_PROCESS_INTERVAL_SECONDS
 local runtimeQueueNotificationFanout: any = nil
 local runtimePartyResolver: any = nil
-local runtimeProcessingDiagnostics = {
+local runtimeProcessingDiagnostics: ProcessingDiagnostics = {
 	totalBatches = 0,
 	totalProcessed = 0,
 	totalSucceeded = 0,
@@ -174,7 +186,8 @@ local function resetProcessingDiagnostics(reason: string)
 	}
 end
 
-local function cloneTable(source: any): any
+local cloneTable: (source: any) -> any
+cloneTable = function(source: any): any
 	if type(source) ~= "table" then
 		return nil
 	end
@@ -191,18 +204,21 @@ end
 
 local function updateProcessingDiagnostics(outcome: any, nowAt: number, reason: string)
 	if type(outcome) == "table" then
+		local outcomeAny: any = outcome
 		runtimeProcessingDiagnostics.totalBatches += 1
-		runtimeProcessingDiagnostics.totalProcessed += if type(outcome.processed) == "number"
-			then outcome.processed
+		runtimeProcessingDiagnostics.totalProcessed += if type(outcomeAny.processed) == "number"
+			then outcomeAny.processed
 			else 0
-		runtimeProcessingDiagnostics.totalSucceeded += if type(outcome.succeeded) == "number"
-			then outcome.succeeded
+		runtimeProcessingDiagnostics.totalSucceeded += if type(outcomeAny.succeeded) == "number"
+			then outcomeAny.succeeded
 			else 0
-		runtimeProcessingDiagnostics.totalExpired += if type(outcome.expired) == "number" then outcome.expired else 0
-		runtimeProcessingDiagnostics.totalRetryDeferred += if type(outcome.retryDeferred) == "number"
-			then outcome.retryDeferred
+		runtimeProcessingDiagnostics.totalExpired += if type(outcomeAny.expired) == "number"
+			then outcomeAny.expired
 			else 0
-		runtimeProcessingDiagnostics.totalFailed += if type(outcome.failed) == "number" then outcome.failed else 0
+		runtimeProcessingDiagnostics.totalRetryDeferred += if type(outcomeAny.retryDeferred) == "number"
+			then outcomeAny.retryDeferred
+			else 0
+		runtimeProcessingDiagnostics.totalFailed += if type(outcomeAny.failed) == "number" then outcomeAny.failed else 0
 		runtimeProcessingDiagnostics.lastOutcome = cloneTable(outcome)
 	else
 		runtimeProcessingDiagnostics.lastOutcome = nil
