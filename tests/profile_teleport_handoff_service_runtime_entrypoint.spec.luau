@@ -189,6 +189,16 @@ assertTrue(type(firstPayload) == "table", "first handoff enqueue payload capture
 assertEqual(firstPayload.handoffToken, firstHandoff.handoffToken, "first handoff token maps to payload")
 assertEqual(firstPayload.userId, 4001, "first handoff user id maps to payload")
 assertEqual(firstPayload.targetRealmId, "realm-main-01", "first handoff target realm mapped")
+local firstIngressDiagnostics = ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics()
+assertEqual(
+	firstIngressDiagnostics.totalAttempts >= 2,
+	true,
+	"first diagnostics total attempts include queue-unavailable"
+)
+assertEqual(firstIngressDiagnostics.primaryAttempts >= 2, true, "first diagnostics primary attempts")
+assertEqual(firstIngressDiagnostics.primarySucceeded >= 1, true, "first diagnostics primary success count")
+assertEqual(firstIngressDiagnostics.lastPath, "primary_profile_teleport", "first diagnostics last path")
+assertEqual(firstIngressDiagnostics.lastReason, "accepted", "first diagnostics last reason")
 
 local enqueueFailureCallbackResult: any = nil
 local enqueueFailureCallbackRegistered = ProfileTeleportHandoffService.RegisterReleaseReadyCallback(
@@ -215,6 +225,18 @@ assertEqual(
 	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4003),
 	true,
 	"enqueue-failed handoff leaves no pending spawn block"
+)
+local enqueueFailedDiagnostics = ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics()
+assertEqual(enqueueFailedDiagnostics.lastPath, "fallback_party_matchmaking", "enqueue-failed diagnostics fallback path")
+assertEqual(
+	enqueueFailedDiagnostics.lastReason,
+	"admission_queue_unavailable",
+	"enqueue-failed diagnostics last reason"
+)
+assertEqual(
+	enqueueFailedDiagnostics.lastFallbackReason,
+	"admission_queue_unavailable",
+	"enqueue-failed diagnostics fallback reason"
 )
 
 local replayedCallbackToken: string? = nil

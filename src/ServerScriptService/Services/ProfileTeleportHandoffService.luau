@@ -16,9 +16,52 @@ export type HandoffResult = {
 	fallbackRoute: string?,
 }
 
+export type AdmissionIngressDiagnostics = {
+	totalAttempts: number,
+	primaryAttempts: number,
+	primarySucceeded: number,
+	primaryFailed: number,
+	fallbackAttempts: number,
+	fallbackSucceeded: number,
+	fallbackFailed: number,
+	lastPath: string,
+	lastReason: string,
+	lastPrimaryReason: string,
+	lastFallbackReason: string,
+}
+
 local pendingHandoffByUserId: { [number]: { handoffToken: string }? } = {}
 local releaseReadyCallbacksByUserId: { [number]: { (HandoffResult) -> () }? } = {}
 local handoffCounter = 0
+local admissionIngressDiagnostics: AdmissionIngressDiagnostics = {
+	totalAttempts = 0,
+	primaryAttempts = 0,
+	primarySucceeded = 0,
+	primaryFailed = 0,
+	fallbackAttempts = 0,
+	fallbackSucceeded = 0,
+	fallbackFailed = 0,
+	lastPath = "none",
+	lastReason = "none",
+	lastPrimaryReason = "none",
+	lastFallbackReason = "none",
+}
+
+local function cloneAdmissionIngressDiagnostics(): AdmissionIngressDiagnostics
+	return {
+		totalAttempts = admissionIngressDiagnostics.totalAttempts,
+		primaryAttempts = admissionIngressDiagnostics.primaryAttempts,
+		primarySucceeded = admissionIngressDiagnostics.primarySucceeded,
+		primaryFailed = admissionIngressDiagnostics.primaryFailed,
+		fallbackAttempts = admissionIngressDiagnostics.fallbackAttempts,
+		fallbackSucceeded = admissionIngressDiagnostics.fallbackSucceeded,
+		fallbackFailed = admissionIngressDiagnostics.fallbackFailed,
+		lastPath = admissionIngressDiagnostics.lastPath,
+		lastReason = admissionIngressDiagnostics.lastReason,
+		lastPrimaryReason = admissionIngressDiagnostics.lastPrimaryReason,
+		lastFallbackReason = admissionIngressDiagnostics.lastFallbackReason,
+	}
+end
 
 local function isValidUserId(value: any): boolean
 	if type(value) ~= "number" then
@@ -191,16 +234,47 @@ local function requestAdmissionViaPartyMatchmakingService(
 end
 
 local function requestAdmissionHandoff(userId: number, handoffToken: string, targetRealmId: string): any
+	admissionIngressDiagnostics.totalAttempts += 1
+	admissionIngressDiagnostics.primaryAttempts += 1
+	admissionIngressDiagnostics.lastPath = "primary_profile_teleport"
+
 	local primaryResult = requestAdmissionViaProfileTeleportService(userId, handoffToken, targetRealmId)
 	if primaryResult.accepted == true then
+		admissionIngressDiagnostics.primarySucceeded += 1
+		admissionIngressDiagnostics.lastReason = "accepted"
+		admissionIngressDiagnostics.lastPrimaryReason = "accepted"
 		return primaryResult
 	end
 
-	if primaryResult.reason ~= "admission_queue_unavailable" then
+	admissionIngressDiagnostics.primaryFailed += 1
+	local primaryReason = if type(primaryResult.reason) == "string" and primaryResult.reason ~= ""
+		then primaryResult.reason
+		else "admission_enqueue_failed"
+	admissionIngressDiagnostics.lastReason = primaryReason
+	admissionIngressDiagnostics.lastPrimaryReason = primaryReason
+
+	if primaryReason ~= "admission_queue_unavailable" then
 		return primaryResult
 	end
 
-	return requestAdmissionViaPartyMatchmakingService(userId, handoffToken, targetRealmId)
+	admissionIngressDiagnostics.fallbackAttempts += 1
+	admissionIngressDiagnostics.lastPath = "fallback_party_matchmaking"
+
+	local fallbackResult = requestAdmissionViaPartyMatchmakingService(userId, handoffToken, targetRealmId)
+	if fallbackResult.accepted == true then
+		admissionIngressDiagnostics.fallbackSucceeded += 1
+		admissionIngressDiagnostics.lastReason = "accepted"
+		admissionIngressDiagnostics.lastFallbackReason = "accepted"
+		return fallbackResult
+	end
+
+	admissionIngressDiagnostics.fallbackFailed += 1
+	local fallbackReason = if type(fallbackResult.reason) == "string" and fallbackResult.reason ~= ""
+		then fallbackResult.reason
+		else "admission_enqueue_failed"
+	admissionIngressDiagnostics.lastReason = fallbackReason
+	admissionIngressDiagnostics.lastFallbackReason = fallbackReason
+	return fallbackResult
 end
 
 local function getLifecycleQueryApi(): any?
@@ -243,6 +317,23 @@ function ProfileTeleportHandoffService.ResetForTests()
 	pendingHandoffByUserId = {}
 	releaseReadyCallbacksByUserId = {}
 	handoffCounter = 0
+	admissionIngressDiagnostics = {
+		totalAttempts = 0,
+		primaryAttempts = 0,
+		primarySucceeded = 0,
+		primaryFailed = 0,
+		fallbackAttempts = 0,
+		fallbackSucceeded = 0,
+		fallbackFailed = 0,
+		lastPath = "none",
+		lastReason = "none",
+		lastPrimaryReason = "none",
+		lastFallbackReason = "none",
+	}
+end
+
+function ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics(): AdmissionIngressDiagnostics
+	return cloneAdmissionIngressDiagnostics()
 end
 
 function ProfileTeleportHandoffService.RegisterReleaseReadyCallback(userId: any, callback: any): boolean
@@ -386,6 +477,9 @@ globalEnv._ProfileTeleportHandoffService_QueryAPI = {
 	end,
 	RegisterReleaseReadyCallback = function(userId: any, callback: any): boolean
 		return ProfileTeleportHandoffService.RegisterReleaseReadyCallback(userId, callback)
+	end,
+	GetAdmissionIngressDiagnostics = function(): AdmissionIngressDiagnostics
+		return ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics()
 	end,
 	ResetForTests = function()
 		ProfileTeleportHandoffService.ResetForTests()

@@ -67,8 +67,24 @@
 	- targeted teleport admission/handoff ingress/runtime specs pass
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 4:
+	- `ProfileTeleportHandoffService` now emits bounded ingress path diagnostics for admission routing:
+		- primary path attempts/success/failure
+		- fallback path attempts/success/failure
+		- last path, last reason, and last primary/fallback reason snapshots
+	- Focused runtime coverage expanded to assert deterministic diagnostics for:
+		- primary seam success
+		- fallback seam success
+		- primary+fallback unavailable failure
+		- primary exception failure without fallback
+	- No request/response contract drift introduced for existing handoff callers.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted teleport handoff ingress/runtime diagnostics specs pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Extend bounded ingress observability parity by adding explicit primary-vs-fallback path diagnostics for teleport and party admission caller seams, then assert those diagnostics in focused runtime specs.
+- Add matching bounded path diagnostics to `PartyMatchmakingAdmissionService` (resolver path and enqueue outcome snapshots), then assert those diagnostics in focused party admission runtime specs.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.
