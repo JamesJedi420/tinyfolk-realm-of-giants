@@ -38,6 +38,7 @@ $testFiles = @(
     'tests\tinyfolk_status_service_runtime_entrypoint.spec.luau',
     'tests\memory_store_adapter.spec.luau',
     'tests\messaging_service_adapter.spec.luau',
+    'tests\notification_message_schema.spec.luau',
     'tests\queue_notification_fanout.spec.luau',
     'tests\memorystore_structure_policy.spec.luau',
     'tests\transfer_lock_service_runtime_entrypoint.spec.luau',

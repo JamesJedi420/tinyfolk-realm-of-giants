@@ -3,12 +3,12 @@
 local MessagingServiceAdapter = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("MessagingServiceAdapter"))
 	else (require :: any)("./MessagingServiceAdapter")
+local NotificationMessageSchema = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("NotificationMessageSchema"))
+	else (require :: any)("./NotificationMessageSchema")
 
 local QueueNotificationFanout: any = {}
 local globalEnv: any = getfenv()
-
-local ADMISSION_TOPIC = "tin_queue_admission_v1"
-local RESCUE_TOPIC = "tin_queue_rescue_v1"
 
 local function getGlobalTable(name: string): any?
 	local fromEnv = rawget(globalEnv, name)
@@ -43,11 +43,36 @@ local function sanitizePayload(payload: any): any
 	return {}
 end
 
+local function resolveOperationId(messageType: string, payload: any, sentAt: number): string
+	if type(payload) == "table" and type(payload.operationId) == "string" and payload.operationId ~= "" then
+		return payload.operationId
+	end
+	return string.format("notification_%s_%d", messageType, math.floor(sentAt * 1000))
+end
+
+local function resolveDefaultSourceJobId(): string
+	if game == nil then
+		return ""
+	end
+
+	local ok, jobId = pcall(function()
+		return (game :: any).JobId
+	end)
+	if ok and type(jobId) == "string" then
+		return jobId
+	end
+	return ""
+end
+
 function QueueNotificationFanout.Create(config: any?): any?
 	local configAny: any = config
 	local messagingService = if type(configAny) == "table" then configAny.messagingService else nil
 	local messagingAdapter = if type(configAny) == "table" then configAny.messagingAdapter else nil
 	local encode = if type(configAny) == "table" then configAny.encode else nil
+	local nowFn = if type(configAny) == "table" and type(configAny.now) == "function" then configAny.now else nil
+	local sourceJobId = if type(configAny) == "table" and type(configAny.sourceJobId) == "string"
+		then configAny.sourceJobId
+		else ""
 
 	if messagingAdapter == nil and messagingService ~= nil then
 		messagingAdapter = MessagingServiceAdapter.Create({
@@ -63,7 +88,17 @@ function QueueNotificationFanout.Create(config: any?): any?
 
 	local fanout: any = {}
 
-	local function publish(topic: string, eventName: any, payload: any): any
+	local function resolveSentAt(): number
+		if type(nowFn) == "function" then
+			local now = nowFn()
+			if type(now) == "number" and now == now and now ~= math.huge and now ~= -math.huge then
+				return now
+			end
+		end
+		return os.clock()
+	end
+
+	local function publish(topicKey: string, eventName: any, payload: any): any
 		local resolvedEventName = sanitizeEventName(eventName)
 		if resolvedEventName == nil then
 			return {
@@ -72,12 +107,31 @@ function QueueNotificationFanout.Create(config: any?): any?
 			}
 		end
 
-		local message = {
-			eventName = resolvedEventName,
-			payload = sanitizePayload(payload),
-		}
+		local topicResult = NotificationMessageSchema.GetTopic(topicKey)
+		if topicResult.accepted ~= true then
+			return {
+				accepted = false,
+				reason = if type(topicResult.reason) == "string" then topicResult.reason else "topic_invalid",
+			}
+		end
 
-		local encodeOk, encodedOrError = pcall(encode, message)
+		local sentAt = resolveSentAt()
+		local operationId = resolveOperationId(resolvedEventName, payload, sentAt)
+		local envelopeResult = NotificationMessageSchema.BuildEnvelope({
+			messageType = resolvedEventName,
+			operationId = operationId,
+			sourceJobId = sourceJobId,
+			sentAt = sentAt,
+			payload = sanitizePayload(payload),
+		})
+		if envelopeResult.accepted ~= true then
+			return {
+				accepted = false,
+				reason = if type(envelopeResult.reason) == "string" then envelopeResult.reason else "message_invalid",
+			}
+		end
+
+		local encodeOk, encodedOrError = pcall(encode, envelopeResult.envelope)
 		if not encodeOk or type(encodedOrError) ~= "string" then
 			return {
 				accepted = false,
@@ -86,10 +140,10 @@ function QueueNotificationFanout.Create(config: any?): any?
 		end
 
 		local publishResult = messagingAdapter.Publish({
-			topic = topic,
+			topic = topicResult.topic,
 			message = encodedOrError,
 			messageType = resolvedEventName,
-			operationId = if type(payload) == "table" then payload.operationId else nil,
+			operationId = operationId,
 		})
 		if type(publishResult) ~= "table" then
 			return {
@@ -111,11 +165,11 @@ function QueueNotificationFanout.Create(config: any?): any?
 	end
 
 	function fanout.PublishAdmission(eventName: any, payload: any): any
-		return publish(ADMISSION_TOPIC, eventName, payload)
+		return publish("admissionQueue", eventName, payload)
 	end
 
 	function fanout.PublishRescue(eventName: any, payload: any): any
-		return publish(RESCUE_TOPIC, eventName, payload)
+		return publish("rescueQueue", eventName, payload)
 	end
 
 	return fanout
@@ -148,6 +202,7 @@ function QueueNotificationFanout.CreateDefault(): any?
 
 	return QueueNotificationFanout.Create({
 		messagingAdapter = messagingAdapter,
+		sourceJobId = resolveDefaultSourceJobId(),
 		encode = function(value: any): string
 			return httpService:JSONEncode(value)
 		end,
