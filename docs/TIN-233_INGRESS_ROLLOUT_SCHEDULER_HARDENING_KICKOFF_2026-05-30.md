@@ -83,8 +83,18 @@
 	- targeted teleport handoff ingress/runtime diagnostics specs pass
 	- full suite `scripts/run-tests.ps1` pass
 
+- Completed batch 5:
+	- `PartyMatchmakingAdmissionService` now emits bounded resolver/enqueue diagnostics snapshots through `_PartyMatchmakingAdmissionService_QueryAPI.GetAdmissionDiagnostics`.
+	- Resolver diagnostics now capture attempts, success/failure, direct-target fallback usage, and last resolver path/reason snapshots.
+	- Enqueue diagnostics now capture attempts, success/failure, and last enqueue outcome reason snapshots.
+	- Focused runtime coverage expanded in `tests/party_matchmaking_admission_service_runtime_entrypoint.spec.luau` to assert deterministic diagnostics across accepted, resolver-unavailable/rejected, and enqueue failure paths.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted party admission runtime diagnostics spec pass
+	- full suite `scripts/run-tests.ps1` pass
+
 ## Next Bounded Step
-- Add matching bounded path diagnostics to `PartyMatchmakingAdmissionService` (resolver path and enqueue outcome snapshots), then assert those diagnostics in focused party admission runtime specs.
+- Extend ingress observability parity to rescue admission caller seams by asserting cross-service diagnostics consistency between `RescueContractService` ingress diagnostics and `RescueAdmissionService` enqueue outcomes in focused runtime specs.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.

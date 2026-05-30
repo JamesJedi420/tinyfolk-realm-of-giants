@@ -32,6 +32,7 @@ local serviceApi = globalEnv._PartyMatchmakingAdmissionService_QueryAPI
 assertTrue(type(serviceApi) == "table", "service query api published")
 assertTrue(type(serviceApi.RequestPartyAdmission) == "function", "request function published")
 assertTrue(type(serviceApi.RequestPartyMatchAdmission) == "function", "match admission function published")
+assertTrue(type(serviceApi.GetAdmissionDiagnostics) == "function", "diagnostics function published")
 
 local enqueuePayloads = {}
 local admissionQueueApi = {
@@ -69,6 +70,17 @@ assertEqual(accepted.payload.targetRealmId, "realm-17", "target realm id")
 assertEqual(accepted.payload.partyMemberUserIds[1], 19, "normalized member ordering first")
 assertEqual(accepted.payload.partyMemberUserIds[2], 44, "normalized member ordering second")
 assertEqual(#enqueuePayloads, 1, "enqueue invoked once")
+local acceptedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(acceptedDiagnostics.totalRequests, 1, "diagnostics total requests after first acceptance")
+assertEqual(acceptedDiagnostics.resolverAttempts, 1, "diagnostics resolver attempts after first acceptance")
+assertEqual(acceptedDiagnostics.resolverSucceeded, 1, "diagnostics resolver success after first acceptance")
+assertEqual(acceptedDiagnostics.resolverFallbackDirectTargetUsed, 0, "diagnostics direct target fallback baseline")
+assertEqual(acceptedDiagnostics.enqueueAttempts, 1, "diagnostics enqueue attempts after first acceptance")
+assertEqual(acceptedDiagnostics.enqueueSucceeded, 1, "diagnostics enqueue success after first acceptance")
+assertEqual(acceptedDiagnostics.enqueueFailed, 0, "diagnostics enqueue failures baseline")
+assertEqual(acceptedDiagnostics.lastEntryType, "direct_invite", "diagnostics last entry type first acceptance")
+assertEqual(acceptedDiagnostics.lastResolverPath, "resolver_query", "diagnostics last resolver path first acceptance")
+assertEqual(acceptedDiagnostics.lastReason, "accepted", "diagnostics last reason first acceptance")
 
 local queueAccepted = serviceApi.RequestPartyMatchAdmission({
 	partyId = "party-queue-alpha",
@@ -83,6 +95,11 @@ assertEqual(queueAccepted.payload.operationId, "party_queue_match_party-queue-al
 assertEqual(queueAccepted.payload.partyMemberUserIds[1], 77, "queue-match normalized member ordering first")
 assertEqual(queueAccepted.payload.partyMemberUserIds[2], 88, "queue-match normalized member ordering second")
 assertEqual(#enqueuePayloads, 2, "queue-match enqueue invoked")
+local queueAcceptedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(queueAcceptedDiagnostics.totalRequests, 2, "diagnostics total requests after queue acceptance")
+assertEqual(queueAcceptedDiagnostics.lastEntryType, "matchmaking_queue", "diagnostics last entry type queue acceptance")
+assertEqual(queueAcceptedDiagnostics.enqueueAttempts, 2, "diagnostics enqueue attempts after queue acceptance")
+assertEqual(queueAcceptedDiagnostics.enqueueSucceeded, 2, "diagnostics enqueue success after queue acceptance")
 
 resolverApi.ConfigureForTests({
 	resolveFallbackTargetRealmId = function(input: any)
@@ -98,6 +115,10 @@ local resolvedAccepted = serviceApi.RequestPartyAdmission({
 assertEqual(resolvedAccepted.accepted, true, "resolver accepted request")
 assertEqual(resolvedAccepted.payload.targetRealmId, "realm-from-resolver", "resolver target realm applied")
 assertEqual(#enqueuePayloads, 3, "resolver accepted path enqueues")
+local resolvedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(resolvedDiagnostics.resolverSucceeded, 3, "diagnostics resolver success after resolver query")
+assertEqual(resolvedDiagnostics.lastResolverPath, "resolver_query", "diagnostics resolver query path")
+assertEqual(resolvedDiagnostics.lastResolverReason, "accepted", "diagnostics resolver query reason")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -112,6 +133,14 @@ local missingQueue = serviceApi.RequestPartyAdmission({
 })
 assertEqual(missingQueue.accepted, false, "missing queue rejected")
 assertEqual(missingQueue.reason, "admission_queue_unavailable", "missing queue reason")
+local missingQueueDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(missingQueueDiagnostics.enqueueAttempts, 4, "diagnostics enqueue attempts include missing queue")
+assertEqual(missingQueueDiagnostics.enqueueFailed, 1, "diagnostics enqueue failures include missing queue")
+assertEqual(
+	missingQueueDiagnostics.lastEnqueueReason,
+	"admission_queue_unavailable",
+	"diagnostics missing queue enqueue reason"
+)
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -126,6 +155,14 @@ local invalidMembers = serviceApi.RequestPartyAdmission({
 })
 assertEqual(invalidMembers.accepted, false, "invalid members rejected")
 assertEqual(invalidMembers.reason, "admission_party_members_invalid", "invalid members reason")
+local invalidMembersDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(invalidMembersDiagnostics.enqueueAttempts, 5, "diagnostics enqueue attempts include invalid members")
+assertEqual(invalidMembersDiagnostics.enqueueFailed, 2, "diagnostics enqueue failures include invalid members")
+assertEqual(
+	invalidMembersDiagnostics.lastEnqueueReason,
+	"admission_party_members_invalid",
+	"diagnostics invalid members enqueue reason"
+)
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -144,6 +181,22 @@ local resolverUnavailable = serviceApi.RequestPartyAdmission({
 assertEqual(resolverUnavailable.accepted, false, "resolver unavailable rejected")
 assertEqual(resolverUnavailable.reason, "target_realm_unavailable", "resolver unavailable reason")
 assertEqual(#enqueuePayloads, 3, "resolver unavailable does not enqueue")
+local resolverUnavailableDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(
+	resolverUnavailableDiagnostics.resolverFailed >= 1,
+	true,
+	"diagnostics resolver failures include unavailable"
+)
+assertEqual(
+	resolverUnavailableDiagnostics.lastResolverPath,
+	"resolver_unavailable",
+	"diagnostics resolver unavailable path"
+)
+assertEqual(
+	resolverUnavailableDiagnostics.lastReason,
+	"target_realm_unavailable",
+	"diagnostics resolver unavailable reason"
+)
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -166,6 +219,10 @@ local unresolvedRealm = serviceApi.RequestPartyAdmission({
 assertEqual(unresolvedRealm.accepted, false, "unresolved realm rejected")
 assertEqual(unresolvedRealm.reason, "target_realm_missing", "unresolved realm reason")
 assertEqual(#enqueuePayloads, 3, "resolver rejection does not enqueue")
+local unresolvedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(unresolvedDiagnostics.lastResolverPath, "resolver_rejected", "diagnostics resolver rejected path")
+assertEqual(unresolvedDiagnostics.lastResolverReason, "target_realm_missing", "diagnostics resolver rejected reason")
+assertEqual(unresolvedDiagnostics.lastReason, "target_realm_missing", "diagnostics resolver rejected request reason")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -187,6 +244,9 @@ local enqueueRejected = serviceApi.RequestPartyAdmission({
 })
 assertEqual(enqueueRejected.accepted, false, "enqueue rejection propagated")
 assertEqual(enqueueRejected.reason, "queue_backpressure", "enqueue rejection reason")
+local enqueueRejectedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(enqueueRejectedDiagnostics.enqueueFailed >= 3, true, "diagnostics enqueue failures include backpressure")
+assertEqual(enqueueRejectedDiagnostics.lastEnqueueReason, "queue_backpressure", "diagnostics enqueue rejection reason")
 
 serviceApi.ConfigureForTests({
 	now = function()
@@ -205,6 +265,10 @@ local enqueueFailed = serviceApi.RequestPartyAdmission({
 })
 assertEqual(enqueueFailed.accepted, false, "enqueue throw rejected")
 assertEqual(enqueueFailed.reason, "admission_enqueue_failed", "enqueue throw reason")
+local enqueueFailedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(enqueueFailedDiagnostics.enqueueFailed >= 4, true, "diagnostics enqueue failures include throw")
+assertEqual(enqueueFailedDiagnostics.lastEnqueueReason, "admission_enqueue_failed", "diagnostics enqueue throw reason")
+assertEqual(enqueueFailedDiagnostics.lastReason, "admission_enqueue_failed", "diagnostics enqueue throw last reason")
 
 serviceApi.ResetForTests()
 resetGlobals()
