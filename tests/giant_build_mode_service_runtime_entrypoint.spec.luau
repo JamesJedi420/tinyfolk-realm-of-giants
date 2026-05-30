@@ -709,6 +709,50 @@ assertEqual(clearedConditions[#clearedConditions].conditionName, "stun", "snare 
 
 queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
 clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_C", 340, 0, 300))
+local expiringTrap = queryApi.GetPlacedSnareTrap("GiantStructure_Runtime_Snare_C")
+assertTrue(expiringTrap ~= nil, "expiring trap placed")
+local expiringContact = queryApi.ResolveSnareTrapContact(trappedTinyfolk.UserId, { x = 340, y = 0, z = 300 }, 1200)
+assertTrue(expiringContact.accepted, "expiring trap contact triggers")
+local expiringContactSnapshot = expiringContact.trap
+assertTrue(expiringContactSnapshot ~= nil, "expiring trap contact returns snapshot")
+local clearCountBeforeExpiry = #clearedConditions
+local expiryCheckAt = (if expiringContactSnapshot ~= nil then expiringContactSnapshot.expiresAt else 1300) + 1
+local expiryContact =
+	queryApi.ResolveSnareTrapContact(rescuerTinyfolk.UserId, { x = 340, y = 0, z = 300 }, expiryCheckAt)
+assertTrue(not expiryContact.accepted, "expired trap does not retrigger")
+assertEqual(expiryContact.reason, "snare_trap_not_triggered", "expired trap contact reason")
+assertEqual(#clearedConditions, clearCountBeforeExpiry + 1, "expired triggered trap clears stun once")
+assertEqual(clearedConditions[#clearedConditions].userId, trappedTinyfolk.UserId, "expiry clear targets trapped user")
+assertEqual(clearedConditions[#clearedConditions].conditionName, "stun", "expiry clear condition is stun")
+
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+clearRequestCooldownFor(acceptedPlayer)
+giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_D", 380, 0, 300))
+local invalidatingTrap = queryApi.GetPlacedSnareTrap("GiantStructure_Runtime_Snare_D")
+assertTrue(invalidatingTrap ~= nil, "invalidating trap placed")
+local invalidatingContact = queryApi.ResolveSnareTrapContact(trappedTinyfolk.UserId, { x = 380, y = 0, z = 300 }, 1310)
+assertTrue(invalidatingContact.accepted, "invalidating trap contact triggers")
+local clearCountBeforeInvalidation = #clearedConditions
+local protectedSpawnNearTriggered = makeNode("Spawn_B", "BasePart", "Workspace.Map.Spawns.Spawn_B")
+protectedSpawnNearTriggered.Position = { x = 380, y = 0, z = 300 }
+if mapFolder:FindFirstChild("Spawns") == nil then
+	local spawnsFolderForTriggered = makeNode("Spawns", "Folder", "Workspace.Map.Spawns")
+	addChild(mapFolder, "Spawns", spawnsFolderForTriggered)
+end
+addChild(mapFolder:FindFirstChild("Spawns"), "Spawn_B", protectedSpawnNearTriggered)
+local invalidatedTriggered = queryApi.RefreshSnareTrapLegality(1311)
+assertTrue(#invalidatedTriggered >= 1, "refresh returns invalidated triggered trap")
+assertEqual(#clearedConditions, clearCountBeforeInvalidation + 1, "invalidated triggered trap clears stun once")
+assertEqual(
+	clearedConditions[#clearedConditions].userId,
+	trappedTinyfolk.UserId,
+	"invalidation clear targets trapped user"
+)
+assertEqual(clearedConditions[#clearedConditions].conditionName, "stun", "invalidation clear condition is stun")
+
+queryApi.ResetSnareTrapRechargeForTests(acceptedPlayer.UserId)
+clearRequestCooldownFor(acceptedPlayer)
 giantPlacementRemote:FireServer(acceptedPlayer, makeAcceptedPayloadAt("GiantStructure_Runtime_Snare_B", 360, 0, 300))
 local disarmTrap = queryApi.GetPlacedSnareTrap("GiantStructure_Runtime_Snare_B")
 assertTrue(disarmTrap ~= nil, "second trap placed for disarm")
@@ -725,10 +769,14 @@ assertEqual(disarm.trap.status, "disarmed", "disarm status")
 assertStoredTotals(
 	resourcesBeforeSnareTrap.Wood.stored
 		- GiantStructureCatalog.GiantStructure_Runtime_Snare_A.woodCost
-		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.woodCost,
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.woodCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_C.woodCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_D.woodCost,
 	resourcesBeforeSnareTrap.Stone.stored
 		- GiantStructureCatalog.GiantStructure_Runtime_Snare_A.stoneCost
-		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.stoneCost,
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_B.stoneCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_C.stoneCost
+		- GiantStructureCatalog.GiantStructure_Runtime_Snare_D.stoneCost,
 	"snare trap placements debit exact structure cost"
 )
 

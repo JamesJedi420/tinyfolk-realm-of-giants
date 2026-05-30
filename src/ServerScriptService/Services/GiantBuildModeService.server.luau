@@ -948,6 +948,19 @@ local function getTinyfolkStatusQueryApi(): any?
 	return nil
 end
 
+local function clearSnareTrapStunIfTriggered(record: any, now: number)
+	if type(record) ~= "table" then
+		return
+	end
+	if type(record.triggeredByUserId) ~= "number" then
+		return
+	end
+	local statusApi = getTinyfolkStatusQueryApi()
+	if statusApi ~= nil and type(statusApi.ClearConditionForUserId) == "function" then
+		pcall(statusApi.ClearConditionForUserId, record.triggeredByUserId, "stun", now)
+	end
+end
+
 local function coarseGridCell(position: any): any
 	local gridSize = tonumber(SnareTrapConfig.CoarseAlertGridSizeStuds) or 50
 	gridSize = math.max(1, gridSize)
@@ -1067,6 +1080,7 @@ local function ResolveSnareTrapContact(userId: number, position: any, at: number
 		end
 		if nextRecord ~= nil and nextRecord.status == SnareTrapState.Status.Expired then
 			snareTrapByTrapId[trapId] = nextRecord
+			clearSnareTrapStunIfTriggered(nextRecord, resolvedAt)
 			updateSnareTrapArtifact(nextRecord, resolvedAt)
 			recordSnareTrapEvent("expired", "info", SnareTrapState.BuildSnapshot(nextRecord, resolvedAt))
 		end
@@ -1169,6 +1183,7 @@ local function RefreshSnareTrapLegality(now: number?): any
 			local expired, _, expiredRecord = SnareTrapState.ResolveExpiry(record, resolvedAt)
 			if expired and expiredRecord ~= nil then
 				snareTrapByTrapId[trapId] = expiredRecord
+				clearSnareTrapStunIfTriggered(expiredRecord, resolvedAt)
 				updateSnareTrapArtifact(expiredRecord, resolvedAt)
 				local snapshot = SnareTrapState.BuildSnapshot(expiredRecord, resolvedAt)
 				recordSnareTrapEvent("expired", "info", snapshot)
@@ -1189,6 +1204,7 @@ local function RefreshSnareTrapLegality(now: number?): any
 					local invalidated, _, invalidatedRecord = SnareTrapState.ResolveInvalidated(record, resolvedAt)
 					if invalidated and invalidatedRecord ~= nil then
 						snareTrapByTrapId[trapId] = invalidatedRecord
+						clearSnareTrapStunIfTriggered(invalidatedRecord, resolvedAt)
 						updateSnareTrapArtifact(invalidatedRecord, resolvedAt)
 						local snapshot = SnareTrapState.BuildSnapshot(invalidatedRecord, resolvedAt)
 						recordSnareTrapEvent("invalidated", "info", snapshot)
