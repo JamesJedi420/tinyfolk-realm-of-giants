@@ -4,7 +4,7 @@
 - ID: TIN-233
 - Title: Phase 2 additional ingress rollout and scheduler telemetry hardening
 - Linear: https://linear.app/spectranoir/issue/TIN-233/phase-2-additional-ingress-rollout-and-scheduler-telemetry-hardening
-- Status: Backlog
+- Status: In Progress
 
 ## Why This Slice Exists
 - TIN-231 closed a bounded producer-ingress and diagnostics slice.
@@ -27,6 +27,25 @@
 3. Add bounded scheduler telemetry counters/snapshots for cadence and outcomes.
 4. Extend focused runtime entrypoint specs for each migrated ingress.
 5. Run `scripts/run-validation.ps1 -ChangedOnly` and targeted plus full suite checks.
+
+## Progress Snapshot (2026-05-30)
+- Completed batch 1:
+	- `RescueContractService` rescue acceptance ingress now consumes `_RescueAdmissionService_QueryAPI.RequestRescueContractAdmission` as primary seam.
+	- Concrete `RescueAdmissionService` query seam added in `src/ServerScriptService/Services/RescueAdmissionService.server.luau`.
+	- Focused runtime coverage added:
+		- `tests/rescue_contract_admission_ingress_runtime_entrypoint.spec.luau`
+		- `tests/rescue_admission_service_runtime_entrypoint.spec.luau`
+	- Default scripted suite wiring updated in `scripts/run-tests.ps1`.
+- Validation evidence:
+	- `scripts/run-validation.ps1 -ChangedOnly` pass
+	- targeted rescue admission/ingress/runtime specs pass
+	- full suite `scripts/run-tests.ps1` pass
+- Commits:
+	- `a6337c11` ingress caller migration + focused ingress spec
+	- `253ac60f` concrete `RescueAdmissionService` seam + focused service spec
+
+## Next Bounded Step
+- Add explicit observability signals for rescue admission ingress path selection and fallback behavior (primary seam vs producer fallback), then assert those signals in focused runtime specs.
 
 ## Exit Criteria
 - Additional ingress surfaces migrated with deterministic failure-reason parity.

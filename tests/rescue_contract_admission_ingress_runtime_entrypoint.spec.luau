@@ -211,6 +211,13 @@ assertEqual(#ingressPayloads[1].partyMemberUserIds, 3, "ingress members count")
 assertEqual(ingressPayloads[1].partyMemberUserIds[1], rescuerOne.UserId, "ingress member 1")
 assertEqual(ingressPayloads[1].partyMemberUserIds[2], targetOne.UserId, "ingress member 2")
 assertEqual(ingressPayloads[1].partyMemberUserIds[3], acceptedByOne.UserId, "ingress member 3")
+local diagnosticsAfterPrimary = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterPrimary.primaryAttempts, 1, "primary attempts tracked")
+assertEqual(diagnosticsAfterPrimary.primarySucceeded, 1, "primary success tracked")
+assertEqual(diagnosticsAfterPrimary.primaryFailed, 0, "primary failures baseline")
+assertEqual(diagnosticsAfterPrimary.fallbackAttempts, 0, "fallback attempts baseline")
+assertEqual(diagnosticsAfterPrimary.lastPath, "primary", "primary path tracked")
+assertEqual(diagnosticsAfterPrimary.lastReason, "accepted", "primary reason tracked")
 
 globalEnv._RescueAdmissionService_QueryAPI = {
 	RequestRescueContractAdmission = function(_payload: any): any
@@ -226,5 +233,31 @@ assertEqual(#pendingTwo, 1, "one pending queue entry for second request")
 local acceptTwo = queryApi.AcceptRescueQueueEntry(acceptedByTwo.UserId, pendingTwo[1].queueEntryId, 20.5)
 assertEqual(acceptTwo.accepted, false, "ingress exception rejected")
 assertEqual(acceptTwo.reason, "admission_enqueue_failed", "ingress exception reason")
+local diagnosticsAfterPrimaryFailure = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterPrimaryFailure.primaryAttempts, 2, "primary attempts include failure")
+assertEqual(diagnosticsAfterPrimaryFailure.primarySucceeded, 1, "primary success count preserved")
+assertEqual(diagnosticsAfterPrimaryFailure.primaryFailed, 1, "primary failure tracked")
+assertEqual(diagnosticsAfterPrimaryFailure.fallbackAttempts, 0, "fallback still unused")
+assertEqual(diagnosticsAfterPrimaryFailure.lastPath, "primary", "primary failure path tracked")
+assertEqual(diagnosticsAfterPrimaryFailure.lastReason, "admission_enqueue_failed", "primary failure reason tracked")
+
+globalEnv._RescueAdmissionService_QueryAPI = nil
+globalEnv._RealmAdmissionQueue_QueryAPI = {
+	EnqueueAdmission = function(_payload: any): any
+		return {
+			accepted = true,
+			reason = "accepted",
+		}
+	end,
+}
+
+local acceptThree = queryApi.AcceptRescueQueueEntry(acceptedByTwo.UserId, pendingTwo[1].queueEntryId, 30.5)
+assertEqual(acceptThree.accepted, true, "fallback enqueue accepted")
+local diagnosticsAfterFallback = queryApi.GetAdmissionIngressDiagnostics()
+assertEqual(diagnosticsAfterFallback.fallbackAttempts, 1, "fallback attempt tracked")
+assertEqual(diagnosticsAfterFallback.fallbackSucceeded, 1, "fallback success tracked")
+assertEqual(diagnosticsAfterFallback.fallbackFailed, 0, "fallback failure baseline")
+assertEqual(diagnosticsAfterFallback.lastPath, "fallback", "fallback path tracked")
+assertEqual(diagnosticsAfterFallback.lastReason, "accepted", "fallback reason tracked")
 
 print("rescue_contract_admission_ingress_runtime_entrypoint: all checks passed")
