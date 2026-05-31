@@ -6,22 +6,30 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
-        "Material": "Concrete",
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Grass",
         "Color": [
-          0.45,
-          0.45,
-          0.45
+          0.25,
+          0.43,
+          0.22
         ],
         "Size": [
-          2048,
-          1,
-          1536
+          300,
+          0.4,
+          220
         ],
         "Position": [
           0,
-          0,
+          -0.3,
           0
         ]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "ReferenceScaled": true,
+        "VisualOnly": true
       }
     },
     {
@@ -29,6 +37,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Concrete",
         "Color": [
           0.35,
@@ -52,6 +64,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Concrete",
         "Color": [
           0.35,
@@ -75,6 +91,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Concrete",
         "Color": [
           0.35,
@@ -98,6 +118,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Concrete",
         "Color": [
           0.35,
