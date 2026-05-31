@@ -15,9 +15,22 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Wood",
-        "Color": [0.36, 0.23, 0.12],
-        "Size": [48, 2, 0.6],
-        "Position": [-118, 1, -13]
+        "Color": [
+          0.36,
+          0.23,
+          0.12
+        ],
+        "Size": [
+          48,
+          2,
+          0.6
+        ],
+        "Position": [
+          -118,
+          1,
+          -13
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -33,10 +46,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Wood",
-        "Color": [0.36, 0.23, 0.12],
-        "Size": [56, 2, 0.6],
-        "Orientation": [0, -18, 0],
-        "Position": [-64, 1, 80]
+        "Color": [
+          0.36,
+          0.23,
+          0.12
+        ],
+        "Size": [
+          56,
+          2,
+          0.6
+        ],
+        "Orientation": [
+          0,
+          -18,
+          0
+        ],
+        "Position": [
+          -64,
+          1,
+          80
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -52,10 +82,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sand",
-        "Color": [0.58, 0.48, 0.29],
-        "Size": [260, 0.35, 4],
-        "Orientation": [0, 4, 0],
-        "Position": [-8, 0.45, 83]
+        "Color": [
+          0.58,
+          0.48,
+          0.29
+        ],
+        "Size": [
+          260,
+          0.35,
+          4
+        ],
+        "Orientation": [
+          0,
+          4,
+          0
+        ],
+        "Position": [
+          -8,
+          0.45,
+          83
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -71,10 +118,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sand",
-        "Color": [0.58, 0.48, 0.29],
-        "Size": [260, 0.35, 4],
-        "Orientation": [0, -3, 0],
-        "Position": [4, 0.45, 101]
+        "Color": [
+          0.58,
+          0.48,
+          0.29
+        ],
+        "Size": [
+          260,
+          0.35,
+          4
+        ],
+        "Orientation": [
+          0,
+          -3,
+          0
+        ],
+        "Position": [
+          4,
+          0.45,
+          101
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -91,9 +155,22 @@
         "CanQuery": false,
         "Transparency": 0.36,
         "Material": "WoodPlanks",
-        "Color": [0.36, 0.24, 0.13],
-        "Size": [6, 24, 6],
-        "Position": [-108, 12, -51]
+        "Color": [
+          0.36,
+          0.24,
+          0.13
+        ],
+        "Size": [
+          6,
+          24,
+          6
+        ],
+        "Position": [
+          -108,
+          12,
+          -51
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -110,10 +187,27 @@
         "CanQuery": false,
         "Transparency": 0.34,
         "Material": "Rock",
-        "Color": [0.32, 0.32, 0.34],
-        "Size": [28, 18, 8],
-        "Orientation": [0, 18, 0],
-        "Position": [101, 9, -58]
+        "Color": [
+          0.32,
+          0.32,
+          0.34
+        ],
+        "Size": [
+          28,
+          18,
+          8
+        ],
+        "Orientation": [
+          0,
+          18,
+          0
+        ],
+        "Position": [
+          101,
+          9,
+          -58
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -130,9 +224,22 @@
         "CanQuery": false,
         "Transparency": 0.38,
         "Material": "Slate",
-        "Color": [0.36, 0.31, 0.42],
-        "Size": [18, 14, 4],
-        "Position": [60, 7, 74]
+        "Color": [
+          0.36,
+          0.31,
+          0.42
+        ],
+        "Size": [
+          18,
+          14,
+          4
+        ],
+        "Position": [
+          60,
+          7,
+          74
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,

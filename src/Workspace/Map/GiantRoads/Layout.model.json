@@ -15,9 +15,22 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 76],
-        "Position": [0, 0.2, -38]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          76
+        ],
+        "Position": [
+          0,
+          0.2,
+          -38
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -35,10 +48,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 104],
-        "Orientation": [0, 64, 0],
-        "Position": [-47, 0.2, -21]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          104
+        ],
+        "Orientation": [
+          0,
+          64,
+          0
+        ],
+        "Position": [
+          -47,
+          0.2,
+          -21
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -56,10 +86,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 90],
-        "Orientation": [0, -57, 0],
-        "Position": [39, 0.2, -22]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          90
+        ],
+        "Orientation": [
+          0,
+          -57,
+          0
+        ],
+        "Position": [
+          39,
+          0.2,
+          -22
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -77,10 +124,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 84],
-        "Orientation": [0, -132, 0],
-        "Position": [-31, 0.2, 27]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          84
+        ],
+        "Orientation": [
+          0,
+          -132,
+          0
+        ],
+        "Position": [
+          -31,
+          0.2,
+          27
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -98,10 +162,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 80],
-        "Orientation": [0, -42, 0],
-        "Position": [37, 0.2, 34]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          80
+        ],
+        "Orientation": [
+          0,
+          -42,
+          0
+        ],
+        "Position": [
+          37,
+          0.2,
+          34
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -119,10 +200,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 82],
-        "Orientation": [0, -86, 0],
-        "Position": [40, 0.2, 4]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          82
+        ],
+        "Orientation": [
+          0,
+          -86,
+          0
+        ],
+        "Position": [
+          40,
+          0.2,
+          4
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -140,10 +238,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 104],
-        "Orientation": [0, -52, 0],
-        "Position": [74, 0.2, 55]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          18,
+          0.6,
+          104
+        ],
+        "Orientation": [
+          0,
+          -52,
+          0
+        ],
+        "Position": [
+          74,
+          0.2,
+          55
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -161,10 +276,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [12, 0.45, 28],
-        "Orientation": [0, 8, 0],
-        "Position": [-65, 0.34, 68]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          12,
+          0.45,
+          28
+        ],
+        "Orientation": [
+          0,
+          8,
+          0
+        ],
+        "Position": [
+          -65,
+          0.34,
+          68
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -182,9 +314,22 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [11, 0.45, 20],
-        "Position": [-39, 0.34, 45]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          11,
+          0.45,
+          20
+        ],
+        "Position": [
+          -39,
+          0.34,
+          45
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -202,10 +347,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [12, 0.45, 30],
-        "Orientation": [0, -18, 0],
-        "Position": [42, 0.34, 52]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          12,
+          0.45,
+          30
+        ],
+        "Orientation": [
+          0,
+          -18,
+          0
+        ],
+        "Position": [
+          42,
+          0.34,
+          52
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -223,10 +385,27 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [11, 0.45, 24],
-        "Orientation": [0, -82, 0],
-        "Position": [70, 0.34, 5]
+        "Color": [
+          0.74,
+          0.58,
+          0.32
+        ],
+        "Size": [
+          11,
+          0.45,
+          24
+        ],
+        "Orientation": [
+          0,
+          -82,
+          0
+        ],
+        "Position": [
+          70,
+          0.34,
+          5
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -244,9 +423,22 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "WoodPlanks",
-        "Color": [0.55, 0.36, 0.18],
-        "Size": [12, 0.5, 28],
-        "Position": [103, 0.38, 82]
+        "Color": [
+          0.55,
+          0.36,
+          0.18
+        ],
+        "Size": [
+          12,
+          0.5,
+          28
+        ],
+        "Position": [
+          103,
+          0.38,
+          82
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,

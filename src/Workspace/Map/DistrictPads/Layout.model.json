@@ -31,7 +31,8 @@
           0,
           0.16,
           0
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "GiantPlaza",
@@ -65,7 +66,8 @@
           0,
           0.18,
           -72
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "GiantHearth",
@@ -99,7 +101,8 @@
           -118,
           0.12,
           8
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "TinyfolkVillage",
@@ -133,7 +136,8 @@
           -92,
           0.12,
           -42
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "WorkYard",
@@ -167,7 +171,8 @@
           78,
           0.12,
           -43
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "StoneDistrict",
@@ -201,7 +206,8 @@
           55,
           0.12,
           -78
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "Containment",
@@ -235,7 +241,8 @@
           80,
           0.12,
           5
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "ControlStation",
@@ -269,7 +276,8 @@
           -63,
           0.12,
           55
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "EconomyYard",
@@ -303,7 +311,8 @@
           -67,
           0.2,
           70
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "Granary",
@@ -338,7 +347,8 @@
           -39,
           0.2,
           35
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "Warehouse",
@@ -373,7 +383,8 @@
           55,
           0.12,
           50
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "ShrineField",
@@ -407,7 +418,8 @@
           45,
           0.2,
           66
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "Shrine_A",
@@ -442,7 +454,8 @@
           -150,
           0.24,
           16
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "EscapeWinPad",
@@ -477,7 +490,8 @@
           103,
           0.12,
           80
-        ]
+        ],
+        "Locked": true
       },
       "attributes": {
         "DistrictId": "TradeDock",

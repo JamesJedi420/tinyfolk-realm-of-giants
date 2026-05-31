@@ -17,9 +17,22 @@
         "CanQuery": false,
         "Transparency": 0.82,
         "Material": "SmoothPlastic",
-        "Color": [0.5, 0.5, 0.5],
-        "Size": [12, 1, 12],
-        "Position": [118, 0.5, 92]
+        "Color": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "Size": [
+          12,
+          1,
+          12
+        ],
+        "Position": [
+          118,
+          0.5,
+          92
+        ],
+        "Locked": true
       },
       "attributes": {
         "DoNotShip": true,

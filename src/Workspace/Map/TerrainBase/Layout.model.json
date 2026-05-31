@@ -10,9 +10,22 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Grass",
-        "Color": [0.25, 0.43, 0.22],
-        "Size": [300, 0.6, 220],
-        "Position": [-10, -0.35, 0]
+        "Color": [
+          0.25,
+          0.43,
+          0.22
+        ],
+        "Size": [
+          300,
+          0.6,
+          220
+        ],
+        "Position": [
+          -10,
+          -0.35,
+          0
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -29,11 +42,28 @@
         "CanTouch": false,
         "CanQuery": false,
         "Material": "WoodPlanks",
-        "Color": [0.62, 0.52, 0.31],
+        "Color": [
+          0.62,
+          0.52,
+          0.31
+        ],
         "Shape": "Cylinder",
-        "Size": [0.8, 76, 64],
-        "Orientation": [0, 0, 90],
-        "Position": [0, 0.15, 0]
+        "Size": [
+          0.8,
+          76,
+          64
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          0.15,
+          0
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -51,11 +81,28 @@
         "CanQuery": false,
         "Transparency": 0.9,
         "Material": "SmoothPlastic",
-        "Color": [0.95, 0.78, 0.33],
+        "Color": [
+          0.95,
+          0.78,
+          0.33
+        ],
         "Shape": "Cylinder",
-        "Size": [0.35, 108, 108],
-        "Orientation": [0, 0, 90],
-        "Position": [0, 0.22, 0]
+        "Size": [
+          0.35,
+          108,
+          108
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          0.22,
+          0
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -73,11 +120,28 @@
         "CanQuery": false,
         "Transparency": 0.94,
         "Material": "SmoothPlastic",
-        "Color": [0.9, 0.36, 0.18],
+        "Color": [
+          0.9,
+          0.36,
+          0.18
+        ],
         "Shape": "Cylinder",
-        "Size": [0.3, 152, 152],
-        "Orientation": [0, 0, 90],
-        "Position": [0, 0.28, 0]
+        "Size": [
+          0.3,
+          152,
+          152
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          0.28,
+          0
+        ],
+        "Locked": true
       },
       "attributes": {
         "GeneratedBlockout": true,
