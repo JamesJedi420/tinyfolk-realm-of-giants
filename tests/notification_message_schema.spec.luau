@@ -23,6 +23,10 @@ do
 	assertTrue(topic.accepted, "known topic accepted")
 	assertEqual(topic.topic, "tin_queue_admission_v1", "known topic value")
 
+	local announcementTopic = NotificationMessageSchema.GetTopic("systemAnnouncement")
+	assertTrue(announcementTopic.accepted, "system announcement topic accepted")
+	assertEqual(announcementTopic.topic, "tin_announcement_v1", "system announcement topic value")
+
 	local literalTopic = NotificationMessageSchema.GetTopic("tin_custom_v1")
 	assertTrue(literalTopic.accepted, "literal topic accepted")
 	assertEqual(literalTopic.topic, "tin_custom_v1", "literal topic value")

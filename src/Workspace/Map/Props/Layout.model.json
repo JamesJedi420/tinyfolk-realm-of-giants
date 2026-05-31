@@ -111,14 +111,14 @@
           0.2
         ],
         "Size": [
-          40,
+          45,
           12,
-          24
+          40
         ],
         "Position": [
-          -126,
+          -118,
           6,
-          14
+          8
         ]
       }
     },
@@ -136,14 +136,14 @@
           0.2
         ],
         "Size": [
-          30,
+          50,
           14,
-          22
+          38
         ],
         "Position": [
-          -102,
+          -92,
           7,
-          -54
+          -42
         ]
       }
     },
@@ -161,14 +161,14 @@
           0.42
         ],
         "Size": [
-          36,
+          72,
           18,
-          24
+          46
         ],
         "Position": [
-          92,
+          78,
           9,
-          -56
+          -43
         ]
       }
     },
@@ -186,14 +186,14 @@
           0.3
         ],
         "Size": [
-          30,
+          54,
           12,
-          22
+          44
         ],
         "Position": [
-          -54,
+          -63,
           6,
-          46
+          55
         ]
       }
     },
@@ -211,14 +211,14 @@
           0.24
         ],
         "Size": [
-          30,
+          52,
           10,
-          24
+          42
         ],
         "Position": [
-          40,
+          55,
           5,
-          60
+          50
         ]
       }
     },
@@ -236,14 +236,14 @@
           0.12
         ],
         "Size": [
-          40,
+          38,
           10,
-          26
+          22
         ],
         "Position": [
-          70,
+          55,
           5,
-          -18
+          -78
         ]
       }
     },
@@ -336,7 +336,7 @@
           0.22
         ],
         "Size": [
-          28,
+          34,
           14,
           14
         ],
@@ -344,6 +344,464 @@
           103,
           7,
           80
+        ]
+      }
+    },
+    {
+      "name": "Contour_NorthRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.24,
+          0.43,
+          0.2
+        ],
+        "Size": [
+          1180,
+          7,
+          116
+        ],
+        "Position": [
+          0,
+          3.5,
+          -640
+        ]
+      }
+    },
+    {
+      "name": "Contour_NorthEastRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.22,
+          0.4,
+          0.22
+        ],
+        "Size": [
+          430,
+          8,
+          124
+        ],
+        "Orientation": [
+          0,
+          -33,
+          0
+        ],
+        "Position": [
+          576,
+          4,
+          -502
+        ]
+      }
+    },
+    {
+      "name": "Contour_EastRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.24,
+          0.39,
+          0.24
+        ],
+        "Size": [
+          136,
+          6,
+          810
+        ],
+        "Position": [
+          894,
+          3,
+          -16
+        ]
+      }
+    },
+    {
+      "name": "Contour_SouthEastRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.2,
+          0.45,
+          0.25
+        ],
+        "Size": [
+          396,
+          7,
+          118
+        ],
+        "Orientation": [
+          0,
+          33,
+          0
+        ],
+        "Position": [
+          616,
+          3.5,
+          520
+        ]
+      }
+    },
+    {
+      "name": "Contour_SouthWestRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.27,
+          0.42,
+          0.21
+        ],
+        "Size": [
+          396,
+          7,
+          118
+        ],
+        "Orientation": [
+          0,
+          -33,
+          0
+        ],
+        "Position": [
+          -616,
+          3.5,
+          520
+        ]
+      }
+    },
+    {
+      "name": "Contour_WestRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.25,
+          0.44,
+          0.2
+        ],
+        "Size": [
+          136,
+          6,
+          810
+        ],
+        "Position": [
+          -894,
+          3,
+          -16
+        ]
+      }
+    },
+    {
+      "name": "Contour_NorthWestRidge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.25,
+          0.45,
+          0.21
+        ],
+        "Size": [
+          430,
+          8,
+          124
+        ],
+        "Orientation": [
+          0,
+          33,
+          0
+        ],
+        "Position": [
+          -576,
+          4,
+          -502
+        ]
+      }
+    },
+    {
+      "name": "Contour_InnerNorthShelf",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.28,
+          0.39,
+          0.22
+        ],
+        "Size": [
+          910,
+          4,
+          76
+        ],
+        "Position": [
+          0,
+          2,
+          -560
+        ]
+      }
+    },
+    {
+      "name": "Contour_InnerEastShelf",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.27,
+          0.37,
+          0.24
+        ],
+        "Size": [
+          88,
+          4,
+          596
+        ],
+        "Position": [
+          812,
+          2,
+          -26
+        ]
+      }
+    },
+    {
+      "name": "Contour_InnerWestShelf",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.3,
+          0.41,
+          0.21
+        ],
+        "Size": [
+          88,
+          4,
+          596
+        ],
+        "Position": [
+          -812,
+          2,
+          -26
+        ]
+      }
+    },
+    {
+      "name": "Contour_SouthLowBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.24,
+          0.39,
+          0.2
+        ],
+        "Size": [
+          1180,
+          2.4,
+          64
+        ],
+        "Position": [
+          0,
+          1.2,
+          684
+        ]
+      }
+    },
+    {
+      "name": "Contour_SouthEastLowBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.2,
+          0.43,
+          0.24
+        ],
+        "Size": [
+          318,
+          2.2,
+          52
+        ],
+        "Orientation": [
+          0,
+          29,
+          0
+        ],
+        "Position": [
+          592,
+          1.1,
+          676
+        ]
+      }
+    },
+    {
+      "name": "Contour_SouthWestLowBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Grass",
+        "Color": [
+          0.26,
+          0.39,
+          0.19
+        ],
+        "Size": [
+          318,
+          2.2,
+          52
+        ],
+        "Orientation": [
+          0,
+          -29,
+          0
+        ],
+        "Position": [
+          -592,
+          1.1,
+          676
+        ]
+      }
+    },
+    {
+      "name": "Contour_Cut_NorthWest",
+      "className": "WedgePart",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.2,
+          0.23,
+          0.2
+        ],
+        "Size": [
+          170,
+          8,
+          120
+        ],
+        "Orientation": [
+          0,
+          16,
+          0
+        ],
+        "Position": [
+          -704,
+          3.8,
+          -560
+        ]
+      }
+    },
+    {
+      "name": "Contour_Cut_NorthEast",
+      "className": "WedgePart",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.2,
+          0.22,
+          0.21
+        ],
+        "Size": [
+          150,
+          9,
+          102
+        ],
+        "Orientation": [
+          0,
+          -22,
+          0
+        ],
+        "Position": [
+          678,
+          4.1,
+          -552
+        ]
+      }
+    },
+    {
+      "name": "Contour_Cut_SouthEast",
+      "className": "WedgePart",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.18,
+          0.24,
+          0.2
+        ],
+        "Size": [
+          188,
+          7,
+          96
+        ],
+        "Orientation": [
+          0,
+          -14,
+          0
+        ],
+        "Position": [
+          716,
+          3.3,
+          612
+        ]
+      }
+    },
+    {
+      "name": "Contour_Cut_SouthWest",
+      "className": "WedgePart",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.2,
+          0.24,
+          0.19
+        ],
+        "Size": [
+          144,
+          6,
+          88
+        ],
+        "Orientation": [
+          0,
+          18,
+          0
+        ],
+        "Position": [
+          -676,
+          2.9,
+          604
         ]
       }
     },

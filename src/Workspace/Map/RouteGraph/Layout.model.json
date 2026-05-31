@@ -58,9 +58,9 @@
                   2
                 ],
                 "Position": [
-                  -90,
+                  -118,
                   1,
-                  10
+                  8
                 ]
               },
               "attributes": {
@@ -142,9 +142,9 @@
                   2
                 ],
                 "Position": [
-                  45,
+                  55,
                   1,
-                  66
+                  50
                 ]
               },
               "attributes": {
@@ -279,7 +279,7 @@
               "attributes": {
                 "From": "TinyfolkSpawn",
                 "To": "RouteWestVillage",
-                "Distance": 24
+                "Distance": 6
               }
             },
             {
@@ -288,7 +288,7 @@
               "attributes": {
                 "From": "RouteWestVillage",
                 "To": "RouteMacroPlaza",
-                "Distance": 90
+                "Distance": 118
               }
             },
             {
@@ -306,7 +306,7 @@
               "attributes": {
                 "From": "RouteMacroPlaza",
                 "To": "RouteShrine",
-                "Distance": 80
+                "Distance": 74
               }
             },
             {
@@ -315,7 +315,7 @@
               "attributes": {
                 "From": "RouteWestVillage",
                 "To": "EscapeRoute_A",
-                "Distance": 60
+                "Distance": 33
               }
             },
             {
@@ -333,7 +333,7 @@
               "attributes": {
                 "From": "RouteShrine",
                 "To": "EscapeRoute_Dock",
-                "Distance": 60
+                "Distance": 57
               }
             },
             {
@@ -360,7 +360,7 @@
               "attributes": {
                 "From": "RouteShrine",
                 "To": "RouteMacroPlaza",
-                "Distance": 80
+                "Distance": 74
               }
             }
           ]

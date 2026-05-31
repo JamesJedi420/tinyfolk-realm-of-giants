@@ -9,9 +9,9 @@
         "CanCollide": true,
         "Material": "Metal",
         "Color": [
-          0.35,
-          0.18,
-          0.55
+          0.34,
+          0.24,
+          0.46
         ],
         "Size": [
           8,
@@ -26,6 +26,163 @@
       },
       "attributes": {
         "RemoteControlZoneId": "GiantControlZone_A"
+      }
+    },
+    {
+      "name": "Control_BasePad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.24,
+          0.24,
+          0.28
+        ],
+        "Size": [
+          16,
+          1,
+          12
+        ],
+        "Position": [
+          80,
+          0.5,
+          5
+        ]
+      }
+    },
+    {
+      "name": "Control_ConsoleTop",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.31,
+          0.31,
+          0.35
+        ],
+        "Size": [
+          7,
+          0.8,
+          4.4
+        ],
+        "Orientation": [
+          -12,
+          0,
+          0
+        ],
+        "Position": [
+          80,
+          4.9,
+          4.2
+        ]
+      }
+    },
+    {
+      "name": "Control_Core",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Transparency": 0.18,
+        "Color": [
+          0.72,
+          0.5,
+          0.86
+        ],
+        "Shape": "Ball",
+        "Size": [
+          2,
+          2,
+          2
+        ],
+        "Position": [
+          80,
+          3.6,
+          5.2
+        ]
+      }
+    },
+    {
+      "name": "Control_AntennaMast",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.38,
+          0.38,
+          0.42
+        ],
+        "Size": [
+          0.8,
+          10,
+          0.8
+        ],
+        "Position": [
+          83,
+          8,
+          6.8
+        ]
+      }
+    },
+    {
+      "name": "Control_AntennaDish",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.44,
+          0.44,
+          0.48
+        ],
+        "Shape": "Cylinder",
+        "Size": [
+          0.5,
+          3,
+          3
+        ],
+        "Orientation": [
+          22,
+          0,
+          90
+        ],
+        "Position": [
+          83,
+          12.2,
+          6.8
+        ]
+      }
+    },
+    {
+      "name": "Control_RailFront",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.39,
+          0.39,
+          0.43
+        ],
+        "Size": [
+          14,
+          1,
+          0.4
+        ],
+        "Position": [
+          80,
+          1.1,
+          -0.8
+        ]
       }
     }
   ]

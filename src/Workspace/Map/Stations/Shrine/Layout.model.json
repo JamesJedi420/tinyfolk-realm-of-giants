@@ -9,18 +9,200 @@
         "CanCollide": true,
         "Material": "Concrete",
         "Color": [
-          0.55,
-          0.55,
-          0.55
+          0.47,
+          0.45,
+          0.42
         ],
         "Size": [
+          30,
           8,
-          8,
-          8
+          22
         ],
         "Position": [
           45,
           4,
+          66
+        ]
+      }
+    },
+    {
+      "name": "Shrine_BaseRing",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.29,
+          0.27,
+          0.25
+        ],
+        "Shape": "Cylinder",
+        "Size": [
+          1,
+          36,
+          36
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          45,
+          0.5,
+          66
+        ]
+      }
+    },
+    {
+      "name": "Shrine_InnerRing",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Concrete",
+        "Color": [
+          0.41,
+          0.39,
+          0.35
+        ],
+        "Shape": "Cylinder",
+        "Size": [
+          1,
+          24,
+          24
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          45,
+          0.6,
+          66
+        ]
+      }
+    },
+    {
+      "name": "Shrine_Obelisk_NW",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.38,
+          0.36,
+          0.33
+        ],
+        "Size": [
+          2.2,
+          9,
+          2.2
+        ],
+        "Position": [
+          35,
+          4.5,
+          56
+        ]
+      }
+    },
+    {
+      "name": "Shrine_Obelisk_NE",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.38,
+          0.36,
+          0.33
+        ],
+        "Size": [
+          2.2,
+          9,
+          2.2
+        ],
+        "Position": [
+          55,
+          4.5,
+          56
+        ]
+      }
+    },
+    {
+      "name": "Shrine_Obelisk_SW",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.38,
+          0.36,
+          0.33
+        ],
+        "Size": [
+          2.2,
+          9,
+          2.2
+        ],
+        "Position": [
+          35,
+          4.5,
+          76
+        ]
+      }
+    },
+    {
+      "name": "Shrine_Obelisk_SE",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.38,
+          0.36,
+          0.33
+        ],
+        "Size": [
+          2.2,
+          9,
+          2.2
+        ],
+        "Position": [
+          55,
+          4.5,
+          76
+        ]
+      }
+    },
+    {
+      "name": "Shrine_CoreFlame",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Transparency": 0.12,
+        "Color": [
+          0.92,
+          0.7,
+          0.3
+        ],
+        "Shape": "Ball",
+        "Size": [
+          2.5,
+          2.5,
+          2.5
+        ],
+        "Position": [
+          45,
+          5.8,
           66
         ]
       }

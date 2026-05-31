@@ -8,6 +8,7 @@ NotificationMessageSchema.Topics = {
 	admissionQueue = "tin_queue_admission_v1",
 	rescueQueue = "tin_queue_rescue_v1",
 	realm = "tin_realm_v1",
+	systemAnnouncement = "tin_announcement_v1",
 	hub = "tin_hub_v1",
 	returns = "tin_return_v1",
 	custody = "tin_custody_v1",

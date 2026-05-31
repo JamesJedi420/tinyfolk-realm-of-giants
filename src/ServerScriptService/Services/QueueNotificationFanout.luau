@@ -172,6 +172,10 @@ function QueueNotificationFanout.Create(config: any?): any?
 		return publish("rescueQueue", eventName, payload)
 	end
 
+	function fanout.PublishSystemAnnouncement(eventName: any, payload: any): any
+		return publish("systemAnnouncement", eventName, payload)
+	end
+
 	return fanout
 end
 

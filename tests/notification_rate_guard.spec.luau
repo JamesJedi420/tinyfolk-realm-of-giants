@@ -109,6 +109,43 @@ do
 end
 
 do
+	local now = 80
+	local guard = NotificationRateGuard.Create({
+		now = function()
+			return now
+		end,
+		maxPublishesPerWindow = 1,
+		windowSeconds = 1,
+	})
+
+	local first = guard.EvaluatePublish({
+		topic = "tin_announcement_v1",
+		messageType = "announcement_updated",
+		operationId = "announcement-op-1",
+		announcementId = "global-1",
+	})
+	assertTrue(first.accepted, "first announcement publish accepted")
+	assertEqual(first.action, "publish", "first announcement action")
+
+	local burst = guard.EvaluatePublish({
+		topic = "tin_announcement_v1",
+		messageType = "announcement_updated",
+		operationId = "announcement-op-2",
+		announcementId = "global-1",
+	})
+	assertTrue(burst.accepted, "burst announcement coalesced instead of dropped")
+	assertEqual(burst.reason, "coalesced", "burst announcement reason")
+	assertEqual(burst.action, "coalesce", "burst announcement action")
+	assertEqual(burst.summary.messageType, "announcement_summary", "burst announcement summary type")
+	assertEqual(burst.summary.announcementId, "global-1", "burst announcement summary id")
+
+	local diagnostics = guard.GetDiagnostics()
+	assertEqual(diagnostics.coalesced, 1, "announcement diagnostics coalesced")
+	assertEqual(diagnostics.dropped, 0, "announcement diagnostics dropped")
+	assertEqual(diagnostics.lastAnnouncementId, "global-1", "announcement diagnostics id")
+end
+
+do
 	local now = 50
 	local guard = NotificationRateGuard.Create({
 		now = function()

@@ -31,6 +31,7 @@ type Diagnostics = {
 	admissionQueue: ChannelCounters,
 	rescueQueue: ChannelCounters,
 	realmStatus: ChannelCounters,
+	systemAnnouncement: ChannelCounters,
 	returnRecovery: ChannelCounters,
 	loopScheduleAttempts: number,
 	loopScheduleSucceeded: number,
@@ -70,6 +71,7 @@ local function resetDiagnostics(reason: string)
 		admissionQueue = newChannelCounters(),
 		rescueQueue = newChannelCounters(),
 		realmStatus = newChannelCounters(),
+		systemAnnouncement = newChannelCounters(),
 		returnRecovery = newChannelCounters(),
 		loopScheduleAttempts = 0,
 		loopScheduleSucceeded = 0,
@@ -256,6 +258,9 @@ local function messageChannel(messageType: string): string?
 	if string.sub(messageType, 1, 6) == "realm_" then
 		return "realmStatus"
 	end
+	if string.sub(messageType, 1, 13) == "announcement_" then
+		return "systemAnnouncement"
+	end
 	if string.sub(messageType, 1, 7) == "return_" then
 		return "returnRecovery"
 	end
@@ -327,6 +332,26 @@ function NotificationReconciliationService.ReconcileRealmStatus(input: any?): an
 	})
 end
 
+function NotificationReconciliationService.ReconcileSystemAnnouncement(input: any?): any
+	local at = resolveAt(input)
+	local api = resolveDependency("systemAnnouncementApi", "_SystemAnnouncementService_QueryAPI")
+	if type(api) ~= "table" or type((api :: any).GetActiveAnnouncement) ~= "function" then
+		recordChannel("systemAnnouncement", false, "announcement_api_unavailable", nil, nil, at)
+		return makeResult(false, "announcement_api_unavailable", "systemAnnouncement", nil)
+	end
+
+	local ok, snapshot = pcall(function()
+		return (api :: any).GetActiveAnnouncement({ at = at })
+	end)
+	if not ok or type(snapshot) ~= "table" then
+		recordChannel("systemAnnouncement", false, "announcement_reconcile_failed", nil, nil, at)
+		return makeResult(false, "announcement_reconcile_failed", "systemAnnouncement", nil)
+	end
+
+	recordChannel("systemAnnouncement", true, "accepted", nil, nil, at)
+	return makeResult(true, "accepted", "systemAnnouncement", cloneTable(snapshot))
+end
+
 function NotificationReconciliationService.ReconcileReturnRecovery(input: any): any
 	local at = resolveAt(input)
 	if type(input) ~= "table" or not isPositiveInteger(input.userId) then
@@ -365,6 +390,7 @@ function NotificationReconciliationService.ReconcileAll(input: any?): any
 			limit = if type(inputAny) == "table" then inputAny.rescueQueueLimit else nil,
 		}),
 		NotificationReconciliationService.ReconcileRealmStatus({ at = at }),
+		NotificationReconciliationService.ReconcileSystemAnnouncement({ at = at }),
 	}
 
 	local returnRecoveryInput = if type(inputAny) == "table" then inputAny.returnRecovery else nil
@@ -432,6 +458,8 @@ function NotificationReconciliationService.HandleNotification(envelope: any): an
 		result = NotificationReconciliationService.ReconcileRescueQueue({ at = envelope.sentAt })
 	elseif channel == "realmStatus" then
 		result = NotificationReconciliationService.ReconcileRealmStatus({ at = envelope.sentAt })
+	elseif channel == "systemAnnouncement" then
+		result = NotificationReconciliationService.ReconcileSystemAnnouncement({ at = envelope.sentAt })
 	else
 		local userId = if type(envelope.payload) == "table" then envelope.payload.userId else nil
 		result = NotificationReconciliationService.ReconcileReturnRecovery({
@@ -544,6 +572,9 @@ globalEnv._NotificationReconciliation_QueryAPI = {
 	end,
 	ReconcileRealmStatus = function(input: any?): any
 		return NotificationReconciliationService.ReconcileRealmStatus(input)
+	end,
+	ReconcileSystemAnnouncement = function(input: any?): any
+		return NotificationReconciliationService.ReconcileSystemAnnouncement(input)
 	end,
 	ReconcileReturnRecovery = function(input: any): any
 		return NotificationReconciliationService.ReconcileReturnRecovery(input)

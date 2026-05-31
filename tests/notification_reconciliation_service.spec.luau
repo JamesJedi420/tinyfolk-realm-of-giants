@@ -163,6 +163,40 @@ do
 end
 
 do
+	local queriedAts: { number } = {}
+	configure({
+		systemAnnouncementApi = {
+			GetActiveAnnouncement = function(input: any): any
+				table.insert(queriedAts, input.at)
+				return {
+					accepted = true,
+					reason = "accepted",
+					active = true,
+					announcement = {
+						announcementId = "global_1",
+						message = "Realm maintenance starts soon",
+						severity = "warning",
+					},
+				}
+			end,
+		},
+		now = function()
+			return 40
+		end,
+	})
+
+	local defaultResult = NotificationReconciliationService.ReconcileSystemAnnouncement()
+	assertTrue(defaultResult.accepted, "announcement default reconcile accepted")
+	assertEqual(defaultResult.channel, "systemAnnouncement", "announcement channel")
+	assertEqual(queriedAts[1], 40, "announcement default at")
+	assertEqual(defaultResult.snapshot.announcement.announcementId, "global_1", "announcement snapshot id")
+
+	local explicitResult = NotificationReconciliationService.ReconcileSystemAnnouncement({ at = 41 })
+	assertTrue(explicitResult.accepted, "announcement explicit reconcile accepted")
+	assertEqual(queriedAts[2], 41, "announcement explicit at")
+end
+
+do
 	local checkedUserIds: { number } = {}
 	configure({
 		handoffApi = {
@@ -214,6 +248,39 @@ do
 end
 
 do
+	local announcementCalls = 0
+	configure({
+		systemAnnouncementApi = {
+			GetActiveAnnouncement = function(_input: any): any
+				announcementCalls += 1
+				return {
+					accepted = true,
+					reason = "accepted",
+					active = true,
+					announcement = {
+						announcementId = "global_2",
+					},
+				}
+			end,
+		},
+	})
+
+	local envelope = buildEnvelope("announcement_created", "op-announcement-1", {
+		announcementId = "global_2",
+	})
+	local first = NotificationReconciliationService.HandleNotification(envelope)
+	local second = NotificationReconciliationService.HandleNotification(envelope)
+	assertTrue(first.accepted, "first announcement notification accepted")
+	assertTrue(second.accepted, "second announcement notification accepted")
+	assertEqual(announcementCalls, 2, "announcement notifications refresh safely")
+
+	local diagnostics = NotificationReconciliationService.GetDiagnostics()
+	assertEqual(diagnostics.systemAnnouncement.attempts, 2, "announcement diagnostics attempts")
+	assertEqual(diagnostics.lastMessageType, "announcement_created", "announcement diagnostics message type")
+	assertEqual(diagnostics.lastOperationId, "op-announcement-1", "announcement diagnostics operation id")
+end
+
+do
 	configure({})
 	local invalidEnvelope = NotificationReconciliationService.HandleNotification({
 		schemaVersion = 1,
@@ -246,11 +313,21 @@ do
 				return {}
 			end,
 		},
+		systemAnnouncementApi = {
+			GetActiveAnnouncement = function(_input: any): any
+				return {
+					accepted = false,
+					reason = "announcement_not_found",
+					active = false,
+					announcement = nil,
+				}
+			end,
+		},
 	})
 
 	local droppedRecovery = NotificationReconciliationService.ReconcileAll()
 	assertTrue(droppedRecovery.accepted, "reconcile all recovers dropped messages")
-	assertEqual(#droppedRecovery.snapshot.results, 3, "reconcile all channel count")
+	assertEqual(#droppedRecovery.snapshot.results, 4, "reconcile all channel count")
 end
 
 do
@@ -262,6 +339,10 @@ do
 	local missingRescue = NotificationReconciliationService.ReconcileRescueQueue()
 	assertFalse(missingRescue.accepted, "missing rescue api rejected")
 	assertEqual(missingRescue.reason, "rescue_queue_api_unavailable", "missing rescue reason")
+
+	local missingAnnouncement = NotificationReconciliationService.ReconcileSystemAnnouncement()
+	assertFalse(missingAnnouncement.accepted, "missing announcement api rejected")
+	assertEqual(missingAnnouncement.reason, "announcement_api_unavailable", "missing announcement reason")
 
 	local missingReturn = NotificationReconciliationService.ReconcileReturnRecovery({
 		userId = 1001,
@@ -282,6 +363,11 @@ do
 				error("rescue boom")
 			end,
 		},
+		systemAnnouncementApi = {
+			GetActiveAnnouncement = function(_input: any): any
+				error("announcement boom")
+			end,
+		},
 		handoffApi = {
 			CanSpawnGameplayForUserId = function(_userId: any): boolean
 				error("handoff boom")
@@ -298,6 +384,11 @@ do
 		NotificationReconciliationService.ReconcileRescueQueue().reason,
 		"rescue_queue_reconcile_failed",
 		"thrown rescue reason"
+	)
+	assertEqual(
+		NotificationReconciliationService.ReconcileSystemAnnouncement().reason,
+		"announcement_reconcile_failed",
+		"thrown announcement reason"
 	)
 	assertEqual(
 		NotificationReconciliationService.ReconcileReturnRecovery({
@@ -327,6 +418,16 @@ do
 			GetPendingRescueQueueEntries = function(_limit: any, _at: any): any
 				rescueCalls += 1
 				return {}
+			end,
+		},
+		systemAnnouncementApi = {
+			GetActiveAnnouncement = function(_input: any): any
+				return {
+					accepted = false,
+					reason = "announcement_not_found",
+					active = false,
+					announcement = nil,
+				}
 			end,
 		},
 		now = function()

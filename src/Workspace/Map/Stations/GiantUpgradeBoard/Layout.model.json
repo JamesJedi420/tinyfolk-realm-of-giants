@@ -9,9 +9,9 @@
         "CanCollide": true,
         "Material": "Concrete",
         "Color": [
-          0.48,
-          0.48,
-          0.48
+          0.44,
+          0.43,
+          0.4
         ],
         "Size": [
           10,
@@ -22,6 +22,178 @@
           0,
           4,
           -72
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.27,
+          0.25,
+          0.23
+        ],
+        "Size": [
+          18,
+          1,
+          8
+        ],
+        "Position": [
+          0,
+          0.5,
+          -72
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_Frame",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.4,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          12,
+          10,
+          1
+        ],
+        "Position": [
+          0,
+          5,
+          -73.4
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_Canopy",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.52,
+          0.39,
+          0.23
+        ],
+        "Size": [
+          14,
+          1,
+          5
+        ],
+        "Position": [
+          0,
+          9.4,
+          -71.6
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_PillarWest",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.4,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1.2,
+          9,
+          1.2
+        ],
+        "Position": [
+          -5.6,
+          4.5,
+          -71.5
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_PillarEast",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.4,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1.2,
+          9,
+          1.2
+        ],
+        "Position": [
+          5.6,
+          4.5,
+          -71.5
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_RuneLightLeft",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Transparency": 0.24,
+        "Color": [
+          0.92,
+          0.7,
+          0.3
+        ],
+        "Shape": "Ball",
+        "Size": [
+          1.2,
+          1.2,
+          1.2
+        ],
+        "Position": [
+          -4,
+          6,
+          -70.7
+        ]
+      }
+    },
+    {
+      "name": "UpgradeBoard_RuneLightRight",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Transparency": 0.24,
+        "Color": [
+          0.92,
+          0.7,
+          0.3
+        ],
+        "Shape": "Ball",
+        "Size": [
+          1.2,
+          1.2,
+          1.2
+        ],
+        "Position": [
+          4,
+          6,
+          -70.7
         ]
       }
     }

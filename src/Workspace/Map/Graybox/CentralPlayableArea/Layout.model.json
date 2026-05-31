@@ -130,8 +130,8 @@
         "Shape": "Cylinder",
         "Size": [
           2,
-          78,
-          78
+          76,
+          64
         ],
         "Orientation": [
           0,
@@ -142,6 +142,175 @@
           0,
           1,
           0
+        ]
+      }
+    },
+    {
+      "name": "MacroPlazaInner",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.68,
+          0.58,
+          0.35
+        ],
+        "Shape": "Cylinder",
+        "Size": [
+          2,
+          50,
+          42
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          1.05,
+          0
+        ]
+      }
+    },
+    {
+      "name": "GiantRoad_North",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Sandstone",
+        "Color": [
+          0.75,
+          0.63,
+          0.36
+        ],
+        "Size": [
+          20,
+          1.2,
+          138
+        ],
+        "Position": [
+          0,
+          0.8,
+          -69
+        ]
+      }
+    },
+    {
+      "name": "GiantRoad_West",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Sandstone",
+        "Color": [
+          0.75,
+          0.63,
+          0.36
+        ],
+        "Size": [
+          20,
+          1.2,
+          212
+        ],
+        "Orientation": [
+          0,
+          64,
+          0
+        ],
+        "Position": [
+          -94,
+          0.8,
+          -46
+        ]
+      }
+    },
+    {
+      "name": "GiantRoad_East",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Sandstone",
+        "Color": [
+          0.75,
+          0.63,
+          0.36
+        ],
+        "Size": [
+          20,
+          1.2,
+          182
+        ],
+        "Orientation": [
+          0,
+          -57,
+          0
+        ],
+        "Position": [
+          76,
+          0.8,
+          -48
+        ]
+      }
+    },
+    {
+      "name": "GiantRoad_SouthWest",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Sandstone",
+        "Color": [
+          0.75,
+          0.63,
+          0.36
+        ],
+        "Size": [
+          20,
+          1.2,
+          200
+        ],
+        "Orientation": [
+          0,
+          -133,
+          0
+        ],
+        "Position": [
+          -66,
+          0.8,
+          62
+        ]
+      }
+    },
+    {
+      "name": "GiantRoad_SouthEast",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Sandstone",
+        "Color": [
+          0.75,
+          0.63,
+          0.36
+        ],
+        "Size": [
+          20,
+          1.2,
+          218
+        ],
+        "Orientation": [
+          0,
+          -43,
+          0
+        ],
+        "Position": [
+          80,
+          0.8,
+          75
         ]
       }
     },

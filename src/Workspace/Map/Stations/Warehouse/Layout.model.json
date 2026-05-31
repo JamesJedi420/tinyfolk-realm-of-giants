@@ -9,19 +9,211 @@
         "CanCollide": true,
         "Material": "Concrete",
         "Color": [
-          0.45,
-          0.45,
-          0.5
+          0.46,
+          0.44,
+          0.4
         ],
         "Size": [
-          10,
-          7,
-          10
+          28,
+          9,
+          18
         ],
         "Position": [
           -39,
-          3.5,
+          4.5,
           35
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Roof",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.27,
+          0.27,
+          0.3
+        ],
+        "Size": [
+          30,
+          1.2,
+          20
+        ],
+        "Position": [
+          -39,
+          9.8,
+          35
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Dock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "WoodPlanks",
+        "Color": [
+          0.51,
+          0.38,
+          0.23
+        ],
+        "Size": [
+          12,
+          0.8,
+          4
+        ],
+        "Position": [
+          -39,
+          1.4,
+          45.2
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_DoorFrame",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.4,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          9,
+          6,
+          0.8
+        ],
+        "Position": [
+          -39,
+          3,
+          44.4
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_TrimBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.48,
+          0.35,
+          0.21
+        ],
+        "Size": [
+          29,
+          0.6,
+          0.6
+        ],
+        "Position": [
+          -39,
+          7.6,
+          44.2
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Post_NW",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          -52.5,
+          4.5,
+          26.5
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Post_NE",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          -25.5,
+          4.5,
+          26.5
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Post_SW",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          -52.5,
+          4.5,
+          43.5
+        ]
+      }
+    },
+    {
+      "name": "Warehouse_Post_SE",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          -25.5,
+          4.5,
+          43.5
         ]
       }
     }

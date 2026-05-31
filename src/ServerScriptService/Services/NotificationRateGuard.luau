@@ -20,6 +20,7 @@ type Diagnostics = {
 	lastMessageType: string?,
 	lastOperationId: string?,
 	lastRealmId: string?,
+	lastAnnouncementId: string?,
 	lastReason: string,
 	frequencyByKey: { [string]: number },
 	realmStatusByRealm: { [string]: number },
@@ -72,15 +73,16 @@ local function resolveNow(nowFn: any): number
 	return os.clock()
 end
 
-local function resolveMetadata(input: any): (string?, string?, string?, string?)
+local function resolveMetadata(input: any): (string?, string?, string?, string?, string?)
 	if type(input) ~= "table" then
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	end
 
 	local topic = if isNonEmptyString(input.topic) then input.topic else nil
 	local messageType = if isNonEmptyString(input.messageType) then input.messageType else nil
 	local operationId = if isNonEmptyString(input.operationId) then input.operationId else nil
 	local realmId = if isNonEmptyString(input.realmId) then input.realmId else nil
+	local announcementId = if isNonEmptyString(input.announcementId) then input.announcementId else nil
 
 	local message = input.message
 	if type(message) == "table" then
@@ -91,20 +93,32 @@ local function resolveMetadata(input: any): (string?, string?, string?, string?)
 			operationId = message.operationId
 		end
 		local payload = message.payload
-		if realmId == nil and type(payload) == "table" and isNonEmptyString(payload.realmId) then
-			realmId = payload.realmId
+		if type(payload) == "table" then
+			if realmId == nil and isNonEmptyString(payload.realmId) then
+				realmId = payload.realmId
+			end
+			if announcementId == nil and isNonEmptyString(payload.announcementId) then
+				announcementId = payload.announcementId
+			end
 		end
 	end
 
-	return topic, messageType, operationId, realmId
+	return topic, messageType, operationId, realmId, announcementId
 end
 
 local function isRealmStatusMessage(messageType: string): boolean
 	return messageType == "RealmStatusChanged" or messageType == "realm_status_changed"
 end
 
+local function isAnnouncementMessage(messageType: string): boolean
+	return string.sub(string.lower(messageType), 1, 13) == "announcement_"
+end
+
 local function isCoalescibleMessage(messageType: string): boolean
 	if isRealmStatusMessage(messageType) then
+		return true
+	end
+	if isAnnouncementMessage(messageType) then
 		return true
 	end
 	return string.find(string.lower(messageType), "status", 1, true) ~= nil
@@ -147,6 +161,7 @@ function NotificationRateGuard.Create(config: any?): any
 		lastMessageType = nil,
 		lastOperationId = nil,
 		lastRealmId = nil,
+		lastAnnouncementId = nil,
 		lastReason = "not_started",
 		frequencyByKey = {},
 		realmStatusByRealm = {},
@@ -186,13 +201,15 @@ function NotificationRateGuard.Create(config: any?): any
 		topic: string?,
 		messageType: string?,
 		operationId: string?,
-		realmId: string?
+		realmId: string?,
+		announcementId: string?
 	)
 		diagnostics.attempts += 1
 		diagnostics.lastTopic = topic
 		diagnostics.lastMessageType = messageType
 		diagnostics.lastOperationId = operationId
 		diagnostics.lastRealmId = realmId
+		diagnostics.lastAnnouncementId = announcementId
 		diagnostics.lastReason = reason
 
 		if accepted and action == "publish" then
@@ -207,9 +224,9 @@ function NotificationRateGuard.Create(config: any?): any
 	local guard: any = {}
 
 	function guard.EvaluatePublish(input: any): GuardDecision
-		local topic, messageType, operationId, realmId = resolveMetadata(input)
+		local topic, messageType, operationId, realmId, announcementId = resolveMetadata(input)
 		if not isNonEmptyString(topic) then
-			record(false, "drop", "topic_invalid", nil, messageType, operationId, realmId)
+			record(false, "drop", "topic_invalid", nil, messageType, operationId, realmId, announcementId)
 			return {
 				accepted = false,
 				reason = "topic_invalid",
@@ -218,7 +235,7 @@ function NotificationRateGuard.Create(config: any?): any
 			}
 		end
 		if not isNonEmptyString(messageType) then
-			record(false, "drop", "message_type_invalid", topic, nil, operationId, realmId)
+			record(false, "drop", "message_type_invalid", topic, nil, operationId, realmId, announcementId)
 			return {
 				accepted = false,
 				reason = "message_type_invalid",
@@ -241,7 +258,16 @@ function NotificationRateGuard.Create(config: any?): any
 			diagnostics.realmStatusByRealm[resolvedRealmId] = now
 			if lastAt ~= nil and now - lastAt < realmStatusMinIntervalSeconds then
 				state.coalesced += 1
-				record(true, "coalesce", "coalesced", resolvedTopic, resolvedMessageType, operationId, resolvedRealmId)
+				record(
+					true,
+					"coalesce",
+					"coalesced",
+					resolvedTopic,
+					resolvedMessageType,
+					operationId,
+					resolvedRealmId,
+					announcementId
+				)
 				return {
 					accepted = true,
 					reason = "coalesced",
@@ -260,22 +286,44 @@ function NotificationRateGuard.Create(config: any?): any
 		if state.count > maxPublishesPerWindow then
 			if isCoalescibleMessage(resolvedMessageType) then
 				state.coalesced += 1
-				record(true, "coalesce", "coalesced", resolvedTopic, resolvedMessageType, operationId, realmId)
+				record(
+					true,
+					"coalesce",
+					"coalesced",
+					resolvedTopic,
+					resolvedMessageType,
+					operationId,
+					realmId,
+					announcementId
+				)
+				local summaryMessageType = if isAnnouncementMessage(resolvedMessageType)
+					then "announcement_summary"
+					else resolvedMessageType .. "Summary"
 				return {
 					accepted = true,
 					reason = "coalesced",
 					action = "coalesce",
 					summary = {
 						topic = resolvedTopic,
-						messageType = resolvedMessageType .. "Summary",
+						messageType = summaryMessageType,
 						realmId = realmId,
+						announcementId = announcementId,
 						coalescedCount = state.coalesced,
 					},
 				}
 			end
 
 			state.dropped += 1
-			record(false, "drop", "rate_limited", resolvedTopic, resolvedMessageType, operationId, realmId)
+			record(
+				false,
+				"drop",
+				"rate_limited",
+				resolvedTopic,
+				resolvedMessageType,
+				operationId,
+				realmId,
+				announcementId
+			)
 			return {
 				accepted = false,
 				reason = "rate_limited",
@@ -284,7 +332,7 @@ function NotificationRateGuard.Create(config: any?): any
 			}
 		end
 
-		record(true, "publish", "accepted", resolvedTopic, resolvedMessageType, operationId, realmId)
+		record(true, "publish", "accepted", resolvedTopic, resolvedMessageType, operationId, realmId, announcementId)
 		return {
 			accepted = true,
 			reason = "accepted",
@@ -315,6 +363,7 @@ function NotificationRateGuard.Create(config: any?): any
 			lastMessageType = diagnostics.lastMessageType,
 			lastOperationId = diagnostics.lastOperationId,
 			lastRealmId = diagnostics.lastRealmId,
+			lastAnnouncementId = diagnostics.lastAnnouncementId,
 			lastReason = diagnostics.lastReason,
 			frequencyByKey = cloneStringNumberMap(diagnostics.frequencyByKey),
 			realmStatusByRealm = cloneStringNumberMap(diagnostics.realmStatusByRealm),

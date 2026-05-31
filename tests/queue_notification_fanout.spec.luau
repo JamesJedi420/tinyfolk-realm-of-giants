@@ -75,6 +75,20 @@ do
 	assertEqual(envelopes[2].schemaVersion, 1, "rescue schema version")
 	assertEqual(envelopes[2].messageType, "rescue_accepted", "rescue envelope message type")
 	assertEqual(envelopes[2].operationId, "op-rescue", "rescue envelope operation id")
+
+	local announcement = fanout.PublishSystemAnnouncement("announcement_created", {
+		operationId = "op-announcement",
+		announcementId = "global-1",
+		severity = "warning",
+	})
+	assertTrue(announcement.accepted, "announcement publish accepted")
+	assertEqual(adapterCalls[3].topic, "tin_announcement_v1", "announcement topic")
+	assertEqual(adapterCalls[3].message, "announcement_created:op-announcement", "announcement encoded message")
+	assertEqual(adapterCalls[3].messageType, "announcement_created", "announcement message type")
+	assertEqual(adapterCalls[3].operationId, "op-announcement", "announcement operation id")
+	assertEqual(envelopes[3].schemaVersion, 1, "announcement schema version")
+	assertEqual(envelopes[3].messageType, "announcement_created", "announcement envelope message type")
+	assertEqual(envelopes[3].operationId, "op-announcement", "announcement envelope operation id")
 end
 
 do

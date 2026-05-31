@@ -14,6 +14,7 @@ local DEFAULT_TOPIC_KEYS = {
 	"admissionQueue",
 	"rescueQueue",
 	"realm",
+	"systemAnnouncement",
 	"returns",
 }
 

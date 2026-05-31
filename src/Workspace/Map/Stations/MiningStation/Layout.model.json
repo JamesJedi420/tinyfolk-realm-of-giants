@@ -9,9 +9,9 @@
         "CanCollide": true,
         "Material": "Slate",
         "Color": [
-          0.35,
-          0.35,
-          0.4
+          0.41,
+          0.39,
+          0.36
         ],
         "Size": [
           8,
@@ -22,6 +22,175 @@
           78,
           3,
           -43
+        ]
+      }
+    },
+    {
+      "name": "Mining_BasePad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.28,
+          0.26,
+          0.24
+        ],
+        "Size": [
+          14,
+          1,
+          14
+        ],
+        "Position": [
+          78,
+          0.5,
+          -43
+        ]
+      }
+    },
+    {
+      "name": "Mining_HoistPostA",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          73.8,
+          4.5,
+          -39.6
+        ]
+      }
+    },
+    {
+      "name": "Mining_HoistPostB",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          1,
+          9,
+          1
+        ],
+        "Position": [
+          82.2,
+          4.5,
+          -39.6
+        ]
+      }
+    },
+    {
+      "name": "Mining_HoistBeam",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.39,
+          0.28,
+          0.17
+        ],
+        "Size": [
+          9,
+          1,
+          1
+        ],
+        "Position": [
+          78,
+          8.8,
+          -39.6
+        ]
+      }
+    },
+    {
+      "name": "Mining_OrePileA",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Rock",
+        "Color": [
+          0.31,
+          0.31,
+          0.34
+        ],
+        "Size": [
+          4,
+          2,
+          3
+        ],
+        "Position": [
+          73.4,
+          1,
+          -45.2
+        ]
+      }
+    },
+    {
+      "name": "Mining_OrePileB",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Rock",
+        "Color": [
+          0.34,
+          0.34,
+          0.37
+        ],
+        "Size": [
+          3,
+          1.5,
+          3
+        ],
+        "Position": [
+          82.8,
+          0.75,
+          -46
+        ]
+      }
+    },
+    {
+      "name": "Mining_Lantern",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Transparency": 0.15,
+        "Color": [
+          0.92,
+          0.69,
+          0.3
+        ],
+        "Size": [
+          0.8,
+          1,
+          0.8
+        ],
+        "Position": [
+          78,
+          7.6,
+          -39.7
         ]
       }
     }

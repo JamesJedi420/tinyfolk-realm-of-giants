@@ -83,20 +83,21 @@ do
 
 	local first = NotificationSubscriptionManager.SubscribeDefaults()
 	assertTrue(first.accepted, "default subscriptions accepted")
-	assertEqual(#subscribeCalls, 4, "default subscribes once per topic")
+	assertEqual(#subscribeCalls, 5, "default subscribes once per topic")
 	assertEqual(subscribeCalls[1].topic, "tin_queue_admission_v1", "default first topic")
 	assertEqual(subscribeCalls[2].topic, "tin_queue_rescue_v1", "default second topic")
 	assertEqual(subscribeCalls[3].topic, "tin_realm_v1", "default third topic")
-	assertEqual(subscribeCalls[4].topic, "tin_return_v1", "default fourth topic")
+	assertEqual(subscribeCalls[4].topic, "tin_announcement_v1", "default fourth topic")
+	assertEqual(subscribeCalls[5].topic, "tin_return_v1", "default fifth topic")
 
 	local second = NotificationSubscriptionManager.SubscribeDefaults()
 	assertTrue(second.accepted, "repeat defaults accepted")
-	assertEqual(#subscribeCalls, 4, "repeat default subscriptions do not duplicate")
+	assertEqual(#subscribeCalls, 5, "repeat default subscriptions do not duplicate")
 	assertEqual(second.results[1].reason, "already_subscribed", "repeat reason")
 
 	local diagnostics = NotificationSubscriptionManager.GetDiagnostics()
-	assertEqual(diagnostics.activeTopicCount, 4, "diagnostics active count")
-	assertEqual(diagnostics.subscribeSucceeded, 8, "diagnostics counts idempotent successes")
+	assertEqual(diagnostics.activeTopicCount, 5, "diagnostics active count")
+	assertEqual(diagnostics.subscribeSucceeded, 10, "diagnostics counts idempotent successes")
 end
 
 do
