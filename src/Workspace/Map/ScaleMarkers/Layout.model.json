@@ -9,11 +9,11 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
+        "Transparency": 0.78,
         "Material": "SmoothPlastic",
         "Color": [0.86, 0.24, 0.18],
         "Size": [1.2, 11.5, 1.2],
-        "Position": [10, 5.75, 0]
+        "Position": [126, 5.75, 78]
       },
       "attributes": {
         "DoNotShip": true,
@@ -30,11 +30,11 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.68,
+        "Transparency": 0.74,
         "Material": "SmoothPlastic",
         "Color": [0.28, 0.62, 0.92],
         "Size": [0.6, 4.35, 0.6],
-        "Position": [13, 2.175, 0]
+        "Position": [129, 2.175, 78]
       },
       "attributes": {
         "DoNotShip": true,
@@ -51,11 +51,11 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.78,
+        "Transparency": 0.84,
         "Material": "SmoothPlastic",
         "Color": [0.95, 0.78, 0.33],
         "Size": [18, 0.35, 2],
-        "Position": [0, 0.65, -28]
+        "Position": [123, 0.65, 88]
       },
       "attributes": {
         "DoNotShip": true,

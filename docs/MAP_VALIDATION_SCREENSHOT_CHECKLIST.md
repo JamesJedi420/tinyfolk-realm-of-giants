@@ -13,6 +13,7 @@ rojo build default.project.json -o TinyfolkRealmOfGiants.rbxlx
 - Overhead map: use `Workspace.Map.ValidationCameras.Shot_Overhead_Map`.
 - Giant road readability: use `Workspace.Map.ValidationCameras.Shot_Giant_PlazaRoads`.
 - Tinyfolk route-scale readability: use `Workspace.Map.ValidationCameras.Shot_Tinyfolk_RouteRead`.
+- After focusing a validation anchor, deselect it or select `Workspace.Map` before capturing so Studio selection outlines do not obscure the map.
 
 ## Pass Criteria
 
