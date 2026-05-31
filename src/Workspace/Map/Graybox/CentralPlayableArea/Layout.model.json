@@ -6,7 +6,7 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
-        "CanCollide": false,
+        "CanCollide": true,
         "CanTouch": false,
         "CanQuery": false,
         "Material": "Grass",
