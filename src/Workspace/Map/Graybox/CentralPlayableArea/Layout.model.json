@@ -145,6 +145,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "WoodPlanks",
         "Color": [
           0.62,
@@ -174,6 +178,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "WoodPlanks",
         "Color": [
           0.68,
@@ -204,6 +212,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Sandstone",
         "Color": [
           0.75,
@@ -228,6 +239,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Sandstone",
         "Color": [
           0.75,
@@ -257,6 +271,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Sandstone",
         "Color": [
           0.75,
@@ -286,6 +303,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Sandstone",
         "Color": [
           0.75,
@@ -315,6 +335,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Sandstone",
         "Color": [
           0.75,
@@ -344,6 +367,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 1,
         "Material": "Water",
         "Color": [
           0.1,
