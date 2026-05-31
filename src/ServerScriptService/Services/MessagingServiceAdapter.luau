@@ -1,6 +1,11 @@
 --!strict
 
+local NotificationRateGuard = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("NotificationRateGuard"))
+	else (require :: any)("./NotificationRateGuard")
+
 local MessagingServiceAdapter: any = {}
+local globalEnv: any = getfenv()
 
 export type AdapterResult = {
 	accepted: boolean,
@@ -15,10 +20,13 @@ type Diagnostics = {
 	subscribeAttempts: number,
 	subscribeSucceeded: number,
 	subscribeFailed: number,
+	publishRateLimited: number,
+	publishCoalesced: number,
 	lastTopic: string?,
 	lastMessageType: string?,
 	lastOperationId: string?,
 	lastReason: string,
+	lastRateGuardReason: string?,
 }
 
 local function isNonEmptyString(value: any): boolean
@@ -50,11 +58,30 @@ local function cloneDiagnostics(diagnostics: Diagnostics): Diagnostics
 		subscribeAttempts = diagnostics.subscribeAttempts,
 		subscribeSucceeded = diagnostics.subscribeSucceeded,
 		subscribeFailed = diagnostics.subscribeFailed,
+		publishRateLimited = diagnostics.publishRateLimited,
+		publishCoalesced = diagnostics.publishCoalesced,
 		lastTopic = diagnostics.lastTopic,
 		lastMessageType = diagnostics.lastMessageType,
 		lastOperationId = diagnostics.lastOperationId,
 		lastReason = diagnostics.lastReason,
+		lastRateGuardReason = diagnostics.lastRateGuardReason,
 	}
+end
+
+local function getGlobalTable(name: string): any?
+	local fromEnv = rawget(globalEnv, name)
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, name)
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	return nil
 end
 
 local function resolveMetadata(input: any): (string?, string?)
@@ -80,6 +107,7 @@ end
 function MessagingServiceAdapter.Create(config: any?): any
 	local configAny: any = config
 	local messagingService = if type(configAny) == "table" then configAny.messagingService else nil
+	local rateGuard = if type(configAny) == "table" then configAny.rateGuard else nil
 	local diagnostics: Diagnostics = {
 		publishAttempts = 0,
 		publishSucceeded = 0,
@@ -87,10 +115,13 @@ function MessagingServiceAdapter.Create(config: any?): any
 		subscribeAttempts = 0,
 		subscribeSucceeded = 0,
 		subscribeFailed = 0,
+		publishRateLimited = 0,
+		publishCoalesced = 0,
 		lastTopic = nil,
 		lastMessageType = nil,
 		lastOperationId = nil,
 		lastReason = "not_started",
+		lastRateGuardReason = nil,
 	}
 
 	local adapter: any = {}
@@ -125,6 +156,15 @@ function MessagingServiceAdapter.Create(config: any?): any
 		end
 	end
 
+	local function recordRateGuard(reason: string)
+		diagnostics.lastRateGuardReason = reason
+		if reason == "rate_limited" then
+			diagnostics.publishRateLimited += 1
+		elseif reason == "coalesced" then
+			diagnostics.publishCoalesced += 1
+		end
+	end
+
 	function adapter.Publish(input: any): AdapterResult
 		local inputAny: any = input
 		local topic = if type(inputAny) == "table" then inputAny.topic else nil
@@ -142,6 +182,32 @@ function MessagingServiceAdapter.Create(config: any?): any
 		if messagingService == nil or not hasMethod(messagingService, "PublishAsync") then
 			record("publish", false, topic, messageType, operationId, "messaging_service_unavailable")
 			return { accepted = false, reason = "messaging_service_unavailable", subscription = nil }
+		end
+
+		if rateGuard ~= nil then
+			if type(rateGuard) ~= "table" or type(rateGuard.EvaluatePublish) ~= "function" then
+				record("publish", false, topic, messageType, operationId, "rate_guard_unavailable")
+				return { accepted = false, reason = "rate_guard_unavailable", subscription = nil }
+			end
+
+			local guardOk, guardResult = pcall(function()
+				return rateGuard.EvaluatePublish(input)
+			end)
+			if not guardOk or type(guardResult) ~= "table" then
+				record("publish", false, topic, messageType, operationId, "rate_guard_failed")
+				return { accepted = false, reason = "rate_guard_failed", subscription = nil }
+			end
+
+			local guardReason = if type(guardResult.reason) == "string" then guardResult.reason else "rate_guard_failed"
+			recordRateGuard(guardReason)
+			if guardResult.accepted ~= true then
+				record("publish", false, topic, messageType, operationId, guardReason)
+				return { accepted = false, reason = guardReason, subscription = nil }
+			end
+			if guardResult.action == "coalesce" then
+				record("publish", true, topic, messageType, operationId, "coalesced")
+				return { accepted = true, reason = "coalesced", subscription = nil }
+			end
 		end
 
 		local publishOk = pcall(function()
@@ -210,8 +276,14 @@ function MessagingServiceAdapter.CreateDefault(): any?
 		return nil
 	end
 
+	local rateGuard = getGlobalTable("_NotificationRateGuard_QueryAPI")
+	if rateGuard == nil then
+		rateGuard = NotificationRateGuard.CreateDefault()
+	end
+
 	return MessagingServiceAdapter.Create({
 		messagingService = messagingService,
+		rateGuard = rateGuard,
 	})
 end
 

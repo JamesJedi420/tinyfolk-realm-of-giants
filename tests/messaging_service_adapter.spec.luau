@@ -84,6 +84,8 @@ do
 	assertEqual(diagnostics.publishAttempts, 1, "diagnostics publish attempts")
 	assertEqual(diagnostics.publishSucceeded, 1, "diagnostics publish success")
 	assertEqual(diagnostics.publishFailed, 0, "diagnostics publish failed")
+	assertEqual(diagnostics.publishRateLimited, 0, "diagnostics publish rate limited")
+	assertEqual(diagnostics.publishCoalesced, 0, "diagnostics publish coalesced")
 	assertEqual(diagnostics.subscribeAttempts, 1, "diagnostics subscribe attempts")
 	assertEqual(diagnostics.subscribeSucceeded, 1, "diagnostics subscribe success")
 	assertEqual(diagnostics.subscribeFailed, 0, "diagnostics subscribe failed")
@@ -91,6 +93,121 @@ do
 	assertEqual(diagnostics.lastMessageType, "subscription_init", "diagnostics last message type")
 	assertEqual(diagnostics.lastOperationId, "op-sub", "diagnostics last operation id")
 	assertEqual(diagnostics.lastReason, "accepted", "diagnostics last reason")
+end
+
+do
+	local messagingService, publishes = makeMessagingService()
+	local guardCalls: { any } = {}
+	local adapter = MessagingServiceAdapter.Create({
+		messagingService = messagingService,
+		rateGuard = {
+			EvaluatePublish = function(input: any)
+				table.insert(guardCalls, input)
+				return {
+					accepted = true,
+					reason = "accepted",
+					action = "publish",
+				}
+			end,
+		},
+	})
+
+	local published = adapter.Publish({
+		topic = "tin_topic",
+		message = "encoded",
+		messageType = "RealmStatusChanged",
+		operationId = "op-guard-accepted",
+	})
+	assertTrue(published.accepted, "guard accepted publish")
+	assertEqual(published.reason, "accepted", "guard accepted reason")
+	assertEqual(#guardCalls, 1, "guard called before publish")
+	assertEqual(#publishes, 1, "guard accepted calls platform publish")
+end
+
+do
+	local messagingService, publishes = makeMessagingService()
+	local adapter = MessagingServiceAdapter.Create({
+		messagingService = messagingService,
+		rateGuard = {
+			EvaluatePublish = function(_input: any)
+				return {
+					accepted = false,
+					reason = "rate_limited",
+					action = "drop",
+				}
+			end,
+		},
+	})
+
+	local limited = adapter.Publish({
+		topic = "tin_topic",
+		message = "encoded",
+		messageType = "admission_enqueue",
+		operationId = "op-limited",
+	})
+	assertFalse(limited.accepted, "rate limited rejected")
+	assertEqual(limited.reason, "rate_limited", "rate limited reason")
+	assertEqual(#publishes, 0, "rate limited skips platform publish")
+
+	local diagnostics = adapter.GetDiagnostics()
+	assertEqual(diagnostics.publishAttempts, 1, "rate limited diagnostics attempts")
+	assertEqual(diagnostics.publishFailed, 1, "rate limited diagnostics failed")
+	assertEqual(diagnostics.publishRateLimited, 1, "rate limited diagnostics counter")
+	assertEqual(diagnostics.lastRateGuardReason, "rate_limited", "rate limited diagnostics reason")
+end
+
+do
+	local messagingService, publishes = makeMessagingService()
+	local adapter = MessagingServiceAdapter.Create({
+		messagingService = messagingService,
+		rateGuard = {
+			EvaluatePublish = function(_input: any)
+				return {
+					accepted = true,
+					reason = "coalesced",
+					action = "coalesce",
+				}
+			end,
+		},
+	})
+
+	local coalesced = adapter.Publish({
+		topic = "tin_topic",
+		message = "encoded",
+		messageType = "RealmStatusChanged",
+		operationId = "op-coalesced",
+	})
+	assertTrue(coalesced.accepted, "coalesced accepted")
+	assertEqual(coalesced.reason, "coalesced", "coalesced reason")
+	assertEqual(#publishes, 0, "coalesced skips platform publish")
+
+	local diagnostics = adapter.GetDiagnostics()
+	assertEqual(diagnostics.publishAttempts, 1, "coalesced diagnostics attempts")
+	assertEqual(diagnostics.publishSucceeded, 1, "coalesced diagnostics success")
+	assertEqual(diagnostics.publishCoalesced, 1, "coalesced diagnostics counter")
+	assertEqual(diagnostics.lastRateGuardReason, "coalesced", "coalesced diagnostics reason")
+end
+
+do
+	local messagingService, publishes = makeMessagingService()
+	local adapter = MessagingServiceAdapter.Create({
+		messagingService = messagingService,
+		rateGuard = {
+			EvaluatePublish = function(_input: any)
+				error("guard failed")
+			end,
+		},
+	})
+
+	local failed = adapter.Publish({
+		topic = "tin_topic",
+		message = "encoded",
+		messageType = "RealmStatusChanged",
+		operationId = "op-guard-failed",
+	})
+	assertFalse(failed.accepted, "guard failure rejected")
+	assertEqual(failed.reason, "rate_guard_failed", "guard failure reason")
+	assertEqual(#publishes, 0, "guard failure skips platform publish")
 end
 
 do
