@@ -2749,6 +2749,212 @@
                                             "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
                                             "DashIndex":  10
                                         }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_GranaryTinyHatch",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.24,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.9,
+                                                          0.45
+                                                      ],
+                                            "Size":  [
+                                                         3.6,
+                                                         0.16,
+                                                         3.6
+                                                     ],
+                                            "Position":  [
+                                                             -74.4,
+                                                             0.44,
+                                                             80.65
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetStation":  "Workspace.Map.Stations.Granary.Granary_A",
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_WarehouseDock",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.9,
+                                                          0.45
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.16,
+                                                         3.2
+                                                     ],
+                                            "Position":  [
+                                                             -39,
+                                                             0.44,
+                                                             45.2
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetStation":  "Workspace.Map.Stations.Warehouse.Warehouse_A",
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_ShrineRing",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.24,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.9,
+                                                          0.45
+                                                      ],
+                                            "Size":  [
+                                                         3.6,
+                                                         0.16,
+                                                         3.6
+                                                     ],
+                                            "Position":  [
+                                                             45,
+                                                             0.44,
+                                                             66
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetStation":  "Workspace.Map.Stations.Shrine.Shrine_A",
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_ControlExit",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.26,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.9,
+                                                          0.45
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.16,
+                                                         3.2
+                                                     ],
+                                            "Position":  [
+                                                             88,
+                                                             0.44,
+                                                             8
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetRouteNode":  "Workspace.Map.RouteGraph.RouteGraphData.Nodes.EscapeRoute_ControlA",
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_DockEscape",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.22,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.7,
+                                                          0.95,
+                                                          0.55
+                                                      ],
+                                            "Size":  [
+                                                         3.8,
+                                                         0.16,
+                                                         3.8
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             0.44,
+                                                             80
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetRouteNode":  "Workspace.Map.RouteGraph.RouteGraphData.Nodes.EscapeRoute_Dock",
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "MarkerEndpoint_WestEscape",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.22,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.7,
+                                                          0.95,
+                                                          0.55
+                                                      ],
+                                            "Size":  [
+                                                         3.8,
+                                                         0.16,
+                                                         3.8
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             0.44,
+                                                             16
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEndpoint":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "TargetRouteNode":  "Workspace.Map.RouteGraph.RouteGraphData.Nodes.EscapeRoute_A",
+                                            "VisualOnly":  true
+                                        }
                      }
                  ]
 }
