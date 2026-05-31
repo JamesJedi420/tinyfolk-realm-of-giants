@@ -1,228 +1,2754 @@
 {
-  "className": "Folder",
-  "attributes": {
-    "GeneratedBlockout": true,
-    "MarkerOnly": true,
-    "MirrorsRouteGraph": "Workspace.Map.RouteGraph.RouteGraphData.Edges"
-  },
-  "children": [
-    {
-      "name": "Marker_TinyfolkSpawn_ToVillage",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 28],
-        "Orientation": [0, 90, 0],
-        "Position": [-116, 0.75, 8]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_Village_ToWork",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 58],
-        "Orientation": [0, 27, 0],
-        "Position": [-104, 0.75, -18]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_Village_ToEconomy",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 70],
-        "Orientation": [0, -55, 0],
-        "Position": [-91, 0.75, 32]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_Economy_ToShrine",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 112],
-        "Orientation": [0, -82, 0],
-        "Position": [-6, 0.75, 61]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_Stone_ToControlExit",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 54],
-        "Orientation": [0, -10, 0],
-        "Position": [83, 0.75, -17]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_DockEscape",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 70],
-        "Orientation": [0, -37, 0],
-        "Position": [78, 0.75, 64]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_WestFallbackEscape",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 36],
-        "Orientation": [0, 11, 0],
-        "Position": [-149, 0.75, 2]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "ProtectedPath": true,
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_MacroPlaza_ToQuarry",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 89],
-        "Orientation": [0, -61, 0],
-        "Position": [39, 0.75, -21.5]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteEdgeFrom": "RouteMacroPlaza",
-        "RouteEdgeTo": "RouteQuarry",
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_MacroPlaza_ToShrine",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 74],
-        "Orientation": [0, -48, 0],
-        "Position": [27.5, 0.75, 25]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteEdgeFrom": "RouteMacroPlaza",
-        "RouteEdgeTo": "RouteShrine",
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Marker_MacroPlaza_ToNorthTunnel",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.12,
-        "Material": "Neon",
-        "Color": [0.94, 0.86, 0.38],
-        "Size": [4, 0.35, 108],
-        "Orientation": [0, -4, 0],
-        "Position": [4, 0.75, -54]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "ProtectedPath": true,
-        "RouteEdgeFrom": "RouteMacroPlaza",
-        "RouteEdgeTo": "EscapeRoute_NorthTunnel",
-        "RouteKind": "TinyfolkMarker",
-        "VisualOnly": true
-      }
-    }
-  ]
+    "className":  "Folder",
+    "attributes":  {
+                       "GeneratedBlockout":  true,
+                       "MarkerOnly":  true,
+                       "MirrorsRouteGraph":  "Workspace.Map.RouteGraph.RouteGraphData.Edges",
+                       "RouteMarkerStyle":  "Dashed"
+                   },
+    "children":  [
+                     {
+                         "name":  "Marker_TinyfolkSpawn_ToVillage_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                90,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -126.5,
+                                                             0.75,
+                                                             8
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_TinyfolkSpawn_ToVillage",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_TinyfolkSpawn_ToVillage_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                90,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -116,
+                                                             0.75,
+                                                             8
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_TinyfolkSpawn_ToVillage",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_TinyfolkSpawn_ToVillage_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                90,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -105.5,
+                                                             0.75,
+                                                             8
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_TinyfolkSpawn_ToVillage",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -115.917,
+                                                             0.75,
+                                                             -41.389
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -111.15,
+                                                             0.75,
+                                                             -32.033
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -106.383,
+                                                             0.75,
+                                                             -22.678
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -101.617,
+                                                             0.75,
+                                                             -13.322
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -96.85,
+                                                             0.75,
+                                                             -3.967
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToWork_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                27,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -92.083,
+                                                             0.75,
+                                                             5.389
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToWork",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -65.197,
+                                                             0.75,
+                                                             13.932
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -73.798,
+                                                             0.75,
+                                                             19.955
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -82.399,
+                                                             0.75,
+                                                             25.977
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -91,
+                                                             0.75,
+                                                             32
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -99.601,
+                                                             0.75,
+                                                             38.023
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -108.202,
+                                                             0.75,
+                                                             44.045
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Village_ToEconomy_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -55,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -116.803,
+                                                             0.75,
+                                                             50.068
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Village_ToEconomy",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             45.989,
+                                                             0.75,
+                                                             53.693
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             35.591,
+                                                             0.75,
+                                                             55.155
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             25.193,
+                                                             0.75,
+                                                             56.616
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             14.796,
+                                                             0.75,
+                                                             58.077
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             4.398,
+                                                             0.75,
+                                                             59.539
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -6,
+                                                             0.75,
+                                                             61
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -16.398,
+                                                             0.75,
+                                                             62.461
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_08",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -26.796,
+                                                             0.75,
+                                                             63.923
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  8
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_09",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -37.193,
+                                                             0.75,
+                                                             65.384
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  9
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_10",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -47.591,
+                                                             0.75,
+                                                             66.845
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  10
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Economy_ToShrine_Dash_11",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -82,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -57.989,
+                                                             0.75,
+                                                             68.307
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Economy_ToShrine",
+                                            "DashIndex":  11
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Stone_ToControlExit_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -10,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             86.647,
+                                                             0.75,
+                                                             -37.681
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Stone_ToControlExit",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Stone_ToControlExit_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -10,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             84.823,
+                                                             0.75,
+                                                             -27.34
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Stone_ToControlExit",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Stone_ToControlExit_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -10,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             83,
+                                                             0.75,
+                                                             -17
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Stone_ToControlExit",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Stone_ToControlExit_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -10,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             81.177,
+                                                             0.75,
+                                                             -6.66
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Stone_ToControlExit",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Stone_ToControlExit_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -10,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             79.353,
+                                                             0.75,
+                                                             3.681
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_Stone_ToControlExit",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             96.957,
+                                                             0.75,
+                                                             38.843
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             90.638,
+                                                             0.75,
+                                                             47.229
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             84.319,
+                                                             0.75,
+                                                             55.614
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             78,
+                                                             0.75,
+                                                             64
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             71.681,
+                                                             0.75,
+                                                             72.386
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             65.362,
+                                                             0.75,
+                                                             80.771
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_DockEscape_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -37,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             59.043,
+                                                             0.75,
+                                                             89.157
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_DockEscape",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_WestFallbackEscape_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                11,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -151.003,
+                                                             0.75,
+                                                             -8.307
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_WestFallbackEscape",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_WestFallbackEscape_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                11,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -149,
+                                                             0.75,
+                                                             2
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_WestFallbackEscape",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_WestFallbackEscape_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                11,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -146.997,
+                                                             0.75,
+                                                             12.307
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_WestFallbackEscape",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             71.142,
+                                                             0.75,
+                                                             -39.317
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             61.959,
+                                                             0.75,
+                                                             -34.226
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             52.775,
+                                                             0.75,
+                                                             -29.136
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             43.592,
+                                                             0.75,
+                                                             -24.045
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             34.408,
+                                                             0.75,
+                                                             -18.955
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             25.225,
+                                                             0.75,
+                                                             -13.864
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             16.041,
+                                                             0.75,
+                                                             -8.774
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToQuarry_Dash_08",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -61,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             6.858,
+                                                             0.75,
+                                                             -3.683
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteQuarry",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToQuarry",
+                                            "DashIndex":  8
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             50.909,
+                                                             0.75,
+                                                             3.922
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             43.106,
+                                                             0.75,
+                                                             10.948
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             35.303,
+                                                             0.75,
+                                                             17.974
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             27.5,
+                                                             0.75,
+                                                             25
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             19.697,
+                                                             0.75,
+                                                             32.026
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             11.894,
+                                                             0.75,
+                                                             39.052
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToShrine_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -48,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             4.091,
+                                                             0.75,
+                                                             46.078
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "RouteShrine",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToShrine",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             7.296,
+                                                             0.75,
+                                                             -101.135
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  1
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             6.564,
+                                                             0.75,
+                                                             -90.66
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  2
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             5.831,
+                                                             0.75,
+                                                             -80.186
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  3
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             5.099,
+                                                             0.75,
+                                                             -69.712
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  4
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             4.366,
+                                                             0.75,
+                                                             -59.237
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  5
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             3.634,
+                                                             0.75,
+                                                             -48.763
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  6
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             2.901,
+                                                             0.75,
+                                                             -38.288
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  7
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_08",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             2.169,
+                                                             0.75,
+                                                             -27.814
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  8
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_09",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             1.436,
+                                                             0.75,
+                                                             -17.34
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  9
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MacroPlaza_ToNorthTunnel_Dash_10",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.18,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.94,
+                                                          0.86,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         3.2,
+                                                         0.32,
+                                                         5.5
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             0.704,
+                                                             0.75,
+                                                             -6.865
+                                                         ]
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "RouteEdgeFrom":  "RouteMacroPlaza",
+                                            "RouteEdgeTo":  "EscapeRoute_NorthTunnel",
+                                            "RouteKind":  "TinyfolkMarker",
+                                            "VisualOnly":  true,
+                                            "RouteMarkerStyle":  "Dashed",
+                                            "SourceMarker":  "Marker_MacroPlaza_ToNorthTunnel",
+                                            "DashIndex":  10
+                                        }
+                     }
+                 ]
 }
