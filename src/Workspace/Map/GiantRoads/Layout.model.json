@@ -151,6 +151,109 @@
         "WidthStuds": 18,
         "VisualOnly": true
       }
+    },
+    {
+      "name": "GiantRoad_ApproachGranaryDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [12, 0.45, 28],
+        "Orientation": [0, 8, 0],
+        "Position": [-65, 0.34, 68]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantApproach",
+        "TargetStation": "Workspace.Map.Stations.Granary.Granary_A",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ApproachWarehouseDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [11, 0.45, 20],
+        "Position": [-39, 0.34, 45]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantApproach",
+        "TargetStation": "Workspace.Map.Stations.Warehouse.Warehouse_A",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ApproachShrineRing",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [12, 0.45, 30],
+        "Orientation": [0, -18, 0],
+        "Position": [42, 0.34, 52]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantApproach",
+        "TargetStation": "Workspace.Map.Stations.Shrine.Shrine_A",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ApproachControlStation",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [11, 0.45, 24],
+        "Orientation": [0, -82, 0],
+        "Position": [70, 0.34, 5]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantApproach",
+        "TargetStation": "Workspace.Map.Stations.GiantControlStation.GiantControlStation_A",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ApproachTradeDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "WoodPlanks",
+        "Color": [0.55, 0.36, 0.18],
+        "Size": [12, 0.5, 28],
+        "Position": [103, 0.38, 82]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantApproach",
+        "TargetStation": "Workspace.Map.DistrictPads.Pad_TradeDock",
+        "VisualOnly": true
+      }
     }
   ]
 }
