@@ -14,15 +14,19 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Neon",
+        "Transparency": 0.9,
+        "Material": "SmoothPlastic",
         "Color": [0.9, 0.9, 0.9],
         "Size": [4, 4, 4],
         "Position": [0, 90, 0]
       },
       "attributes": {
         "DoNotShip": true,
+        "LookAtX": 0,
+        "LookAtY": 0,
+        "LookAtZ": 0,
         "ScreenshotView": "overhead",
+        "SuggestedFov": 45,
         "VisualOnly": true
       }
     },
@@ -34,15 +38,19 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Neon",
+        "Transparency": 0.9,
+        "Material": "SmoothPlastic",
         "Color": [0.86, 0.24, 0.18],
         "Size": [4, 4, 4],
         "Position": [-18, 14, 18]
       },
       "attributes": {
         "DoNotShip": true,
+        "LookAtX": 25,
+        "LookAtY": 2,
+        "LookAtZ": -8,
         "ScreenshotView": "giant_eye_level",
+        "SuggestedFov": 60,
         "VisualOnly": true
       }
     },
@@ -54,15 +62,19 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Neon",
+        "Transparency": 0.9,
+        "Material": "SmoothPlastic",
         "Color": [0.28, 0.62, 0.92],
         "Size": [3, 3, 3],
         "Position": [-112, 5, 8]
       },
       "attributes": {
         "DoNotShip": true,
+        "LookAtX": -102,
+        "LookAtY": 1,
+        "LookAtZ": 8,
         "ScreenshotView": "tinyfolk_route_scale",
+        "SuggestedFov": 70,
         "VisualOnly": true
       }
     }
