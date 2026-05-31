@@ -99,6 +99,105 @@ local function resolveRoleServiceApi(): any?
 	return nil
 end
 
+local function resolveGrabServiceApi(): any?
+	local configAny = runtimeConfig
+	if type(configAny) == "table" and type(configAny.grabServiceApi) == "table" then
+		return configAny.grabServiceApi
+	end
+
+	local fromEnv = rawget(globalEnv, "_GrabService_QueryAPI")
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_GrabService_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+	return nil
+end
+
+local function resolveHidingServiceApi(): any?
+	local configAny = runtimeConfig
+	if type(configAny) == "table" and type(configAny.hidingServiceApi) == "table" then
+		return configAny.hidingServiceApi
+	end
+
+	local fromEnv = rawget(globalEnv, "_TinyfolkHiding_QueryAPI")
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_TinyfolkHiding_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+	return nil
+end
+
+local function resolveStatusServiceApi(): any?
+	local configAny = runtimeConfig
+	if type(configAny) == "table" and type(configAny.statusServiceApi) == "table" then
+		return configAny.statusServiceApi
+	end
+
+	local fromEnv = rawget(globalEnv, "_TinyfolkStatusService_QueryAPI")
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_TinyfolkStatusService_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+	return nil
+end
+
+local function isPlayerHiding(userId: number): boolean
+	local hidingServiceApi = resolveHidingServiceApi()
+	if type(hidingServiceApi) ~= "table" or type(hidingServiceApi.IsPlayerHiding) ~= "function" then
+		return false
+	end
+
+	local ok, hidden = pcall(function()
+		return hidingServiceApi.IsPlayerHiding(userId)
+	end)
+	return ok and hidden == true
+end
+
+local function isStatusStealthAllowed(userId: number, at: number): (boolean, string?)
+	local configAny = runtimeConfig
+	if type(configAny) == "table" and type(configAny.statusResolver) == "function" then
+		local ok, allowed, reason = pcall(function()
+			return configAny.statusResolver(userId, at)
+		end)
+		if ok and allowed ~= true then
+			if isNonEmptyString(reason) then
+				return false, reason
+			end
+			return false, "status_forbidden"
+		end
+	end
+
+	local statusServiceApi = resolveStatusServiceApi()
+	if type(statusServiceApi) == "table" and type(statusServiceApi.IsStealthShrinkAllowed) == "function" then
+		local ok, allowed, reason = pcall(function()
+			return statusServiceApi.IsStealthShrinkAllowed(userId, at)
+		end)
+		if ok and allowed ~= true then
+			if isNonEmptyString(reason) then
+				return false, reason
+			end
+			return false, "status_forbidden"
+		end
+	end
+
+	return true, nil
+end
+
 local function getStateForUser(userId: number): any
 	local state = stateByUserId[userId]
 	if state == nil then
@@ -151,7 +250,7 @@ local function resolveActorRole(userId: number): string?
 	return nil
 end
 
-local function checkInvalidState(userId: number): (boolean, string?)
+local function checkInvalidState(userId: number, at: number): (boolean, string?)
 	local configAny = runtimeConfig
 	if type(configAny) == "table" and type(configAny.invalidStateResolver) == "function" then
 		local ok, invalidState, reason = pcall(function()
@@ -162,14 +261,44 @@ local function checkInvalidState(userId: number): (boolean, string?)
 		end
 	end
 
+	local roleName = resolveActorRole(userId)
+	if roleName ~= "Tinyfolk" then
+		return true, "cancelled_role_mismatch"
+	end
+
 	local roleServiceApi = resolveRoleServiceApi()
 	if type(roleServiceApi) == "table" and type(roleServiceApi.IsPlayerDowned) == "function" then
 		local ok, isDowned = pcall(function()
 			return roleServiceApi.IsPlayerDowned(userId)
 		end)
 		if ok and isDowned == true then
-			return true, "cancelled_invalid_state"
+			return true, "cancelled_downed"
 		end
+	end
+
+	local grabServiceApi = resolveGrabServiceApi()
+	if type(grabServiceApi) == "table" and type(grabServiceApi.IsPlayerCarried) == "function" then
+		local ok, isCarried = pcall(function()
+			return grabServiceApi.IsPlayerCarried(userId)
+		end)
+		if ok and isCarried == true then
+			return true, "cancelled_carried"
+		end
+	end
+
+	if isPlayerHiding(userId) then
+		return true, "cancelled_hiding_conflict"
+	end
+
+	local statusAllowed, statusReason = isStatusStealthAllowed(userId, at)
+	if statusAllowed ~= true then
+		if statusReason == "status_forbidden" then
+			return true, "cancelled_status_forbidden"
+		end
+		if isNonEmptyString(statusReason) and string.find(statusReason, "cancelled_", 1, true) == 1 then
+			return true, statusReason
+		end
+		return true, "cancelled_status_forbidden"
 	end
 
 	return false, nil
@@ -210,6 +339,20 @@ local function requestStealthShrink(input: any): any
 		diagnostics.activationFailed += 1
 		setLastReason(userId, "interaction_forbidden")
 		return { accepted = false, reason = "interaction_forbidden" }
+	end
+
+	if isPlayerHiding(userId) then
+		diagnostics.activationFailed += 1
+		setLastReason(userId, "hiding_forbidden")
+		return { accepted = false, reason = "hiding_forbidden" }
+	end
+
+	local statusAllowed, statusReason = isStatusStealthAllowed(userId, resolveNow())
+	if statusAllowed ~= true then
+		diagnostics.activationFailed += 1
+		local resolvedReason = if isNonEmptyString(statusReason) then statusReason else "status_forbidden"
+		setLastReason(userId, resolvedReason)
+		return { accepted = false, reason = resolvedReason }
 	end
 
 	local state = getStateForUser(userId)
@@ -306,7 +449,7 @@ local function tickStealthShrink(input: any?): any
 	local at = if type(input) == "table" and isFiniteNumber(input.at) then input.at else resolveNow()
 	for userId, state in pairs(stateByUserId) do
 		if state.isActive then
-			local invalidState, reason = checkInvalidState(userId)
+			local invalidState, reason = checkInvalidState(userId, at)
 			if invalidState then
 				state:Cancel(reason or "cancelled_invalid_state", at)
 				diagnostics.invalidStateCancelled += 1
