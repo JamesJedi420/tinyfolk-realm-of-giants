@@ -3,7 +3,8 @@
   "attributes": {
     "AssetIntakeStatus": "PlaceholderOnly",
     "ExternalAssetsImported": false,
-    "GeneratedBlockout": true
+    "GeneratedBlockout": true,
+    "IntakeChecklist": "docs/MAP_EXTERNAL_ASSET_INTAKE_CHECKLIST.md"
   },
   "children": [
     {
@@ -24,6 +25,30 @@
         "DoNotShip": true,
         "GeneratedBlockout": true,
         "VisualOnly": true
+      }
+    },
+    {
+      "name": "FolderConvention_StaticMeshes",
+      "className": "Folder",
+      "attributes": {
+        "AllowedContent": "Reviewed static mesh replacements only",
+        "ExternalAssetsImported": false
+      }
+    },
+    {
+      "name": "FolderConvention_Textures",
+      "className": "Folder",
+      "attributes": {
+        "AllowedContent": "Reviewed materials/textures only",
+        "ExternalAssetsImported": false
+      }
+    },
+    {
+      "name": "FolderConvention_Collision",
+      "className": "Folder",
+      "attributes": {
+        "AllowedContent": "Explicit collision-only parts for imported dressing",
+        "ExternalAssetsImported": false
       }
     }
   ]

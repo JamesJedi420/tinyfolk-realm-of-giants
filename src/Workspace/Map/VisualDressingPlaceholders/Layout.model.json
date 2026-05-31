@@ -1,154 +1,141 @@
 {
   "className": "Folder",
   "attributes": {
-    "CanonicalGiantMacroRoads": true,
+    "ExternalAssetsImported": false,
     "GeneratedBlockout": true,
-    "Supersedes": "Workspace.Map.Graybox.SupportingRoutes"
+    "Purpose": "Primitive dressing only"
   },
   "children": [
     {
-      "name": "GiantRoad_ToHearth",
+      "name": "Fence_WestVillage_A",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 76],
-        "Position": [0, 0.2, -38]
+        "Material": "Wood",
+        "Color": [0.36, 0.23, 0.12],
+        "Size": [48, 2, 0.6],
+        "Position": [-118, 1, -13]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToWorkYard",
+      "name": "Fence_EconomyYard_A",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 104],
-        "Orientation": [0, 64, 0],
-        "Position": [-47, 0.2, -21]
+        "Material": "Wood",
+        "Color": [0.36, 0.23, 0.12],
+        "Size": [56, 2, 0.6],
+        "Orientation": [0, -18, 0],
+        "Position": [-64, 1, 80]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToStoneDistrict",
+      "name": "CreekEdge_NorthBank",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 90],
-        "Orientation": [0, -57, 0],
-        "Position": [39, 0.2, -22]
+        "Material": "Sand",
+        "Color": [0.58, 0.48, 0.29],
+        "Size": [260, 0.35, 4],
+        "Orientation": [0, 4, 0],
+        "Position": [-8, 0.45, 83]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToEconomyYard",
+      "name": "CreekEdge_SouthBank",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 84],
-        "Orientation": [0, -132, 0],
-        "Position": [-31, 0.2, 27]
+        "Material": "Sand",
+        "Color": [0.58, 0.48, 0.29],
+        "Size": [260, 0.35, 4],
+        "Orientation": [0, -3, 0],
+        "Position": [4, 0.45, 101]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToShrineField",
+      "name": "Silhouette_WorkYard_Tower",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 80],
-        "Orientation": [0, -42, 0],
-        "Position": [37, 0.2, 34]
+        "Transparency": 0.36,
+        "Material": "WoodPlanks",
+        "Color": [0.36, 0.24, 0.13],
+        "Size": [6, 24, 6],
+        "Position": [-108, 12, -51]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToControlStation",
+      "name": "Silhouette_Quarry_RockFace",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 82],
-        "Orientation": [0, -86, 0],
-        "Position": [40, 0.2, 4]
+        "Transparency": 0.34,
+        "Material": "Rock",
+        "Color": [0.32, 0.32, 0.34],
+        "Size": [28, 18, 8],
+        "Orientation": [0, 18, 0],
+        "Position": [101, 9, -58]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToTradeDock",
+      "name": "Silhouette_Shrine_RuneGate",
       "className": "Part",
       "properties": {
         "Anchored": true,
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Material": "Sandstone",
-        "Color": [0.74, 0.58, 0.32],
-        "Size": [18, 0.6, 104],
-        "Orientation": [0, -52, 0],
-        "Position": [74, 0.2, 55]
+        "Transparency": 0.38,
+        "Material": "Slate",
+        "Color": [0.36, 0.31, 0.42],
+        "Size": [18, 14, 4],
+        "Position": [60, 7, 74]
       },
       "attributes": {
         "GeneratedBlockout": true,
-        "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
         "VisualOnly": true
       }
     }

@@ -1,5 +1,10 @@
 {
   "className": "Folder",
+  "attributes": {
+    "GeneratedBlockout": true,
+    "MarkerOnly": true,
+    "MirrorsRouteGraph": "Workspace.Map.RouteGraph.RouteGraphData.Edges"
+  },
   "children": [
     {
       "name": "Marker_TinyfolkSpawn_ToVillage",
@@ -145,6 +150,76 @@
       "attributes": {
         "GeneratedBlockout": true,
         "ProtectedPath": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_MacroPlaza_ToQuarry",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 89],
+        "Orientation": [0, -61, 0],
+        "Position": [39, 0.75, -21.5]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteEdgeFrom": "RouteMacroPlaza",
+        "RouteEdgeTo": "RouteQuarry",
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_MacroPlaza_ToShrine",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 74],
+        "Orientation": [0, -48, 0],
+        "Position": [27.5, 0.75, 25]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteEdgeFrom": "RouteMacroPlaza",
+        "RouteEdgeTo": "RouteShrine",
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_MacroPlaza_ToNorthTunnel",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 108],
+        "Orientation": [0, -4, 0],
+        "Position": [4, 0.75, -54]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "ProtectedPath": true,
+        "RouteEdgeFrom": "RouteMacroPlaza",
+        "RouteEdgeTo": "EscapeRoute_NorthTunnel",
         "RouteKind": "TinyfolkMarker",
         "VisualOnly": true
       }

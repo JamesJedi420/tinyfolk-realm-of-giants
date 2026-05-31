@@ -2,6 +2,52 @@
   "className": "Folder",
   "children": [
     {
+      "name": "Pad_GiantPlaza",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "WoodPlanks",
+        "Color": [0.62, 0.52, 0.31],
+        "Shape": "Cylinder",
+        "Size": [0.5, 76, 64],
+        "Orientation": [0, 0, 90],
+        "Position": [0, 0.16, 0]
+      },
+      "attributes": {
+        "DistrictId": "GiantPlaza",
+        "GeneratedBlockout": true,
+        "ReferenceX": 0,
+        "ReferenceZ": 0,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_GiantHearth",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.38,
+        "Material": "WoodPlanks",
+        "Color": [0.48, 0.33, 0.22],
+        "Size": [34, 0.5, 22],
+        "Position": [0, 0.18, -72]
+      },
+      "attributes": {
+        "DistrictId": "GiantHearth",
+        "GeneratedBlockout": true,
+        "ReferenceX": 0,
+        "ReferenceZ": -72,
+        "VisualOnly": true
+      }
+    },
+    {
       "name": "Pad_TinyfolkVillage",
       "className": "Part",
       "properties": {
@@ -134,6 +180,52 @@
       }
     },
     {
+      "name": "Pad_Granary",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.46,
+        "Material": "Concrete",
+        "Color": [0.55, 0.48, 0.33],
+        "Size": [40, 0.5, 26],
+        "Position": [-67, 0.2, 70]
+      },
+      "attributes": {
+        "DistrictId": "Granary",
+        "GeneratedBlockout": true,
+        "PreserveStationContract": "Granary_A",
+        "ReferenceX": -67,
+        "ReferenceZ": 70,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_Warehouse",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.42,
+        "Material": "Concrete",
+        "Color": [0.42, 0.4, 0.34],
+        "Size": [28, 0.5, 18],
+        "Position": [-39, 0.2, 35]
+      },
+      "attributes": {
+        "DistrictId": "Warehouse",
+        "GeneratedBlockout": true,
+        "PreserveStationContract": "Warehouse_A",
+        "ReferenceX": -39,
+        "ReferenceZ": 35,
+        "VisualOnly": true
+      }
+    },
+    {
       "name": "Pad_ShrineField",
       "className": "Part",
       "properties": {
@@ -152,6 +244,52 @@
         "GeneratedBlockout": true,
         "ReferenceX": 55,
         "ReferenceZ": 50,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_Shrine_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.4,
+        "Material": "Concrete",
+        "Color": [0.47, 0.41, 0.55],
+        "Size": [30, 0.5, 22],
+        "Position": [45, 0.2, 66]
+      },
+      "attributes": {
+        "DistrictId": "Shrine_A",
+        "GeneratedBlockout": true,
+        "PreserveStationContract": "Shrine_A",
+        "ReferenceX": 45,
+        "ReferenceZ": 66,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_EscapeWin",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.28,
+        "Material": "Neon",
+        "Color": [0.35, 0.78, 0.42],
+        "Size": [14, 0.5, 14],
+        "Position": [-150, 0.24, 16]
+      },
+      "attributes": {
+        "DistrictId": "EscapeWinPad",
+        "GeneratedBlockout": true,
+        "ProtectedPath": true,
+        "ReferenceX": -150,
+        "ReferenceZ": 16,
         "VisualOnly": true
       }
     },

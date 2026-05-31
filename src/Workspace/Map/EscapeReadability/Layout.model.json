@@ -1,0 +1,112 @@
+{
+  "className": "Folder",
+  "attributes": {
+    "GeneratedBlockout": true,
+    "Purpose": "Escape, rescue, and fallback route readability"
+  },
+  "children": [
+    {
+      "name": "EscapeRead_EscapeRoute_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.48,
+        "Material": "Neon",
+        "Color": [0.35, 0.9, 0.45],
+        "Size": [18, 0.45, 18],
+        "Position": [-150, 0.7, 16]
+      },
+      "attributes": {
+        "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_A",
+        "ProtectedPath": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "EscapeRead_EscapeRoute_Dock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.48,
+        "Material": "Neon",
+        "Color": [0.35, 0.9, 0.45],
+        "Size": [18, 0.45, 18],
+        "Position": [103, 0.7, 80]
+      },
+      "attributes": {
+        "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_Dock",
+        "ProtectedPath": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "EscapeRead_EscapeRoute_NorthTunnel",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.48,
+        "Material": "Neon",
+        "Color": [0.35, 0.9, 0.45],
+        "Size": [18, 0.45, 18],
+        "Position": [8, 0.7, -108]
+      },
+      "attributes": {
+        "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_NorthTunnel",
+        "ProtectedPath": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "RescueEntry_ReadabilityBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.62,
+        "Material": "Neon",
+        "Color": [0.42, 0.76, 0.9],
+        "Size": [6, 0.35, 70],
+        "Orientation": [0, -80, 0],
+        "Position": [67, 0.8, 48]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoutePurpose": "rescue_readability",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Fallback_ReadabilityBand",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.52,
+        "Material": "Neon",
+        "Color": [0.45, 0.95, 0.45],
+        "Size": [6, 0.35, 44],
+        "Orientation": [0, 9, 0],
+        "Position": [-148, 0.8, -6]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "ProtectedPath": true,
+        "RoutePurpose": "fallback_escape",
+        "VisualOnly": true
+      }
+    }
+  ]
+}

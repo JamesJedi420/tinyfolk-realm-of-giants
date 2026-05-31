@@ -1,0 +1,201 @@
+{
+  "className": "Folder",
+  "attributes": {
+    "GeneratedBlockout": true,
+    "MirrorsRouteGraph": "Workspace.Map.RouteGraph.RouteGraphData.Nodes"
+  },
+  "children": [
+    {
+      "name": "Node_TinyfolkSpawn",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Neon",
+        "Color": [0.22, 0.62, 0.88],
+        "Shape": "Ball",
+        "Size": [4, 4, 4],
+        "Position": [-112, 2, 8]
+      },
+      "attributes": {
+        "RouteGraphNode": "TinyfolkSpawn",
+        "RouteNodeType": "spawn",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RouteWestVillage",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Shape": "Ball",
+        "Size": [3, 3, 3],
+        "Position": [-118, 1.5, 8]
+      },
+      "attributes": {
+        "RouteGraphNode": "RouteWestVillage",
+        "RouteNodeType": "waypoint",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RouteMacroPlaza",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Shape": "Ball",
+        "Size": [3, 3, 3],
+        "Position": [0, 1.5, 0]
+      },
+      "attributes": {
+        "RouteGraphNode": "RouteMacroPlaza",
+        "RouteNodeType": "waypoint",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RouteQuarry",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Shape": "Ball",
+        "Size": [3, 3, 3],
+        "Position": [78, 1.5, -43]
+      },
+      "attributes": {
+        "RouteGraphNode": "RouteQuarry",
+        "RouteNodeType": "waypoint",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RouteShrine",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Shape": "Ball",
+        "Size": [3, 3, 3],
+        "Position": [55, 1.5, 50]
+      },
+      "attributes": {
+        "RouteGraphNode": "RouteShrine",
+        "RouteNodeType": "waypoint",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_EscapeRoute_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.14,
+        "Material": "Neon",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [4, 4, 4],
+        "Position": [-150, 2, 16]
+      },
+      "attributes": {
+        "ProtectedPath": true,
+        "RouteGraphNode": "EscapeRoute_A",
+        "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_EscapeRoute_ControlA",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.14,
+        "Material": "Neon",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [4, 4, 4],
+        "Position": [88, 2, 8]
+      },
+      "attributes": {
+        "RouteGraphNode": "EscapeRoute_ControlA",
+        "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_EscapeRoute_Dock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.14,
+        "Material": "Neon",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [4, 4, 4],
+        "Position": [103, 2, 80]
+      },
+      "attributes": {
+        "ProtectedPath": true,
+        "RouteGraphNode": "EscapeRoute_Dock",
+        "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_EscapeRoute_NorthTunnel",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.14,
+        "Material": "Neon",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [4, 4, 4],
+        "Position": [8, 2, -108]
+      },
+      "attributes": {
+        "ProtectedPath": true,
+        "RouteGraphNode": "EscapeRoute_NorthTunnel",
+        "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    }
+  ]
+}

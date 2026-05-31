@@ -1,0 +1,70 @@
+{
+  "className": "Folder",
+  "attributes": {
+    "DoNotShip": true,
+    "GeneratedBlockout": true,
+    "Purpose": "Manual Studio screenshot anchors"
+  },
+  "children": [
+    {
+      "name": "Shot_Overhead_Map",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.72,
+        "Material": "Neon",
+        "Color": [0.9, 0.9, 0.9],
+        "Size": [4, 4, 4],
+        "Position": [0, 90, 0]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "ScreenshotView": "overhead",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Shot_Giant_PlazaRoads",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.72,
+        "Material": "Neon",
+        "Color": [0.86, 0.24, 0.18],
+        "Size": [4, 4, 4],
+        "Position": [-18, 14, 18]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "ScreenshotView": "giant_eye_level",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Shot_Tinyfolk_RouteRead",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.72,
+        "Material": "Neon",
+        "Color": [0.28, 0.62, 0.92],
+        "Size": [3, 3, 3],
+        "Position": [-112, 5, 8]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "ScreenshotView": "tinyfolk_route_scale",
+        "VisualOnly": true
+      }
+    }
+  ]
+}

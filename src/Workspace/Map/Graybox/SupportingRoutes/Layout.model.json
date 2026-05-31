@@ -1,5 +1,11 @@
 {
   "className": "Model",
+  "attributes": {
+    "QuarantinedBy": "MapFoundationCompletion",
+    "QuarantineReason": "Oversized generated road experiment superseded by Workspace.Map.GiantRoads",
+    "ReferenceOnly": true,
+    "DoNotUseForCurrentMapReadability": true
+  },
   "children": [
     {
       "name": "R-001_OuterServiceRing",
