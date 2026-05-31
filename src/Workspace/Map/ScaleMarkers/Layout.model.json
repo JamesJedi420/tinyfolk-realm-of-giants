@@ -1,0 +1,68 @@
+{
+  "className": "Folder",
+  "children": [
+    {
+      "name": "Scale_GiantHeight_11_5Studs",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.28,
+        "Material": "Neon",
+        "Color": [0.86, 0.24, 0.18],
+        "Size": [1.2, 11.5, 1.2],
+        "Position": [10, 5.75, 0]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "GeneratedBlockout": true,
+        "ScaleReference": "GiantScale_2_25",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Scale_Tinyfolk_0_85",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.25,
+        "Material": "Neon",
+        "Color": [0.28, 0.62, 0.92],
+        "Size": [0.6, 4.35, 0.6],
+        "Position": [13, 2.175, 0]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "GeneratedBlockout": true,
+        "ScaleReference": "TinyfolkScale_0_85",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "RoadWidth_GiantMacro_18Studs",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.55,
+        "Material": "Neon",
+        "Color": [0.95, 0.78, 0.33],
+        "Size": [18, 0.35, 2],
+        "Position": [0, 0.65, -28]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "GeneratedBlockout": true,
+        "ScaleReference": "GiantRoadWidth",
+        "VisualOnly": true
+      }
+    }
+  ]
+}

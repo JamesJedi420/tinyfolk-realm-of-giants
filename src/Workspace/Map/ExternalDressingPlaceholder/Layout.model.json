@@ -1,0 +1,30 @@
+{
+  "className": "Folder",
+  "attributes": {
+    "AssetIntakeStatus": "PlaceholderOnly",
+    "ExternalAssetsImported": false,
+    "GeneratedBlockout": true
+  },
+  "children": [
+    {
+      "name": "DressingPlaceholder_DoNotImportYet",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.82,
+        "Material": "SmoothPlastic",
+        "Color": [0.5, 0.5, 0.5],
+        "Size": [12, 1, 12],
+        "Position": [118, 0.5, 92]
+      },
+      "attributes": {
+        "DoNotShip": true,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    }
+  ]
+}

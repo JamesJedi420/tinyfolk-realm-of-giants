@@ -1,0 +1,153 @@
+{
+  "className": "Folder",
+  "children": [
+    {
+      "name": "Marker_TinyfolkSpawn_ToVillage",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 28],
+        "Orientation": [0, 90, 0],
+        "Position": [-116, 0.75, 8]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_Village_ToWork",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 58],
+        "Orientation": [0, 27, 0],
+        "Position": [-104, 0.75, -18]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_Village_ToEconomy",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 70],
+        "Orientation": [0, -55, 0],
+        "Position": [-91, 0.75, 32]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_Economy_ToShrine",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 112],
+        "Orientation": [0, -82, 0],
+        "Position": [-6, 0.75, 61]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_Stone_ToControlExit",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 54],
+        "Orientation": [0, -10, 0],
+        "Position": [83, 0.75, -17]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_DockEscape",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 70],
+        "Orientation": [0, -37, 0],
+        "Position": [78, 0.75, 64]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Marker_WestFallbackEscape",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Neon",
+        "Color": [0.94, 0.86, 0.38],
+        "Size": [4, 0.35, 36],
+        "Orientation": [0, 11, 0],
+        "Position": [-149, 0.75, 2]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "ProtectedPath": true,
+        "RouteKind": "TinyfolkMarker",
+        "VisualOnly": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "className": "Folder",
+  "children": [
+    {
+      "name": "GiantRoad_ToHearth",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [18, 0.6, 76],
+        "Position": [0, 0.2, -38]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ToWorkYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [18, 0.6, 104],
+        "Orientation": [0, 64, 0],
+        "Position": [-47, 0.2, -21]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ToStoneDistrict",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [18, 0.6, 90],
+        "Orientation": [0, -57, 0],
+        "Position": [39, 0.2, -22]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ToEconomyYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [18, 0.6, 84],
+        "Orientation": [0, -132, 0],
+        "Position": [-31, 0.2, 27]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "GiantRoad_ToShrineField",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Material": "Sandstone",
+        "Color": [0.74, 0.58, 0.32],
+        "Size": [18, 0.6, 80],
+        "Orientation": [0, -42, 0],
+        "Position": [37, 0.2, 34]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18,
+        "VisualOnly": true
+      }
+    }
+  ]
+}

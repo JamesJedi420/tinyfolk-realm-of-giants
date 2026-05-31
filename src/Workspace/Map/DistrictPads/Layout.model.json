@@ -1,0 +1,181 @@
+{
+  "className": "Folder",
+  "children": [
+    {
+      "name": "Pad_TinyfolkVillage",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.36,
+        "Material": "Grass",
+        "Color": [0.31, 0.58, 0.33],
+        "Size": [45, 0.5, 40],
+        "Position": [-118, 0.12, 8]
+      },
+      "attributes": {
+        "DistrictId": "TinyfolkVillage",
+        "GeneratedBlockout": true,
+        "ReferenceX": -118,
+        "ReferenceZ": 8,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_WorkYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.38,
+        "Material": "WoodPlanks",
+        "Color": [0.42, 0.32, 0.2],
+        "Size": [50, 0.5, 38],
+        "Position": [-92, 0.12, -42]
+      },
+      "attributes": {
+        "DistrictId": "WorkYard",
+        "GeneratedBlockout": true,
+        "ReferenceX": -92,
+        "ReferenceZ": -42,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_StoneDistrict",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.38,
+        "Material": "Slate",
+        "Color": [0.45, 0.45, 0.41],
+        "Size": [72, 0.5, 46],
+        "Position": [78, 0.12, -43]
+      },
+      "attributes": {
+        "DistrictId": "StoneDistrict",
+        "GeneratedBlockout": true,
+        "ReferenceX": 78,
+        "ReferenceZ": -43,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_Containment",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.42,
+        "Material": "Brick",
+        "Color": [0.52, 0.22, 0.18],
+        "Size": [38, 0.5, 22],
+        "Position": [55, 0.12, -78]
+      },
+      "attributes": {
+        "DistrictId": "Containment",
+        "GeneratedBlockout": true,
+        "ReferenceX": 55,
+        "ReferenceZ": -78,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_ControlStation",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.42,
+        "Material": "Metal",
+        "Color": [0.36, 0.34, 0.36],
+        "Size": [45, 0.5, 55],
+        "Position": [80, 0.12, 5]
+      },
+      "attributes": {
+        "DistrictId": "ControlStation",
+        "GeneratedBlockout": true,
+        "ReferenceX": 80,
+        "ReferenceZ": 5,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_EconomyYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.38,
+        "Material": "Concrete",
+        "Color": [0.42, 0.36, 0.25],
+        "Size": [54, 0.5, 44],
+        "Position": [-63, 0.12, 55]
+      },
+      "attributes": {
+        "DistrictId": "EconomyYard",
+        "GeneratedBlockout": true,
+        "ReferenceX": -63,
+        "ReferenceZ": 55,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_ShrineField",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.36,
+        "Material": "Grass",
+        "Color": [0.39, 0.31, 0.56],
+        "Size": [52, 0.5, 42],
+        "Position": [55, 0.12, 50]
+      },
+      "attributes": {
+        "DistrictId": "ShrineField",
+        "GeneratedBlockout": true,
+        "ReferenceX": 55,
+        "ReferenceZ": 50,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Pad_TradeDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "WoodPlanks",
+        "Color": [0.45, 0.31, 0.17],
+        "Size": [34, 0.5, 14],
+        "Position": [103, 0.12, 80]
+      },
+      "attributes": {
+        "DistrictId": "TradeDock",
+        "GeneratedBlockout": true,
+        "ReferenceX": 103,
+        "ReferenceZ": 80,
+        "VisualOnly": true
+      }
+    }
+  ]
+}
