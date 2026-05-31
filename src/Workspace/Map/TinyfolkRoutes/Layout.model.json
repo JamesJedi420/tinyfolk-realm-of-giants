@@ -15,7 +15,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -23,9 +23,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -34,7 +34,7 @@
                                                             ],
                                             "Position":  [
                                                              -126.5,
-                                                             0.75,
+                                                             0.42,
                                                              8
                                                          ]
                                         },
@@ -55,7 +55,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -63,9 +63,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -74,7 +74,7 @@
                                                             ],
                                             "Position":  [
                                                              -116,
-                                                             0.75,
+                                                             0.42,
                                                              8
                                                          ]
                                         },
@@ -95,7 +95,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -103,9 +103,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -114,7 +114,7 @@
                                                             ],
                                             "Position":  [
                                                              -105.5,
-                                                             0.75,
+                                                             0.42,
                                                              8
                                                          ]
                                         },
@@ -135,7 +135,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -143,9 +143,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -154,7 +154,7 @@
                                                             ],
                                             "Position":  [
                                                              -115.917,
-                                                             0.75,
+                                                             0.42,
                                                              -41.389
                                                          ]
                                         },
@@ -175,7 +175,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -183,9 +183,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -194,7 +194,7 @@
                                                             ],
                                             "Position":  [
                                                              -111.15,
-                                                             0.75,
+                                                             0.42,
                                                              -32.033
                                                          ]
                                         },
@@ -215,7 +215,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -223,9 +223,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -234,7 +234,7 @@
                                                             ],
                                             "Position":  [
                                                              -106.383,
-                                                             0.75,
+                                                             0.42,
                                                              -22.678
                                                          ]
                                         },
@@ -255,7 +255,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -263,9 +263,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -274,7 +274,7 @@
                                                             ],
                                             "Position":  [
                                                              -101.617,
-                                                             0.75,
+                                                             0.42,
                                                              -13.322
                                                          ]
                                         },
@@ -295,7 +295,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -303,9 +303,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -314,7 +314,7 @@
                                                             ],
                                             "Position":  [
                                                              -96.85,
-                                                             0.75,
+                                                             0.42,
                                                              -3.967
                                                          ]
                                         },
@@ -335,7 +335,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -343,9 +343,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -354,7 +354,7 @@
                                                             ],
                                             "Position":  [
                                                              -92.083,
-                                                             0.75,
+                                                             0.42,
                                                              5.389
                                                          ]
                                         },
@@ -375,7 +375,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -383,9 +383,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -394,7 +394,7 @@
                                                             ],
                                             "Position":  [
                                                              -65.197,
-                                                             0.75,
+                                                             0.42,
                                                              13.932
                                                          ]
                                         },
@@ -415,7 +415,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -423,9 +423,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -434,7 +434,7 @@
                                                             ],
                                             "Position":  [
                                                              -73.798,
-                                                             0.75,
+                                                             0.42,
                                                              19.955
                                                          ]
                                         },
@@ -455,7 +455,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -463,9 +463,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -474,7 +474,7 @@
                                                             ],
                                             "Position":  [
                                                              -82.399,
-                                                             0.75,
+                                                             0.42,
                                                              25.977
                                                          ]
                                         },
@@ -495,7 +495,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -503,9 +503,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -514,7 +514,7 @@
                                                             ],
                                             "Position":  [
                                                              -91,
-                                                             0.75,
+                                                             0.42,
                                                              32
                                                          ]
                                         },
@@ -535,7 +535,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -543,9 +543,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -554,7 +554,7 @@
                                                             ],
                                             "Position":  [
                                                              -99.601,
-                                                             0.75,
+                                                             0.42,
                                                              38.023
                                                          ]
                                         },
@@ -575,7 +575,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -583,9 +583,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -594,7 +594,7 @@
                                                             ],
                                             "Position":  [
                                                              -108.202,
-                                                             0.75,
+                                                             0.42,
                                                              44.045
                                                          ]
                                         },
@@ -615,7 +615,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -623,9 +623,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -634,7 +634,7 @@
                                                             ],
                                             "Position":  [
                                                              -116.803,
-                                                             0.75,
+                                                             0.42,
                                                              50.068
                                                          ]
                                         },
@@ -655,7 +655,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -663,9 +663,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -674,7 +674,7 @@
                                                             ],
                                             "Position":  [
                                                              45.989,
-                                                             0.75,
+                                                             0.42,
                                                              53.693
                                                          ]
                                         },
@@ -695,7 +695,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -703,9 +703,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -714,7 +714,7 @@
                                                             ],
                                             "Position":  [
                                                              35.591,
-                                                             0.75,
+                                                             0.42,
                                                              55.155
                                                          ]
                                         },
@@ -735,7 +735,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -743,9 +743,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -754,7 +754,7 @@
                                                             ],
                                             "Position":  [
                                                              25.193,
-                                                             0.75,
+                                                             0.42,
                                                              56.616
                                                          ]
                                         },
@@ -775,7 +775,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -783,9 +783,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -794,7 +794,7 @@
                                                             ],
                                             "Position":  [
                                                              14.796,
-                                                             0.75,
+                                                             0.42,
                                                              58.077
                                                          ]
                                         },
@@ -815,7 +815,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -823,9 +823,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -834,7 +834,7 @@
                                                             ],
                                             "Position":  [
                                                              4.398,
-                                                             0.75,
+                                                             0.42,
                                                              59.539
                                                          ]
                                         },
@@ -855,7 +855,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -863,9 +863,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -874,7 +874,7 @@
                                                             ],
                                             "Position":  [
                                                              -6,
-                                                             0.75,
+                                                             0.42,
                                                              61
                                                          ]
                                         },
@@ -895,7 +895,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -903,9 +903,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -914,7 +914,7 @@
                                                             ],
                                             "Position":  [
                                                              -16.398,
-                                                             0.75,
+                                                             0.42,
                                                              62.461
                                                          ]
                                         },
@@ -935,7 +935,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -943,9 +943,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -954,7 +954,7 @@
                                                             ],
                                             "Position":  [
                                                              -26.796,
-                                                             0.75,
+                                                             0.42,
                                                              63.923
                                                          ]
                                         },
@@ -975,7 +975,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -983,9 +983,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -994,7 +994,7 @@
                                                             ],
                                             "Position":  [
                                                              -37.193,
-                                                             0.75,
+                                                             0.42,
                                                              65.384
                                                          ]
                                         },
@@ -1015,7 +1015,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1023,9 +1023,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1034,7 +1034,7 @@
                                                             ],
                                             "Position":  [
                                                              -47.591,
-                                                             0.75,
+                                                             0.42,
                                                              66.845
                                                          ]
                                         },
@@ -1055,7 +1055,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1063,9 +1063,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1074,7 +1074,7 @@
                                                             ],
                                             "Position":  [
                                                              -57.989,
-                                                             0.75,
+                                                             0.42,
                                                              68.307
                                                          ]
                                         },
@@ -1095,7 +1095,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1103,9 +1103,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1114,7 +1114,7 @@
                                                             ],
                                             "Position":  [
                                                              86.647,
-                                                             0.75,
+                                                             0.42,
                                                              -37.681
                                                          ]
                                         },
@@ -1135,7 +1135,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1143,9 +1143,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1154,7 +1154,7 @@
                                                             ],
                                             "Position":  [
                                                              84.823,
-                                                             0.75,
+                                                             0.42,
                                                              -27.34
                                                          ]
                                         },
@@ -1175,7 +1175,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1183,9 +1183,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1194,7 +1194,7 @@
                                                             ],
                                             "Position":  [
                                                              83,
-                                                             0.75,
+                                                             0.42,
                                                              -17
                                                          ]
                                         },
@@ -1215,7 +1215,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1223,9 +1223,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1234,7 +1234,7 @@
                                                             ],
                                             "Position":  [
                                                              81.177,
-                                                             0.75,
+                                                             0.42,
                                                              -6.66
                                                          ]
                                         },
@@ -1255,7 +1255,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1263,9 +1263,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1274,7 +1274,7 @@
                                                             ],
                                             "Position":  [
                                                              79.353,
-                                                             0.75,
+                                                             0.42,
                                                              3.681
                                                          ]
                                         },
@@ -1295,7 +1295,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1303,9 +1303,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1314,7 +1314,7 @@
                                                             ],
                                             "Position":  [
                                                              96.957,
-                                                             0.75,
+                                                             0.42,
                                                              38.843
                                                          ]
                                         },
@@ -1335,7 +1335,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1343,9 +1343,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1354,7 +1354,7 @@
                                                             ],
                                             "Position":  [
                                                              90.638,
-                                                             0.75,
+                                                             0.42,
                                                              47.229
                                                          ]
                                         },
@@ -1375,7 +1375,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1383,9 +1383,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1394,7 +1394,7 @@
                                                             ],
                                             "Position":  [
                                                              84.319,
-                                                             0.75,
+                                                             0.42,
                                                              55.614
                                                          ]
                                         },
@@ -1415,7 +1415,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1423,9 +1423,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1434,7 +1434,7 @@
                                                             ],
                                             "Position":  [
                                                              78,
-                                                             0.75,
+                                                             0.42,
                                                              64
                                                          ]
                                         },
@@ -1455,7 +1455,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1463,9 +1463,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1474,7 +1474,7 @@
                                                             ],
                                             "Position":  [
                                                              71.681,
-                                                             0.75,
+                                                             0.42,
                                                              72.386
                                                          ]
                                         },
@@ -1495,7 +1495,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1503,9 +1503,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1514,7 +1514,7 @@
                                                             ],
                                             "Position":  [
                                                              65.362,
-                                                             0.75,
+                                                             0.42,
                                                              80.771
                                                          ]
                                         },
@@ -1535,7 +1535,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1543,9 +1543,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1554,7 +1554,7 @@
                                                             ],
                                             "Position":  [
                                                              59.043,
-                                                             0.75,
+                                                             0.42,
                                                              89.157
                                                          ]
                                         },
@@ -1575,7 +1575,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1583,9 +1583,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1594,7 +1594,7 @@
                                                             ],
                                             "Position":  [
                                                              -151.003,
-                                                             0.75,
+                                                             0.42,
                                                              -8.307
                                                          ]
                                         },
@@ -1616,7 +1616,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1624,9 +1624,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1635,7 +1635,7 @@
                                                             ],
                                             "Position":  [
                                                              -149,
-                                                             0.75,
+                                                             0.42,
                                                              2
                                                          ]
                                         },
@@ -1657,7 +1657,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1665,9 +1665,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1676,7 +1676,7 @@
                                                             ],
                                             "Position":  [
                                                              -146.997,
-                                                             0.75,
+                                                             0.42,
                                                              12.307
                                                          ]
                                         },
@@ -1698,7 +1698,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1706,9 +1706,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1717,7 +1717,7 @@
                                                             ],
                                             "Position":  [
                                                              71.142,
-                                                             0.75,
+                                                             0.42,
                                                              -39.317
                                                          ]
                                         },
@@ -1740,7 +1740,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1748,9 +1748,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1759,7 +1759,7 @@
                                                             ],
                                             "Position":  [
                                                              61.959,
-                                                             0.75,
+                                                             0.42,
                                                              -34.226
                                                          ]
                                         },
@@ -1782,7 +1782,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1790,9 +1790,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1801,7 +1801,7 @@
                                                             ],
                                             "Position":  [
                                                              52.775,
-                                                             0.75,
+                                                             0.42,
                                                              -29.136
                                                          ]
                                         },
@@ -1824,7 +1824,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1832,9 +1832,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1843,7 +1843,7 @@
                                                             ],
                                             "Position":  [
                                                              43.592,
-                                                             0.75,
+                                                             0.42,
                                                              -24.045
                                                          ]
                                         },
@@ -1866,7 +1866,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1874,9 +1874,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1885,7 +1885,7 @@
                                                             ],
                                             "Position":  [
                                                              34.408,
-                                                             0.75,
+                                                             0.42,
                                                              -18.955
                                                          ]
                                         },
@@ -1908,7 +1908,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1916,9 +1916,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1927,7 +1927,7 @@
                                                             ],
                                             "Position":  [
                                                              25.225,
-                                                             0.75,
+                                                             0.42,
                                                              -13.864
                                                          ]
                                         },
@@ -1950,7 +1950,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -1958,9 +1958,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -1969,7 +1969,7 @@
                                                             ],
                                             "Position":  [
                                                              16.041,
-                                                             0.75,
+                                                             0.42,
                                                              -8.774
                                                          ]
                                         },
@@ -1992,7 +1992,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2000,9 +2000,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2011,7 +2011,7 @@
                                                             ],
                                             "Position":  [
                                                              6.858,
-                                                             0.75,
+                                                             0.42,
                                                              -3.683
                                                          ]
                                         },
@@ -2034,7 +2034,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2042,9 +2042,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2053,7 +2053,7 @@
                                                             ],
                                             "Position":  [
                                                              50.909,
-                                                             0.75,
+                                                             0.42,
                                                              3.922
                                                          ]
                                         },
@@ -2076,7 +2076,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2084,9 +2084,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2095,7 +2095,7 @@
                                                             ],
                                             "Position":  [
                                                              43.106,
-                                                             0.75,
+                                                             0.42,
                                                              10.948
                                                          ]
                                         },
@@ -2118,7 +2118,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2126,9 +2126,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2137,7 +2137,7 @@
                                                             ],
                                             "Position":  [
                                                              35.303,
-                                                             0.75,
+                                                             0.42,
                                                              17.974
                                                          ]
                                         },
@@ -2160,7 +2160,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2168,9 +2168,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2179,7 +2179,7 @@
                                                             ],
                                             "Position":  [
                                                              27.5,
-                                                             0.75,
+                                                             0.42,
                                                              25
                                                          ]
                                         },
@@ -2202,7 +2202,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2210,9 +2210,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2221,7 +2221,7 @@
                                                             ],
                                             "Position":  [
                                                              19.697,
-                                                             0.75,
+                                                             0.42,
                                                              32.026
                                                          ]
                                         },
@@ -2244,7 +2244,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2252,9 +2252,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2263,7 +2263,7 @@
                                                             ],
                                             "Position":  [
                                                              11.894,
-                                                             0.75,
+                                                             0.42,
                                                              39.052
                                                          ]
                                         },
@@ -2286,7 +2286,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2294,9 +2294,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2305,7 +2305,7 @@
                                                             ],
                                             "Position":  [
                                                              4.091,
-                                                             0.75,
+                                                             0.42,
                                                              46.078
                                                          ]
                                         },
@@ -2328,7 +2328,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2336,9 +2336,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2347,7 +2347,7 @@
                                                             ],
                                             "Position":  [
                                                              7.296,
-                                                             0.75,
+                                                             0.42,
                                                              -101.135
                                                          ]
                                         },
@@ -2371,7 +2371,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2379,9 +2379,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2390,7 +2390,7 @@
                                                             ],
                                             "Position":  [
                                                              6.564,
-                                                             0.75,
+                                                             0.42,
                                                              -90.66
                                                          ]
                                         },
@@ -2414,7 +2414,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2422,9 +2422,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2433,7 +2433,7 @@
                                                             ],
                                             "Position":  [
                                                              5.831,
-                                                             0.75,
+                                                             0.42,
                                                              -80.186
                                                          ]
                                         },
@@ -2457,7 +2457,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2465,9 +2465,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2476,7 +2476,7 @@
                                                             ],
                                             "Position":  [
                                                              5.099,
-                                                             0.75,
+                                                             0.42,
                                                              -69.712
                                                          ]
                                         },
@@ -2500,7 +2500,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2508,9 +2508,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2519,7 +2519,7 @@
                                                             ],
                                             "Position":  [
                                                              4.366,
-                                                             0.75,
+                                                             0.42,
                                                              -59.237
                                                          ]
                                         },
@@ -2543,7 +2543,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2551,9 +2551,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2562,7 +2562,7 @@
                                                             ],
                                             "Position":  [
                                                              3.634,
-                                                             0.75,
+                                                             0.42,
                                                              -48.763
                                                          ]
                                         },
@@ -2586,7 +2586,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2594,9 +2594,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2605,7 +2605,7 @@
                                                             ],
                                             "Position":  [
                                                              2.901,
-                                                             0.75,
+                                                             0.42,
                                                              -38.288
                                                          ]
                                         },
@@ -2629,7 +2629,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2637,9 +2637,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2648,7 +2648,7 @@
                                                             ],
                                             "Position":  [
                                                              2.169,
-                                                             0.75,
+                                                             0.42,
                                                              -27.814
                                                          ]
                                         },
@@ -2672,7 +2672,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2680,9 +2680,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2691,7 +2691,7 @@
                                                             ],
                                             "Position":  [
                                                              1.436,
-                                                             0.75,
+                                                             0.42,
                                                              -17.34
                                                          ]
                                         },
@@ -2715,7 +2715,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.18,
+                                            "Transparency":  0.32,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.94,
@@ -2723,9 +2723,9 @@
                                                           0.38
                                                       ],
                                             "Size":  [
-                                                         3.2,
-                                                         0.32,
-                                                         5.5
+                                                         2.4,
+                                                         0.18,
+                                                         4.2
                                                      ],
                                             "Orientation":  [
                                                                 0,
@@ -2734,7 +2734,7 @@
                                                             ],
                                             "Position":  [
                                                              0.704,
-                                                             0.75,
+                                                             0.42,
                                                              -6.865
                                                          ]
                                         },

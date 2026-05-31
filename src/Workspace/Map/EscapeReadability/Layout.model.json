@@ -13,11 +13,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.7,
+        "Transparency": 0.82,
         "Material": "SmoothPlastic",
-        "Color": [0.35, 0.9, 0.45],
-        "Size": [18, 0.45, 18],
-        "Position": [-150, 0.7, 16]
+        "Color": [
+          0.35,
+          0.9,
+          0.45
+        ],
+        "Size": [
+          14,
+          0.25,
+          14
+        ],
+        "Position": [
+          -150,
+          0.5,
+          16
+        ]
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_A",
@@ -33,11 +45,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.7,
+        "Transparency": 0.82,
         "Material": "SmoothPlastic",
-        "Color": [0.35, 0.9, 0.45],
-        "Size": [18, 0.45, 18],
-        "Position": [103, 0.7, 80]
+        "Color": [
+          0.35,
+          0.9,
+          0.45
+        ],
+        "Size": [
+          14,
+          0.25,
+          14
+        ],
+        "Position": [
+          103,
+          0.5,
+          80
+        ]
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_Dock",
@@ -53,11 +77,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.7,
+        "Transparency": 0.82,
         "Material": "SmoothPlastic",
-        "Color": [0.35, 0.9, 0.45],
-        "Size": [18, 0.45, 18],
-        "Position": [8, 0.7, -108]
+        "Color": [
+          0.35,
+          0.9,
+          0.45
+        ],
+        "Size": [
+          14,
+          0.25,
+          14
+        ],
+        "Position": [
+          8,
+          0.5,
+          -108
+        ]
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_NorthTunnel",
@@ -73,12 +109,28 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.78,
+        "Transparency": 0.86,
         "Material": "SmoothPlastic",
-        "Color": [0.42, 0.76, 0.9],
-        "Size": [6, 0.35, 70],
-        "Orientation": [0, -80, 0],
-        "Position": [67, 0.8, 48]
+        "Color": [
+          0.42,
+          0.76,
+          0.9
+        ],
+        "Size": [
+          6,
+          0.22,
+          70
+        ],
+        "Orientation": [
+          0,
+          -80,
+          0
+        ],
+        "Position": [
+          67,
+          0.5,
+          48
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -94,12 +146,28 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.74,
+        "Transparency": 0.86,
         "Material": "SmoothPlastic",
-        "Color": [0.45, 0.95, 0.45],
-        "Size": [6, 0.35, 44],
-        "Orientation": [0, 9, 0],
-        "Position": [-148, 0.8, -6]
+        "Color": [
+          0.45,
+          0.95,
+          0.45
+        ],
+        "Size": [
+          6,
+          0.22,
+          44
+        ],
+        "Orientation": [
+          0,
+          9,
+          0
+        ],
+        "Position": [
+          -148,
+          0.5,
+          -6
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,
