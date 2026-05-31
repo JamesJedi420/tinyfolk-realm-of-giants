@@ -9,13 +9,29 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.44,
+        "Transparency": 0.62,
         "Material": "WoodPlanks",
-        "Color": [0.62, 0.52, 0.31],
+        "Color": [
+          0.62,
+          0.52,
+          0.31
+        ],
         "Shape": "Cylinder",
-        "Size": [0.5, 76, 64],
-        "Orientation": [0, 0, 90],
-        "Position": [0, 0.16, 0]
+        "Size": [
+          0.5,
+          76,
+          64
+        ],
+        "Orientation": [
+          0,
+          0,
+          90
+        ],
+        "Position": [
+          0,
+          0.16,
+          0
+        ]
       },
       "attributes": {
         "DistrictId": "GiantPlaza",
@@ -33,11 +49,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.38,
-        "Material": "WoodPlanks",
-        "Color": [0.48, 0.33, 0.22],
-        "Size": [34, 0.5, 22],
-        "Position": [0, 0.18, -72]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.48,
+          0.33,
+          0.22
+        ],
+        "Size": [
+          34,
+          0.5,
+          22
+        ],
+        "Position": [
+          0,
+          0.18,
+          -72
+        ]
       },
       "attributes": {
         "DistrictId": "GiantHearth",
@@ -55,11 +83,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.36,
+        "Transparency": 0.72,
         "Material": "Grass",
-        "Color": [0.31, 0.58, 0.33],
-        "Size": [45, 0.5, 40],
-        "Position": [-118, 0.12, 8]
+        "Color": [
+          0.31,
+          0.58,
+          0.33
+        ],
+        "Size": [
+          45,
+          0.5,
+          40
+        ],
+        "Position": [
+          -118,
+          0.12,
+          8
+        ]
       },
       "attributes": {
         "DistrictId": "TinyfolkVillage",
@@ -77,11 +117,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.38,
-        "Material": "WoodPlanks",
-        "Color": [0.42, 0.32, 0.2],
-        "Size": [50, 0.5, 38],
-        "Position": [-92, 0.12, -42]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.42,
+          0.32,
+          0.2
+        ],
+        "Size": [
+          50,
+          0.5,
+          38
+        ],
+        "Position": [
+          -92,
+          0.12,
+          -42
+        ]
       },
       "attributes": {
         "DistrictId": "WorkYard",
@@ -99,11 +151,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.38,
-        "Material": "Slate",
-        "Color": [0.45, 0.45, 0.41],
-        "Size": [72, 0.5, 46],
-        "Position": [78, 0.12, -43]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.45,
+          0.45,
+          0.41
+        ],
+        "Size": [
+          72,
+          0.5,
+          46
+        ],
+        "Position": [
+          78,
+          0.12,
+          -43
+        ]
       },
       "attributes": {
         "DistrictId": "StoneDistrict",
@@ -121,11 +185,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.42,
-        "Material": "Brick",
-        "Color": [0.52, 0.22, 0.18],
-        "Size": [38, 0.5, 22],
-        "Position": [55, 0.12, -78]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.52,
+          0.22,
+          0.18
+        ],
+        "Size": [
+          38,
+          0.5,
+          22
+        ],
+        "Position": [
+          55,
+          0.12,
+          -78
+        ]
       },
       "attributes": {
         "DistrictId": "Containment",
@@ -143,11 +219,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.42,
-        "Material": "Metal",
-        "Color": [0.36, 0.34, 0.36],
-        "Size": [45, 0.5, 55],
-        "Position": [80, 0.12, 5]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.36,
+          0.34,
+          0.36
+        ],
+        "Size": [
+          45,
+          0.5,
+          55
+        ],
+        "Position": [
+          80,
+          0.12,
+          5
+        ]
       },
       "attributes": {
         "DistrictId": "ControlStation",
@@ -165,11 +253,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.38,
-        "Material": "Concrete",
-        "Color": [0.42, 0.36, 0.25],
-        "Size": [54, 0.5, 44],
-        "Position": [-63, 0.12, 55]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.42,
+          0.36,
+          0.25
+        ],
+        "Size": [
+          54,
+          0.5,
+          44
+        ],
+        "Position": [
+          -63,
+          0.12,
+          55
+        ]
       },
       "attributes": {
         "DistrictId": "EconomyYard",
@@ -187,11 +287,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.46,
-        "Material": "Concrete",
-        "Color": [0.55, 0.48, 0.33],
-        "Size": [40, 0.5, 26],
-        "Position": [-67, 0.2, 70]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.55,
+          0.48,
+          0.33
+        ],
+        "Size": [
+          40,
+          0.5,
+          26
+        ],
+        "Position": [
+          -67,
+          0.2,
+          70
+        ]
       },
       "attributes": {
         "DistrictId": "Granary",
@@ -210,11 +322,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.42,
-        "Material": "Concrete",
-        "Color": [0.42, 0.4, 0.34],
-        "Size": [28, 0.5, 18],
-        "Position": [-39, 0.2, 35]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.42,
+          0.4,
+          0.34
+        ],
+        "Size": [
+          28,
+          0.5,
+          18
+        ],
+        "Position": [
+          -39,
+          0.2,
+          35
+        ]
       },
       "attributes": {
         "DistrictId": "Warehouse",
@@ -233,11 +357,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.36,
+        "Transparency": 0.72,
         "Material": "Grass",
-        "Color": [0.39, 0.31, 0.56],
-        "Size": [52, 0.5, 42],
-        "Position": [55, 0.12, 50]
+        "Color": [
+          0.39,
+          0.31,
+          0.56
+        ],
+        "Size": [
+          52,
+          0.5,
+          42
+        ],
+        "Position": [
+          55,
+          0.12,
+          50
+        ]
       },
       "attributes": {
         "DistrictId": "ShrineField",
@@ -255,11 +391,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.4,
-        "Material": "Concrete",
-        "Color": [0.47, 0.41, 0.55],
-        "Size": [30, 0.5, 22],
-        "Position": [45, 0.2, 66]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.47,
+          0.41,
+          0.55
+        ],
+        "Size": [
+          30,
+          0.5,
+          22
+        ],
+        "Position": [
+          45,
+          0.2,
+          66
+        ]
       },
       "attributes": {
         "DistrictId": "Shrine_A",
@@ -278,11 +426,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Neon",
-        "Color": [0.35, 0.78, 0.42],
-        "Size": [14, 0.5, 14],
-        "Position": [-150, 0.24, 16]
+        "Transparency": 0.58,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.35,
+          0.78,
+          0.42
+        ],
+        "Size": [
+          14,
+          0.5,
+          14
+        ],
+        "Position": [
+          -150,
+          0.24,
+          16
+        ]
       },
       "attributes": {
         "DistrictId": "EscapeWinPad",
@@ -301,11 +461,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "WoodPlanks",
-        "Color": [0.45, 0.31, 0.17],
-        "Size": [34, 0.5, 14],
-        "Position": [103, 0.12, 80]
+        "Transparency": 0.72,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.45,
+          0.31,
+          0.17
+        ],
+        "Size": [
+          34,
+          0.5,
+          14
+        ],
+        "Position": [
+          103,
+          0.12,
+          80
+        ]
       },
       "attributes": {
         "DistrictId": "TradeDock",

@@ -9,11 +9,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Grass",
-        "Color": [0.15, 0.31, 0.15],
-        "Size": [260, 2, 10],
-        "Position": [0, 0.8, -112]
+        "Transparency": 0.86,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.15,
+          0.31,
+          0.15
+        ],
+        "Size": [
+          260,
+          2,
+          10
+        ],
+        "Position": [
+          0,
+          0.8,
+          -112
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -29,11 +41,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Grass",
-        "Color": [0.15, 0.31, 0.15],
-        "Size": [10, 2, 210],
-        "Position": [130, 0.8, 0]
+        "Transparency": 0.86,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.15,
+          0.31,
+          0.15
+        ],
+        "Size": [
+          10,
+          2,
+          210
+        ],
+        "Position": [
+          130,
+          0.8,
+          0
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -49,11 +73,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.22,
+        "Transparency": 0.36,
         "Material": "Water",
-        "Color": [0.08, 0.31, 0.55],
-        "Size": [270, 1.2, 16],
-        "Position": [0, 0.15, 92]
+        "Color": [
+          0.08,
+          0.31,
+          0.55
+        ],
+        "Size": [
+          270,
+          1.2,
+          16
+        ],
+        "Position": [
+          0,
+          0.15,
+          92
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -69,11 +105,23 @@
         "CanCollide": false,
         "CanTouch": false,
         "CanQuery": false,
-        "Transparency": 0.72,
-        "Material": "Grass",
-        "Color": [0.15, 0.31, 0.15],
-        "Size": [10, 2, 210],
-        "Position": [-158, 0.8, 0]
+        "Transparency": 0.86,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.15,
+          0.31,
+          0.15
+        ],
+        "Size": [
+          10,
+          2,
+          210
+        ],
+        "Position": [
+          -158,
+          0.8,
+          0
+        ]
       },
       "attributes": {
         "GeneratedBlockout": true,

@@ -7,8 +7,8 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
-        "Transparency": 0.8,
-        "Material": "Neon",
+        "Transparency": 0.92,
+        "Material": "SmoothPlastic",
         "Color": [
           1,
           0.2,
@@ -23,7 +23,9 @@
           80,
           0.5,
           5
-        ]
+        ],
+        "CanTouch": true,
+        "CanQuery": true
       },
       "children": [
         {
@@ -48,8 +50,8 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
-        "Transparency": 0.84,
-        "Material": "Neon",
+        "Transparency": 0.92,
+        "Material": "SmoothPlastic",
         "Color": [
           0.95,
           0.35,
@@ -64,7 +66,9 @@
           55,
           0.5,
           -78
-        ]
+        ],
+        "CanTouch": true,
+        "CanQuery": true
       },
       "children": [
         {
