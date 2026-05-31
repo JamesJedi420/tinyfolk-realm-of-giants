@@ -6,7 +6,10 @@
       "className": "Part",
       "properties": {
         "Anchored": true,
-        "CanCollide": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.82,
         "Material": "SmoothPlastic",
         "Color": [
           1,
