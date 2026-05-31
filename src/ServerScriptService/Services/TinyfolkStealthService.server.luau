@@ -169,6 +169,16 @@ local function isPlayerHiding(userId: number): boolean
 end
 
 local function isStatusStealthAllowed(userId: number, at: number): (boolean, string?)
+	local statusServiceApi = resolveStatusServiceApi()
+	if type(statusServiceApi) == "table" and type(statusServiceApi.GetStatusSnapshot) == "function" then
+		local ok, snapshot = pcall(function()
+			return statusServiceApi.GetStatusSnapshot(userId, at)
+		end)
+		if ok and type(snapshot) == "table" and snapshot.stunActive == true then
+			return false, "status_snapshot_forbidden"
+		end
+	end
+
 	local configAny = runtimeConfig
 	if type(configAny) == "table" and type(configAny.statusResolver) == "function" then
 		local ok, allowed, reason = pcall(function()
@@ -182,7 +192,7 @@ local function isStatusStealthAllowed(userId: number, at: number): (boolean, str
 		end
 	end
 
-	local statusServiceApi = resolveStatusServiceApi()
+	statusServiceApi = resolveStatusServiceApi()
 	if type(statusServiceApi) == "table" and type(statusServiceApi.IsStealthShrinkAllowed) == "function" then
 		local ok, allowed, reason = pcall(function()
 			return statusServiceApi.IsStealthShrinkAllowed(userId, at)
@@ -292,6 +302,9 @@ local function checkInvalidState(userId: number, at: number): (boolean, string?)
 
 	local statusAllowed, statusReason = isStatusStealthAllowed(userId, at)
 	if statusAllowed ~= true then
+		if statusReason == "status_snapshot_forbidden" then
+			return true, "cancelled_status_snapshot_forbidden"
+		end
 		if statusReason == "status_forbidden" then
 			return true, "cancelled_status_forbidden"
 		end

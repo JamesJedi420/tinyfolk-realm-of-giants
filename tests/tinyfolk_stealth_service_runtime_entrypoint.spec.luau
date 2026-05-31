@@ -101,6 +101,7 @@ local carriedByUser = {}
 local hidingByUser = {}
 local statusAllowedByUser = {}
 local downedByUser = {}
+local statusSnapshotByUser = {}
 
 api.ConfigureForTests({
 	now = function()
@@ -138,6 +139,14 @@ api.ConfigureForTests({
 		end
 		return true, nil
 	end,
+	statusServiceApi = {
+		GetStatusSnapshot = function(userId: number, _at: number): any
+			if statusSnapshotByUser[userId] == true then
+				return { stunActive = true }
+			end
+			return { stunActive = false }
+		end,
+	},
 	invalidStateResolver = function(userId: number): (boolean, string?)
 		if invalidByUser[userId] == true then
 			return true, "cancelled_invalid_state"
@@ -174,6 +183,14 @@ statusAllowedByUser[401] = false
 local statusForbidden = api.RequestStealthShrink({ userId = 401 })
 assertFalse(statusForbidden.accepted, "status forbidden rejected")
 assertEqual(statusForbidden.reason, "status_forbidden", "status forbidden reason")
+statusAllowedByUser[401] = true
+
+statusSnapshotByUser[401] = true
+statusAllowedByUser[401] = false
+local statusSnapshotForbidden = api.RequestStealthShrink({ userId = 401 })
+assertFalse(statusSnapshotForbidden.accepted, "status snapshot forbidden rejected")
+assertEqual(statusSnapshotForbidden.reason, "status_snapshot_forbidden", "status snapshot reason")
+statusSnapshotByUser[401] = false
 statusAllowedByUser[401] = true
 
 blockedInteraction = true
@@ -275,6 +292,22 @@ assertFalse(snapshotAfterStatusConflict.isActive, "status conflict cancels steal
 assertEqual(snapshotAfterStatusConflict.lastReason, "cancelled_status_forbidden", "status conflict reason tracked")
 statusAllowedByUser[401] = true
 
+local activateForStatusSnapshotConflict = api.RequestStealthShrink({ userId = 401 })
+assertTrue(activateForStatusSnapshotConflict.accepted, "reactivate for status snapshot conflict")
+statusSnapshotByUser[401] = true
+statusAllowedByUser[401] = false
+local tickStatusSnapshotConflict = api.TickStealthShrink({ at = 109.5 })
+assertTrue(tickStatusSnapshotConflict.accepted, "tick accepted status snapshot conflict pass")
+local snapshotAfterStatusSnapshotConflict = api.GetStealthShrinkSnapshot({ userId = 401 })
+assertFalse(snapshotAfterStatusSnapshotConflict.isActive, "status snapshot conflict cancels stealth")
+assertEqual(
+	snapshotAfterStatusSnapshotConflict.lastReason,
+	"cancelled_status_snapshot_forbidden",
+	"status snapshot conflict reason tracked"
+)
+statusSnapshotByUser[401] = false
+statusAllowedByUser[401] = true
+
 local activateForInvalidPrecedence = api.RequestStealthShrink({ userId = 401 })
 assertTrue(activateForInvalidPrecedence.accepted, "reactivate for invalid precedence matrix")
 invalidByUser[401] = true
@@ -345,6 +378,7 @@ local activateForCarriedPrecedence = api.RequestStealthShrink({ userId = 401 })
 assertTrue(activateForCarriedPrecedence.accepted, "reactivate for carried precedence matrix")
 carriedByUser[401] = true
 hidingByUser[401] = true
+statusSnapshotByUser[401] = true
 statusAllowedByUser[401] = false
 local tickCarriedPrecedence = api.TickStealthShrink({ at = 113 })
 assertTrue(tickCarriedPrecedence.accepted, "tick accepted carried precedence matrix")
@@ -353,11 +387,13 @@ assertFalse(snapshotAfterCarriedPrecedence.isActive, "carried precedence matrix 
 assertEqual(snapshotAfterCarriedPrecedence.lastReason, "cancelled_carried", "carried precedence before hiding/status")
 carriedByUser[401] = false
 hidingByUser[401] = false
+statusSnapshotByUser[401] = false
 statusAllowedByUser[401] = true
 
 local activateForHidingPrecedence = api.RequestStealthShrink({ userId = 401 })
 assertTrue(activateForHidingPrecedence.accepted, "reactivate for hiding precedence matrix")
 hidingByUser[401] = true
+statusSnapshotByUser[401] = true
 statusAllowedByUser[401] = false
 local tickHidingPrecedence = api.TickStealthShrink({ at = 114 })
 assertTrue(tickHidingPrecedence.accepted, "tick accepted hiding precedence matrix")
@@ -365,6 +401,23 @@ local snapshotAfterHidingPrecedence = api.GetStealthShrinkSnapshot({ userId = 40
 assertFalse(snapshotAfterHidingPrecedence.isActive, "hiding precedence matrix cancels stealth")
 assertEqual(snapshotAfterHidingPrecedence.lastReason, "cancelled_hiding_conflict", "hiding precedence before status")
 hidingByUser[401] = false
+statusSnapshotByUser[401] = false
+statusAllowedByUser[401] = true
+
+local activateForStatusSnapshotPrecedence = api.RequestStealthShrink({ userId = 401 })
+assertTrue(activateForStatusSnapshotPrecedence.accepted, "reactivate for status snapshot precedence matrix")
+statusSnapshotByUser[401] = true
+statusAllowedByUser[401] = false
+local tickStatusSnapshotPrecedence = api.TickStealthShrink({ at = 114.5 })
+assertTrue(tickStatusSnapshotPrecedence.accepted, "tick accepted status snapshot precedence matrix")
+local snapshotAfterStatusSnapshotPrecedence = api.GetStealthShrinkSnapshot({ userId = 401 })
+assertFalse(snapshotAfterStatusSnapshotPrecedence.isActive, "status snapshot precedence matrix cancels stealth")
+assertEqual(
+	snapshotAfterStatusSnapshotPrecedence.lastReason,
+	"cancelled_status_snapshot_forbidden",
+	"status snapshot precedence before status resolver"
+)
+statusSnapshotByUser[401] = false
 statusAllowedByUser[401] = true
 
 local activateForExpiry = api.RequestStealthShrink({ userId = 401 })
@@ -383,14 +436,14 @@ assertTrue(cancelAccepted.accepted, "cancel accepted")
 assertEqual(cancelAccepted.reason, "cancelled_by_request", "cancel accepted reason")
 
 local diagnostics = api.GetStealthShrinkDiagnostics()
-assertTrue(diagnostics.activationAttempts >= 21, "diagnostics activation attempts")
-assertTrue(diagnostics.activationSucceeded >= 13, "diagnostics activation succeeded")
+assertTrue(diagnostics.activationAttempts >= 23, "diagnostics activation attempts")
+assertTrue(diagnostics.activationSucceeded >= 15, "diagnostics activation succeeded")
 assertTrue(diagnostics.activationFailed >= 8, "diagnostics activation failed")
 assertTrue(diagnostics.cancelAttempts >= 2, "diagnostics cancel attempts")
 assertTrue(diagnostics.cancelSucceeded >= 1, "diagnostics cancel succeeded")
 assertTrue(diagnostics.cancelFailed >= 1, "diagnostics cancel failed")
 assertTrue(diagnostics.invalidActionCancelled >= 1, "diagnostics invalid action cancelled")
-assertTrue(diagnostics.invalidStateCancelled >= 10, "diagnostics invalid state cancelled")
+assertTrue(diagnostics.invalidStateCancelled >= 12, "diagnostics invalid state cancelled")
 assertTrue(diagnostics.tickExpired >= 1, "diagnostics tick expired")
 assertEqual(diagnostics.lastReason, "cancelled_by_request", "diagnostics last reason")
 assertEqual(diagnostics.lastUserId, 401, "diagnostics last user")

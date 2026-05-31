@@ -398,6 +398,16 @@ function TinyfolkStatusService.ResetForTests()
 end
 
 globalEnv._TinyfolkStatusService_QueryAPI = {
+	GetStatusSnapshot = function(userId: number, now: number?): any
+		local currentNow = if type(now) == "number" then now else os.clock()
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player.UserId == userId then
+				local state = stateByUserId[userId]
+				return TimedConditionStateLogic.Snapshot(state, currentNow)
+			end
+		end
+		return nil
+	end,
 	ClearConditionForUserId = function(userId: number, conditionName: string, now: number?)
 		local currentNow = if type(now) == "number" then now else os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do

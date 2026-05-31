@@ -22,23 +22,31 @@
     - `isStatusStealthAllowed`
   - Activation precedence hardening (`RequestStealthShrink`):
     - rejects when hiding is active: `hiding_forbidden`
+    - rejects when real status snapshot blocks stealth (stun active): `status_snapshot_forbidden`
     - rejects when status resolver blocks stealth: `status_forbidden` (or provided deterministic status reason)
   - Runtime invalidation hardening (`tickStealthShrink` + `checkInvalidState`):
     - role drift -> `cancelled_role_mismatch`
     - downed -> `cancelled_downed`
     - carried -> `cancelled_carried`
     - hiding conflict -> `cancelled_hiding_conflict`
+    - status snapshot conflict (stun active) -> `cancelled_status_snapshot_forbidden`
     - status conflict -> `cancelled_status_forbidden`
+- src/ServerScriptService/Services/TinyfolkStatusService.server.luau
+  - Added query API exposure for real snapshot integration:
+    - `GetStatusSnapshot(userId, now?)`
+  - Enables cross-service status gating from real timed-condition state instead of resolver-only seams.
 - tests/tinyfolk_stealth_service_runtime_entrypoint.spec.luau
   - Added coverage for activation rejection precedence:
     - interaction conflict
     - hiding conflict
+    - status snapshot conflict
     - status conflict
   - Added coverage for active-state cancellation reasons:
     - role drift
     - downed
     - carried
     - hiding conflict
+    - status snapshot conflict
     - status conflict
   - Added explicit multi-conflict precedence matrix assertions for deterministic ordering when multiple conflicts are simultaneously true.
   - Updated diagnostics expectations to match expanded invalidation coverage.
@@ -52,12 +60,14 @@
 - Activation ordering verified:
   - `interaction_forbidden` takes precedence over hiding/status conflicts.
   - `hiding_forbidden` takes precedence over `status_forbidden` when both are true.
+  - `status_snapshot_forbidden` takes precedence over `status_forbidden` when both status blockers are true.
 - Runtime invalidation ordering verified:
   - `cancelled_invalid_state` (custom resolver) takes precedence over all runtime branch checks.
   - `cancelled_role_mismatch` takes precedence over downed/carried/hiding/status.
   - `cancelled_downed` takes precedence over carried/hiding/status.
   - `cancelled_carried` takes precedence over hiding/status.
   - `cancelled_hiding_conflict` takes precedence over `cancelled_status_forbidden`.
+  - `cancelled_status_snapshot_forbidden` takes precedence over `cancelled_status_forbidden` when both status blockers are true.
 
 ### Changed-file Validation Gate
 - `./scripts/run-validation.ps1 -ChangedOnly` -> pass
@@ -75,12 +85,14 @@
 ## Deterministic Reason Coverage (Slice B Delta)
 - Activation precedence:
   - `hiding_forbidden`
+  - `status_snapshot_forbidden`
   - `status_forbidden`
 - Runtime invalidation branches:
   - `cancelled_role_mismatch`
   - `cancelled_downed`
   - `cancelled_carried`
   - `cancelled_hiding_conflict`
+  - `cancelled_status_snapshot_forbidden`
   - `cancelled_status_forbidden`
 
 ## Boundary Notes
