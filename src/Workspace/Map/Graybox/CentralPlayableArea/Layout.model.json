@@ -1,392 +1,418 @@
 {
-  "className": "Model",
-  "children": [
-    {
-      "name": "CentralFloor",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": true,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Material": "Grass",
-        "Color": [
-          0.25,
-          0.43,
-          0.22
-        ],
-        "Size": [
-          300,
-          0.4,
-          220
-        ],
-        "Position": [
-          0,
-          -0.3,
-          0
-        ]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "ReferenceScaled": true,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "NorthAnchor",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Concrete",
-        "Color": [
-          0.35,
-          0.35,
-          0.35
-        ],
-        "Size": [
-          410,
-          12,
-          3
-        ],
-        "Position": [
-          0,
-          6,
-          -768
-        ]
-      }
-    },
-    {
-      "name": "SouthAnchor",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Concrete",
-        "Color": [
-          0.35,
-          0.35,
-          0.35
-        ],
-        "Size": [
-          410,
-          12,
-          3
-        ],
-        "Position": [
-          0,
-          6,
-          768
-        ]
-      }
-    },
-    {
-      "name": "EastAnchor",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Concrete",
-        "Color": [
-          0.35,
-          0.35,
-          0.35
-        ],
-        "Size": [
-          3,
-          12,
-          360
-        ],
-        "Position": [
-          1024,
-          6,
-          0
-        ]
-      }
-    },
-    {
-      "name": "WestAnchor",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Concrete",
-        "Color": [
-          0.35,
-          0.35,
-          0.35
-        ],
-        "Size": [
-          3,
-          12,
-          360
-        ],
-        "Position": [
-          -1024,
-          6,
-          0
-        ]
-      }
-    },
-    {
-      "name": "MacroPlazaDisk",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "WoodPlanks",
-        "Color": [
-          0.62,
-          0.54,
-          0.34
-        ],
-        "Shape": "Cylinder",
-        "Size": [
-          2,
-          76,
-          64
-        ],
-        "Orientation": [
-          0,
-          0,
-          90
-        ],
-        "Position": [
-          0,
-          1,
-          0
-        ]
-      }
-    },
-    {
-      "name": "MacroPlazaInner",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "WoodPlanks",
-        "Color": [
-          0.68,
-          0.58,
-          0.35
-        ],
-        "Shape": "Cylinder",
-        "Size": [
-          2,
-          50,
-          42
-        ],
-        "Orientation": [
-          0,
-          0,
-          90
-        ],
-        "Position": [
-          0,
-          1.05,
-          0
-        ]
-      }
-    },
-    {
-      "name": "GiantRoad_North",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Sandstone",
-        "Color": [
-          0.75,
-          0.63,
-          0.36
-        ],
-        "Size": [
-          20,
-          1.2,
-          138
-        ],
-        "Position": [
-          0,
-          0.8,
-          -69
-        ]
-      }
-    },
-    {
-      "name": "GiantRoad_West",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Sandstone",
-        "Color": [
-          0.75,
-          0.63,
-          0.36
-        ],
-        "Size": [
-          20,
-          1.2,
-          212
-        ],
-        "Orientation": [
-          0,
-          64,
-          0
-        ],
-        "Position": [
-          -94,
-          0.8,
-          -46
-        ]
-      }
-    },
-    {
-      "name": "GiantRoad_East",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Sandstone",
-        "Color": [
-          0.75,
-          0.63,
-          0.36
-        ],
-        "Size": [
-          20,
-          1.2,
-          182
-        ],
-        "Orientation": [
-          0,
-          -57,
-          0
-        ],
-        "Position": [
-          76,
-          0.8,
-          -48
-        ]
-      }
-    },
-    {
-      "name": "GiantRoad_SouthWest",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Sandstone",
-        "Color": [
-          0.75,
-          0.63,
-          0.36
-        ],
-        "Size": [
-          20,
-          1.2,
-          200
-        ],
-        "Orientation": [
-          0,
-          -133,
-          0
-        ],
-        "Position": [
-          -66,
-          0.8,
-          62
-        ]
-      }
-    },
-    {
-      "name": "GiantRoad_SouthEast",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Sandstone",
-        "Color": [
-          0.75,
-          0.63,
-          0.36
-        ],
-        "Size": [
-          20,
-          1.2,
-          218
-        ],
-        "Orientation": [
-          0,
-          -43,
-          0
-        ],
-        "Position": [
-          80,
-          0.8,
-          75
-        ]
-      }
-    },
-    {
-      "name": "SouthRiver",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 1,
-        "Material": "Water",
-        "Color": [
-          0.1,
-          0.35,
-          0.7
-        ],
-        "Size": [
-          2048,
-          2,
-          24
-        ],
-        "Position": [
-          0,
-          -0.25,
-          756
-        ]
-      }
-    }
-  ]
+    "className":  "Model",
+    "children":  [
+                     {
+                         "name":  "CentralFloor",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  true,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.25,
+                                                          0.43,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         300,
+                                                         0.4,
+                                                         220
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             -0.3,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceScaled":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "NorthAnchor",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Concrete",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.35,
+                                                          0.35
+                                                      ],
+                                            "Size":  [
+                                                         410,
+                                                         12,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             6,
+                                                             -768
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "SouthAnchor",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Concrete",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.35,
+                                                          0.35
+                                                      ],
+                                            "Size":  [
+                                                         410,
+                                                         12,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             6,
+                                                             768
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "EastAnchor",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Concrete",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.35,
+                                                          0.35
+                                                      ],
+                                            "Size":  [
+                                                         3,
+                                                         12,
+                                                         360
+                                                     ],
+                                            "Position":  [
+                                                             1024,
+                                                             6,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "WestAnchor",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Concrete",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.35,
+                                                          0.35
+                                                      ],
+                                            "Size":  [
+                                                         3,
+                                                         12,
+                                                         360
+                                                     ],
+                                            "Position":  [
+                                                             -1024,
+                                                             6,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "MacroPlazaDisk",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "WoodPlanks",
+                                            "Color":  [
+                                                          0.62,
+                                                          0.54,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Cylinder",
+                                            "Size":  [
+                                                         2,
+                                                         76,
+                                                         64
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                0,
+                                                                90
+                                                            ],
+                                            "Position":  [
+                                                             0,
+                                                             1,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "MacroPlazaInner",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "WoodPlanks",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.58,
+                                                          0.35
+                                                      ],
+                                            "Shape":  "Cylinder",
+                                            "Size":  [
+                                                         2,
+                                                         50,
+                                                         42
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                0,
+                                                                90
+                                                            ],
+                                            "Position":  [
+                                                             0,
+                                                             1.05,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "GiantRoad_North",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Sandstone",
+                                            "Color":  [
+                                                          0.75,
+                                                          0.63,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         20,
+                                                         1.2,
+                                                         138
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             0.8,
+                                                             -69
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "GiantRoad_West",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Sandstone",
+                                            "Color":  [
+                                                          0.75,
+                                                          0.63,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         20,
+                                                         1.2,
+                                                         212
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                64,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -94,
+                                                             0.8,
+                                                             -46
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "GiantRoad_East",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Sandstone",
+                                            "Color":  [
+                                                          0.75,
+                                                          0.63,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         20,
+                                                         1.2,
+                                                         182
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -57,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             76,
+                                                             0.8,
+                                                             -48
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "GiantRoad_SouthWest",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Sandstone",
+                                            "Color":  [
+                                                          0.75,
+                                                          0.63,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         20,
+                                                         1.2,
+                                                         200
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -133,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -66,
+                                                             0.8,
+                                                             62
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "GiantRoad_SouthEast",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Sandstone",
+                                            "Color":  [
+                                                          0.75,
+                                                          0.63,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         20,
+                                                         1.2,
+                                                         218
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -43,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             80,
+                                                             0.8,
+                                                             75
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     },
+                     {
+                         "name":  "SouthRiver",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  1,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.1,
+                                                          0.35,
+                                                          0.7
+                                                      ],
+                                            "Size":  [
+                                                         2048,
+                                                         2,
+                                                         24
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             -0.25,
+                                                             756
+                                                         ],
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        }
+                     }
+                 ]
 }
