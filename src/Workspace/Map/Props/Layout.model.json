@@ -228,23 +228,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.6,
-                                            "Material":  "Neon",
+                                            "Transparency":  0.86,
+                                            "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.55,
-                                                          0.12,
-                                                          0.12
+                                                          0.6,
+                                                          0.18,
+                                                          0.16
                                                       ],
                                             "Size":  [
-                                                         38,
-                                                         10,
-                                                         22
+                                                         34,
+                                                         4,
+                                                         20
                                                      ],
                                             "Position":  [
                                                              55,
-                                                             5,
+                                                             2,
                                                              -78
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
