@@ -1,859 +1,1028 @@
 {
-  "className": "Folder",
-  "children": [
-    {
-      "name": "Cover_A",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": true,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.4,
-          0.4,
-          0.6
-        ],
-        "Size": [
-          4,
-          3,
-          4
-        ],
-        "Position": [
-          -94,
-          0.5,
-          -32
-        ]
-      }
-    },
-    {
-      "name": "Cover_B",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": true,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.4,
-          0.4,
-          0.6
-        ],
-        "Size": [
-          4,
-          3,
-          4
-        ],
-        "Position": [
-          92,
-          0.5,
-          -26
-        ]
-      }
-    },
-    {
-      "name": "Cover_C",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": true,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.42,
-          0.38,
-          0.58
-        ],
-        "Size": [
-          6,
-          4,
-          4
-        ],
-        "Position": [
-          64,
-          0.5,
-          58
-        ]
-      }
-    },
-    {
-      "name": "Cover_D",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": true,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.42,
-          0.38,
-          0.58
-        ],
-        "Size": [
-          6,
-          4,
-          4
-        ],
-        "Position": [
-          -28,
-          0.5,
-          60
-        ]
-      }
-    },
-    {
-      "name": "VillageMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.55,
-        "Material": "WoodPlanks",
-        "Color": [
-          0.48,
-          0.35,
-          0.2
-        ],
-        "Size": [
-          45,
-          12,
-          40
-        ],
-        "Position": [
-          -118,
-          6,
-          8
-        ]
-      }
-    },
-    {
-      "name": "WorkYardMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.55,
-        "Material": "Slate",
-        "Color": [
-          0.38,
-          0.3,
-          0.2
-        ],
-        "Size": [
-          50,
-          14,
-          38
-        ],
-        "Position": [
-          -92,
-          7,
-          -42
-        ]
-      }
-    },
-    {
-      "name": "QuarryMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.55,
-        "Material": "Slate",
-        "Color": [
-          0.4,
-          0.4,
-          0.42
-        ],
-        "Size": [
-          72,
-          18,
-          46
-        ],
-        "Position": [
-          78,
-          9,
-          -43
-        ]
-      }
-    },
-    {
-      "name": "EconomyYardMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.55,
-        "Material": "Concrete",
-        "Color": [
-          0.42,
-          0.38,
-          0.3
-        ],
-        "Size": [
-          54,
-          12,
-          44
-        ],
-        "Position": [
-          -63,
-          6,
-          55
-        ]
-      }
-    },
-    {
-      "name": "ShrineFieldMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.55,
-        "Material": "Grass",
-        "Color": [
-          0.32,
-          0.5,
-          0.24
-        ],
-        "Size": [
-          52,
-          10,
-          42
-        ],
-        "Position": [
-          55,
-          5,
-          50
-        ]
-      }
-    },
-    {
-      "name": "ContainmentPressureMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.6,
-        "Material": "Neon",
-        "Color": [
-          0.55,
-          0.12,
-          0.12
-        ],
-        "Size": [
-          38,
-          10,
-          22
-        ],
-        "Position": [
-          55,
-          5,
-          -78
-        ]
-      }
-    },
-    {
-      "name": "MacroPlazaMarker",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.82,
-        "Material": "Neon",
-        "Color": [
-          0.92,
-          0.72,
-          0.3
-        ],
-        "Size": [
-          18,
-          2,
-          18
-        ],
-        "Position": [
-          0,
-          1,
-          0
-        ]
-      }
-    },
-    {
-      "name": "ControlStationMarker",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.84,
-        "Material": "Neon",
-        "Color": [
-          0.74,
-          0.24,
-          0.86
-        ],
-        "Size": [
-          12,
-          2,
-          12
-        ],
-        "Position": [
-          80,
-          1,
-          5
-        ]
-      }
-    },
-    {
-      "name": "EscapePadMarker",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.82,
-        "Material": "Neon",
-        "Color": [
-          0.35,
-          0.78,
-          0.42
-        ],
-        "Size": [
-          12,
-          2,
-          12
-        ],
-        "Position": [
-          -150,
-          1,
-          16
-        ]
-      }
-    },
-    {
-      "name": "TradeDockMass",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.7,
-        "Material": "WoodPlanks",
-        "Color": [
-          0.53,
-          0.39,
-          0.22
-        ],
-        "Size": [
-          34,
-          14,
-          14
-        ],
-        "Position": [
-          103,
-          7,
-          80
-        ]
-      }
-    },
-    {
-      "name": "Contour_NorthRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.24,
-          0.43,
-          0.2
-        ],
-        "Size": [
-          1180,
-          7,
-          116
-        ],
-        "Position": [
-          0,
-          3.5,
-          -640
-        ]
-      }
-    },
-    {
-      "name": "Contour_NorthEastRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.22,
-          0.4,
-          0.22
-        ],
-        "Size": [
-          430,
-          8,
-          124
-        ],
-        "Orientation": [
-          0,
-          -33,
-          0
-        ],
-        "Position": [
-          576,
-          4,
-          -502
-        ]
-      }
-    },
-    {
-      "name": "Contour_EastRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.24,
-          0.39,
-          0.24
-        ],
-        "Size": [
-          136,
-          6,
-          810
-        ],
-        "Position": [
-          894,
-          3,
-          -16
-        ]
-      }
-    },
-    {
-      "name": "Contour_SouthEastRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.2,
-          0.45,
-          0.25
-        ],
-        "Size": [
-          396,
-          7,
-          118
-        ],
-        "Orientation": [
-          0,
-          33,
-          0
-        ],
-        "Position": [
-          616,
-          3.5,
-          520
-        ]
-      }
-    },
-    {
-      "name": "Contour_SouthWestRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.27,
-          0.42,
-          0.21
-        ],
-        "Size": [
-          396,
-          7,
-          118
-        ],
-        "Orientation": [
-          0,
-          -33,
-          0
-        ],
-        "Position": [
-          -616,
-          3.5,
-          520
-        ]
-      }
-    },
-    {
-      "name": "Contour_WestRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.25,
-          0.44,
-          0.2
-        ],
-        "Size": [
-          136,
-          6,
-          810
-        ],
-        "Position": [
-          -894,
-          3,
-          -16
-        ]
-      }
-    },
-    {
-      "name": "Contour_NorthWestRidge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.25,
-          0.45,
-          0.21
-        ],
-        "Size": [
-          430,
-          8,
-          124
-        ],
-        "Orientation": [
-          0,
-          33,
-          0
-        ],
-        "Position": [
-          -576,
-          4,
-          -502
-        ]
-      }
-    },
-    {
-      "name": "Contour_InnerNorthShelf",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.28,
-          0.39,
-          0.22
-        ],
-        "Size": [
-          910,
-          4,
-          76
-        ],
-        "Position": [
-          0,
-          2,
-          -560
-        ]
-      }
-    },
-    {
-      "name": "Contour_InnerEastShelf",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.27,
-          0.37,
-          0.24
-        ],
-        "Size": [
-          88,
-          4,
-          596
-        ],
-        "Position": [
-          812,
-          2,
-          -26
-        ]
-      }
-    },
-    {
-      "name": "Contour_InnerWestShelf",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.3,
-          0.41,
-          0.21
-        ],
-        "Size": [
-          88,
-          4,
-          596
-        ],
-        "Position": [
-          -812,
-          2,
-          -26
-        ]
-      }
-    },
-    {
-      "name": "Contour_SouthLowBand",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.24,
-          0.39,
-          0.2
-        ],
-        "Size": [
-          1180,
-          2.4,
-          64
-        ],
-        "Position": [
-          0,
-          1.2,
-          684
-        ]
-      }
-    },
-    {
-      "name": "Contour_SouthEastLowBand",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.2,
-          0.43,
-          0.24
-        ],
-        "Size": [
-          318,
-          2.2,
-          52
-        ],
-        "Orientation": [
-          0,
-          29,
-          0
-        ],
-        "Position": [
-          592,
-          1.1,
-          676
-        ]
-      }
-    },
-    {
-      "name": "Contour_SouthWestLowBand",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Grass",
-        "Color": [
-          0.26,
-          0.39,
-          0.19
-        ],
-        "Size": [
-          318,
-          2.2,
-          52
-        ],
-        "Orientation": [
-          0,
-          -29,
-          0
-        ],
-        "Position": [
-          -592,
-          1.1,
-          676
-        ]
-      }
-    },
-    {
-      "name": "Contour_Cut_NorthWest",
-      "className": "WedgePart",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.2,
-          0.23,
-          0.2
-        ],
-        "Size": [
-          170,
-          8,
-          120
-        ],
-        "Orientation": [
-          0,
-          16,
-          0
-        ],
-        "Position": [
-          -704,
-          3.8,
-          -560
-        ]
-      }
-    },
-    {
-      "name": "Contour_Cut_NorthEast",
-      "className": "WedgePart",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.2,
-          0.22,
-          0.21
-        ],
-        "Size": [
-          150,
-          9,
-          102
-        ],
-        "Orientation": [
-          0,
-          -22,
-          0
-        ],
-        "Position": [
-          678,
-          4.1,
-          -552
-        ]
-      }
-    },
-    {
-      "name": "Contour_Cut_SouthEast",
-      "className": "WedgePart",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.18,
-          0.24,
-          0.2
-        ],
-        "Size": [
-          188,
-          7,
-          96
-        ],
-        "Orientation": [
-          0,
-          -14,
-          0
-        ],
-        "Position": [
-          716,
-          3.3,
-          612
-        ]
-      }
-    },
-    {
-      "name": "Contour_Cut_SouthWest",
-      "className": "WedgePart",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Material": "Slate",
-        "Color": [
-          0.2,
-          0.24,
-          0.19
-        ],
-        "Size": [
-          144,
-          6,
-          88
-        ],
-        "Orientation": [
-          0,
-          18,
-          0
-        ],
-        "Position": [
-          -676,
-          2.9,
-          604
-        ]
-      }
-    },
-    {
-      "name": "NorthBoundaryMarker",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.85,
-        "Material": "Grass",
-        "Color": [
-          0.25,
-          0.42,
-          0.18
-        ],
-        "Size": [
-          2048,
-          2,
-          24
-        ],
-        "Position": [
-          0,
-          1,
-          -756
-        ]
-      }
-    },
-    {
-      "name": "SouthCreekEdge",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "Transparency": 0.72,
-        "Material": "Water",
-        "Color": [
-          0.1,
-          0.35,
-          0.7
-        ],
-        "Size": [
-          2048,
-          2,
-          24
-        ],
-        "Position": [
-          0,
-          0.5,
-          756
-        ]
-      }
-    }
-  ]
+    "className":  "Folder",
+    "children":  [
+                     {
+                         "name":  "Cover_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  true,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.4,
+                                                          0.4,
+                                                          0.6
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         3,
+                                                         4
+                                                     ],
+                                            "Position":  [
+                                                             -94,
+                                                             0.5,
+                                                             -32
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "Cover_B",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  true,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.4,
+                                                          0.4,
+                                                          0.6
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         3,
+                                                         4
+                                                     ],
+                                            "Position":  [
+                                                             92,
+                                                             0.5,
+                                                             -26
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "Cover_C",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  true,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.38,
+                                                          0.58
+                                                      ],
+                                            "Size":  [
+                                                         6,
+                                                         4,
+                                                         4
+                                                     ],
+                                            "Position":  [
+                                                             64,
+                                                             0.5,
+                                                             58
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "Cover_D",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  true,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.38,
+                                                          0.58
+                                                      ],
+                                            "Size":  [
+                                                         6,
+                                                         4,
+                                                         4
+                                                     ],
+                                            "Position":  [
+                                                             -28,
+                                                             0.5,
+                                                             60
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "VillageMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.55,
+                                            "Material":  "WoodPlanks",
+                                            "Color":  [
+                                                          0.48,
+                                                          0.35,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         45,
+                                                         12,
+                                                         40
+                                                     ],
+                                            "Position":  [
+                                                             -118,
+                                                             6,
+                                                             8
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "WorkYardMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.55,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.38,
+                                                          0.3,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         50,
+                                                         14,
+                                                         38
+                                                     ],
+                                            "Position":  [
+                                                             -92,
+                                                             7,
+                                                             -42
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "QuarryMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.55,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.4,
+                                                          0.4,
+                                                          0.42
+                                                      ],
+                                            "Size":  [
+                                                         72,
+                                                         18,
+                                                         46
+                                                     ],
+                                            "Position":  [
+                                                             78,
+                                                             9,
+                                                             -43
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "EconomyYardMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.55,
+                                            "Material":  "Concrete",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.38,
+                                                          0.3
+                                                      ],
+                                            "Size":  [
+                                                         54,
+                                                         12,
+                                                         44
+                                                     ],
+                                            "Position":  [
+                                                             -63,
+                                                             6,
+                                                             55
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "ShrineFieldMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.55,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.5,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         52,
+                                                         10,
+                                                         42
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             5,
+                                                             50
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "ContainmentPressureMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.6,
+                                            "Material":  "Neon",
+                                            "Color":  [
+                                                          0.55,
+                                                          0.12,
+                                                          0.12
+                                                      ],
+                                            "Size":  [
+                                                         38,
+                                                         10,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             5,
+                                                             -78
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "MacroPlazaMarker",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "Neon",
+                                            "Color":  [
+                                                          0.92,
+                                                          0.72,
+                                                          0.3
+                                                      ],
+                                            "Size":  [
+                                                         18,
+                                                         2,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             1,
+                                                             0
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "ControlStationMarker",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.84,
+                                            "Material":  "Neon",
+                                            "Color":  [
+                                                          0.74,
+                                                          0.24,
+                                                          0.86
+                                                      ],
+                                            "Size":  [
+                                                         12,
+                                                         2,
+                                                         12
+                                                     ],
+                                            "Position":  [
+                                                             80,
+                                                             1,
+                                                             5
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "EscapePadMarker",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "Neon",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.78,
+                                                          0.42
+                                                      ],
+                                            "Size":  [
+                                                         12,
+                                                         2,
+                                                         12
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             1,
+                                                             16
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "TradeDockMass",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Transparency":  0.7,
+                                            "Material":  "WoodPlanks",
+                                            "Color":  [
+                                                          0.53,
+                                                          0.39,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         14,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             7,
+                                                             80
+                                                         ]
+                                        }
+                     },
+                     {
+                         "name":  "Contour_NorthRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.24,
+                                                          0.43,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         1180,
+                                                         7,
+                                                         116
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             3.5,
+                                                             -640
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_NorthEastRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.22,
+                                                          0.4,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         430,
+                                                         8,
+                                                         124
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -33,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             576,
+                                                             4,
+                                                             -502
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_EastRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.24,
+                                                          0.39,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         136,
+                                                         6,
+                                                         810
+                                                     ],
+                                            "Position":  [
+                                                             894,
+                                                             3,
+                                                             -16
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_SouthEastRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.45,
+                                                          0.25
+                                                      ],
+                                            "Size":  [
+                                                         396,
+                                                         7,
+                                                         118
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                33,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             616,
+                                                             3.5,
+                                                             520
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_SouthWestRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.27,
+                                                          0.42,
+                                                          0.21
+                                                      ],
+                                            "Size":  [
+                                                         396,
+                                                         7,
+                                                         118
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -33,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -616,
+                                                             3.5,
+                                                             520
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_WestRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.25,
+                                                          0.44,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         136,
+                                                         6,
+                                                         810
+                                                     ],
+                                            "Position":  [
+                                                             -894,
+                                                             3,
+                                                             -16
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_NorthWestRidge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.25,
+                                                          0.45,
+                                                          0.21
+                                                      ],
+                                            "Size":  [
+                                                         430,
+                                                         8,
+                                                         124
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                33,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -576,
+                                                             4,
+                                                             -502
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_InnerNorthShelf",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.28,
+                                                          0.39,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         910,
+                                                         4,
+                                                         76
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             2,
+                                                             -560
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_InnerEastShelf",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.27,
+                                                          0.37,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         88,
+                                                         4,
+                                                         596
+                                                     ],
+                                            "Position":  [
+                                                             812,
+                                                             2,
+                                                             -26
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_InnerWestShelf",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.3,
+                                                          0.41,
+                                                          0.21
+                                                      ],
+                                            "Size":  [
+                                                         88,
+                                                         4,
+                                                         596
+                                                     ],
+                                            "Position":  [
+                                                             -812,
+                                                             2,
+                                                             -26
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_SouthLowBand",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.24,
+                                                          0.39,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         1180,
+                                                         2.4,
+                                                         64
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             1.2,
+                                                             684
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_SouthEastLowBand",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.43,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         318,
+                                                         2.2,
+                                                         52
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                29,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             592,
+                                                             1.1,
+                                                             676
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_SouthWestLowBand",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.26,
+                                                          0.39,
+                                                          0.19
+                                                      ],
+                                            "Size":  [
+                                                         318,
+                                                         2.2,
+                                                         52
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -29,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -592,
+                                                             1.1,
+                                                             676
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_Cut_NorthWest",
+                         "className":  "WedgePart",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.23,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         170,
+                                                         8,
+                                                         120
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                16,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -704,
+                                                             3.8,
+                                                             -560
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_Cut_NorthEast",
+                         "className":  "WedgePart",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.22,
+                                                          0.21
+                                                      ],
+                                            "Size":  [
+                                                         150,
+                                                         9,
+                                                         102
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -22,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             678,
+                                                             4.1,
+                                                             -552
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_Cut_SouthEast",
+                         "className":  "WedgePart",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.18,
+                                                          0.24,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         188,
+                                                         7,
+                                                         96
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -14,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             716,
+                                                             3.3,
+                                                             612
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Contour_Cut_SouthWest",
+                         "className":  "WedgePart",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Slate",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.24,
+                                                          0.19
+                                                      ],
+                                            "Size":  [
+                                                         144,
+                                                         6,
+                                                         88
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                18,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -676,
+                                                             2.9,
+                                                             604
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "NorthBoundaryMarker",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.25,
+                                                          0.42,
+                                                          0.18
+                                                      ],
+                                            "Size":  [
+                                                         2048,
+                                                         2,
+                                                         24
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             1,
+                                                             -756
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "SouthCreekEdge",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.1,
+                                                          0.35,
+                                                          0.7
+                                                      ],
+                                            "Size":  [
+                                                         2048,
+                                                         2,
+                                                         24
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             0.5,
+                                                             756
+                                                         ],
+                                            "Transparency":  1,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "HiddenReference":  true,
+                                            "VisualOnly":  true
+                                        }
+                     }
+                 ]
 }
