@@ -9,7 +9,7 @@
         "CanCollide": false,
         "CanTouch": true,
         "CanQuery": true,
-        "Transparency": 0.9,
+        "Transparency": 0.96,
         "Material": "SmoothPlastic",
         "Color": [
           1,
@@ -25,7 +25,9 @@
           55,
           0.55,
           -78
-        ]
+        ],
+        "CastShadow": false,
+        "Locked": true
       }
     }
   ]
