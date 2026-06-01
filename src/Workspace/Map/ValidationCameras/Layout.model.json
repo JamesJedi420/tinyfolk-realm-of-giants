@@ -18,10 +18,12 @@
         "Material": "SmoothPlastic",
         "Color": [0.9, 0.9, 0.9],
         "Size": [0.5, 0.5, 0.5],
-        "Position": [0, 90, 0]
+        "Position": [0, 90, 0],
+        "Locked": true
       },
       "attributes": {
         "DoNotShip": true,
+        "SelectionLocked": true,
         "LookAtX": 0,
         "LookAtY": 0,
         "LookAtZ": 0,
@@ -42,10 +44,12 @@
         "Material": "SmoothPlastic",
         "Color": [0.86, 0.24, 0.18],
         "Size": [0.5, 0.5, 0.5],
-        "Position": [-18, 14, 18]
+        "Position": [-18, 14, 18],
+        "Locked": true
       },
       "attributes": {
         "DoNotShip": true,
+        "SelectionLocked": true,
         "LookAtX": 25,
         "LookAtY": 2,
         "LookAtZ": -8,
@@ -66,10 +70,12 @@
         "Material": "SmoothPlastic",
         "Color": [0.28, 0.62, 0.92],
         "Size": [0.5, 0.5, 0.5],
-        "Position": [-112, 5, 8]
+        "Position": [-112, 5, 8],
+        "Locked": true
       },
       "attributes": {
         "DoNotShip": true,
+        "SelectionLocked": true,
         "LookAtX": -102,
         "LookAtY": 1,
         "LookAtZ": 8,
