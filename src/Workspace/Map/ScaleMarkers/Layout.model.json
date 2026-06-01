@@ -7,7 +7,7 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.94,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.86,
@@ -34,7 +34,8 @@
                                             "GeneratedBlockout":  true,
                                             "ScaleReference":  "GiantScale_2_25",
                                             "VisualOnly":  true,
-                                            "LowPriorityScreenshotCue":  true
+                                            "LowPriorityScreenshotCue":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      },
                      {
@@ -43,7 +44,7 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.94,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.28,
@@ -70,7 +71,8 @@
                                             "GeneratedBlockout":  true,
                                             "ScaleReference":  "TinyfolkScale_0_85",
                                             "VisualOnly":  true,
-                                            "LowPriorityScreenshotCue":  true
+                                            "LowPriorityScreenshotCue":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      },
                      {
@@ -79,7 +81,7 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.94,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.95,
@@ -106,7 +108,8 @@
                                             "GeneratedBlockout":  true,
                                             "ScaleReference":  "GiantRoadWidth",
                                             "VisualOnly":  true,
-                                            "LowPriorityScreenshotCue":  true
+                                            "LowPriorityScreenshotCue":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      }
                  ]

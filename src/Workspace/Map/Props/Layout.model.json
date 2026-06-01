@@ -103,23 +103,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.55,
+                                            "Transparency":  0.74,
                                             "Material":  "WoodPlanks",
                                             "Color":  [
-                                                          0.48,
-                                                          0.35,
+                                                          0.38,
+                                                          0.3,
                                                           0.2
                                                       ],
                                             "Size":  [
                                                          45,
-                                                         12,
+                                                         8,
                                                          40
                                                      ],
                                             "Position":  [
                                                              -118,
-                                                             6,
+                                                             4,
                                                              8
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
@@ -128,23 +136,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.55,
+                                            "Transparency":  0.76,
                                             "Material":  "Slate",
                                             "Color":  [
-                                                          0.38,
-                                                          0.3,
-                                                          0.2
+                                                          0.32,
+                                                          0.28,
+                                                          0.22
                                                       ],
                                             "Size":  [
                                                          50,
-                                                         14,
+                                                         8,
                                                          38
                                                      ],
                                             "Position":  [
                                                              -92,
-                                                             7,
+                                                             4,
                                                              -42
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
@@ -153,23 +169,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.55,
+                                            "Transparency":  0.78,
                                             "Material":  "Slate",
                                             "Color":  [
-                                                          0.4,
-                                                          0.4,
-                                                          0.42
+                                                          0.34,
+                                                          0.35,
+                                                          0.36
                                                       ],
                                             "Size":  [
                                                          72,
-                                                         18,
+                                                         10,
                                                          46
                                                      ],
                                             "Position":  [
                                                              78,
-                                                             9,
+                                                             5,
                                                              -43
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
@@ -178,23 +202,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.55,
+                                            "Transparency":  0.76,
                                             "Material":  "Concrete",
                                             "Color":  [
-                                                          0.42,
-                                                          0.38,
-                                                          0.3
+                                                          0.36,
+                                                          0.33,
+                                                          0.27
                                                       ],
                                             "Size":  [
                                                          54,
-                                                         12,
+                                                         8,
                                                          44
                                                      ],
                                             "Position":  [
                                                              -63,
-                                                             6,
+                                                             4,
                                                              55
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
@@ -203,23 +235,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.55,
+                                            "Transparency":  0.78,
                                             "Material":  "Grass",
                                             "Color":  [
-                                                          0.32,
-                                                          0.5,
+                                                          0.28,
+                                                          0.43,
                                                           0.24
                                                       ],
                                             "Size":  [
                                                          52,
-                                                         10,
+                                                         6,
                                                          42
                                                      ],
                                             "Position":  [
                                                              55,
-                                                             5,
+                                                             3,
                                                              50
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
@@ -228,21 +268,21 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.86,
+                                            "Transparency":  0.92,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.6,
-                                                          0.18,
-                                                          0.16
+                                                          0.45,
+                                                          0.22,
+                                                          0.2
                                                       ],
                                             "Size":  [
-                                                         34,
-                                                         4,
-                                                         20
+                                                         30,
+                                                         2,
+                                                         16
                                                      ],
                                             "Position":  [
                                                              55,
-                                                             2,
+                                                             1,
                                                              -78
                                                          ],
                                             "CanTouch":  false,
@@ -261,8 +301,8 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.82,
-                                            "Material":  "Neon",
+                                            "Transparency":  1,
+                                            "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.92,
                                                           0.72,
@@ -277,7 +317,15 @@
                                                              0,
                                                              1,
                                                              0
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      },
                      {
@@ -286,8 +334,8 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.84,
-                                            "Material":  "Neon",
+                                            "Transparency":  1,
+                                            "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.74,
                                                           0.24,
@@ -302,7 +350,15 @@
                                                              80,
                                                              1,
                                                              5
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      },
                      {
@@ -311,8 +367,8 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.82,
-                                            "Material":  "Neon",
+                                            "Transparency":  1,
+                                            "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.35,
                                                           0.78,
@@ -327,7 +383,15 @@
                                                              -150,
                                                              1,
                                                              16
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "HiddenForScreenshots":  true
                                         }
                      },
                      {
@@ -336,23 +400,31 @@
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
-                                            "Transparency":  0.7,
+                                            "Transparency":  0.78,
                                             "Material":  "WoodPlanks",
                                             "Color":  [
-                                                          0.53,
-                                                          0.39,
-                                                          0.22
+                                                          0.42,
+                                                          0.32,
+                                                          0.21
                                                       ],
                                             "Size":  [
                                                          34,
-                                                         14,
+                                                         6,
                                                          14
                                                      ],
                                             "Position":  [
                                                              103,
-                                                             7,
+                                                             3,
                                                              80
-                                                         ]
+                                                         ],
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "CastShadow":  false,
+                                            "Locked":  true
+                                        },
+                         "attributes":  {
+                                            "VisualOnly":  true,
+                                            "ScreenshotSoftened":  true
                                         }
                      },
                      {
