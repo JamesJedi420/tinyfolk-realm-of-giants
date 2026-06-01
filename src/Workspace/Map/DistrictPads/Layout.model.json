@@ -32,7 +32,8 @@
           0.16,
           0
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "GiantPlaza",
@@ -67,7 +68,8 @@
           0.18,
           -72
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "GiantHearth",
@@ -102,7 +104,8 @@
           0.12,
           8
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "TinyfolkVillage",
@@ -137,7 +140,8 @@
           0.12,
           -42
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "WorkYard",
@@ -172,7 +176,8 @@
           0.12,
           -43
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "StoneDistrict",
@@ -207,7 +212,8 @@
           0.12,
           -78
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "Containment",
@@ -242,7 +248,8 @@
           0.12,
           5
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "ControlStation",
@@ -277,7 +284,8 @@
           0.12,
           55
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "EconomyYard",
@@ -312,7 +320,8 @@
           0.2,
           70
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "Granary",
@@ -348,7 +357,8 @@
           0.2,
           35
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "Warehouse",
@@ -384,7 +394,8 @@
           0.12,
           50
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "ShrineField",
@@ -419,7 +430,8 @@
           0.2,
           66
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "Shrine_A",
@@ -455,7 +467,8 @@
           0.24,
           16
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "EscapeWinPad",
@@ -491,7 +504,8 @@
           0.12,
           80
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DistrictId": "TradeDock",

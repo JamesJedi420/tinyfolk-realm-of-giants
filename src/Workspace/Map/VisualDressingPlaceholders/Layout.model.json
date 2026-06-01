@@ -30,7 +30,8 @@
           1,
           -13
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -66,7 +67,8 @@
           1,
           80
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -102,7 +104,8 @@
           0.45,
           83
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -138,7 +141,8 @@
           0.45,
           101
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -170,7 +174,8 @@
           12,
           -51
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -207,7 +212,8 @@
           9,
           -58
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -239,7 +245,8 @@
           7,
           74
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,

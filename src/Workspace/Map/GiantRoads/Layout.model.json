@@ -16,9 +16,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -30,7 +30,8 @@
           0.2,
           -38
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -49,9 +50,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -68,7 +69,8 @@
           0.2,
           -21
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -87,9 +89,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -106,7 +108,8 @@
           0.2,
           -22
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -125,9 +128,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -144,7 +147,8 @@
           0.2,
           27
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -163,9 +167,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -182,7 +186,8 @@
           0.2,
           34
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -201,9 +206,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -220,7 +225,8 @@
           0.2,
           4
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -239,9 +245,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           18,
@@ -258,7 +264,8 @@
           0.2,
           55
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -277,9 +284,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           12,
@@ -296,7 +303,8 @@
           0.34,
           68
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -315,9 +323,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           11,
@@ -329,7 +337,8 @@
           0.34,
           45
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -348,9 +357,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           12,
@@ -367,7 +376,8 @@
           0.34,
           52
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -386,9 +396,9 @@
         "CanQuery": false,
         "Material": "Sandstone",
         "Color": [
-          0.74,
-          0.58,
-          0.32
+          0.86,
+          0.7,
+          0.43
         ],
         "Size": [
           11,
@@ -405,7 +415,8 @@
           0.34,
           5
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -424,9 +435,9 @@
         "CanQuery": false,
         "Material": "WoodPlanks",
         "Color": [
-          0.55,
-          0.36,
-          0.18
+          0.68,
+          0.46,
+          0.24
         ],
         "Size": [
           12,
@@ -438,7 +449,8 @@
           0.38,
           82
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,

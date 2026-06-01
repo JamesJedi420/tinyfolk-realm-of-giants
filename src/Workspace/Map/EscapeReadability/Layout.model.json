@@ -30,7 +30,8 @@
           0.5,
           16
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_A",
@@ -63,7 +64,8 @@
           0.5,
           80
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_Dock",
@@ -96,7 +98,8 @@
           0.5,
           -108
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "MirrorsFunctionalPart": "Workspace.Map.EscapeRoutes.EscapeRoute_NorthTunnel",
@@ -134,7 +137,8 @@
           0.5,
           48
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,
@@ -172,7 +176,8 @@
           0.5,
           -6
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "GeneratedBlockout": true,

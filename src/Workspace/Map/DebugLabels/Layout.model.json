@@ -26,7 +26,8 @@
           2.2,
           0
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DebugLabel": "Giant Macro Plaza origin 0,0",
@@ -60,7 +61,8 @@
           2.2,
           86
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DebugLabel": "Preserve map/stations/granary and Granary_A",
@@ -94,7 +96,8 @@
           2.2,
           16
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DebugLabel": "Fallback escape readability protected",

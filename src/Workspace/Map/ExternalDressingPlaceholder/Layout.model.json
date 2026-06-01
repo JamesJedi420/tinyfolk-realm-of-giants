@@ -32,7 +32,8 @@
           0.5,
           92
         ],
-        "Locked": true
+        "Locked": true,
+        "CastShadow": false
       },
       "attributes": {
         "DoNotShip": true,

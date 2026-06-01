@@ -15,12 +15,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -37,7 +37,8 @@
                                                              0.42,
                                                              8
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -56,12 +57,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -78,7 +79,8 @@
                                                              0.42,
                                                              8
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -97,12 +99,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -119,7 +121,8 @@
                                                              0.42,
                                                              8
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -138,12 +141,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -160,7 +163,8 @@
                                                              0.42,
                                                              -41.389
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -179,12 +183,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -201,7 +205,8 @@
                                                              0.42,
                                                              -32.033
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -220,12 +225,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -242,7 +247,8 @@
                                                              0.42,
                                                              -22.678
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -261,12 +267,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -283,7 +289,8 @@
                                                              0.42,
                                                              -13.322
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -302,12 +309,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -324,7 +331,8 @@
                                                              0.42,
                                                              -3.967
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -343,12 +351,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -365,7 +373,8 @@
                                                              0.42,
                                                              5.389
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -384,12 +393,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -406,7 +415,8 @@
                                                              0.42,
                                                              13.932
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -425,12 +435,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -447,7 +457,8 @@
                                                              0.42,
                                                              19.955
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -466,12 +477,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -488,7 +499,8 @@
                                                              0.42,
                                                              25.977
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -507,12 +519,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -529,7 +541,8 @@
                                                              0.42,
                                                              32
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -548,12 +561,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -570,7 +583,8 @@
                                                              0.42,
                                                              38.023
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -589,12 +603,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -611,7 +625,8 @@
                                                              0.42,
                                                              44.045
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -630,12 +645,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -652,7 +667,8 @@
                                                              0.42,
                                                              50.068
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -671,12 +687,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -693,7 +709,8 @@
                                                              0.42,
                                                              53.693
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -712,12 +729,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -734,7 +751,8 @@
                                                              0.42,
                                                              55.155
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -753,12 +771,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -775,7 +793,8 @@
                                                              0.42,
                                                              56.616
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -794,12 +813,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -816,7 +835,8 @@
                                                              0.42,
                                                              58.077
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -835,12 +855,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -857,7 +877,8 @@
                                                              0.42,
                                                              59.539
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -876,12 +897,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -898,7 +919,8 @@
                                                              0.42,
                                                              61
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -917,12 +939,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -939,7 +961,8 @@
                                                              0.42,
                                                              62.461
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -958,12 +981,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -980,7 +1003,8 @@
                                                              0.42,
                                                              63.923
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -999,12 +1023,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1021,7 +1045,8 @@
                                                              0.42,
                                                              65.384
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1040,12 +1065,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1062,7 +1087,8 @@
                                                              0.42,
                                                              66.845
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1081,12 +1107,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1103,7 +1129,8 @@
                                                              0.42,
                                                              68.307
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1122,12 +1149,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1144,7 +1171,8 @@
                                                              0.42,
                                                              -37.681
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1163,12 +1191,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1185,7 +1213,8 @@
                                                              0.42,
                                                              -27.34
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1204,12 +1233,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1226,7 +1255,8 @@
                                                              0.42,
                                                              -17
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1245,12 +1275,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1267,7 +1297,8 @@
                                                              0.42,
                                                              -6.66
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1286,12 +1317,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1308,7 +1339,8 @@
                                                              0.42,
                                                              3.681
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1327,12 +1359,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1349,7 +1381,8 @@
                                                              0.42,
                                                              38.843
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1368,12 +1401,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1390,7 +1423,8 @@
                                                              0.42,
                                                              47.229
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1409,12 +1443,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1431,7 +1465,8 @@
                                                              0.42,
                                                              55.614
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1450,12 +1485,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1472,7 +1507,8 @@
                                                              0.42,
                                                              64
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1491,12 +1527,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1513,7 +1549,8 @@
                                                              0.42,
                                                              72.386
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1532,12 +1569,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1554,7 +1591,8 @@
                                                              0.42,
                                                              80.771
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1573,12 +1611,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1595,7 +1633,8 @@
                                                              0.42,
                                                              89.157
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1614,12 +1653,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1636,7 +1675,8 @@
                                                              0.42,
                                                              -8.307
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1656,12 +1696,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1678,7 +1718,8 @@
                                                              0.42,
                                                              2
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1698,12 +1739,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1720,7 +1761,8 @@
                                                              0.42,
                                                              12.307
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1740,12 +1782,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1762,7 +1804,8 @@
                                                              0.42,
                                                              -39.317
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1783,12 +1826,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1805,7 +1848,8 @@
                                                              0.42,
                                                              -34.226
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1826,12 +1870,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1848,7 +1892,8 @@
                                                              0.42,
                                                              -29.136
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1869,12 +1914,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1891,7 +1936,8 @@
                                                              0.42,
                                                              -24.045
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1912,12 +1958,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1934,7 +1980,8 @@
                                                              0.42,
                                                              -18.955
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1955,12 +2002,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -1977,7 +2024,8 @@
                                                              0.42,
                                                              -13.864
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -1998,12 +2046,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2020,7 +2068,8 @@
                                                              0.42,
                                                              -8.774
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2041,12 +2090,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2063,7 +2112,8 @@
                                                              0.42,
                                                              -3.683
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2084,12 +2134,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2106,7 +2156,8 @@
                                                              0.42,
                                                              3.922
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2127,12 +2178,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2149,7 +2200,8 @@
                                                              0.42,
                                                              10.948
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2170,12 +2222,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2192,7 +2244,8 @@
                                                              0.42,
                                                              17.974
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2213,12 +2266,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2235,7 +2288,8 @@
                                                              0.42,
                                                              25
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2256,12 +2310,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2278,7 +2332,8 @@
                                                              0.42,
                                                              32.026
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2299,12 +2354,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2321,7 +2376,8 @@
                                                              0.42,
                                                              39.052
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2342,12 +2398,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2364,7 +2420,8 @@
                                                              0.42,
                                                              46.078
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2385,12 +2442,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2407,7 +2464,8 @@
                                                              0.42,
                                                              -101.135
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2429,12 +2487,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2451,7 +2509,8 @@
                                                              0.42,
                                                              -90.66
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2473,12 +2532,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2495,7 +2554,8 @@
                                                              0.42,
                                                              -80.186
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2517,12 +2577,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2539,7 +2599,8 @@
                                                              0.42,
                                                              -69.712
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2561,12 +2622,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2583,7 +2644,8 @@
                                                              0.42,
                                                              -59.237
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2605,12 +2667,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2627,7 +2689,8 @@
                                                              0.42,
                                                              -48.763
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2649,12 +2712,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2671,7 +2734,8 @@
                                                              0.42,
                                                              -38.288
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2693,12 +2757,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2715,7 +2779,8 @@
                                                              0.42,
                                                              -27.814
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2737,12 +2802,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2759,7 +2824,8 @@
                                                              0.42,
                                                              -17.34
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2781,12 +2847,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.32,
+                                            "Transparency":  0.24,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.86,
-                                                          0.38
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          2.4,
@@ -2803,7 +2869,8 @@
                                                              0.42,
                                                              -6.865
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2825,12 +2892,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.24,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.9,
-                                                          0.45
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          3.6,
@@ -2842,7 +2909,8 @@
                                                              0.44,
                                                              80.65
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2860,12 +2928,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.28,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.9,
-                                                          0.45
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          3.2,
@@ -2877,7 +2945,8 @@
                                                              0.44,
                                                              45.2
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2895,12 +2964,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.24,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.9,
-                                                          0.45
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          3.6,
@@ -2912,7 +2981,8 @@
                                                              0.44,
                                                              66
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2930,12 +3000,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.26,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
+                                                          1,
                                                           0.94,
-                                                          0.9,
-                                                          0.45
+                                                          0.5
                                                       ],
                                             "Size":  [
                                                          3.2,
@@ -2947,7 +3017,8 @@
                                                              0.44,
                                                              8
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -2965,12 +3036,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.22,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.7,
-                                                          0.95,
-                                                          0.55
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          3.8,
@@ -2982,7 +3053,8 @@
                                                              0.44,
                                                              80
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
@@ -3001,12 +3073,12 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.22,
+                                            "Transparency":  0.18,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
-                                                          0.7,
-                                                          0.95,
-                                                          0.55
+                                                          0.78,
+                                                          1,
+                                                          0.62
                                                       ],
                                             "Size":  [
                                                          3.8,
@@ -3018,7 +3090,8 @@
                                                              0.44,
                                                              16
                                                          ],
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "CastShadow":  false
                                         },
                          "attributes":  {
                                             "GeneratedBlockout":  true,
