@@ -9,11 +9,11 @@
                                             "CanCollide":  true,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Material":  "Grass",
+                                            "Material":  "Ground",
                                             "Color":  [
-                                                          0.25,
-                                                          0.43,
-                                                          0.22
+                                                          0.28,
+                                                          0.42,
+                                                          0.26
                                                       ],
                                             "Size":  [
                                                          300,
@@ -31,7 +31,8 @@
                          "attributes":  {
                                             "GeneratedBlockout":  true,
                                             "ReferenceScaled":  true,
-                                            "VisualOnly":  true
+                                            "VisualOnly":  true,
+                                            "GrassReadabilityCleanup":  true
                                         }
                      },
                      {

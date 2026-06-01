@@ -661,6 +661,162 @@
         "GeneratedBlockout": true,
         "VisualOnly": true
       }
+    },
+    {
+      "name": "FieldDressingPatch_NorthWest",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Locked": true,
+        "CastShadow": false,
+        "Transparency": 0.18,
+        "Material": "Ground",
+        "Color": [
+          0.22,
+          0.36,
+          0.18
+        ],
+        "Size": [
+          44,
+          0.08,
+          26
+        ],
+        "Orientation": [
+          0,
+          -12,
+          0
+        ],
+        "Position": [
+          -126,
+          0.08,
+          -78
+        ]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "GrassReadabilityCleanup": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "FieldDressingPatch_NorthEast",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Locked": true,
+        "CastShadow": false,
+        "Transparency": 0.2,
+        "Material": "Ground",
+        "Color": [
+          0.22,
+          0.36,
+          0.18
+        ],
+        "Size": [
+          42,
+          0.08,
+          28
+        ],
+        "Orientation": [
+          0,
+          16,
+          0
+        ],
+        "Position": [
+          126,
+          0.08,
+          -82
+        ]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "GrassReadabilityCleanup": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "FieldDressingPatch_WestEdge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Locked": true,
+        "CastShadow": false,
+        "Transparency": 0.22,
+        "Material": "Ground",
+        "Color": [
+          0.2,
+          0.34,
+          0.17
+        ],
+        "Size": [
+          22,
+          0.08,
+          54
+        ],
+        "Orientation": [
+          0,
+          7,
+          0
+        ],
+        "Position": [
+          -142,
+          0.08,
+          52
+        ]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "GrassReadabilityCleanup": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "FieldDressingPatch_EastEdge",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Locked": true,
+        "CastShadow": false,
+        "Transparency": 0.22,
+        "Material": "Ground",
+        "Color": [
+          0.2,
+          0.34,
+          0.17
+        ],
+        "Size": [
+          24,
+          0.08,
+          48
+        ],
+        "Orientation": [
+          0,
+          -8,
+          0
+        ],
+        "Position": [
+          132,
+          0.08,
+          48
+        ]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "GrassReadabilityCleanup": true,
+        "VisualOnly": true
+      }
     }
   ]
 }
