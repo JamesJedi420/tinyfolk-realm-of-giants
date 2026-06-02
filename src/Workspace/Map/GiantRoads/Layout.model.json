@@ -7,7 +7,7 @@
   },
   "children": [
     {
-      "name": "GiantRoad_ToHearth",
+      "name": "Road_Giant_PlazaToHearth",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -21,14 +21,14 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
-          76
+          10,
+          0.3,
+          72
         ],
         "Position": [
           0,
-          0.2,
-          -38
+          0.38,
+          -36
         ],
         "Locked": true,
         "CastShadow": false
@@ -36,12 +36,12 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToWorkYard",
+      "name": "Road_Giant_PlazaToWorkYard",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -55,18 +55,18 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
-          104
+          10,
+          0.3,
+          101
         ],
         "Orientation": [
           0,
-          64,
+          65,
           0
         ],
         "Position": [
-          -47,
-          0.2,
+          -46,
+          0.38,
           -21
         ],
         "Locked": true,
@@ -75,12 +75,12 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToStoneDistrict",
+      "name": "Road_Giant_PlazaToStoneDistrict",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -94,19 +94,19 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
-          90
+          10,
+          0.3,
+          89
         ],
         "Orientation": [
           0,
-          -57,
+          -61,
           0
         ],
         "Position": [
           39,
-          0.2,
-          -22
+          0.38,
+          -21.5
         ],
         "Locked": true,
         "CastShadow": false
@@ -114,12 +114,12 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToEconomyYard",
+      "name": "Road_Giant_PlazaToEconomyYard",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -133,19 +133,19 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
+          10,
+          0.3,
           84
         ],
         "Orientation": [
           0,
-          -132,
+          -49,
           0
         ],
         "Position": [
-          -31,
-          0.2,
-          27
+          -31.5,
+          0.38,
+          27.5
         ],
         "Locked": true,
         "CastShadow": false
@@ -153,12 +153,12 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
     {
-      "name": "GiantRoad_ToShrineField",
+      "name": "Road_Giant_PlazaToShrineField",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -172,19 +172,19 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
-          80
+          10,
+          0.3,
+          74
         ],
         "Orientation": [
           0,
-          -42,
+          48,
           0
         ],
         "Position": [
-          37,
-          0.2,
-          34
+          27.5,
+          0.38,
+          25
         ],
         "Locked": true,
         "CastShadow": false
@@ -192,7 +192,7 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
@@ -236,7 +236,7 @@
       }
     },
     {
-      "name": "GiantRoad_ToTradeDock",
+      "name": "Road_Giant_PlazaToTradeDock",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -250,19 +250,19 @@
           0.43
         ],
         "Size": [
-          18,
-          0.6,
-          104
+          10,
+          0.3,
+          130
         ],
         "Orientation": [
           0,
-          -52,
+          52,
           0
         ],
         "Position": [
-          74,
-          0.2,
-          55
+          51.5,
+          0.38,
+          40
         ],
         "Locked": true,
         "CastShadow": false
@@ -270,7 +270,7 @@
       "attributes": {
         "GeneratedBlockout": true,
         "RoadKind": "GiantMacro",
-        "WidthStuds": 18,
+        "WidthStuds": 10,
         "VisualOnly": true
       }
     },
