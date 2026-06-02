@@ -186,6 +186,330 @@
                                             "VisualOnly":  true,
                                             "HiddenForScreenshots":  true
                                         }
+                     },
+                     {
+                         "name":  "Marker_GiantHearth",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.9,
+                                                          0.28,
+                                                          0.18
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.25,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             0.35,
+                                                             -72
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Giant Hearth / Upgrade Board",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_WorkStation_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.58,
+                                                          0.95
+                                                      ],
+                                            "Size":  [
+                                                         28,
+                                                         0.25,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             -92,
+                                                             0.35,
+                                                             -37
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "WorkStation_A / Wood",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_MiningStation_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.64,
+                                                          0.96
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.25,
+                                                         20
+                                                     ],
+                                            "Position":  [
+                                                             78,
+                                                             0.35,
+                                                             -37
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "MiningStation_A / Stone",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Warehouse_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.95,
+                                                          0.48,
+                                                          0.84
+                                                      ],
+                                            "Size":  [
+                                                         28,
+                                                         0.25,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             -39,
+                                                             0.35,
+                                                             35
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Warehouse_A / Stored resources",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Granary_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.96,
+                                                          0.62,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         40,
+                                                         0.25,
+                                                         26
+                                                     ],
+                                            "Position":  [
+                                                             -67,
+                                                             0.35,
+                                                             70
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Granary_A / preserve src/Workspace/Map/Stations/Granary/Layout.model.json",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_Shrine_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.7,
+                                                          0.42,
+                                                          0.96
+                                                      ],
+                                            "Size":  [
+                                                         30,
+                                                         0.25,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             45,
+                                                             0.35,
+                                                             66
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Shrine_A / Essence",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_GiantControlStation_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.2,
+                                                          0.82,
+                                                          0.72
+                                                      ],
+                                            "Size":  [
+                                                         26,
+                                                         0.25,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             80,
+                                                             0.35,
+                                                             5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "GiantControlStation_A",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_TradeDockPlaceholder",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.18,
+                                                          0.72,
+                                                          0.92
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.25,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             0.35,
+                                                             80
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Trade Dock placeholder",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Marker_EscapeWinPad",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.46,
+                                                          0.95,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         18,
+                                                         0.25,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             0.35,
+                                                             16
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Escape Win Pad",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true
+                                        }
                      }
                  ]
 }
