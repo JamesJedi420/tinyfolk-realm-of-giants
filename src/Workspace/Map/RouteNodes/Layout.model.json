@@ -386,6 +386,160 @@
         "RouteNodeType": "rescue",
         "VisualOnly": true
       }
+    },
+    {
+      "name": "ObjectiveMarker_01",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [-80, 0.65, 0]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_02",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [-40, 0.65, -12]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_03",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [-50, 0.65, 45]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_04",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [50, 0.65, 12]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_05",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [25, 0.65, -22]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_06",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [18, 0.65, 58]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "ObjectiveMarker_07",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.34,
+        "Material": "SmoothPlastic",
+        "Color": [1, 0.72, 0.18],
+        "Shape": "Ball",
+        "Size": [4, 0.5, 4],
+        "Position": [-85, 0.65, 47]
+      },
+      "attributes": {
+        "DistributedObjectiveMarker": true,
+        "GeneratedBlockout": true,
+        "RouteNodeType": "objective",
+        "VisualOnly": true
+      }
     }
   ]
 }
