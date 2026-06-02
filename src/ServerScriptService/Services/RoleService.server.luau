@@ -392,6 +392,108 @@ local function setDownedAttributes(player: Player, snapshot: any)
 	player:SetAttribute("DownedCarryEligibleMarker", snapshot.carryEligibleMarker)
 end
 
+local function resolveOutcomeFromDownedReason(reason: string): string
+	local lowered = string.lower(reason)
+	if string.find(lowered, "escape", 1, true) ~= nil then
+		return "escape"
+	end
+	if string.find(lowered, "defense", 1, true) ~= nil then
+		return "defense"
+	end
+	if string.find(lowered, "return", 1, true) ~= nil then
+		return "return"
+	end
+
+	return "capture"
+end
+
+local function resolveDownedOutcomeRouting(userId: number, reason: string): (boolean, string)
+	if type(ProfilePersistenceGateway.ResolveEventOutcomeWriteBack) ~= "function" then
+		return false, "event_outcome_router_missing"
+	end
+
+	local routing = ProfilePersistenceGateway.ResolveEventOutcomeWriteBack({
+		outcome = resolveOutcomeFromDownedReason(reason),
+		userId = userId,
+		service = "RoleService",
+	})
+
+	if type(routing) ~= "table" or routing.accepted ~= true then
+		return false, tostring(if type(routing) == "table" then routing.reason else "event_outcome_router_invalid")
+	end
+
+	if type(routing.scopes) ~= "table" or routing.scopes.sessionRuntime ~= true then
+		return false, "event_outcome_session_runtime_rejected"
+	end
+
+	return true, "accepted"
+end
+
+local function applyDownedReconnectRouting(userId: number, input: any?): any
+	if type(ProfilePersistenceGateway.ResolveReconnectRestoreAction) ~= "function" then
+		return {
+			accepted = false,
+			reason = "reconnect_router_missing",
+		}
+	end
+
+	local payload = if type(input) == "table" then input else {}
+	local state = downedStates[userId]
+	local hasSessionRuntime = if payload.hasSessionRuntime ~= nil
+		then payload.hasSessionRuntime == true
+		else state ~= nil and DownedState.IsDowned(state)
+
+	local phase = payload.phase
+	if type(phase) ~= "string" then
+		if state == nil then
+			phase = "none"
+		elseif hasSessionRuntime then
+			phase = "active"
+		else
+			phase = "resolved"
+		end
+	end
+
+	local expectedSessionId = payload.expectedSessionId
+	if type(expectedSessionId) ~= "string" or expectedSessionId == "" then
+		expectedSessionId = tostring(userId)
+	end
+
+	local activeSessionId = payload.activeSessionId
+	if type(activeSessionId) ~= "string" or activeSessionId == "" then
+		activeSessionId = tostring(userId)
+	end
+
+	local routing = ProfilePersistenceGateway.ResolveReconnectRestoreAction({
+		phase = phase,
+		expectedSessionId = expectedSessionId,
+		activeSessionId = activeSessionId,
+		hasSessionRuntime = hasSessionRuntime,
+		userId = userId,
+		service = "RoleService",
+	})
+
+	if type(routing) ~= "table" or routing.accepted ~= true then
+		return if type(routing) == "table"
+			then routing
+			else {
+				accepted = false,
+				reason = "reconnect_router_invalid",
+			}
+	end
+
+	if routing.action == "clear_session_runtime" then
+		local resetState = DownedState.New(downedNow())
+		downedStates[userId] = resetState
+		local player = getPlayerByUserId(userId)
+		if player ~= nil then
+			setDownedAttributes(player, DownedState.Snapshot(resetState))
+		end
+	end
+
+	return routing
+end
+
 local function getOrCreateDownedState(userId: number): any
 	local existing = downedStates[userId]
 	if existing ~= nil then
@@ -825,6 +927,18 @@ function RoleService.setDowned(userId: number, duration: number, reason: string)
 		return false
 	end
 
+	local routingAccepted, routingReason = resolveDownedOutcomeRouting(userId, reason)
+	if not routingAccepted then
+		debugWarn(
+			string.format(
+				"Rejected setDowned userId=%d reason=event_outcome_routing_rejected detail=%s",
+				userId,
+				routingReason
+			)
+		)
+		return false
+	end
+
 	local nowSeconds = downedNow()
 	local safeZoneDecision = evaluateTargetSafeZone(player, nowSeconds)
 	local state = getOrCreateDownedState(userId)
@@ -918,6 +1032,9 @@ _G._RoleService_QueryAPI = {
 	end,
 	GetDownedSnapshot = function(userId: number): any
 		return RoleService.getDownedSnapshot(userId)
+	end,
+	ResolveDownedReconnectRouting = function(userId: number, input: any?): any
+		return applyDownedReconnectRouting(userId, input)
 	end,
 	GetActiveGiantRealmOwnerUserId = function(): number?
 		return activeGiantRealmOwnerUserId

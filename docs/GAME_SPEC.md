@@ -109,6 +109,11 @@ Operational state model:
 - In transit: being hauled between source and storage.
 - Stored: available to realm-level spend/use systems.
 
+Event-state ownership model:
+- Durable player preference fields remain player-profile owned.
+- Durable realm event persistence remains giant-realm profile owned.
+- Active capture/escape/defense/return participation state is session runtime only.
+
 ## Implementation Guidance for Future Slices
 - Keep systems deterministic and server-authoritative.
 - Prefer bounded vertical slices over broad generic frameworks.

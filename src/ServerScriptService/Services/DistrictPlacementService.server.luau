@@ -113,8 +113,18 @@ local function resolveAssemblyInputForRuntime(): any
 	if type(preferredTemplateId) == "string" and preferredTemplateId ~= "" then
 		local input, reason = RealmAssemblyPrototypeFixture.GetAssemblyInputForTemplate(preferredTemplateId)
 		if input ~= nil then
-			debugLog(string.format("Assembly selection template=%s source=config", preferredTemplateId))
-			return input
+			local validInput, validationReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+			if validInput then
+				debugLog(string.format("Assembly selection template=%s source=config", preferredTemplateId))
+				return input
+			end
+			debugWarn(
+				string.format(
+					"Assembly selection invalid template=%s source=config reason=%s",
+					preferredTemplateId,
+					tostring(validationReason)
+				)
+			)
 		end
 		debugWarn(
 			string.format(
@@ -141,11 +151,29 @@ local function resolveAssemblyInputForRuntime(): any
 		debugLog(string.format("Assembly selection template=%s source=registry", selectedTemplateId))
 	end
 
+	local validInput, validationReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(selectedInput)
+	if not validInput then
+		debugWarn(
+			string.format(
+				"Assembly selection invalid template=%s source=registry reason=%s",
+				tostring(selectedTemplateId),
+				tostring(validationReason)
+			)
+		)
+		debugWarn("Assembly selection fallback=prototype")
+		return RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+	end
+
 	return selectedInput
 end
 
 local prototypeOutputBuilt, prototypeOutputOrError = pcall(function()
-	return RealmChunkAssemblySchema.BuildAssemblyOutput(resolveAssemblyInputForRuntime())
+	local selectedInput = resolveAssemblyInputForRuntime()
+	local validInput, validationReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(selectedInput)
+	if not validInput then
+		error(string.format("assembly_input_contract_invalid reason=%s", tostring(validationReason)))
+	end
+	return RealmChunkAssemblySchema.BuildAssemblyOutput(selectedInput)
 end)
 if not prototypeOutputBuilt then
 	debugWarn(string.format("Failed to build prototype assembly output error=%s", tostring(prototypeOutputOrError)))

@@ -51,6 +51,8 @@ end
 local expectedApi = {
 	ConfigureOwnerLayer = true,
 	ResetForTests = true,
+	ResolveEventOutcomeWriteBack = true,
+	ResolveReconnectRestoreAction = true,
 	GetLoadedPlayerProfileData = true,
 	UpdateLoadedPlayerProfileData = true,
 	LoadPlayerProfile = true,

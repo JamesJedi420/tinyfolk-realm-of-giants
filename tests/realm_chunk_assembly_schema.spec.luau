@@ -556,6 +556,41 @@ local function run()
 		end
 	end
 
+	-- BLOCK 34: Assembly input contract accepts canonical prototype fixture input.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, true, "block34 input contract valid")
+		assertEqual(reason, nil, "block34 valid reason nil")
+	end
+
+	-- BLOCK 35: Assembly input contract rejects duplicate placement ids deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.placements[2].placementId = input.placements[1].placementId
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block35 input contract invalid")
+		assertEqual(reason, "assembly_input_placement_id_duplicate", "block35 duplicate reason")
+	end
+
+	-- BLOCK 36: Assembly input contract rejects missing placement chunk references.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.placements[1].chunkId = "MissingChunk"
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block36 input contract invalid")
+		assertEqual(reason, "assembly_input_placement_chunk_missing", "block36 missing chunk reason")
+	end
+
+	-- BLOCK 37: Assembly input contract rejects non-integer yaw transform values.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.placements[1].transform.yawQuarterTurns = 0.5
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block37 input contract invalid")
+		assertEqual(reason, "assembly_input_placement_transform_yaw_invalid", "block37 yaw reason")
+	end
+
 	print("realm_chunk_assembly_schema: all checks passed")
 end
 

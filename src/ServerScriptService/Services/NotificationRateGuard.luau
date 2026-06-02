@@ -49,11 +49,7 @@ local function isNonEmptyString(value: any): boolean
 end
 
 local function cloneStringNumberMap(source: { [string]: number }): { [string]: number }
-	local clone: { [string]: number } = {}
-	for key, value in pairs(source) do
-		clone[key] = value
-	end
-	return clone
+	return table.clone(source)
 end
 
 local function resolvePositiveNumber(value: any, fallback: number): number

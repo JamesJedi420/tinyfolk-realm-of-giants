@@ -372,6 +372,155 @@ local function resolveOccupiedBox(placement: ChunkPlacement, box: ChunkOccupiedB
 	}
 end
 
+local function isFiniteNumber(value: any): boolean
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value then
+		return false
+	end
+	if value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
+end
+
+local function isNonEmptyString(value: any): boolean
+	if type(value) ~= "string" then
+		return false
+	end
+	return value ~= ""
+end
+
+local function isValidVector3Data(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isFiniteNumber(value.x) then
+		return false
+	end
+	if not isFiniteNumber(value.y) then
+		return false
+	end
+	if not isFiniteNumber(value.z) then
+		return false
+	end
+	return true
+end
+
+function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (boolean, string?)
+	if type(input) ~= "table" then
+		return false, "assembly_input_invalid"
+	end
+
+	if type(input.chunkLibrary) ~= "table" then
+		return false, "assembly_input_chunk_library_invalid"
+	end
+	if type(input.placements) ~= "table" then
+		return false, "assembly_input_placements_invalid"
+	end
+	if type(input.declaredConnections) ~= "table" then
+		return false, "assembly_input_declared_connections_invalid"
+	end
+
+	local chunkCount = 0
+	for chunkId, chunk in pairs(input.chunkLibrary) do
+		chunkCount += 1
+		if not isNonEmptyString(chunkId) then
+			return false, "assembly_input_chunk_id_invalid"
+		end
+		if type(chunk) ~= "table" then
+			return false, "assembly_input_chunk_record_invalid"
+		end
+		if not isNonEmptyString(chunk.chunkId) or chunk.chunkId ~= chunkId then
+			return false, "assembly_input_chunk_record_chunk_id_invalid"
+		end
+		if not isNonEmptyString(chunk.chunkKind) then
+			return false, "assembly_input_chunk_kind_invalid"
+		end
+		if
+			type(chunk.authoringVersion) ~= "number"
+			or chunk.authoringVersion < 1
+			or chunk.authoringVersion % 1 ~= 0
+		then
+			return false, "assembly_input_chunk_authoring_version_invalid"
+		end
+		if type(chunk.tags) ~= "table" then
+			return false, "assembly_input_chunk_tags_invalid"
+		end
+		if type(chunk.sockets) ~= "table" then
+			return false, "assembly_input_chunk_sockets_invalid"
+		end
+		if type(chunk.content) ~= "table" then
+			return false, "assembly_input_chunk_content_invalid"
+		end
+		if type(chunk.content.routeGraph) ~= "table" then
+			return false, "assembly_input_chunk_route_graph_invalid"
+		end
+		if type(chunk.content.routeGraph.nodes) ~= "table" or type(chunk.content.routeGraph.edges) ~= "table" then
+			return false, "assembly_input_chunk_route_graph_shape_invalid"
+		end
+	end
+	if chunkCount < 1 then
+		return false, "assembly_input_chunk_library_empty"
+	end
+
+	if #input.placements < 1 then
+		return false, "assembly_input_placements_empty"
+	end
+
+	local seenPlacementIds: { [string]: boolean } = {}
+	for _, placement in ipairs(input.placements) do
+		if type(placement) ~= "table" then
+			return false, "assembly_input_placement_record_invalid"
+		end
+		if not isNonEmptyString(placement.placementId) then
+			return false, "assembly_input_placement_id_invalid"
+		end
+		if seenPlacementIds[placement.placementId] then
+			return false, "assembly_input_placement_id_duplicate"
+		end
+		seenPlacementIds[placement.placementId] = true
+
+		if not isNonEmptyString(placement.chunkId) then
+			return false, "assembly_input_placement_chunk_id_invalid"
+		end
+		if input.chunkLibrary[placement.chunkId] == nil then
+			return false, "assembly_input_placement_chunk_missing"
+		end
+
+		if type(placement.transform) ~= "table" then
+			return false, "assembly_input_placement_transform_invalid"
+		end
+		if not isValidVector3Data(placement.transform.position) then
+			return false, "assembly_input_placement_transform_position_invalid"
+		end
+		if not isFiniteNumber(placement.transform.yawQuarterTurns) or placement.transform.yawQuarterTurns % 1 ~= 0 then
+			return false, "assembly_input_placement_transform_yaw_invalid"
+		end
+	end
+
+	for _, connection in ipairs(input.declaredConnections) do
+		if type(connection) ~= "table" then
+			return false, "assembly_input_connection_record_invalid"
+		end
+		if not isNonEmptyString(connection.fromPlacementId) then
+			return false, "assembly_input_connection_from_placement_invalid"
+		end
+		if not isNonEmptyString(connection.fromSocketId) then
+			return false, "assembly_input_connection_from_socket_invalid"
+		end
+		if not isNonEmptyString(connection.toPlacementId) then
+			return false, "assembly_input_connection_to_placement_invalid"
+		end
+		if not isNonEmptyString(connection.toSocketId) then
+			return false, "assembly_input_connection_to_socket_invalid"
+		end
+	end
+
+	return true, nil
+end
+
 function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): AssemblyOutput
 	local placementById: { [string]: ChunkPlacement } = {}
 	for _, placement in ipairs(input.placements) do

@@ -2,6 +2,15 @@
 
 local ProfilePersistenceGateway: any = {}
 
+local EventStateOwnershipModel = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("EventStateOwnershipModel")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/EventStateOwnershipModel")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -121,6 +130,15 @@ local function getGiantBuildModeQueryApi(operation: string, profileKey: string):
 	return queryApi, nil
 end
 
+local function getEventStateOwnershipModel(): any
+	local overrideModel = _G._EventStateOwnershipModel_QueryAPI
+	if type(overrideModel) == "table" then
+		return overrideModel
+	end
+
+	return EventStateOwnershipModel
+end
+
 function ProfilePersistenceGateway.ConfigureOwnerLayer(newOwnerLayer: any)
 	ownerLayer = newOwnerLayer :: ProfileOwnerLayer
 end
@@ -138,6 +156,30 @@ function ProfilePersistenceGateway.LoadDefaultPlayerProfile(userId: any): Gatewa
 	local key = playerProfileKey(userId)
 	local data = makeDefaultPlayerProfileData(userId)
 	return makeSuccess("LoadDefaultPlayerProfile", key, data)
+end
+
+function ProfilePersistenceGateway.ResolveEventOutcomeWriteBack(input: any): any
+	local model = getEventStateOwnershipModel()
+	if type(model.ResolveWriteBackPlan) ~= "function" then
+		return {
+			accepted = false,
+			reason = "event_state_write_back_resolver_missing",
+		}
+	end
+
+	return model.ResolveWriteBackPlan(input)
+end
+
+function ProfilePersistenceGateway.ResolveReconnectRestoreAction(input: any): any
+	local model = getEventStateOwnershipModel()
+	if type(model.ResolveReconnectRestore) ~= "function" then
+		return {
+			accepted = false,
+			reason = "event_state_reconnect_resolver_missing",
+		}
+	end
+
+	return model.ResolveReconnectRestore(input)
 end
 
 function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
