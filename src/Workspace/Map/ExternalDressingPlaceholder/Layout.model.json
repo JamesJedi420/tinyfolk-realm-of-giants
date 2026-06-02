@@ -64,6 +64,329 @@
         "AllowedContent": "Explicit collision-only parts for imported dressing",
         "ExternalAssetsImported": false
       }
+    },
+    {
+      "name": "Dressing_Granary_SackCluster_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Sack_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Fabric",
+            "Color": [0.72, 0.58, 0.36],
+            "Size": [1.8, 0.7, 1.2],
+            "Position": [-79.5, 0.75, 62.3],
+            "Orientation": [0, 12, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "grain sacks",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Sack_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Fabric",
+            "Color": [0.76, 0.62, 0.4],
+            "Size": [1.7, 0.65, 1.15],
+            "Position": [-77.8, 0.73, 63.4],
+            "Orientation": [0, -18, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "grain sacks",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Sack_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Fabric",
+            "Color": [0.7, 0.55, 0.34],
+            "Size": [1.6, 0.6, 1.05],
+            "Position": [-78.8, 1.15, 63.1],
+            "Orientation": [0, 33, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "grain sacks",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Sack_04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Fabric",
+            "Color": [0.74, 0.59, 0.37],
+            "Size": [1.5, 0.58, 1],
+            "Position": [-76.7, 0.72, 62.2],
+            "Orientation": [0, 8, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "grain sacks",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "grain sacks",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_Granary_CrateCluster_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Crate_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.48, 0.31, 0.18],
+            "Size": [2.4, 1.2, 2.2],
+            "Position": [-56.5, 0.85, 62.2],
+            "Orientation": [0, 6, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "storage crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Crate_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.54, 0.36, 0.2],
+            "Size": [2.1, 1.05, 2],
+            "Position": [-53.9, 0.78, 63.5],
+            "Orientation": [0, -15, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "storage crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Crate_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.44, 0.28, 0.16],
+            "Size": [1.8, 0.9, 1.8],
+            "Position": [-55.1, 1.55, 62.7],
+            "Orientation": [0, 21, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "storage crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "storage crates",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_Granary_LoadingLip_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.16,
+        "Material": "Wood",
+        "Color": [0.55, 0.36, 0.2],
+        "Size": [24, 0.5, 3],
+        "Position": [-67, 0.45, 56],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DressingIntent": "raised loading lip in front of granary marker",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_Warehouse_CrateCluster_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Crate_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.5, 0.33, 0.18],
+            "Size": [2.5, 1.2, 2.2],
+            "Position": [-34.6, 0.85, 46.4],
+            "Orientation": [0, -10, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored-resource crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Crate_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.58, 0.38, 0.21],
+            "Size": [2.1, 1.05, 2],
+            "Position": [-32.2, 0.78, 47.8],
+            "Orientation": [0, 14, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored-resource crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Crate_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.06,
+            "Material": "Wood",
+            "Color": [0.46, 0.3, 0.17],
+            "Size": [1.9, 0.95, 1.8],
+            "Position": [-33.5, 1.55, 47.2],
+            "Orientation": [0, 28, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored-resource crates",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "stored-resource crates",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_EconomyYard_Sign_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Wood",
+        "Color": [0.62, 0.42, 0.22],
+        "Size": [8, 2, 0.35],
+        "Position": [-63, 1, 31],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DebugLabel": "Economy Yard Storage Dressing",
+        "DressingIntent": "Economy Yard Storage Dressing",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
     }
   ]
 }
