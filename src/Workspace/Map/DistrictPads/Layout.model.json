@@ -80,7 +80,7 @@
       }
     },
     {
-      "name": "Pad_TinyfolkVillage",
+      "name": "DistrictPad_TinyfolkVillage",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -96,7 +96,7 @@
         ],
         "Size": [
           45,
-          0.5,
+          0.25,
           40
         ],
         "Position": [
@@ -116,7 +116,7 @@
       }
     },
     {
-      "name": "Pad_WorkYard",
+      "name": "DistrictPad_WorkYard",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -132,7 +132,7 @@
         ],
         "Size": [
           50,
-          0.5,
+          0.25,
           38
         ],
         "Position": [
@@ -152,7 +152,7 @@
       }
     },
     {
-      "name": "Pad_StoneDistrict",
+      "name": "DistrictPad_StoneDistrict",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -168,7 +168,7 @@
         ],
         "Size": [
           72,
-          0.5,
+          0.25,
           46
         ],
         "Position": [
@@ -188,7 +188,7 @@
       }
     },
     {
-      "name": "Pad_Containment",
+      "name": "DistrictPad_Containment",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -204,7 +204,7 @@
         ],
         "Size": [
           38,
-          0.5,
+          0.25,
           22
         ],
         "Position": [
@@ -224,7 +224,7 @@
       }
     },
     {
-      "name": "Pad_ControlStation",
+      "name": "DistrictPad_ControlStationZone",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -240,7 +240,7 @@
         ],
         "Size": [
           45,
-          0.5,
+          0.25,
           55
         ],
         "Position": [
@@ -252,7 +252,7 @@
         "CastShadow": false
       },
       "attributes": {
-        "DistrictId": "ControlStation",
+        "DistrictId": "ControlStationZone",
         "GeneratedBlockout": true,
         "ReferenceX": 80,
         "ReferenceZ": 5,
@@ -260,7 +260,7 @@
       }
     },
     {
-      "name": "Pad_EconomyYard",
+      "name": "DistrictPad_EconomyYard",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -276,7 +276,7 @@
         ],
         "Size": [
           54,
-          0.5,
+          0.25,
           44
         ],
         "Position": [
@@ -370,7 +370,7 @@
       }
     },
     {
-      "name": "Pad_ShrineField",
+      "name": "DistrictPad_ShrineField",
       "className": "Part",
       "properties": {
         "Anchored": true,
@@ -386,7 +386,7 @@
         ],
         "Size": [
           52,
-          0.5,
+          0.25,
           42
         ],
         "Position": [
