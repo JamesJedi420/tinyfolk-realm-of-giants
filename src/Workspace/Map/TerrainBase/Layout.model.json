@@ -36,18 +36,18 @@
                                         }
                      },
                      {
-                         "name":  "GiantPlaza_Foundation",
+                         "name":  "GiantMacroPlaza_A",
                          "className":  "Part",
                          "properties":  {
                                             "Anchored":  true,
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Material":  "WoodPlanks",
+                                            "Material":  "Ground",
                                             "Color":  [
-                                                          0.72,
-                                                          0.62,
-                                                          0.42
+                                                          0.74,
+                                                          0.61,
+                                                          0.38
                                                       ],
                                             "Shape":  "Cylinder",
                                             "Size":  [
@@ -71,7 +71,9 @@
                          "attributes":  {
                                             "GeneratedBlockout":  true,
                                             "VisualOnly":  true,
-                                            "ReferenceSlice":  "MapFoundation"
+                                            "ReferenceSlice":  "GiantMacroPlaza",
+                                            "FootprintWidthStuds":  76,
+                                            "FootprintDepthStuds":  64
                                         }
                      },
                      {
