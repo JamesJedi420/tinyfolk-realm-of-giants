@@ -17,12 +17,13 @@
         "Material": "SmoothPlastic",
         "Color": [0.22, 0.62, 0.88],
         "Shape": "Ball",
-        "Size": [4, 4, 4],
-        "Position": [-112, 2, 8]
+        "Size": [3, 0.5, 3],
+        "Position": [-122, 0.5, 14]
       },
       "attributes": {
         "RouteGraphNode": "TinyfolkSpawn",
         "RouteNodeType": "spawn",
+        "GeneratedBlockout": true,
         "VisualOnly": true
       }
     },
@@ -194,6 +195,195 @@
         "ProtectedPath": true,
         "RouteGraphNode": "EscapeRoute_NorthTunnel",
         "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_EscapeWinPad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.36,
+        "Material": "SmoothPlastic",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [-150, 0.5, 16]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "escape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RootTunnel",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "SmoothPlastic",
+        "Color": [0.42, 0.5, 0.28],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [-132, 0.5, -12]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "root",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_ScoutMark",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "SmoothPlastic",
+        "Color": [0.5, 0.42, 0.28],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [-112, 0.5, -36]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "scout",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_Hide_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "SmoothPlastic",
+        "Color": [0.32, 0.58, 0.28],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [-60, 0.5, 5]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "hide",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_Hide_B",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "SmoothPlastic",
+        "Color": [0.32, 0.58, 0.28],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [5, 0.5, 38]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "hide",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_CrawlEntry",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.44,
+        "Material": "SmoothPlastic",
+        "Color": [0.42, 0.5, 0.28],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [103, 0.5, -5]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "crawl",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_FallbackEscape",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.36,
+        "Material": "SmoothPlastic",
+        "Color": [0.35, 0.82, 0.45],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [-18, 0.5, 92]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "fallbackEscape",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_WatchStone",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.4,
+        "Material": "SmoothPlastic",
+        "Color": [0.55, 0.45, 0.72],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [35, 0.5, 0]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "watch",
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Node_RescueRouteEntry",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.38,
+        "Material": "SmoothPlastic",
+        "Color": [0.95, 0.55, 0.18],
+        "Shape": "Ball",
+        "Size": [3, 0.5, 3],
+        "Position": [55, 0.5, -67]
+      },
+      "attributes": {
+        "GeneratedBlockout": true,
+        "RouteNodeType": "rescue",
         "VisualOnly": true
       }
     }
