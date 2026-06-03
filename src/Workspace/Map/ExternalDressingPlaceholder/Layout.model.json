@@ -2354,6 +2354,315 @@
         "NoControlStationGameplay": true,
         "VisualOnly": true
       }
+    },
+    {
+      "name": "Dressing_TradeDock_Platform_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.16,
+        "Material": "WoodPlanks",
+        "Color": [0.44, 0.3, 0.18],
+        "Size": [24, 0.35, 10],
+        "Position": [103, 0.55, 80],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DressingIntent": "dock platform placeholder near creek edge",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_TradeDock_Posts_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "DockPost_NorthWest",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.4, 1],
+            "Position": [92, 1.25, 75.8],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "DockPost_NorthEast",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.4, 1],
+            "Position": [114, 1.25, 75.8],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "DockPost_SouthWest",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.4, 1],
+            "Position": [92, 1.25, 84.2],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "DockPost_SouthEast",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.4, 1],
+            "Position": [114, 1.25, 84.2],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "DockPost_MidLeft",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.1, 1],
+            "Position": [98, 1.1, 80],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "DockPost_MidRight",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.35, 0.22, 0.12],
+            "Size": [1, 2.1, 1],
+            "Position": [108, 1.1, 80],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "dock support post",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "dock supports",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_TradeDock_CrateCluster_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "TradeCrate_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.48, 0.32, 0.18],
+            "Size": [3.4, 2, 2.6],
+            "Position": [92.3, 1.1, 75.2],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "trade cargo crate placeholder",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "TradeCrate_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.42, 0.26, 0.14],
+            "Size": [2.6, 1.6, 2.2],
+            "Position": [96, 0.9, 76.4],
+            "Orientation": [0, 12, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "trade cargo crate placeholder",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "TradeCrate_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.08,
+            "Material": "Wood",
+            "Color": [0.55, 0.38, 0.22],
+            "Size": [2.2, 1.3, 2.2],
+            "Position": [94.5, 1.95, 75.1],
+            "Orientation": [0, -8, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "trade cargo crate placeholder",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "trade cargo",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_TradeDock_BoatMarker_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.25,
+        "Material": "SmoothPlastic",
+        "Color": [0.23, 0.39, 0.5],
+        "Size": [10, 0.22, 4],
+        "Position": [116, 0.45, 92],
+        "Orientation": [0, 12, 0],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DressingIntent": "future boat/transport placeholder visual",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_TradeDock_Sign_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.2,
+        "Material": "Wood",
+        "Color": [0.5, 0.34, 0.18],
+        "Size": [8, 2, 0.35],
+        "Position": [103, 1, 66],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DebugLabel": "Trade Dock Placeholder",
+        "DressingIntent": "Trade Dock Placeholder",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
     }
   ]
 }
