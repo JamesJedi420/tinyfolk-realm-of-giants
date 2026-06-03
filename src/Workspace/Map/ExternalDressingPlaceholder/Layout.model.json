@@ -387,6 +387,269 @@
         "GeneratedBlockout": true,
         "VisualOnly": true
       }
+    },
+    {
+      "name": "Dressing_WorkYard_LogPile_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Log_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.42, 0.27, 0.14],
+            "Size": [5.6, 0.55, 0.55],
+            "Position": [-107.4, 0.72, -45.8],
+            "Orientation": [0, 8, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored logs near Work Yard",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Log_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.48, 0.31, 0.16],
+            "Size": [5.2, 0.5, 0.5],
+            "Position": [-105.7, 0.76, -44.6],
+            "Orientation": [0, 6, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored logs near Work Yard",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Log_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.38, 0.24, 0.13],
+            "Size": [4.8, 0.48, 0.48],
+            "Position": [-106.5, 1.2, -45.2],
+            "Orientation": [0, 10, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored logs near Work Yard",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Log_04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.45, 0.29, 0.15],
+            "Size": [4.4, 0.45, 0.45],
+            "Position": [-104.8, 1.18, -43.9],
+            "Orientation": [0, 4, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "stored logs near Work Yard",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "stored logs near Work Yard",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_WorkYard_ChoppingBlock_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.05,
+        "Material": "Wood",
+        "Color": [0.5, 0.32, 0.16],
+        "Size": [3, 1.2, 3],
+        "Position": [-88, 0.8, -55],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DressingIntent": "chopping/work surface",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_WorkYard_TimberStack_A",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Timber_01",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.56, 0.36, 0.18],
+            "Size": [6.2, 0.45, 1],
+            "Position": [-75.8, 0.72, -44.3],
+            "Orientation": [0, -6, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "lumber output",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Timber_02",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.5, 0.32, 0.17],
+            "Size": [5.8, 0.42, 0.95],
+            "Position": [-74.2, 0.74, -42.6],
+            "Orientation": [0, -8, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "lumber output",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Timber_03",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.58, 0.38, 0.19],
+            "Size": [5.4, 0.4, 0.9],
+            "Position": [-75.1, 1.13, -43.5],
+            "Orientation": [0, -5, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "lumber output",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        },
+        {
+          "name": "Timber_04",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.04,
+            "Material": "Wood",
+            "Color": [0.48, 0.3, 0.16],
+            "Size": [5, 0.38, 0.85],
+            "Position": [-73.6, 1.5, -42.2],
+            "Orientation": [0, -8, 0],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "DressingIntent": "lumber output",
+            "ExternalAssetsImported": false,
+            "GeneratedBlockout": true,
+            "VisualOnly": true
+          }
+        }
+      ],
+      "attributes": {
+        "DressingIntent": "lumber output",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "Dressing_WorkYard_ToolRack_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.12,
+        "Material": "Wood",
+        "Color": [0.44, 0.28, 0.15],
+        "Size": [5, 2.2, 0.35],
+        "Position": [-95, 1, -25],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "DebugLabel": "Work Yard Tool Storage",
+        "DressingIntent": "tool storage",
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "VisualOnly": true
+      }
     }
   ]
 }
