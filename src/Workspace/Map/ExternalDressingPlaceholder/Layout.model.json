@@ -79,10 +79,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Fabric",
-            "Color": [0.72, 0.58, 0.36],
-            "Size": [1.8, 0.7, 1.2],
-            "Position": [-79.5, 0.75, 62.3],
-            "Orientation": [0, 12, 0],
+            "Color": [
+              0.72,
+              0.58,
+              0.36
+            ],
+            "Size": [
+              1.8,
+              0.7,
+              1.2
+            ],
+            "Position": [
+              -79.5,
+              0.75,
+              62.3
+            ],
+            "Orientation": [
+              0,
+              12,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -103,10 +119,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Fabric",
-            "Color": [0.76, 0.62, 0.4],
-            "Size": [1.7, 0.65, 1.15],
-            "Position": [-77.8, 0.73, 63.4],
-            "Orientation": [0, -18, 0],
+            "Color": [
+              0.76,
+              0.62,
+              0.4
+            ],
+            "Size": [
+              1.7,
+              0.65,
+              1.15
+            ],
+            "Position": [
+              -77.8,
+              0.73,
+              63.4
+            ],
+            "Orientation": [
+              0,
+              -18,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -127,10 +159,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Fabric",
-            "Color": [0.7, 0.55, 0.34],
-            "Size": [1.6, 0.6, 1.05],
-            "Position": [-78.8, 1.15, 63.1],
-            "Orientation": [0, 33, 0],
+            "Color": [
+              0.7,
+              0.55,
+              0.34
+            ],
+            "Size": [
+              1.6,
+              0.6,
+              1.05
+            ],
+            "Position": [
+              -78.8,
+              1.15,
+              63.1
+            ],
+            "Orientation": [
+              0,
+              33,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -151,10 +199,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Fabric",
-            "Color": [0.74, 0.59, 0.37],
-            "Size": [1.5, 0.58, 1],
-            "Position": [-76.7, 0.72, 62.2],
-            "Orientation": [0, 8, 0],
+            "Color": [
+              0.74,
+              0.59,
+              0.37
+            ],
+            "Size": [
+              1.5,
+              0.58,
+              1
+            ],
+            "Position": [
+              -76.7,
+              0.72,
+              62.2
+            ],
+            "Orientation": [
+              0,
+              8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -187,10 +251,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.48, 0.31, 0.18],
-            "Size": [2.4, 1.2, 2.2],
-            "Position": [-56.5, 0.85, 62.2],
-            "Orientation": [0, 6, 0],
+            "Color": [
+              0.48,
+              0.31,
+              0.18
+            ],
+            "Size": [
+              2.4,
+              1.2,
+              2.2
+            ],
+            "Position": [
+              -56.5,
+              0.85,
+              62.2
+            ],
+            "Orientation": [
+              0,
+              6,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -211,10 +291,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.54, 0.36, 0.2],
-            "Size": [2.1, 1.05, 2],
-            "Position": [-53.9, 0.78, 63.5],
-            "Orientation": [0, -15, 0],
+            "Color": [
+              0.54,
+              0.36,
+              0.2
+            ],
+            "Size": [
+              2.1,
+              1.05,
+              2
+            ],
+            "Position": [
+              -53.9,
+              0.78,
+              63.5
+            ],
+            "Orientation": [
+              0,
+              -15,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -235,10 +331,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.44, 0.28, 0.16],
-            "Size": [1.8, 0.9, 1.8],
-            "Position": [-55.1, 1.55, 62.7],
-            "Orientation": [0, 21, 0],
+            "Color": [
+              0.44,
+              0.28,
+              0.16
+            ],
+            "Size": [
+              1.8,
+              0.9,
+              1.8
+            ],
+            "Position": [
+              -55.1,
+              1.55,
+              62.7
+            ],
+            "Orientation": [
+              0,
+              21,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -267,9 +379,21 @@
         "CanQuery": false,
         "Transparency": 0.16,
         "Material": "Wood",
-        "Color": [0.55, 0.36, 0.2],
-        "Size": [24, 0.5, 3],
-        "Position": [-67, 0.45, 56],
+        "Color": [
+          0.55,
+          0.36,
+          0.2
+        ],
+        "Size": [
+          24,
+          0.5,
+          3
+        ],
+        "Position": [
+          -67,
+          0.45,
+          56
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -294,10 +418,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.5, 0.33, 0.18],
-            "Size": [2.5, 1.2, 2.2],
-            "Position": [-34.6, 0.85, 46.4],
-            "Orientation": [0, -10, 0],
+            "Color": [
+              0.5,
+              0.33,
+              0.18
+            ],
+            "Size": [
+              2.5,
+              1.2,
+              2.2
+            ],
+            "Position": [
+              -34.6,
+              0.85,
+              46.4
+            ],
+            "Orientation": [
+              0,
+              -10,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -318,10 +458,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.58, 0.38, 0.21],
-            "Size": [2.1, 1.05, 2],
-            "Position": [-32.2, 0.78, 47.8],
-            "Orientation": [0, 14, 0],
+            "Color": [
+              0.58,
+              0.38,
+              0.21
+            ],
+            "Size": [
+              2.1,
+              1.05,
+              2
+            ],
+            "Position": [
+              -32.2,
+              0.78,
+              47.8
+            ],
+            "Orientation": [
+              0,
+              14,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -342,10 +498,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.46, 0.3, 0.17],
-            "Size": [1.9, 0.95, 1.8],
-            "Position": [-33.5, 1.55, 47.2],
-            "Orientation": [0, 28, 0],
+            "Color": [
+              0.46,
+              0.3,
+              0.17
+            ],
+            "Size": [
+              1.9,
+              0.95,
+              1.8
+            ],
+            "Position": [
+              -33.5,
+              1.55,
+              47.2
+            ],
+            "Orientation": [
+              0,
+              28,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -374,9 +546,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Wood",
-        "Color": [0.62, 0.42, 0.22],
-        "Size": [8, 2, 0.35],
-        "Position": [-63, 1, 31],
+        "Color": [
+          0.62,
+          0.42,
+          0.22
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          -63,
+          1,
+          31
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -402,10 +586,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.42, 0.27, 0.14],
-            "Size": [5.6, 0.55, 0.55],
-            "Position": [-107.4, 0.72, -45.8],
-            "Orientation": [0, 8, 0],
+            "Color": [
+              0.42,
+              0.27,
+              0.14
+            ],
+            "Size": [
+              5.6,
+              0.55,
+              0.55
+            ],
+            "Position": [
+              -107.4,
+              0.72,
+              -45.8
+            ],
+            "Orientation": [
+              0,
+              8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -426,10 +626,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.48, 0.31, 0.16],
-            "Size": [5.2, 0.5, 0.5],
-            "Position": [-105.7, 0.76, -44.6],
-            "Orientation": [0, 6, 0],
+            "Color": [
+              0.48,
+              0.31,
+              0.16
+            ],
+            "Size": [
+              5.2,
+              0.5,
+              0.5
+            ],
+            "Position": [
+              -105.7,
+              0.76,
+              -44.6
+            ],
+            "Orientation": [
+              0,
+              6,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -450,10 +666,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.38, 0.24, 0.13],
-            "Size": [4.8, 0.48, 0.48],
-            "Position": [-106.5, 1.2, -45.2],
-            "Orientation": [0, 10, 0],
+            "Color": [
+              0.38,
+              0.24,
+              0.13
+            ],
+            "Size": [
+              4.8,
+              0.48,
+              0.48
+            ],
+            "Position": [
+              -106.5,
+              1.2,
+              -45.2
+            ],
+            "Orientation": [
+              0,
+              10,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -474,10 +706,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.45, 0.29, 0.15],
-            "Size": [4.4, 0.45, 0.45],
-            "Position": [-104.8, 1.18, -43.9],
-            "Orientation": [0, 4, 0],
+            "Color": [
+              0.45,
+              0.29,
+              0.15
+            ],
+            "Size": [
+              4.4,
+              0.45,
+              0.45
+            ],
+            "Position": [
+              -104.8,
+              1.18,
+              -43.9
+            ],
+            "Orientation": [
+              0,
+              4,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -506,9 +754,21 @@
         "CanQuery": false,
         "Transparency": 0.05,
         "Material": "Wood",
-        "Color": [0.5, 0.32, 0.16],
-        "Size": [3, 1.2, 3],
-        "Position": [-88, 0.8, -55],
+        "Color": [
+          0.5,
+          0.32,
+          0.16
+        ],
+        "Size": [
+          3,
+          1.2,
+          3
+        ],
+        "Position": [
+          -88,
+          0.8,
+          -55
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -533,10 +793,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.56, 0.36, 0.18],
-            "Size": [6.2, 0.45, 1],
-            "Position": [-75.8, 0.72, -44.3],
-            "Orientation": [0, -6, 0],
+            "Color": [
+              0.56,
+              0.36,
+              0.18
+            ],
+            "Size": [
+              6.2,
+              0.45,
+              1
+            ],
+            "Position": [
+              -75.8,
+              0.72,
+              -44.3
+            ],
+            "Orientation": [
+              0,
+              -6,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -557,10 +833,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.5, 0.32, 0.17],
-            "Size": [5.8, 0.42, 0.95],
-            "Position": [-74.2, 0.74, -42.6],
-            "Orientation": [0, -8, 0],
+            "Color": [
+              0.5,
+              0.32,
+              0.17
+            ],
+            "Size": [
+              5.8,
+              0.42,
+              0.95
+            ],
+            "Position": [
+              -74.2,
+              0.74,
+              -42.6
+            ],
+            "Orientation": [
+              0,
+              -8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -581,10 +873,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.58, 0.38, 0.19],
-            "Size": [5.4, 0.4, 0.9],
-            "Position": [-75.1, 1.13, -43.5],
-            "Orientation": [0, -5, 0],
+            "Color": [
+              0.58,
+              0.38,
+              0.19
+            ],
+            "Size": [
+              5.4,
+              0.4,
+              0.9
+            ],
+            "Position": [
+              -75.1,
+              1.13,
+              -43.5
+            ],
+            "Orientation": [
+              0,
+              -5,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -605,10 +913,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Wood",
-            "Color": [0.48, 0.3, 0.16],
-            "Size": [5, 0.38, 0.85],
-            "Position": [-73.6, 1.5, -42.2],
-            "Orientation": [0, -8, 0],
+            "Color": [
+              0.48,
+              0.3,
+              0.16
+            ],
+            "Size": [
+              5,
+              0.38,
+              0.85
+            ],
+            "Position": [
+              -73.6,
+              1.5,
+              -42.2
+            ],
+            "Orientation": [
+              0,
+              -8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -637,9 +961,21 @@
         "CanQuery": false,
         "Transparency": 0.12,
         "Material": "Wood",
-        "Color": [0.44, 0.28, 0.15],
-        "Size": [5, 2.2, 0.35],
-        "Position": [-95, 1, -25],
+        "Color": [
+          0.44,
+          0.28,
+          0.15
+        ],
+        "Size": [
+          5,
+          2.2,
+          0.35
+        ],
+        "Position": [
+          -95,
+          1,
+          -25
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -665,10 +1001,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.42, 0.43, 0.4],
-            "Size": [2.3, 1.1, 1.8],
-            "Position": [61.8, 0.82, -49.1],
-            "Orientation": [0, 18, 7],
+            "Color": [
+              0.42,
+              0.43,
+              0.4
+            ],
+            "Size": [
+              2.3,
+              1.1,
+              1.8
+            ],
+            "Position": [
+              61.8,
+              0.82,
+              -49.1
+            ],
+            "Orientation": [
+              0,
+              18,
+              7
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -689,10 +1041,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.36, 0.37, 0.35],
-            "Size": [1.8, 0.9, 1.5],
-            "Position": [64.2, 0.73, -48.2],
-            "Orientation": [4, -16, 0],
+            "Color": [
+              0.36,
+              0.37,
+              0.35
+            ],
+            "Size": [
+              1.8,
+              0.9,
+              1.5
+            ],
+            "Position": [
+              64.2,
+              0.73,
+              -48.2
+            ],
+            "Orientation": [
+              4,
+              -16,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -713,10 +1081,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.47, 0.47, 0.44],
-            "Size": [2, 0.8, 1.2],
-            "Position": [63.2, 1.35, -47.6],
-            "Orientation": [0, 36, -5],
+            "Color": [
+              0.47,
+              0.47,
+              0.44
+            ],
+            "Size": [
+              2,
+              0.8,
+              1.2
+            ],
+            "Position": [
+              63.2,
+              1.35,
+              -47.6
+            ],
+            "Orientation": [
+              0,
+              36,
+              -5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -737,10 +1121,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.32, 0.33, 0.31],
-            "Size": [1.6, 0.75, 1.4],
-            "Position": [60.9, 0.68, -46.8],
-            "Orientation": [-3, 8, 4],
+            "Color": [
+              0.32,
+              0.33,
+              0.31
+            ],
+            "Size": [
+              1.6,
+              0.75,
+              1.4
+            ],
+            "Position": [
+              60.9,
+              0.68,
+              -46.8
+            ],
+            "Orientation": [
+              -3,
+              8,
+              4
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -761,10 +1161,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.4, 0.4, 0.38],
-            "Size": [1.7, 0.7, 1.1],
-            "Position": [65.1, 1.18, -49.5],
-            "Orientation": [5, -24, 3],
+            "Color": [
+              0.4,
+              0.4,
+              0.38
+            ],
+            "Size": [
+              1.7,
+              0.7,
+              1.1
+            ],
+            "Position": [
+              65.1,
+              1.18,
+              -49.5
+            ],
+            "Orientation": [
+              5,
+              -24,
+              3
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -797,10 +1213,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Slate",
-            "Color": [0.28, 0.32, 0.36],
-            "Size": [1.7, 0.85, 1.4],
-            "Position": [91.7, 0.72, -49.1],
-            "Orientation": [0, 14, 5],
+            "Color": [
+              0.28,
+              0.32,
+              0.36
+            ],
+            "Size": [
+              1.7,
+              0.85,
+              1.4
+            ],
+            "Position": [
+              91.7,
+              0.72,
+              -49.1
+            ],
+            "Orientation": [
+              0,
+              14,
+              5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -821,10 +1253,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Slate",
-            "Color": [0.34, 0.38, 0.42],
-            "Size": [1.4, 0.7, 1.2],
-            "Position": [94, 0.65, -48.1],
-            "Orientation": [3, -21, 0],
+            "Color": [
+              0.34,
+              0.38,
+              0.42
+            ],
+            "Size": [
+              1.4,
+              0.7,
+              1.2
+            ],
+            "Position": [
+              94,
+              0.65,
+              -48.1
+            ],
+            "Orientation": [
+              3,
+              -21,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -845,10 +1293,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Slate",
-            "Color": [0.24, 0.29, 0.33],
-            "Size": [1.2, 0.6, 1],
-            "Position": [93, 1.14, -48.7],
-            "Orientation": [0, 38, -4],
+            "Color": [
+              0.24,
+              0.29,
+              0.33
+            ],
+            "Size": [
+              1.2,
+              0.6,
+              1
+            ],
+            "Position": [
+              93,
+              1.14,
+              -48.7
+            ],
+            "Orientation": [
+              0,
+              38,
+              -4
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -869,10 +1333,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Slate",
-            "Color": [0.39, 0.42, 0.45],
-            "Size": [1.1, 0.55, 0.95],
-            "Position": [95.1, 1.02, -49.2],
-            "Orientation": [4, 9, 4],
+            "Color": [
+              0.39,
+              0.42,
+              0.45
+            ],
+            "Size": [
+              1.1,
+              0.55,
+              0.95
+            ],
+            "Position": [
+              95.1,
+              1.02,
+              -49.2
+            ],
+            "Orientation": [
+              4,
+              9,
+              4
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -905,10 +1385,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.48, 0.49, 0.47],
-            "Size": [4.4, 0.7, 1.8],
-            "Position": [90.2, 0.68, -31.8],
-            "Orientation": [0, 2, 0],
+            "Color": [
+              0.48,
+              0.49,
+              0.47
+            ],
+            "Size": [
+              4.4,
+              0.7,
+              1.8
+            ],
+            "Position": [
+              90.2,
+              0.68,
+              -31.8
+            ],
+            "Orientation": [
+              0,
+              2,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -929,10 +1425,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.42, 0.43, 0.41],
-            "Size": [4.1, 0.65, 1.6],
-            "Position": [92.2, 0.7, -30.4],
-            "Orientation": [0, 1, 0],
+            "Color": [
+              0.42,
+              0.43,
+              0.41
+            ],
+            "Size": [
+              4.1,
+              0.65,
+              1.6
+            ],
+            "Position": [
+              92.2,
+              0.7,
+              -30.4
+            ],
+            "Orientation": [
+              0,
+              1,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -953,10 +1465,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.5, 0.5, 0.48],
-            "Size": [3.8, 0.6, 1.5],
-            "Position": [91.1, 1.34, -31.1],
-            "Orientation": [0, 2, 0],
+            "Color": [
+              0.5,
+              0.5,
+              0.48
+            ],
+            "Size": [
+              3.8,
+              0.6,
+              1.5
+            ],
+            "Position": [
+              91.1,
+              1.34,
+              -31.1
+            ],
+            "Orientation": [
+              0,
+              2,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -977,10 +1505,26 @@
             "CanQuery": false,
             "Transparency": 0.04,
             "Material": "Slate",
-            "Color": [0.44, 0.45, 0.43],
-            "Size": [3.4, 0.55, 1.35],
-            "Position": [91.6, 1.9, -30.8],
-            "Orientation": [0, 2, 0],
+            "Color": [
+              0.44,
+              0.45,
+              0.43
+            ],
+            "Size": [
+              3.4,
+              0.55,
+              1.35
+            ],
+            "Position": [
+              91.6,
+              1.9,
+              -30.8
+            ],
+            "Orientation": [
+              0,
+              2,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1009,9 +1553,21 @@
         "CanQuery": false,
         "Transparency": 0.12,
         "Material": "Slate",
-        "Color": [0.38, 0.39, 0.37],
-        "Size": [4, 2.5, 24],
-        "Position": [111, 1.2, -43],
+        "Color": [
+          0.38,
+          0.39,
+          0.37
+        ],
+        "Size": [
+          4,
+          2.5,
+          24
+        ],
+        "Position": [
+          111,
+          1.2,
+          -43
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1032,9 +1588,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Slate",
-        "Color": [0.46, 0.43, 0.5],
-        "Size": [8, 2, 0.35],
-        "Position": [78, 1, -18],
+        "Color": [
+          0.46,
+          0.43,
+          0.5
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          78,
+          1,
+          -18
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1060,10 +1628,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.48, 0.43, 0.58],
-            "Size": [1.4, 2.6, 1],
-            "Position": [55, 1.3, 42.5],
-            "Orientation": [0, 5, 4],
+            "Color": [
+              0.48,
+              0.43,
+              0.58
+            ],
+            "Size": [
+              1.4,
+              2.6,
+              1
+            ],
+            "Position": [
+              55,
+              1.3,
+              42.5
+            ],
+            "Orientation": [
+              0,
+              5,
+              4
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1084,10 +1668,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.42, 0.38, 0.52],
-            "Size": [1.2, 2.2, 0.9],
-            "Position": [61.5, 1.15, 46.2],
-            "Orientation": [3, 28, -2],
+            "Color": [
+              0.42,
+              0.38,
+              0.52
+            ],
+            "Size": [
+              1.2,
+              2.2,
+              0.9
+            ],
+            "Position": [
+              61.5,
+              1.15,
+              46.2
+            ],
+            "Orientation": [
+              3,
+              28,
+              -2
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1108,10 +1708,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.5, 0.45, 0.6],
-            "Size": [1.3, 2.4, 0.95],
-            "Position": [62.2, 1.2, 53.5],
-            "Orientation": [-2, 64, 3],
+            "Color": [
+              0.5,
+              0.45,
+              0.6
+            ],
+            "Size": [
+              1.3,
+              2.4,
+              0.95
+            ],
+            "Position": [
+              62.2,
+              1.2,
+              53.5
+            ],
+            "Orientation": [
+              -2,
+              64,
+              3
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1132,10 +1748,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.46, 0.4, 0.56],
-            "Size": [1.15, 2.1, 0.9],
-            "Position": [55, 1.08, 57.5],
-            "Orientation": [0, -8, -3],
+            "Color": [
+              0.46,
+              0.4,
+              0.56
+            ],
+            "Size": [
+              1.15,
+              2.1,
+              0.9
+            ],
+            "Position": [
+              55,
+              1.08,
+              57.5
+            ],
+            "Orientation": [
+              0,
+              -8,
+              -3
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1156,10 +1788,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.4, 0.36, 0.5],
-            "Size": [1.2, 2.25, 0.9],
-            "Position": [48.6, 1.15, 53.4],
-            "Orientation": [2, -32, 2],
+            "Color": [
+              0.4,
+              0.36,
+              0.5
+            ],
+            "Size": [
+              1.2,
+              2.25,
+              0.9
+            ],
+            "Position": [
+              48.6,
+              1.15,
+              53.4
+            ],
+            "Orientation": [
+              2,
+              -32,
+              2
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1180,10 +1828,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.5, 0.44, 0.62],
-            "Size": [1.35, 2.5, 1],
-            "Position": [48.2, 1.25, 46.4],
-            "Orientation": [-2, -58, 4],
+            "Color": [
+              0.5,
+              0.44,
+              0.62
+            ],
+            "Size": [
+              1.35,
+              2.5,
+              1
+            ],
+            "Position": [
+              48.2,
+              1.25,
+              46.4
+            ],
+            "Orientation": [
+              -2,
+              -58,
+              4
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1212,9 +1876,21 @@
         "CanQuery": false,
         "Transparency": 0.18,
         "Material": "Neon",
-        "Color": [0.82, 0.45, 1],
-        "Size": [2.4, 1.2, 2.4],
-        "Position": [45, 1, 58],
+        "Color": [
+          0.82,
+          0.45,
+          1
+        ],
+        "Size": [
+          2.4,
+          1.2,
+          2.4
+        ],
+        "Position": [
+          45,
+          1,
+          58
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1239,10 +1915,26 @@
             "CanQuery": false,
             "Transparency": 0.1,
             "Material": "Slate",
-            "Color": [0.5, 0.49, 0.54],
-            "Size": [2.5, 0.28, 1.6],
-            "Position": [24.5, 0.7, 55.7],
-            "Orientation": [0, -18, 0],
+            "Color": [
+              0.5,
+              0.49,
+              0.54
+            ],
+            "Size": [
+              2.5,
+              0.28,
+              1.6
+            ],
+            "Position": [
+              24.5,
+              0.7,
+              55.7
+            ],
+            "Orientation": [
+              0,
+              -18,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1263,10 +1955,26 @@
             "CanQuery": false,
             "Transparency": 0.1,
             "Material": "Slate",
-            "Color": [0.45, 0.44, 0.5],
-            "Size": [2.2, 0.26, 1.4],
-            "Position": [28.1, 0.7, 58.2],
-            "Orientation": [0, 12, 0],
+            "Color": [
+              0.45,
+              0.44,
+              0.5
+            ],
+            "Size": [
+              2.2,
+              0.26,
+              1.4
+            ],
+            "Position": [
+              28.1,
+              0.7,
+              58.2
+            ],
+            "Orientation": [
+              0,
+              12,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1287,10 +1995,26 @@
             "CanQuery": false,
             "Transparency": 0.1,
             "Material": "Slate",
-            "Color": [0.53, 0.51, 0.57],
-            "Size": [2.4, 0.28, 1.55],
-            "Position": [31.7, 0.7, 59.1],
-            "Orientation": [0, -8, 0],
+            "Color": [
+              0.53,
+              0.51,
+              0.57
+            ],
+            "Size": [
+              2.4,
+              0.28,
+              1.55
+            ],
+            "Position": [
+              31.7,
+              0.7,
+              59.1
+            ],
+            "Orientation": [
+              0,
+              -8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1311,10 +2035,26 @@
             "CanQuery": false,
             "Transparency": 0.1,
             "Material": "Slate",
-            "Color": [0.48, 0.46, 0.53],
-            "Size": [2.1, 0.25, 1.35],
-            "Position": [35.2, 0.7, 58.5],
-            "Orientation": [0, 18, 0],
+            "Color": [
+              0.48,
+              0.46,
+              0.53
+            ],
+            "Size": [
+              2.1,
+              0.25,
+              1.35
+            ],
+            "Position": [
+              35.2,
+              0.7,
+              58.5
+            ],
+            "Orientation": [
+              0,
+              18,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1343,9 +2083,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Slate",
-        "Color": [0.58, 0.42, 0.7],
-        "Size": [8, 2, 0.35],
-        "Position": [62, 1, 30],
+        "Color": [
+          0.58,
+          0.42,
+          0.7
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          62,
+          1,
+          30
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1371,10 +2123,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.45, 0.3, 0.18],
-            "Size": [2.8, 1.4, 2.4],
-            "Position": [-128.4, 0.9, 3.8],
-            "Orientation": [0, -12, 0],
+            "Color": [
+              0.45,
+              0.3,
+              0.18
+            ],
+            "Size": [
+              2.8,
+              1.4,
+              2.4
+            ],
+            "Position": [
+              -128.4,
+              0.9,
+              3.8
+            ],
+            "Orientation": [
+              0,
+              -12,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1395,10 +2163,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.5, 0.34, 0.2],
-            "Size": [2.4, 1.25, 2.1],
-            "Position": [-124.9, 0.83, 6.4],
-            "Orientation": [0, 18, 0],
+            "Color": [
+              0.5,
+              0.34,
+              0.2
+            ],
+            "Size": [
+              2.4,
+              1.25,
+              2.1
+            ],
+            "Position": [
+              -124.9,
+              0.83,
+              6.4
+            ],
+            "Orientation": [
+              0,
+              18,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1419,10 +2203,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.42, 0.28, 0.17],
-            "Size": [2.5, 1.3, 2.2],
-            "Position": [-127.3, 0.86, 7.9],
-            "Orientation": [0, 7, 0],
+            "Color": [
+              0.42,
+              0.28,
+              0.17
+            ],
+            "Size": [
+              2.5,
+              1.3,
+              2.2
+            ],
+            "Position": [
+              -127.3,
+              0.86,
+              7.9
+            ],
+            "Orientation": [
+              0,
+              7,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1443,10 +2243,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.55, 0.38, 0.23],
-            "Size": [2.1, 1.15, 1.9],
-            "Position": [-123.6, 0.78, 3.2],
-            "Orientation": [0, -25, 0],
+            "Color": [
+              0.55,
+              0.38,
+              0.23
+            ],
+            "Size": [
+              2.1,
+              1.15,
+              1.9
+            ],
+            "Position": [
+              -123.6,
+              0.78,
+              3.2
+            ],
+            "Orientation": [
+              0,
+              -25,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1479,9 +2295,21 @@
             "CanQuery": false,
             "Transparency": 0.12,
             "Material": "Slate",
-            "Color": [0.24, 0.22, 0.2],
-            "Size": [2.8, 0.22, 2.8],
-            "Position": [-116, 0.55, 18],
+            "Color": [
+              0.24,
+              0.22,
+              0.2
+            ],
+            "Size": [
+              2.8,
+              0.22,
+              2.8
+            ],
+            "Position": [
+              -116,
+              0.55,
+              18
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1502,10 +2330,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.16, 0.1, 0.07],
-            "Size": [1.6, 0.22, 0.28],
-            "Position": [-116.4, 0.72, 18],
-            "Orientation": [0, 28, 0],
+            "Color": [
+              0.16,
+              0.1,
+              0.07
+            ],
+            "Size": [
+              1.6,
+              0.22,
+              0.28
+            ],
+            "Position": [
+              -116.4,
+              0.72,
+              18
+            ],
+            "Orientation": [
+              0,
+              28,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1526,10 +2370,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.18, 0.11, 0.08],
-            "Size": [1.45, 0.2, 0.26],
-            "Position": [-115.7, 0.73, 18.2],
-            "Orientation": [0, -34, 0],
+            "Color": [
+              0.18,
+              0.11,
+              0.08
+            ],
+            "Size": [
+              1.45,
+              0.2,
+              0.26
+            ],
+            "Position": [
+              -115.7,
+              0.73,
+              18.2
+            ],
+            "Orientation": [
+              0,
+              -34,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1550,9 +2410,21 @@
             "CanQuery": false,
             "Transparency": 0.3,
             "Material": "Neon",
-            "Color": [1, 0.45, 0.12],
-            "Size": [0.8, 0.12, 0.8],
-            "Position": [-116, 0.8, 18],
+            "Color": [
+              1,
+              0.45,
+              0.12
+            ],
+            "Size": [
+              0.8,
+              0.12,
+              0.8
+            ],
+            "Position": [
+              -116,
+              0.8,
+              18
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1586,10 +2458,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.58, 0.42, 0.24],
-            "Size": [1.3, 0.7, 1.1],
-            "Position": [-109.2, 0.7, 2.4],
-            "Orientation": [0, 11, 0],
+            "Color": [
+              0.58,
+              0.42,
+              0.24
+            ],
+            "Size": [
+              1.3,
+              0.7,
+              1.1
+            ],
+            "Position": [
+              -109.2,
+              0.7,
+              2.4
+            ],
+            "Orientation": [
+              0,
+              11,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1610,10 +2498,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.62, 0.46, 0.27],
-            "Size": [1.15, 0.65, 1],
-            "Position": [-107.6, 0.68, 3.5],
-            "Orientation": [0, -18, 0],
+            "Color": [
+              0.62,
+              0.46,
+              0.27
+            ],
+            "Size": [
+              1.15,
+              0.65,
+              1
+            ],
+            "Position": [
+              -107.6,
+              0.68,
+              3.5
+            ],
+            "Orientation": [
+              0,
+              -18,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1634,10 +2538,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.5, 0.36, 0.21],
-            "Size": [1, 0.58, 0.9],
-            "Position": [-106.6, 0.64, 2.2],
-            "Orientation": [0, 26, 0],
+            "Color": [
+              0.5,
+              0.36,
+              0.21
+            ],
+            "Size": [
+              1,
+              0.58,
+              0.9
+            ],
+            "Position": [
+              -106.6,
+              0.64,
+              2.2
+            ],
+            "Orientation": [
+              0,
+              26,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1670,10 +2590,26 @@
             "CanQuery": false,
             "Transparency": 0.22,
             "Material": "SmoothPlastic",
-            "Color": [0.11, 0.08, 0.05],
-            "Size": [4, 1.4, 1.2],
-            "Position": [-132, 0.85, -12.6],
-            "Orientation": [0, 0, 0],
+            "Color": [
+              0.11,
+              0.08,
+              0.05
+            ],
+            "Size": [
+              4,
+              1.4,
+              1.2
+            ],
+            "Position": [
+              -132,
+              0.85,
+              -12.6
+            ],
+            "Orientation": [
+              0,
+              0,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1694,10 +2630,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.36, 0.25, 0.14],
-            "Size": [4.6, 0.45, 0.7],
-            "Position": [-132, 1.55, -12.1],
-            "Orientation": [0, 0, 0],
+            "Color": [
+              0.36,
+              0.25,
+              0.14
+            ],
+            "Size": [
+              4.6,
+              0.45,
+              0.7
+            ],
+            "Position": [
+              -132,
+              1.55,
+              -12.1
+            ],
+            "Orientation": [
+              0,
+              0,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1718,10 +2670,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.32, 0.22, 0.12],
-            "Size": [0.55, 1.5, 0.65],
-            "Position": [-134.2, 0.85, -12.1],
-            "Orientation": [0, 0, -8],
+            "Color": [
+              0.32,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              0.55,
+              1.5,
+              0.65
+            ],
+            "Position": [
+              -134.2,
+              0.85,
+              -12.1
+            ],
+            "Orientation": [
+              0,
+              0,
+              -8
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1742,10 +2710,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.32, 0.22, 0.12],
-            "Size": [0.55, 1.5, 0.65],
-            "Position": [-129.8, 0.85, -12.1],
-            "Orientation": [0, 0, 8],
+            "Color": [
+              0.32,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              0.55,
+              1.5,
+              0.65
+            ],
+            "Position": [
+              -129.8,
+              0.85,
+              -12.1
+            ],
+            "Orientation": [
+              0,
+              0,
+              8
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1774,9 +2758,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Wood",
-        "Color": [0.5, 0.35, 0.2],
-        "Size": [8, 2, 0.35],
-        "Position": [-118, 1, 28],
+        "Color": [
+          0.5,
+          0.35,
+          0.2
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          -118,
+          1,
+          28
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1802,9 +2798,21 @@
             "CanQuery": false,
             "Transparency": 0.14,
             "Material": "Wood",
-            "Color": [0.38, 0.22, 0.16],
-            "Size": [25, 0.55, 0.65],
-            "Position": [55, 0.72, -88.5],
+            "Color": [
+              0.38,
+              0.22,
+              0.16
+            ],
+            "Size": [
+              25,
+              0.55,
+              0.65
+            ],
+            "Position": [
+              55,
+              0.72,
+              -88.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1825,9 +2833,21 @@
             "CanQuery": false,
             "Transparency": 0.14,
             "Material": "Wood",
-            "Color": [0.38, 0.22, 0.16],
-            "Size": [0.65, 0.55, 18],
-            "Position": [42.5, 0.72, -78.5],
+            "Color": [
+              0.38,
+              0.22,
+              0.16
+            ],
+            "Size": [
+              0.65,
+              0.55,
+              18
+            ],
+            "Position": [
+              42.5,
+              0.72,
+              -78.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1848,9 +2868,21 @@
             "CanQuery": false,
             "Transparency": 0.14,
             "Material": "Wood",
-            "Color": [0.38, 0.22, 0.16],
-            "Size": [0.65, 0.55, 18],
-            "Position": [67.5, 0.72, -78.5],
+            "Color": [
+              0.38,
+              0.22,
+              0.16
+            ],
+            "Size": [
+              0.65,
+              0.55,
+              18
+            ],
+            "Position": [
+              67.5,
+              0.72,
+              -78.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1871,9 +2903,21 @@
             "CanQuery": false,
             "Transparency": 0.14,
             "Material": "Wood",
-            "Color": [0.38, 0.22, 0.16],
-            "Size": [7, 0.55, 0.65],
-            "Position": [46, 0.72, -68.5],
+            "Color": [
+              0.38,
+              0.22,
+              0.16
+            ],
+            "Size": [
+              7,
+              0.55,
+              0.65
+            ],
+            "Position": [
+              46,
+              0.72,
+              -68.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1894,9 +2938,21 @@
             "CanQuery": false,
             "Transparency": 0.14,
             "Material": "Wood",
-            "Color": [0.38, 0.22, 0.16],
-            "Size": [7, 0.55, 0.65],
-            "Position": [64, 0.72, -68.5],
+            "Color": [
+              0.38,
+              0.22,
+              0.16
+            ],
+            "Size": [
+              7,
+              0.55,
+              0.65
+            ],
+            "Position": [
+              64,
+              0.72,
+              -68.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1925,9 +2981,21 @@
         "CanQuery": false,
         "Transparency": 0.12,
         "Material": "Wood",
-        "Color": [0.58, 0.28, 0.16],
-        "Size": [1.2, 2.4, 0.45],
-        "Position": [43, 1, -67],
+        "Color": [
+          0.58,
+          0.28,
+          0.16
+        ],
+        "Size": [
+          1.2,
+          2.4,
+          0.45
+        ],
+        "Position": [
+          43,
+          1,
+          -67
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -1953,10 +3021,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.45, 0.27, 0.17],
-            "Size": [2.4, 1.1, 2],
-            "Position": [66.2, 0.8, -84.8],
-            "Orientation": [0, 12, 0],
+            "Color": [
+              0.45,
+              0.27,
+              0.17
+            ],
+            "Size": [
+              2.4,
+              1.1,
+              2
+            ],
+            "Position": [
+              66.2,
+              0.8,
+              -84.8
+            ],
+            "Orientation": [
+              0,
+              12,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -1977,10 +3061,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.52, 0.32, 0.19],
-            "Size": [2, 0.95, 1.8],
-            "Position": [68.4, 0.72, -83.6],
-            "Orientation": [0, -14, 0],
+            "Color": [
+              0.52,
+              0.32,
+              0.19
+            ],
+            "Size": [
+              2,
+              0.95,
+              1.8
+            ],
+            "Position": [
+              68.4,
+              0.72,
+              -83.6
+            ],
+            "Orientation": [
+              0,
+              -14,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2001,10 +3101,26 @@
             "CanQuery": false,
             "Transparency": 0.06,
             "Material": "Wood",
-            "Color": [0.4, 0.24, 0.15],
-            "Size": [1.7, 0.8, 1.5],
-            "Position": [67.2, 1.35, -84.1],
-            "Orientation": [0, 24, 0],
+            "Color": [
+              0.4,
+              0.24,
+              0.15
+            ],
+            "Size": [
+              1.7,
+              0.8,
+              1.5
+            ],
+            "Position": [
+              67.2,
+              1.35,
+              -84.1
+            ],
+            "Orientation": [
+              0,
+              24,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2033,9 +3149,21 @@
         "CanQuery": false,
         "Transparency": 0.24,
         "Material": "Neon",
-        "Color": [1, 0.58, 0.2],
-        "Size": [2.4, 0.35, 2.4],
-        "Position": [55, 0.8, -67],
+        "Color": [
+          1,
+          0.58,
+          0.2
+        ],
+        "Size": [
+          2.4,
+          0.35,
+          2.4
+        ],
+        "Position": [
+          55,
+          0.8,
+          -67
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2057,9 +3185,21 @@
         "CanQuery": false,
         "Transparency": 0.22,
         "Material": "Slate",
-        "Color": [0.35, 0.33, 0.3],
-        "Size": [18, 0.35, 12],
-        "Position": [80, 0.55, 5],
+        "Color": [
+          0.35,
+          0.33,
+          0.3
+        ],
+        "Size": [
+          18,
+          0.35,
+          12
+        ],
+        "Position": [
+          80,
+          0.55,
+          5
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2085,9 +3225,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.28, 0.29, 0.32],
-            "Size": [3.2, 1.2, 3.2],
-            "Position": [80, 0.95, 0],
+            "Color": [
+              0.28,
+              0.29,
+              0.32
+            ],
+            "Size": [
+              3.2,
+              1.2,
+              3.2
+            ],
+            "Position": [
+              80,
+              0.95,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2108,9 +3260,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.34, 0.32, 0.38],
-            "Size": [1.4, 4.2, 1.4],
-            "Position": [80, 2.5, 0],
+            "Color": [
+              0.34,
+              0.32,
+              0.38
+            ],
+            "Size": [
+              1.4,
+              4.2,
+              1.4
+            ],
+            "Position": [
+              80,
+              2.5,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2131,9 +3295,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Slate",
-            "Color": [0.42, 0.36, 0.48],
-            "Size": [2.4, 0.7, 2.4],
-            "Position": [80, 4.75, 0],
+            "Color": [
+              0.42,
+              0.36,
+              0.48
+            ],
+            "Size": [
+              2.4,
+              0.7,
+              2.4
+            ],
+            "Position": [
+              80,
+              4.75,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2167,9 +3343,21 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [3, 0.22, 1],
-            "Position": [80, 0.65, -3.5],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              3,
+              0.22,
+              1
+            ],
+            "Position": [
+              80,
+              0.65,
+              -3.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2190,9 +3378,21 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [3, 0.22, 1],
-            "Position": [80, 0.65, 13.5],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              3,
+              0.22,
+              1
+            ],
+            "Position": [
+              80,
+              0.65,
+              13.5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2213,9 +3413,21 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [1, 0.22, 3],
-            "Position": [90.5, 0.65, 5],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              1,
+              0.22,
+              3
+            ],
+            "Position": [
+              90.5,
+              0.65,
+              5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2236,9 +3448,21 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [1, 0.22, 3],
-            "Position": [69.5, 0.65, 5],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              1,
+              0.22,
+              3
+            ],
+            "Position": [
+              69.5,
+              0.65,
+              5
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2259,10 +3483,26 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [2.4, 0.22, 0.9],
-            "Position": [87.5, 0.65, -1.2],
-            "Orientation": [0, 35, 0],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              2.4,
+              0.22,
+              0.9
+            ],
+            "Position": [
+              87.5,
+              0.65,
+              -1.2
+            ],
+            "Orientation": [
+              0,
+              35,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2283,10 +3523,26 @@
             "CanQuery": false,
             "Transparency": 0.2,
             "Material": "Neon",
-            "Color": [0.95, 0.55, 0.15],
-            "Size": [2.4, 0.22, 0.9],
-            "Position": [72.5, 0.65, -1.2],
-            "Orientation": [0, -35, 0],
+            "Color": [
+              0.95,
+              0.55,
+              0.15
+            ],
+            "Size": [
+              2.4,
+              0.22,
+              0.9
+            ],
+            "Position": [
+              72.5,
+              0.65,
+              -1.2
+            ],
+            "Orientation": [
+              0,
+              -35,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2316,9 +3572,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Neon",
-        "Color": [0.3, 0.85, 0.75],
-        "Size": [2.4, 0.3, 2.4],
-        "Position": [103, 0.8, -5],
+        "Color": [
+          0.3,
+          0.85,
+          0.75
+        ],
+        "Size": [
+          2.4,
+          0.3,
+          2.4
+        ],
+        "Position": [
+          103,
+          0.8,
+          -5
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2340,9 +3608,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Slate",
-        "Color": [0.42, 0.38, 0.48],
-        "Size": [8, 2, 0.35],
-        "Position": [80, 1, 26],
+        "Color": [
+          0.42,
+          0.38,
+          0.48
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          80,
+          1,
+          26
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2365,9 +3645,21 @@
         "CanQuery": false,
         "Transparency": 0.16,
         "Material": "WoodPlanks",
-        "Color": [0.44, 0.3, 0.18],
-        "Size": [24, 0.35, 10],
-        "Position": [103, 0.55, 80],
+        "Color": [
+          0.44,
+          0.3,
+          0.18
+        ],
+        "Size": [
+          24,
+          0.35,
+          10
+        ],
+        "Position": [
+          103,
+          0.55,
+          80
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2393,9 +3685,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.4, 1],
-            "Position": [92, 1.25, 75.8],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.4,
+              1
+            ],
+            "Position": [
+              92,
+              1.25,
+              75.8
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2416,9 +3720,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.4, 1],
-            "Position": [114, 1.25, 75.8],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.4,
+              1
+            ],
+            "Position": [
+              114,
+              1.25,
+              75.8
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2439,9 +3755,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.4, 1],
-            "Position": [92, 1.25, 84.2],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.4,
+              1
+            ],
+            "Position": [
+              92,
+              1.25,
+              84.2
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2462,9 +3790,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.4, 1],
-            "Position": [114, 1.25, 84.2],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.4,
+              1
+            ],
+            "Position": [
+              114,
+              1.25,
+              84.2
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2485,9 +3825,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.1, 1],
-            "Position": [98, 1.1, 80],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.1,
+              1
+            ],
+            "Position": [
+              98,
+              1.1,
+              80
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2508,9 +3860,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.35, 0.22, 0.12],
-            "Size": [1, 2.1, 1],
-            "Position": [108, 1.1, 80],
+            "Color": [
+              0.35,
+              0.22,
+              0.12
+            ],
+            "Size": [
+              1,
+              2.1,
+              1
+            ],
+            "Position": [
+              108,
+              1.1,
+              80
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2544,9 +3908,21 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.48, 0.32, 0.18],
-            "Size": [3.4, 2, 2.6],
-            "Position": [92.3, 1.1, 75.2],
+            "Color": [
+              0.48,
+              0.32,
+              0.18
+            ],
+            "Size": [
+              3.4,
+              2,
+              2.6
+            ],
+            "Position": [
+              92.3,
+              1.1,
+              75.2
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2567,10 +3943,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.42, 0.26, 0.14],
-            "Size": [2.6, 1.6, 2.2],
-            "Position": [96, 0.9, 76.4],
-            "Orientation": [0, 12, 0],
+            "Color": [
+              0.42,
+              0.26,
+              0.14
+            ],
+            "Size": [
+              2.6,
+              1.6,
+              2.2
+            ],
+            "Position": [
+              96,
+              0.9,
+              76.4
+            ],
+            "Orientation": [
+              0,
+              12,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2591,10 +3983,26 @@
             "CanQuery": false,
             "Transparency": 0.08,
             "Material": "Wood",
-            "Color": [0.55, 0.38, 0.22],
-            "Size": [2.2, 1.3, 2.2],
-            "Position": [94.5, 1.95, 75.1],
-            "Orientation": [0, -8, 0],
+            "Color": [
+              0.55,
+              0.38,
+              0.22
+            ],
+            "Size": [
+              2.2,
+              1.3,
+              2.2
+            ],
+            "Position": [
+              94.5,
+              1.95,
+              75.1
+            ],
+            "Orientation": [
+              0,
+              -8,
+              0
+            ],
             "Locked": true,
             "CastShadow": false
           },
@@ -2624,10 +4032,26 @@
         "CanQuery": false,
         "Transparency": 0.25,
         "Material": "SmoothPlastic",
-        "Color": [0.23, 0.39, 0.5],
-        "Size": [10, 0.22, 4],
-        "Position": [116, 0.45, 92],
-        "Orientation": [0, 12, 0],
+        "Color": [
+          0.23,
+          0.39,
+          0.5
+        ],
+        "Size": [
+          10,
+          0.22,
+          4
+        ],
+        "Position": [
+          116,
+          0.45,
+          92
+        ],
+        "Orientation": [
+          0,
+          12,
+          0
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2649,9 +4073,21 @@
         "CanQuery": false,
         "Transparency": 0.2,
         "Material": "Wood",
-        "Color": [0.5, 0.34, 0.18],
-        "Size": [8, 2, 0.35],
-        "Position": [103, 1, 66],
+        "Color": [
+          0.5,
+          0.34,
+          0.18
+        ],
+        "Size": [
+          8,
+          2,
+          0.35
+        ],
+        "Position": [
+          103,
+          1,
+          66
+        ],
         "Locked": true,
         "CastShadow": false
       },
@@ -2661,6 +4097,861 @@
         "ExternalAssetsImported": false,
         "GeneratedBlockout": true,
         "NoTradeDockGameplay": true,
+        "VisualOnly": true
+      }
+    },
+    {
+      "name": "LegacyVisualDressingPlaceholders_Migrated",
+      "className": "Model",
+      "children": [
+        {
+          "name": "Fence_WestVillage_A",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Material": "Wood",
+            "Color": [
+              0.36,
+              0.23,
+              0.12
+            ],
+            "Size": [
+              48,
+              2,
+              0.6
+            ],
+            "Position": [
+              -118,
+              1,
+              -13
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Fence_EconomyYard_A",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Material": "Wood",
+            "Color": [
+              0.36,
+              0.23,
+              0.12
+            ],
+            "Size": [
+              56,
+              2,
+              0.6
+            ],
+            "Orientation": [
+              0,
+              -18,
+              0
+            ],
+            "Position": [
+              -64,
+              1,
+              80
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "CreekEdge_NorthBank",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Material": "Sand",
+            "Color": [
+              0.58,
+              0.48,
+              0.29
+            ],
+            "Size": [
+              260,
+              0.35,
+              4
+            ],
+            "Orientation": [
+              0,
+              4,
+              0
+            ],
+            "Position": [
+              -8,
+              0.45,
+              83
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "CreekEdge_SouthBank",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Material": "Sand",
+            "Color": [
+              0.58,
+              0.48,
+              0.29
+            ],
+            "Size": [
+              260,
+              0.35,
+              4
+            ],
+            "Orientation": [
+              0,
+              -3,
+              0
+            ],
+            "Position": [
+              4,
+              0.45,
+              101
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Silhouette_WorkYard_Tower",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.68,
+            "Material": "WoodPlanks",
+            "Color": [
+              0.36,
+              0.24,
+              0.13
+            ],
+            "Size": [
+              5,
+              8,
+              5
+            ],
+            "Position": [
+              -108,
+              4,
+              -51
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Silhouette_Quarry_RockFace",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.64,
+            "Material": "Rock",
+            "Color": [
+              0.32,
+              0.32,
+              0.34
+            ],
+            "Size": [
+              30,
+              6,
+              6
+            ],
+            "Orientation": [
+              0,
+              18,
+              0
+            ],
+            "Position": [
+              101,
+              3,
+              -58
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Silhouette_Shrine_RuneGate",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Transparency": 0.66,
+            "Material": "Slate",
+            "Color": [
+              0.36,
+              0.31,
+              0.42
+            ],
+            "Size": [
+              16,
+              5,
+              3
+            ],
+            "Position": [
+              60,
+              2.5,
+              74
+            ],
+            "Locked": true,
+            "CastShadow": false
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Fence_TinyfolkVillage_West",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Wood",
+            "Color": [
+              0.36,
+              0.23,
+              0.12
+            ],
+            "Size": [
+              0.6,
+              1.4,
+              32
+            ],
+            "Position": [
+              -141,
+              0.7,
+              8
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Fence_WorkYard_North",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Wood",
+            "Color": [
+              0.36,
+              0.23,
+              0.12
+            ],
+            "Size": [
+              36,
+              1.4,
+              0.6
+            ],
+            "Position": [
+              -92,
+              0.7,
+              -62
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "Fence_ControlStation_East",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Metal",
+            "Color": [
+              0.34,
+              0.34,
+              0.36
+            ],
+            "Size": [
+              0.35,
+              0.8,
+              30
+            ],
+            "Position": [
+              108,
+              0.4,
+              7
+            ],
+            "Transparency": 0.58
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false,
+            "PresentationCleanup": true,
+            "ClutterAdjustedFrom": "Node_CrawlEntry"
+          }
+        },
+        {
+          "name": "CreekStone_A",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Rock",
+            "Color": [
+              0.36,
+              0.36,
+              0.34
+            ],
+            "Size": [
+              5,
+              0.45,
+              3
+            ],
+            "Orientation": [
+              0,
+              12,
+              0
+            ],
+            "Position": [
+              -105,
+              0.55,
+              88
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "CreekStone_B",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Rock",
+            "Color": [
+              0.36,
+              0.36,
+              0.34
+            ],
+            "Size": [
+              4,
+              0.45,
+              2.5
+            ],
+            "Orientation": [
+              0,
+              -18,
+              0
+            ],
+            "Position": [
+              -22,
+              0.55,
+              90
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "CreekStone_C",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Rock",
+            "Color": [
+              0.36,
+              0.36,
+              0.34
+            ],
+            "Size": [
+              5.5,
+              0.45,
+              3
+            ],
+            "Orientation": [
+              0,
+              24,
+              0
+            ],
+            "Position": [
+              74,
+              0.55,
+              88
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "QuarryLowRubble_A",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Rock",
+            "Color": [
+              0.32,
+              0.32,
+              0.34
+            ],
+            "Size": [
+              8,
+              1.2,
+              5
+            ],
+            "Orientation": [
+              0,
+              15,
+              0
+            ],
+            "Position": [
+              91,
+              0.8,
+              -57
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "QuarryLowRubble_B",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Rock",
+            "Color": [
+              0.38,
+              0.38,
+              0.36
+            ],
+            "Size": [
+              5,
+              0.9,
+              4
+            ],
+            "Orientation": [
+              0,
+              -21,
+              0
+            ],
+            "Position": [
+              105,
+              0.65,
+              -49
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "ShrineLowMarker_West",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Slate",
+            "Color": [
+              0.42,
+              0.36,
+              0.5
+            ],
+            "Size": [
+              3,
+              1.4,
+              3
+            ],
+            "Position": [
+              34,
+              0.9,
+              66
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "ShrineLowMarker_East",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Slate",
+            "Color": [
+              0.42,
+              0.36,
+              0.5
+            ],
+            "Size": [
+              3,
+              1.4,
+              3
+            ],
+            "Position": [
+              56,
+              0.9,
+              66
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "ContainmentLowWall_North",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Brick",
+            "Color": [
+              0.5,
+              0.18,
+              0.16
+            ],
+            "Size": [
+              30,
+              1.5,
+              1.2
+            ],
+            "Position": [
+              55,
+              0.75,
+              -90
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "ContainmentLowWall_South",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Material": "Brick",
+            "Color": [
+              0.5,
+              0.18,
+              0.16
+            ],
+            "Size": [
+              10,
+              0.55,
+              0.8
+            ],
+            "Position": [
+              68,
+              0.45,
+              -66
+            ],
+            "Transparency": 0.62
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false,
+            "PresentationCleanup": true,
+            "ClutterAdjustedFrom": "Node_RescueRouteEntry"
+          }
+        },
+        {
+          "name": "FieldDressingPatch_NorthWest",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Transparency": 0.18,
+            "Material": "Ground",
+            "Color": [
+              0.22,
+              0.36,
+              0.18
+            ],
+            "Size": [
+              44,
+              0.08,
+              26
+            ],
+            "Orientation": [
+              0,
+              -12,
+              0
+            ],
+            "Position": [
+              -126,
+              0.08,
+              -78
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "GrassReadabilityCleanup": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "FieldDressingPatch_NorthEast",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Transparency": 0.2,
+            "Material": "Ground",
+            "Color": [
+              0.22,
+              0.36,
+              0.18
+            ],
+            "Size": [
+              42,
+              0.08,
+              28
+            ],
+            "Orientation": [
+              0,
+              16,
+              0
+            ],
+            "Position": [
+              126,
+              0.08,
+              -82
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "GrassReadabilityCleanup": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "FieldDressingPatch_WestEdge",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Transparency": 0.22,
+            "Material": "Ground",
+            "Color": [
+              0.2,
+              0.34,
+              0.17
+            ],
+            "Size": [
+              22,
+              0.08,
+              54
+            ],
+            "Orientation": [
+              0,
+              7,
+              0
+            ],
+            "Position": [
+              -142,
+              0.08,
+              52
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "GrassReadabilityCleanup": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        },
+        {
+          "name": "FieldDressingPatch_EastEdge",
+          "className": "Part",
+          "properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "CanTouch": false,
+            "CanQuery": false,
+            "Locked": true,
+            "CastShadow": false,
+            "Transparency": 0.22,
+            "Material": "Ground",
+            "Color": [
+              0.2,
+              0.34,
+              0.17
+            ],
+            "Size": [
+              24,
+              0.08,
+              48
+            ],
+            "Orientation": [
+              0,
+              -8,
+              0
+            ],
+            "Position": [
+              132,
+              0.08,
+              48
+            ]
+          },
+          "attributes": {
+            "GeneratedBlockout": true,
+            "GrassReadabilityCleanup": true,
+            "VisualOnly": true,
+            "ExternalAssetsImported": false
+          }
+        }
+      ],
+      "attributes": {
+        "ExternalAssetsImported": false,
+        "GeneratedBlockout": true,
+        "MigratedFrom": "Workspace.Map.VisualDressingPlaceholders",
+        "PresentationCleanup": true,
+        "Purpose": "Primitive dressing only",
         "VisualOnly": true
       }
     }
