@@ -277,6 +277,78 @@ local function addCustodyEntries(
 	return "free"
 end
 
+local function terminalSeverity(config: any, state: string): string
+	if state == "expired" or state == "timeout" then
+		return severityName(config, "Info", "info")
+	end
+	return severityName(config, "Positive", "positive")
+end
+
+local function addSelfTerminalEntries(
+	config: any,
+	entriesById: { [string]: Entry },
+	order: { string },
+	terminalEntries: any,
+	now: number?
+): string?
+	if type(terminalEntries) ~= "table" then
+		return nil
+	end
+
+	local custodyCategory = categoryName(config, "Custody", "custody")
+	local firstState: string? = nil
+	for _, terminalEntry in ipairs(terminalEntries) do
+		if type(terminalEntry) == "table" then
+			local state = stringValue(terminalEntry.state)
+			local retainedUntil = finiteNumber(terminalEntry.retainedUntil)
+			if state ~= nil and (retainedUntil == nil or now == nil or retainedUntil > now) then
+				addOrRefresh(entriesById, order, {
+					id = state,
+					category = custodyCategory,
+					severity = terminalSeverity(config, state),
+					labelKey = "raid_status_" .. state,
+					privacy = "self",
+				})
+				if firstState == nil then
+					firstState = state
+				end
+			end
+		end
+	end
+	return firstState
+end
+
+local function addTeammateTerminalEntries(
+	config: any,
+	entriesById: { [string]: Entry },
+	order: { string },
+	userId: number,
+	terminalEntries: any,
+	now: number?
+)
+	if type(terminalEntries) ~= "table" then
+		return
+	end
+
+	local category = categoryName(config, "TeammateActivity", "teammate_activity")
+	for _, terminalEntry in ipairs(terminalEntries) do
+		if type(terminalEntry) == "table" then
+			local state = stringValue(terminalEntry.state)
+			local retainedUntil = finiteNumber(terminalEntry.retainedUntil)
+			if state ~= nil and (retainedUntil == nil or now == nil or retainedUntil > now) then
+				addOrRefresh(entriesById, order, {
+					id = "teammate_" .. state .. "_" .. tostring(userId),
+					category = category,
+					severity = terminalSeverity(config, state),
+					labelKey = "raid_status_teammate_" .. state,
+					sourceUserId = userId,
+					privacy = "team",
+				})
+			end
+		end
+	end
+end
+
 local function addScoreFeedback(config: any, entriesById: { [string]: Entry }, order: { string }, attrs: any)
 	local feedbackKey = stringValue(getAttr(attrs, "ScoreLastFeedbackKey"))
 	if feedbackKey == nil then
@@ -491,7 +563,10 @@ local function addTeammateActivity(
 			endsAt = sanitizeEndsAt(getAttr(attrs, "RescueContractExpiresAt"), now),
 			privacy = "team",
 		})
+		return
 	end
+
+	addTeammateTerminalEntries(config, entriesById, order, userId, teammate.terminalEntries, now)
 end
 
 function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): any
@@ -552,7 +627,12 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 		})
 	end
 
+	local terminalEntries = if type(input) == "table" then input.terminalEntries else nil
 	local custodyState = addCustodyEntries(projectionConfig, entriesById, order, attrs, now)
+	if custodyState == "free" then
+		custodyState = addSelfTerminalEntries(projectionConfig, entriesById, order, terminalEntries, now)
+			or custodyState
+	end
 	local exposureRatio = unitValue(getAttr(attrs, configAttrs.FearExposureRatio or "TinyfolkFearExposureRatio"))
 	local threatLevel = resolveThreatLevel(
 		projectionConfig,

@@ -67,6 +67,8 @@ type ThreatStageState = any
 local stateByUserId: { [number]: TimedConditionState? } = {}
 local trailStateByUserId: { [number]: TrailState? } = {}
 local raidThreatStageByUserId: { [number]: ThreatStageState? } = {}
+local terminalHudStateByUserId: { [number]: any } = {}
+local TERMINAL_HUD_RETENTION_SECONDS = 4
 
 local function getHumanoid(player: Player): Humanoid?
 	local character = player.Character
@@ -170,6 +172,7 @@ local function clearPlayerState(userId: number)
 	stateByUserId[userId] = nil
 	trailStateByUserId[userId] = nil
 	raidThreatStageByUserId[userId] = nil
+	terminalHudStateByUserId[userId] = nil
 end
 
 local function updateTrailState(
@@ -231,10 +234,12 @@ local HUD_SOURCE_ATTRIBUTES = {
 	"CaptureActive",
 	"CaptureCustodianUserId",
 	"CaptureExpiresAt",
+	"CaptureLastReason",
 	"RescueContractActive",
 	"RescueContractTargetUserId",
 	"RescueContractRescuerUserId",
 	"RescueContractExpiresAt",
+	"RescueContractLastReason",
 	"PostRescueProtected",
 	"PostRescueProtectionExpiresAt",
 	"RescueAccelerationActive",
@@ -271,14 +276,136 @@ local function readHudAttributes(player: Player): any
 	return output
 end
 
-local function getHudTeammates(player: Player): { any }
+local function boolAttribute(value: any): boolean
+	return value == true
+end
+
+local function finiteAttribute(value: any): number?
+	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+		return nil
+	end
+	return value
+end
+
+local function positiveUserIdAttribute(value: any): number?
+	local numeric = finiteAttribute(value)
+	if numeric == nil or numeric <= 0 or numeric % 1 ~= 0 then
+		return nil
+	end
+	return numeric
+end
+
+local function stringAttribute(value: any): string?
+	if type(value) == "string" and value ~= "" then
+		return value
+	end
+	return nil
+end
+
+local function terminalStateFromTransition(
+	lastReason: any,
+	previousExpiresAt: any,
+	now: number,
+	expectedReason: string,
+	state: string
+): string?
+	if stringAttribute(lastReason) == expectedReason then
+		return state
+	end
+
+	local expiresAt = finiteAttribute(previousExpiresAt)
+	if expiresAt ~= nil and expiresAt <= now then
+		return "expired"
+	end
+	return nil
+end
+
+local function retainTerminalEntry(state: any, terminalState: string?, now: number)
+	if terminalState == nil then
+		return
+	end
+
+	state.retained = state.retained or {}
+	state.retained[terminalState] = now + TERMINAL_HUD_RETENTION_SECONDS
+end
+
+local function updateTerminalHudState(userId: number, attrs: any, now: number): { any }
+	local state = terminalHudStateByUserId[userId]
+	if state == nil then
+		state = {}
+		terminalHudStateByUserId[userId] = state
+	end
+
+	local captureActive = boolAttribute(attrs.CaptureActive)
+		and positiveUserIdAttribute(attrs.CaptureCustodianUserId) ~= nil
+	local rescueActive = boolAttribute(attrs.RescueContractActive)
+	local previousCapture = state.capture or {}
+	local previousRescue = state.rescue or {}
+
+	if previousCapture.active == true and not captureActive then
+		local terminalState =
+			terminalStateFromTransition(attrs.CaptureLastReason, previousCapture.expiresAt, now, "released", "released")
+		if terminalState == nil and stringAttribute(attrs.RescueContractLastReason) == "rescued" then
+			terminalState = "rescued"
+		end
+		retainTerminalEntry(state, terminalState, now)
+	end
+
+	if previousRescue.active == true and not rescueActive then
+		retainTerminalEntry(
+			state,
+			terminalStateFromTransition(
+				attrs.RescueContractLastReason,
+				previousRescue.expiresAt,
+				now,
+				"rescued",
+				"rescued"
+			),
+			now
+		)
+	end
+
+	state.capture = {
+		active = captureActive,
+		expiresAt = finiteAttribute(attrs.CaptureExpiresAt),
+	}
+	state.rescue = {
+		active = rescueActive,
+		expiresAt = finiteAttribute(attrs.RescueContractExpiresAt),
+	}
+
+	local retained = state.retained
+	if type(retained) ~= "table" then
+		return {}
+	end
+
+	local output = {}
+	local orderedTerminalStates = { "released", "rescued", "expired" }
+	for _, terminalState in ipairs(orderedTerminalStates) do
+		local retainedUntil = retained[terminalState]
+		local expiresAt = finiteAttribute(retainedUntil)
+		if expiresAt ~= nil and expiresAt > now then
+			table.insert(output, {
+				state = terminalState,
+				retainedUntil = expiresAt,
+			})
+		else
+			retained[terminalState] = nil
+		end
+	end
+	return output
+end
+
+local function getHudTeammates(player: Player, now: number): { any }
 	local teammates = {}
 	for _, otherPlayer in ipairs(Players:GetPlayers()) do
 		if otherPlayer ~= player and otherPlayer:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
+			local attrs = readHudAttributes(otherPlayer)
 			table.insert(teammates, {
 				userId = otherPlayer.UserId,
 				role = RoleConfig.Roles.Tinyfolk,
-				attributes = readHudAttributes(otherPlayer),
+				attributes = attrs,
+				terminalEntries = updateTerminalHudState(otherPlayer.UserId, attrs, now),
 			})
 		end
 	end
@@ -286,10 +413,12 @@ local function getHudTeammates(player: Player): { any }
 end
 
 local function applyRaidHudProjection(player: Player, now: number)
+	local attrs = readHudAttributes(player)
 	local projection = RaidStatusProjection.BuildPlayerProjection(TinyfolkStatusConfig, {
 		now = now,
-		attributes = readHudAttributes(player),
-		teammates = getHudTeammates(player),
+		attributes = attrs,
+		terminalEntries = updateTerminalHudState(player.UserId, attrs, now),
+		teammates = getHudTeammates(player, now),
 	})
 	local attributes = TinyfolkStatusConfig.Attributes
 	player:SetAttribute(attributes.RaidHudSummary, projection.summary)
@@ -395,6 +524,7 @@ function TinyfolkStatusService.ResetForTests()
 	stateByUserId = {}
 	trailStateByUserId = {}
 	raidThreatStageByUserId = {}
+	terminalHudStateByUserId = {}
 end
 
 globalEnv._TinyfolkStatusService_QueryAPI = {

@@ -18,6 +18,10 @@ local function assertEqual(actual: any, expected: any, label: string)
 	print(string.format("PASS [%s]", label))
 end
 
+local function contains(text: string?, needle: string): boolean
+	return type(text) == "string" and string.find(text, needle, 1, true) ~= nil
+end
+
 local function makeNode(name: string, className: string?, fullName: string?)
 	local node: any = {
 		Name = name,
@@ -293,3 +297,61 @@ end
 
 local decayedSnapshot = service.ResolveNow(testPlayer, 261)
 assertEqual(decayedSnapshot.raidThreatStage, "pressure", "raid threat stage decays one step at a time")
+
+testPlayer:SetAttribute("CaptureActive", true)
+testPlayer:SetAttribute("CaptureCustodianUserId", 900)
+testPlayer:SetAttribute("CaptureExpiresAt", 275)
+service.ResolveNow(testPlayer, 270)
+testPlayer:SetAttribute("CaptureActive", false)
+testPlayer:SetAttribute("CaptureCustodianUserId", nil)
+testPlayer:SetAttribute("CaptureLastReason", "released")
+service.ResolveNow(testPlayer, 271)
+
+assertTrue(
+	contains(testPlayer:GetAttribute(attributes.RaidHudSummary), "released|custody|positive"),
+	"released terminal remains in self raid hud summary"
+)
+assertEqual(
+	testPlayer:GetAttribute(attributes.RaidHudCustodyState),
+	"released",
+	"released terminal updates custody state"
+)
+
+service.ResolveNow(testPlayer, 276)
+assertTrue(
+	not contains(testPlayer:GetAttribute(attributes.RaidHudSummary), "released|custody|positive"),
+	"released terminal expires from self raid hud summary"
+)
+
+testPlayer:SetAttribute("CaptureActive", true)
+testPlayer:SetAttribute("CaptureCustodianUserId", 900)
+testPlayer:SetAttribute("CaptureExpiresAt", 286)
+testPlayer:SetAttribute("CaptureLastReason", nil)
+service.ResolveNow(testPlayer, 285)
+testPlayer:SetAttribute("CaptureActive", false)
+testPlayer:SetAttribute("CaptureCustodianUserId", nil)
+service.ResolveNow(testPlayer, 287)
+
+assertTrue(
+	contains(testPlayer:GetAttribute(attributes.RaidHudSummary), "expired|custody|info"),
+	"expired terminal inferred from elapsed capture expiry"
+)
+
+local teammatePlayer = makePlayer(502)
+playersService._playerList = { testPlayer, teammatePlayer, giantPlayer }
+teammatePlayer:SetAttribute("CaptureActive", true)
+teammatePlayer:SetAttribute("CaptureCustodianUserId", 900)
+teammatePlayer:SetAttribute("CaptureExpiresAt", 286)
+service.ResolveNow(teammatePlayer, 280)
+teammatePlayer:SetAttribute("CaptureActive", false)
+teammatePlayer:SetAttribute("CaptureCustodianUserId", nil)
+teammatePlayer:SetAttribute("RescueContractLastReason", "rescued")
+service.ResolveNow(testPlayer, 281)
+
+assertTrue(
+	contains(
+		testPlayer:GetAttribute(attributes.RaidHudTeammateActivity),
+		"teammate_rescued_502|teammate_activity|positive"
+	),
+	"rescued terminal remains in teammate raid hud activity"
+)

@@ -228,4 +228,43 @@ do
 	)
 end
 
+do
+	local attrs = baseAttrs()
+	local projection = Projection.BuildPlayerProjection(Config, {
+		now = 21,
+		attributes = attrs,
+		terminalEntries = {
+			{ state = "released", retainedUntil = 25 },
+			{ state = "rescued", retainedUntil = 25 },
+			{ state = "expired", retainedUntil = 20 },
+		},
+		teammates = {
+			{
+				userId = 222,
+				role = "Tinyfolk",
+				attributes = {
+					Role = "Tinyfolk",
+				},
+				terminalEntries = {
+					{ state = "rescued", retainedUntil = 25 },
+					{ state = "expired", retainedUntil = 20 },
+				},
+			},
+		},
+	})
+
+	assertEqual(projection.custodyState, "released", "retained self terminal updates custody state")
+	assertTrue(contains(projection.summary, "released|custody|positive"), "retained released projected")
+	assertTrue(contains(projection.summary, "rescued|custody|positive"), "retained rescued projected")
+	assertFalse(contains(projection.summary, "expired|custody|info"), "expired retained self terminal filtered")
+	assertTrue(
+		contains(projection.teammateActivity, "teammate_rescued_222|teammate_activity|positive"),
+		"retained teammate rescued projected"
+	)
+	assertFalse(
+		contains(projection.teammateActivity, "teammate_expired_222"),
+		"expired retained teammate terminal filtered"
+	)
+end
+
 print("tinyfolk_raid_status_projection: all checks passed")
