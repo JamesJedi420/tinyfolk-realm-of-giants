@@ -94,14 +94,53 @@ local function joinTexts(values: { string }): string
 	return table.concat(filtered, " • ")
 end
 
-local function formatCustodyState(state: string): string
+local function finiteNumber(value: any): number?
+	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+		return nil
+	end
+	return value
+end
+
+local function remainingSeconds(entry: Entry, now: number?): number?
+	if now == nil then
+		return nil
+	end
+
+	local endsAt = tonumber(entry.endsAt or "")
+	if endsAt == nil or endsAt ~= endsAt or endsAt == math.huge or endsAt == -math.huge then
+		return nil
+	end
+
+	local remaining = endsAt - now
+	if remaining <= 0 then
+		return nil
+	end
+
+	return math.ceil(remaining)
+end
+
+local function formatCountdown(label: string, entry: Entry, now: number?): string?
+	local remaining = remainingSeconds(entry, now)
+	if remaining == nil then
+		return nil
+	end
+	return string.format("%s %ds", label, remaining)
+end
+
+local function formatCustodyState(state: string, entry: Entry?, now: number?): string
 	if state == "captured" then
+		if entry ~= nil then
+			local countdown = formatCountdown("Capture active - release in", entry, now)
+			if countdown ~= nil then
+				return countdown
+			end
+		end
 		return "Capture active - release timer running"
 	end
 	return titleCase(state)
 end
 
-local function formatEntry(entry: Entry, hud: any): string
+local function formatEntry(entry: Entry, hud: any, now: number?): string
 	local categories: any = if type(hud.Categories) == "table" then hud.Categories else {}
 	local threatCategory = categories.Threat or "threat"
 	local custodyCategory = categories.Custody or "custody"
@@ -122,17 +161,33 @@ local function formatEntry(entry: Entry, hud: any): string
 	end
 
 	if entry.category == custodyCategory then
-		return string.format("Custody: %s", formatCustodyState(entry.id))
+		return string.format("Custody: %s", formatCustodyState(entry.id, entry, now))
 	end
 
 	if entry.category == personalEffectCategory then
+		if entry.id == "post_rescue_protected" then
+			local countdown = formatCountdown("Safe return protection", entry, now)
+			if countdown ~= nil then
+				return countdown
+			end
+		end
 		return titleCase(entry.id)
 	end
 
 	if entry.category == teammateCategory then
 		local text = entry.id
 		if string.find(text, "teammate_captured_", 1, true) == 1 then
+			local countdown = formatCountdown("Teammate: Capture active - rescue window", entry, now)
+			if countdown ~= nil then
+				return countdown
+			end
 			return "Teammate: Capture active - rescue window available"
+		end
+		if string.find(text, "teammate_rescue_", 1, true) == 1 then
+			local countdown = formatCountdown("Teammate: Rescue window", entry, now)
+			if countdown ~= nil then
+				return countdown
+			end
 		end
 		if string.find(text, "teammate_", 1, true) == 1 then
 			text = string.sub(text, 10)
@@ -155,7 +210,7 @@ local function formatEntry(entry: Entry, hud: any): string
 	return string.format("%s: %s", titleCase(entry.category), titleCase(entry.id))
 end
 
-local function formatEntryList(serialized: any, hud: any, emptyLabel: string): string
+local function formatEntryList(serialized: any, hud: any, emptyLabel: string, now: number?): string
 	local entries = splitEntries(serialized)
 	if #entries == 0 then
 		return emptyLabel
@@ -163,10 +218,19 @@ local function formatEntryList(serialized: any, hud: any, emptyLabel: string): s
 
 	local values: { string } = {}
 	for _, entry in ipairs(entries) do
-		table.insert(values, formatEntry(entry, hud))
+		table.insert(values, formatEntry(entry, hud, now))
 	end
 
 	return joinTexts(values)
+end
+
+local function findEntry(serialized: any, category: string, id: string): Entry?
+	for _, entry in ipairs(splitEntries(serialized)) do
+		if entry.category == category and entry.id == id then
+			return entry
+		end
+	end
+	return nil
 end
 
 local function formatUpdatedAt(updatedAt: any): string
@@ -190,11 +254,17 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 	local custodyState = if type(attributes) == "table" and type(attributes.RaidHudCustodyState) == "string"
 		then attributes.RaidHudCustodyState
 		else "free"
+	local updatedAt = finiteNumber(if type(attributes) == "table" then attributes.RaidHudUpdatedAt else nil)
+	local categories: any = if type(hud.Categories) == "table" then hud.Categories else {}
+	local custodyCategory = categories.Custody or "custody"
+	local custodyEntry = findEntry(attributes and attributes.RaidHudSummary, custodyCategory, custodyState)
 
-	local summary = formatEntryList(attributes and attributes.RaidHudSummary, hud, "Summary: none")
-	local personalEffects = formatEntryList(attributes and attributes.RaidHudPersonalEffects, hud, "Effects: none")
-	local teammateActivity = formatEntryList(attributes and attributes.RaidHudTeammateActivity, hud, "Team: none")
-	local scoreFeedback = formatEntryList(attributes and attributes.RaidHudScoreFeedback, hud, "Score: none")
+	local summary = formatEntryList(attributes and attributes.RaidHudSummary, hud, "Summary: none", updatedAt)
+	local personalEffects =
+		formatEntryList(attributes and attributes.RaidHudPersonalEffects, hud, "Effects: none", updatedAt)
+	local teammateActivity =
+		formatEntryList(attributes and attributes.RaidHudTeammateActivity, hud, "Team: none", updatedAt)
+	local scoreFeedback = formatEntryList(attributes and attributes.RaidHudScoreFeedback, hud, "Score: none", updatedAt)
 
 	return {
 		visible = visible,
@@ -205,7 +275,7 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 		summary = summary,
 		threat = string.format("Threat: %s", titleCase(threatLevel)),
 		threatStage = string.format("Stage: %s", titleCase(threatStage)),
-		custody = string.format("Custody: %s", formatCustodyState(custodyState)),
+		custody = string.format("Custody: %s", formatCustodyState(custodyState, custodyEntry, updatedAt)),
 		personalEffects = personalEffects,
 		teammateActivity = teammateActivity,
 		scoreFeedback = scoreFeedback,

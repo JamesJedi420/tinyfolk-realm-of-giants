@@ -104,4 +104,63 @@ do
 	)
 end
 
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
+		RaidHudSummary = "captured|custody|critical|20|||",
+		RaidHudCustodyState = "captured",
+		RaidHudUpdatedAt = 11,
+	})
+
+	assertEqual(model.summary, "Custody: Capture active - release in 9s", "captured summary shows release countdown")
+	assertEqual(model.custody, "Custody: Capture active - release in 9s", "custody line shows release countdown")
+end
+
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
+		RaidHudTeammateActivity = "teammate_captured_222|teammate_activity|critical|20|||;teammate_rescue_333|teammate_activity|info|16|||",
+		RaidHudUpdatedAt = 11,
+	})
+
+	assertTrue(
+		contains(model.teammateActivity, "Teammate: Capture active - rescue window 9s"),
+		"teammate captured shows rescue window countdown"
+	)
+	assertTrue(contains(model.teammateActivity, "Teammate: Rescue window 5s"), "teammate rescue shows rescue countdown")
+end
+
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
+		RaidHudPersonalEffects = "post_rescue_protected|personal_effect|positive|15|||",
+		RaidHudUpdatedAt = 11,
+	})
+
+	assertEqual(model.personalEffects, "Safe return protection 4s", "post-rescue protection countdown")
+end
+
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
+		RaidHudSummary = "captured|custody|critical|10|||",
+		RaidHudCustodyState = "captured",
+		RaidHudTeammateActivity = "teammate_captured_222|teammate_activity|critical|bad|||",
+		RaidHudPersonalEffects = "post_rescue_protected|personal_effect|positive|10|||",
+		RaidHudUpdatedAt = 11,
+	})
+
+	assertEqual(
+		model.custody,
+		"Custody: Capture active - release timer running",
+		"past release time uses custody fallback"
+	)
+	assertEqual(
+		model.teammateActivity,
+		"Teammate: Capture active - rescue window available",
+		"invalid teammate time uses rescue fallback"
+	)
+	assertEqual(model.personalEffects, "Post Rescue Protected", "past protection time uses effect fallback")
+end
+
 print("tinyfolk_raid_status_hud_presentation: all checks passed")
