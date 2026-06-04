@@ -143,6 +143,30 @@ end
 do
 	local model = Presentation.BuildHudModel(Config, {
 		Role = "Tinyfolk",
+		RaidHudSummary = "released|custody|positive|||;rescued|custody|positive|||;expired|custody|info|||",
+		RaidHudCustodyState = "released",
+		RaidHudTeammateActivity = "teammate_released_222|teammate_activity|positive|||;teammate_rescued_333|teammate_activity|positive|||;teammate_expired_444|teammate_activity|info|||",
+		RaidHudUpdatedAt = 11,
+	})
+
+	assertTrue(contains(model.summary, "Custody: Release complete"), "released terminal summary text")
+	assertTrue(contains(model.summary, "Custody: Rescue complete"), "rescued terminal summary text")
+	assertTrue(
+		contains(model.summary, "Custody: Release window ended - safe return available"),
+		"expired terminal summary text"
+	)
+	assertEqual(model.custody, "Custody: Release complete", "released terminal custody line")
+	assertTrue(contains(model.teammateActivity, "Teammate: Release complete"), "teammate released terminal text")
+	assertTrue(contains(model.teammateActivity, "Teammate: Rescue complete"), "teammate rescued terminal text")
+	assertTrue(
+		contains(model.teammateActivity, "Teammate: Release window ended - safe return available"),
+		"teammate expired terminal text"
+	)
+end
+
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
 		RaidHudSummary = "captured|custody|critical|10|||",
 		RaidHudCustodyState = "captured",
 		RaidHudTeammateActivity = "teammate_captured_222|teammate_activity|critical|bad|||",

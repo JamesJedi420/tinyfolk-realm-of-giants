@@ -137,6 +137,15 @@ local function formatCustodyState(state: string, entry: Entry?, now: number?): s
 		end
 		return "Capture active - release timer running"
 	end
+	if state == "released" then
+		return "Release complete"
+	end
+	if state == "rescued" then
+		return "Rescue complete"
+	end
+	if state == "expired" or state == "timeout" then
+		return "Release window ended - safe return available"
+	end
 	return titleCase(state)
 end
 
@@ -182,6 +191,18 @@ local function formatEntry(entry: Entry, hud: any, now: number?): string
 				return countdown
 			end
 			return "Teammate: Capture active - rescue window available"
+		end
+		if string.find(text, "teammate_released_", 1, true) == 1 then
+			return "Teammate: Release complete"
+		end
+		if string.find(text, "teammate_rescued_", 1, true) == 1 then
+			return "Teammate: Rescue complete"
+		end
+		if
+			string.find(text, "teammate_expired_", 1, true) == 1
+			or string.find(text, "teammate_timeout_", 1, true) == 1
+		then
+			return "Teammate: Release window ended - safe return available"
 		end
 		if string.find(text, "teammate_rescue_", 1, true) == 1 then
 			local countdown = formatCountdown("Teammate: Rescue window", entry, now)
