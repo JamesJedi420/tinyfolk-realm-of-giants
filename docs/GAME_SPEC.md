@@ -46,6 +46,11 @@ Important:
 - This is directional architecture only.
 - Full realm transfer/instancing is not part of the current prototype.
 
+## Policy-Sensitive Terminology
+Use game-system terms for capture-adjacent mechanics: capture, containment, custody, rescue, escape, release, timeout, safe return, realm challenge, ransom contract, recovery, route blocked, rescue window, and containment timer.
+
+Avoid wording that frames Tinyfolk as owned property or implies slavery, trafficking, humiliation, torture, sexualized captivity, or indefinite loss of agency. Containment and custody text must mention or expose an escape, rescue, release, timeout, or safe-return path.
+
 ## Giant End-Game Direction
 Design rule:
 - The Giant should become a distinct realm ruler, not an unbeatable stat stack.

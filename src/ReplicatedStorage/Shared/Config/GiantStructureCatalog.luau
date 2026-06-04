@@ -21,7 +21,7 @@ local GiantStructureCatalog: { [string]: GiantStructureDefinition } = {
 		stoneCost = 10,
 	},
 	GiantStructure_Runtime_Snare_A = {
-		displayName = "Runtime Test Snare Trap A",
+		displayName = "Runtime Test Snare Challenge A",
 		category = "trap",
 		woodCost = 10,
 		stoneCost = 4,

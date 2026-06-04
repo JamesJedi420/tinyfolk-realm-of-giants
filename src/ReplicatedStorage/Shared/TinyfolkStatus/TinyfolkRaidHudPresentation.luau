@@ -94,6 +94,13 @@ local function joinTexts(values: { string }): string
 	return table.concat(filtered, " • ")
 end
 
+local function formatCustodyState(state: string): string
+	if state == "captured" then
+		return "Capture active - release timer running"
+	end
+	return titleCase(state)
+end
+
 local function formatEntry(entry: Entry, hud: any): string
 	local categories: any = if type(hud.Categories) == "table" then hud.Categories else {}
 	local threatCategory = categories.Threat or "threat"
@@ -115,7 +122,7 @@ local function formatEntry(entry: Entry, hud: any): string
 	end
 
 	if entry.category == custodyCategory then
-		return string.format("Custody: %s", titleCase(entry.id))
+		return string.format("Custody: %s", formatCustodyState(entry.id))
 	end
 
 	if entry.category == personalEffectCategory then
@@ -124,6 +131,9 @@ local function formatEntry(entry: Entry, hud: any): string
 
 	if entry.category == teammateCategory then
 		local text = entry.id
+		if string.find(text, "teammate_captured_", 1, true) == 1 then
+			return "Teammate: Capture active - rescue window available"
+		end
 		if string.find(text, "teammate_", 1, true) == 1 then
 			text = string.sub(text, 10)
 		end
@@ -195,7 +205,7 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 		summary = summary,
 		threat = string.format("Threat: %s", titleCase(threatLevel)),
 		threatStage = string.format("Stage: %s", titleCase(threatStage)),
-		custody = string.format("Custody: %s", titleCase(custodyState)),
+		custody = string.format("Custody: %s", formatCustodyState(custodyState)),
 		personalEffects = personalEffects,
 		teammateActivity = teammateActivity,
 		scoreFeedback = scoreFeedback,

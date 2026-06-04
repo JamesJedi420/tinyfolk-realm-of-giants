@@ -48,12 +48,12 @@ do
 	assertTrue(model.visible, "tinyfolk visible")
 	assertEqual(model.title, "Tinyfolk Raid Status", "title text")
 	assertTrue(contains(model.summary, "Threat: Medium"), "summary threat text")
-	assertTrue(contains(model.summary, "Custody: Captured"), "summary custody text")
+	assertTrue(contains(model.summary, "Custody: Capture active - release timer running"), "summary custody text")
 	assertTrue(contains(model.summary, "Bleed"), "summary personal effect text")
 	assertTrue(contains(model.summary, "Teammate: Rescue 111"), "summary teammate text")
 	assertTrue(contains(model.summary, "Score: Capture Success"), "summary score text")
 	assertEqual(model.threat, "Threat: Medium", "threat line")
-	assertEqual(model.custody, "Custody: Captured", "custody line")
+	assertEqual(model.custody, "Custody: Capture active - release timer running", "custody line")
 	assertEqual(model.personalEffects, "Bleed", "effects line")
 	assertEqual(model.teammateActivity, "Teammate: Rescue 111", "team line")
 	assertEqual(model.scoreFeedback, "Score: Capture Success", "score line")
@@ -89,6 +89,19 @@ do
 	assertTrue(contains(model.summary, "Threat: Valid Summary"), "valid summary retained")
 	assertFalse(contains(model.summary, "bad"), "malformed summary chunk ignored")
 	assertFalse(contains(model.summary, "also_bad"), "malformed custody chunk ignored")
+end
+
+do
+	local model = Presentation.BuildHudModel(Config, {
+		Role = "Tinyfolk",
+		RaidHudTeammateActivity = "teammate_captured_222|teammate_activity|critical|||",
+	})
+
+	assertEqual(
+		model.teammateActivity,
+		"Teammate: Capture active - rescue window available",
+		"teammate captured agency text"
+	)
 end
 
 print("tinyfolk_raid_status_hud_presentation: all checks passed")

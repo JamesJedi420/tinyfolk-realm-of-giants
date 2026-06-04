@@ -2817,7 +2817,7 @@
             "CastShadow": false
           },
           "attributes": {
-            "DressingIntent": "containment pressure area broken pen outline",
+            "DressingIntent": "containment pressure area broken boundary outline",
             "ExternalAssetsImported": false,
             "GeneratedBlockout": true,
             "VisualOnly": true
@@ -2852,7 +2852,7 @@
             "CastShadow": false
           },
           "attributes": {
-            "DressingIntent": "containment pressure area broken pen outline",
+            "DressingIntent": "containment pressure area broken boundary outline",
             "ExternalAssetsImported": false,
             "GeneratedBlockout": true,
             "VisualOnly": true
@@ -2887,7 +2887,7 @@
             "CastShadow": false
           },
           "attributes": {
-            "DressingIntent": "containment pressure area broken pen outline",
+            "DressingIntent": "containment pressure area broken boundary outline",
             "ExternalAssetsImported": false,
             "GeneratedBlockout": true,
             "VisualOnly": true
@@ -2922,7 +2922,7 @@
             "CastShadow": false
           },
           "attributes": {
-            "DressingIntent": "containment pressure area broken pen outline with rescue-facing gap",
+            "DressingIntent": "containment pressure area broken boundary outline with rescue-facing gap",
             "ExternalAssetsImported": false,
             "GeneratedBlockout": true,
             "VisualOnly": true
@@ -2957,7 +2957,7 @@
             "CastShadow": false
           },
           "attributes": {
-            "DressingIntent": "containment pressure area broken pen outline with rescue-facing gap",
+            "DressingIntent": "containment pressure area broken boundary outline with rescue-facing gap",
             "ExternalAssetsImported": false,
             "GeneratedBlockout": true,
             "VisualOnly": true
@@ -2965,7 +2965,7 @@
         }
       ],
       "attributes": {
-        "DressingIntent": "containment pressure area broken pen outline; open toward rescue route",
+        "DressingIntent": "containment pressure area broken boundary outline; open toward rescue route",
         "ExternalAssetsImported": false,
         "GeneratedBlockout": true,
         "VisualOnly": true
