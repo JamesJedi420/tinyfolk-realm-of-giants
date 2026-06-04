@@ -1,519 +1,522 @@
 {
-  "className": "Folder",
-  "children": [
-    {
-      "name": "Pad_GiantPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.82,
-        "Material": "WoodPlanks",
-        "Color": [
-          0.62,
-          0.52,
-          0.31
-        ],
-        "Shape": "Cylinder",
-        "Size": [
-          0.5,
-          76,
-          64
-        ],
-        "Orientation": [
-          0,
-          0,
-          90
-        ],
-        "Position": [
-          0,
-          0.16,
-          0
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "GiantPlaza",
-        "GeneratedBlockout": true,
-        "ReferenceX": 0,
-        "ReferenceZ": 0,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_GiantHearth",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.48,
-          0.33,
-          0.22
-        ],
-        "Size": [
-          34,
-          0.5,
-          22
-        ],
-        "Position": [
-          0,
-          0.18,
-          -72
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "GiantHearth",
-        "GeneratedBlockout": true,
-        "ReferenceX": 0,
-        "ReferenceZ": -72,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_TinyfolkVillage",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "Grass",
-        "Color": [
-          0.31,
-          0.58,
-          0.33
-        ],
-        "Size": [
-          45,
-          0.25,
-          40
-        ],
-        "Position": [
-          -118,
-          0.12,
-          8
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "TinyfolkVillage",
-        "GeneratedBlockout": true,
-        "ReferenceX": -118,
-        "ReferenceZ": 8,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_WorkYard",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.42,
-          0.32,
-          0.2
-        ],
-        "Size": [
-          50,
-          0.25,
-          38
-        ],
-        "Position": [
-          -92,
-          0.12,
-          -42
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "WorkYard",
-        "GeneratedBlockout": true,
-        "ReferenceX": -92,
-        "ReferenceZ": -42,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_StoneDistrict",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.45,
-          0.45,
-          0.41
-        ],
-        "Size": [
-          72,
-          0.25,
-          46
-        ],
-        "Position": [
-          78,
-          0.12,
-          -43
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "StoneDistrict",
-        "GeneratedBlockout": true,
-        "ReferenceX": 78,
-        "ReferenceZ": -43,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_Containment",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.52,
-          0.22,
-          0.18
-        ],
-        "Size": [
-          38,
-          0.25,
-          22
-        ],
-        "Position": [
-          55,
-          0.12,
-          -78
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "Containment",
-        "GeneratedBlockout": true,
-        "ReferenceX": 55,
-        "ReferenceZ": -78,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_ControlStationZone",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.36,
-          0.34,
-          0.36
-        ],
-        "Size": [
-          45,
-          0.25,
-          55
-        ],
-        "Position": [
-          80,
-          0.12,
-          5
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "ControlStationZone",
-        "GeneratedBlockout": true,
-        "ReferenceX": 80,
-        "ReferenceZ": 5,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_EconomyYard",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.42,
-          0.36,
-          0.25
-        ],
-        "Size": [
-          54,
-          0.25,
-          44
-        ],
-        "Position": [
-          -63,
-          0.12,
-          55
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "EconomyYard",
-        "GeneratedBlockout": true,
-        "ReferenceX": -63,
-        "ReferenceZ": 55,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_Granary",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.55,
-          0.48,
-          0.33
-        ],
-        "Size": [
-          40,
-          0.5,
-          26
-        ],
-        "Position": [
-          -67,
-          0.2,
-          70
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "Granary",
-        "GeneratedBlockout": true,
-        "PreserveStationContract": "Granary_A",
-        "ReferenceX": -67,
-        "ReferenceZ": 70,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_Warehouse",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.42,
-          0.4,
-          0.34
-        ],
-        "Size": [
-          28,
-          0.5,
-          18
-        ],
-        "Position": [
-          -39,
-          0.2,
-          35
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "Warehouse",
-        "GeneratedBlockout": true,
-        "PreserveStationContract": "Warehouse_A",
-        "ReferenceX": -39,
-        "ReferenceZ": 35,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "DistrictPad_ShrineField",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "Grass",
-        "Color": [
-          0.39,
-          0.31,
-          0.56
-        ],
-        "Size": [
-          52,
-          0.25,
-          42
-        ],
-        "Position": [
-          55,
-          0.12,
-          50
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "ShrineField",
-        "GeneratedBlockout": true,
-        "ReferenceX": 55,
-        "ReferenceZ": 50,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_Shrine_A",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.47,
-          0.41,
-          0.55
-        ],
-        "Size": [
-          30,
-          0.5,
-          22
-        ],
-        "Position": [
-          45,
-          0.2,
-          66
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "Shrine_A",
-        "GeneratedBlockout": true,
-        "PreserveStationContract": "Shrine_A",
-        "ReferenceX": 45,
-        "ReferenceZ": 66,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_EscapeWin",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.86,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.35,
-          0.78,
-          0.42
-        ],
-        "Size": [
-          14,
-          0.5,
-          14
-        ],
-        "Position": [
-          -150,
-          0.24,
-          16
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "EscapeWinPad",
-        "GeneratedBlockout": true,
-        "ProtectedPath": true,
-        "ReferenceX": -150,
-        "ReferenceZ": 16,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Pad_TradeDock",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.9,
-        "Material": "SmoothPlastic",
-        "Color": [
-          0.45,
-          0.31,
-          0.17
-        ],
-        "Size": [
-          34,
-          0.5,
-          14
-        ],
-        "Position": [
-          103,
-          0.12,
-          80
-        ],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "DistrictId": "TradeDock",
-        "GeneratedBlockout": true,
-        "ReferenceX": 103,
-        "ReferenceZ": 80,
-        "VisualOnly": true
-      }
-    }
-  ]
+    "className":  "Folder",
+    "children":  [
+                     {
+                         "name":  "Pad_GiantPlaza",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "WoodPlanks",
+                                            "Color":  [
+                                                          0.54,
+                                                          0.46,
+                                                          0.3
+                                                      ],
+                                            "Shape":  "Cylinder",
+                                            "Size":  [
+                                                         0.5,
+                                                         76,
+                                                         64
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                0,
+                                                                90
+                                                            ],
+                                            "Position":  [
+                                                             0,
+                                                             0.12,
+                                                             0
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "GiantPlaza",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  0,
+                                            "ReferenceZ":  0,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "GrayPadBlended":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Pad_GiantHearth",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.48,
+                                                          0.33,
+                                                          0.22
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.5,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             0.18,
+                                                             -72
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "GiantHearth",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  0,
+                                            "ReferenceZ":  -72,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_TinyfolkVillage",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.31,
+                                                          0.58,
+                                                          0.33
+                                                      ],
+                                            "Size":  [
+                                                         45,
+                                                         0.25,
+                                                         40
+                                                     ],
+                                            "Position":  [
+                                                             -118,
+                                                             0.12,
+                                                             8
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "TinyfolkVillage",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  -118,
+                                            "ReferenceZ":  8,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_WorkYard",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.32,
+                                                          0.2
+                                                      ],
+                                            "Size":  [
+                                                         50,
+                                                         0.25,
+                                                         38
+                                                     ],
+                                            "Position":  [
+                                                             -92,
+                                                             0.12,
+                                                             -42
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "WorkYard",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  -92,
+                                            "ReferenceZ":  -42,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_StoneDistrict",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.45,
+                                                          0.45,
+                                                          0.41
+                                                      ],
+                                            "Size":  [
+                                                         72,
+                                                         0.25,
+                                                         46
+                                                     ],
+                                            "Position":  [
+                                                             78,
+                                                             0.12,
+                                                             -43
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "StoneDistrict",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  78,
+                                            "ReferenceZ":  -43,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_Containment",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.52,
+                                                          0.22,
+                                                          0.18
+                                                      ],
+                                            "Size":  [
+                                                         38,
+                                                         0.25,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             0.12,
+                                                             -78
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "Containment",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  55,
+                                            "ReferenceZ":  -78,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_ControlStationZone",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.36,
+                                                          0.34,
+                                                          0.36
+                                                      ],
+                                            "Size":  [
+                                                         45,
+                                                         0.25,
+                                                         55
+                                                     ],
+                                            "Position":  [
+                                                             80,
+                                                             0.12,
+                                                             5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "ControlStationZone",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  80,
+                                            "ReferenceZ":  5,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_EconomyYard",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.36,
+                                                          0.25
+                                                      ],
+                                            "Size":  [
+                                                         54,
+                                                         0.25,
+                                                         44
+                                                     ],
+                                            "Position":  [
+                                                             -63,
+                                                             0.12,
+                                                             55
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "EconomyYard",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  -63,
+                                            "ReferenceZ":  55,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Pad_Granary",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.55,
+                                                          0.48,
+                                                          0.33
+                                                      ],
+                                            "Size":  [
+                                                         40,
+                                                         0.5,
+                                                         26
+                                                     ],
+                                            "Position":  [
+                                                             -67,
+                                                             0.2,
+                                                             70
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "Granary",
+                                            "GeneratedBlockout":  true,
+                                            "PreserveStationContract":  "Granary_A",
+                                            "ReferenceX":  -67,
+                                            "ReferenceZ":  70,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Pad_Warehouse",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.4,
+                                                          0.34
+                                                      ],
+                                            "Size":  [
+                                                         28,
+                                                         0.5,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             -39,
+                                                             0.2,
+                                                             35
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "Warehouse",
+                                            "GeneratedBlockout":  true,
+                                            "PreserveStationContract":  "Warehouse_A",
+                                            "ReferenceX":  -39,
+                                            "ReferenceZ":  35,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "DistrictPad_ShrineField",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "Grass",
+                                            "Color":  [
+                                                          0.39,
+                                                          0.31,
+                                                          0.56
+                                                      ],
+                                            "Size":  [
+                                                         52,
+                                                         0.25,
+                                                         42
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             0.12,
+                                                             50
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "ShrineField",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  55,
+                                            "ReferenceZ":  50,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Pad_Shrine_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.47,
+                                                          0.41,
+                                                          0.55
+                                                      ],
+                                            "Size":  [
+                                                         30,
+                                                         0.5,
+                                                         22
+                                                     ],
+                                            "Position":  [
+                                                             45,
+                                                             0.2,
+                                                             66
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "Shrine_A",
+                                            "GeneratedBlockout":  true,
+                                            "PreserveStationContract":  "Shrine_A",
+                                            "ReferenceX":  45,
+                                            "ReferenceZ":  66,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Pad_EscapeWin",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.86,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.78,
+                                                          0.42
+                                                      ],
+                                            "Size":  [
+                                                         14,
+                                                         0.5,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             0.24,
+                                                             16
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "EscapeWinPad",
+                                            "GeneratedBlockout":  true,
+                                            "ProtectedPath":  true,
+                                            "ReferenceX":  -150,
+                                            "ReferenceZ":  16,
+                                            "VisualOnly":  true
+                                        }
+                     },
+                     {
+                         "name":  "Pad_TradeDock",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.9,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.45,
+                                                          0.31,
+                                                          0.17
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.5,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             0.12,
+                                                             80
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistrictId":  "TradeDock",
+                                            "GeneratedBlockout":  true,
+                                            "ReferenceX":  103,
+                                            "ReferenceZ":  80,
+                                            "VisualOnly":  true
+                                        }
+                     }
+                 ]
 }

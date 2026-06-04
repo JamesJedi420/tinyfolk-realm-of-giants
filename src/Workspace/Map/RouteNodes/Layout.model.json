@@ -1,545 +1,945 @@
 {
-  "className": "Folder",
-  "attributes": {
-    "GeneratedBlockout": true,
-    "MirrorsRouteGraph": "Workspace.Map.RouteGraph.RouteGraphData.Nodes"
-  },
-  "children": [
-    {
-      "name": "Node_TinyfolkSpawn",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.42,
-        "Material": "SmoothPlastic",
-        "Color": [0.22, 0.62, 0.88],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-122, 0.5, 14]
-      },
-      "attributes": {
-        "RouteGraphNode": "TinyfolkSpawn",
-        "RouteNodeType": "spawn",
-        "GeneratedBlockout": true,
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RouteWestVillage",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.48,
-        "Material": "SmoothPlastic",
-        "Color": [0.94, 0.86, 0.38],
-        "Shape": "Ball",
-        "Size": [3, 3, 3],
-        "Position": [-118, 1.5, 8]
-      },
-      "attributes": {
-        "RouteGraphNode": "RouteWestVillage",
-        "RouteNodeType": "waypoint",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RouteMacroPlaza",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.48,
-        "Material": "SmoothPlastic",
-        "Color": [0.94, 0.86, 0.38],
-        "Shape": "Ball",
-        "Size": [3, 3, 3],
-        "Position": [0, 1.5, 0]
-      },
-      "attributes": {
-        "RouteGraphNode": "RouteMacroPlaza",
-        "RouteNodeType": "waypoint",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RouteQuarry",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.48,
-        "Material": "SmoothPlastic",
-        "Color": [0.94, 0.86, 0.38],
-        "Shape": "Ball",
-        "Size": [3, 3, 3],
-        "Position": [78, 1.5, -43]
-      },
-      "attributes": {
-        "RouteGraphNode": "RouteQuarry",
-        "RouteNodeType": "waypoint",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RouteShrine",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.48,
-        "Material": "SmoothPlastic",
-        "Color": [0.94, 0.86, 0.38],
-        "Shape": "Ball",
-        "Size": [3, 3, 3],
-        "Position": [55, 1.5, 50]
-      },
-      "attributes": {
-        "RouteGraphNode": "RouteShrine",
-        "RouteNodeType": "waypoint",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_EscapeRoute_A",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [4, 4, 4],
-        "Position": [-150, 2, 16]
-      },
-      "attributes": {
-        "ProtectedPath": true,
-        "RouteGraphNode": "EscapeRoute_A",
-        "RouteNodeType": "escape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_EscapeRoute_ControlA",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [4, 4, 4],
-        "Position": [88, 2, 8]
-      },
-      "attributes": {
-        "RouteGraphNode": "EscapeRoute_ControlA",
-        "RouteNodeType": "escape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_EscapeRoute_Dock",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [4, 4, 4],
-        "Position": [103, 2, 80]
-      },
-      "attributes": {
-        "ProtectedPath": true,
-        "RouteGraphNode": "EscapeRoute_Dock",
-        "RouteNodeType": "escape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_EscapeRoute_NorthTunnel",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [4, 4, 4],
-        "Position": [8, 2, -108]
-      },
-      "attributes": {
-        "ProtectedPath": true,
-        "RouteGraphNode": "EscapeRoute_NorthTunnel",
-        "RouteNodeType": "escape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_EscapeWinPad",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-150, 0.5, 16]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "escape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RootTunnel",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.44,
-        "Material": "SmoothPlastic",
-        "Color": [0.42, 0.5, 0.28],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-132, 0.5, -12]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "root",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_ScoutMark",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.44,
-        "Material": "SmoothPlastic",
-        "Color": [0.5, 0.42, 0.28],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-112, 0.5, -36]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "scout",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_Hide_A",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.44,
-        "Material": "SmoothPlastic",
-        "Color": [0.32, 0.58, 0.28],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-60, 0.5, 5]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "hide",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_Hide_B",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.44,
-        "Material": "SmoothPlastic",
-        "Color": [0.32, 0.58, 0.28],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [5, 0.5, 38]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "hide",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_CrawlEntry",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.44,
-        "Material": "SmoothPlastic",
-        "Color": [0.42, 0.5, 0.28],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [103, 0.5, -5]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "crawl",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_FallbackEscape",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.36,
-        "Material": "SmoothPlastic",
-        "Color": [0.35, 0.82, 0.45],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [-18, 0.5, 92]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "fallbackEscape",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_WatchStone",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.4,
-        "Material": "SmoothPlastic",
-        "Color": [0.55, 0.45, 0.72],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [35, 0.5, 0]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "watch",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "Node_RescueRouteEntry",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.38,
-        "Material": "SmoothPlastic",
-        "Color": [0.95, 0.55, 0.18],
-        "Shape": "Ball",
-        "Size": [3, 0.5, 3],
-        "Position": [55, 0.5, -67]
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "RouteNodeType": "rescue",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_01",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [-80, 0.65, 0]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_02",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [-40, 0.65, -12]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_03",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [-50, 0.65, 45]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_04",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [50, 0.65, 12]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_05",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [25, 0.65, -22]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_06",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [18, 0.65, 58]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    },
-    {
-      "name": "ObjectiveMarker_07",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.34,
-        "Material": "SmoothPlastic",
-        "Color": [1, 0.72, 0.18],
-        "Shape": "Ball",
-        "Size": [4, 0.5, 4],
-        "Position": [-85, 0.65, 47]
-      },
-      "attributes": {
-        "DistributedObjectiveMarker": true,
-        "GeneratedBlockout": true,
-        "RouteNodeType": "objective",
-        "VisualOnly": true
-      }
-    }
-  ]
+    "className":  "Folder",
+    "attributes":  {
+                       "GeneratedBlockout":  true,
+                       "MirrorsRouteGraph":  "Workspace.Map.RouteGraph.RouteGraphData.Nodes"
+                   },
+    "children":  [
+                     {
+                         "name":  "Node_TinyfolkSpawn",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.72,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.24,
+                                                          0.46,
+                                                          0.58
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             -122,
+                                                             0.34,
+                                                             14
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "TinyfolkSpawn",
+                                            "RouteNodeType":  "spawn",
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RouteWestVillage",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.52,
+                                                          0.28
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             -118,
+                                                             0.34,
+                                                             8
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "RouteWestVillage",
+                                            "RouteNodeType":  "waypoint",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RouteMacroPlaza",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.52,
+                                                          0.28
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             0,
+                                                             0.34,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "RouteMacroPlaza",
+                                            "RouteNodeType":  "waypoint",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RouteQuarry",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.52,
+                                                          0.28
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             78,
+                                                             0.34,
+                                                             -43
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "RouteQuarry",
+                                            "RouteNodeType":  "waypoint",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RouteShrine",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.52,
+                                                          0.28
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             0.34,
+                                                             50
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "RouteShrine",
+                                            "RouteNodeType":  "waypoint",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_EscapeRoute_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             0.34,
+                                                             16
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "ProtectedPath":  true,
+                                            "RouteGraphNode":  "EscapeRoute_A",
+                                            "RouteNodeType":  "escape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_EscapeRoute_ControlA",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             88,
+                                                             0.34,
+                                                             8
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "RouteGraphNode":  "EscapeRoute_ControlA",
+                                            "RouteNodeType":  "escape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_EscapeRoute_Dock",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             0.34,
+                                                             80
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "ProtectedPath":  true,
+                                            "RouteGraphNode":  "EscapeRoute_Dock",
+                                            "RouteNodeType":  "escape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_EscapeRoute_NorthTunnel",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             8,
+                                                             0.34,
+                                                             -108
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "ProtectedPath":  true,
+                                            "RouteGraphNode":  "EscapeRoute_NorthTunnel",
+                                            "RouteNodeType":  "escape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_EscapeWinPad",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -150,
+                                                             0.34,
+                                                             16
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "escape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RootTunnel",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.34,
+                                                          0.38,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             -132,
+                                                             0.34,
+                                                             -12
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "root",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_ScoutMark",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.52,
+                                                          0.28
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             -112,
+                                                             0.34,
+                                                             -36
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "scout",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_Hide_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.28,
+                                                          0.42,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             -60,
+                                                             0.34,
+                                                             5
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "hide",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_Hide_B",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.28,
+                                                          0.42,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             5,
+                                                             0.34,
+                                                             38
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "hide",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_CrawlEntry",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.34,
+                                                          0.38,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             103,
+                                                             0.34,
+                                                             -5
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "crawl",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_FallbackEscape",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.32,
+                                                          0.52,
+                                                          0.34
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -18,
+                                                             0.34,
+                                                             92
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "fallbackEscape",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_WatchStone",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.78,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.34,
+                                                          0.52
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             35,
+                                                             0.34,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "watch",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "Node_RescueRouteEntry",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.76,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.58,
+                                                          0.38,
+                                                          0.22
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         2.4,
+                                                         0.32,
+                                                         2.4
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             0.34,
+                                                             -67
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "rescue",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -80,
+                                                             0.34,
+                                                             0
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -40,
+                                                             0.34,
+                                                             -12
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -50,
+                                                             0.34,
+                                                             45
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             50,
+                                                             0.34,
+                                                             12
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             25,
+                                                             0.34,
+                                                             -22
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             18,
+                                                             0.34,
+                                                             58
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "ObjectiveMarker_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.82,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.68,
+                                                          0.52,
+                                                          0.24
+                                                      ],
+                                            "Shape":  "Ball",
+                                            "Size":  [
+                                                         3,
+                                                         0.32,
+                                                         3
+                                                     ],
+                                            "Position":  [
+                                                             -85,
+                                                             0.34,
+                                                             47
+                                                         ],
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DistributedObjectiveMarker":  true,
+                                            "GeneratedBlockout":  true,
+                                            "RouteNodeType":  "objective",
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     }
+                 ]
 }

@@ -1,488 +1,1076 @@
 {
-  "className": "Folder",
-  "children": [
-    {
-      "name": "Creek_SouthBoundary_Segment_01",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 36.4],
-        "Orientation": [0, 105.9, 0],
-        "Position": [-162.5, 0.18, 77],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_02",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 37.01],
-        "Orientation": [0, 91.5, 0],
-        "Position": [-126.5, 0.18, 71.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_03",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 30.08],
-        "Orientation": [0, 68.6, 0],
-        "Position": [-94, 0.18, 76.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_04",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 32.56],
-        "Orientation": [0, 79.4, 0],
-        "Position": [-64, 0.18, 85],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_05",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 32.56],
-        "Orientation": [0, 100.6, 0],
-        "Position": [-32, 0.18, 85],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_06",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 32.57],
-        "Orientation": [0, 107.9, 0],
-        "Position": [-0.5, 0.18, 77],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_07",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 35.51],
-        "Orientation": [0, 80.3, 0],
-        "Position": [32.5, 0.18, 75],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_08",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 34.93],
-        "Orientation": [0, 66.4, 0],
-        "Position": [66, 0.18, 85],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_09",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 39.85],
-        "Orientation": [0, 72.5, 0],
-        "Position": [101, 0.18, 98],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "Creek_SouthBoundary_Segment_10",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.28,
-        "Material": "Water",
-        "Color": [0.08, 0.34, 0.62],
-        "Size": [10, 0.22, 50.04],
-        "Orientation": [0, 92.3, 0],
-        "Position": [145, 0.18, 103],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "SouthernCreek"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_01",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 75.66],
-        "Orientation": [0, 97.6, 0],
-        "Position": [-107.5, 0.32, -103],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_02",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 105.04],
-        "Orientation": [0, 88.4, 0],
-        "Position": [-17.5, 0.32, -106.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_03",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 70.38],
-        "Orientation": [0, 67.4, 0],
-        "Position": [67.5, 0.32, -91.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_04",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 58.9],
-        "Orientation": [0, 49.8, 0],
-        "Position": [122.5, 0.32, -59],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_05",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 85.15],
-        "Orientation": [0, -3.4, 0],
-        "Position": [142.5, 0.32, 2.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_06",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 69.81],
-        "Orientation": [0, -52, 0],
-        "Position": [112.5, 0.32, 66.5],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_07",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 86.15],
-        "Orientation": [0, -80.6, 0],
-        "Position": [42.5, 0.32, 95],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_08",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 97.08],
-        "Orientation": [0, -101.9, 0],
-        "Position": [-47.5, 0.32, 92],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_09",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 64.38],
-        "Orientation": [0, -133.1, 0],
-        "Position": [-118.5, 0.32, 60],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_10",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 78.1],
-        "Orientation": [0, -166.7, 0],
-        "Position": [-151, 0.32, 0],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    },
-    {
-      "name": "RealmBoundary_Segment_11",
-      "className": "Part",
-      "properties": {
-        "Anchored": true,
-        "CanCollide": false,
-        "CanTouch": false,
-        "CanQuery": false,
-        "Transparency": 0.5,
-        "Material": "Ground",
-        "Color": [0.17, 0.29, 0.16],
-        "Size": [4, 0.35, 61.85],
-        "Orientation": [0, 166, 0],
-        "Position": [-152.5, 0.32, -68],
-        "Locked": true,
-        "CastShadow": false
-      },
-      "attributes": {
-        "GeneratedBlockout": true,
-        "VisualOnly": true,
-        "BoundaryKind": "RealmOutline"
-      }
-    }
-  ]
+    "className":  "Folder",
+    "children":  [
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         36.4
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                105.9,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -162.5,
+                                                             0.18,
+                                                             77
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         37.01
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                91.5,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -126.5,
+                                                             0.18,
+                                                             71.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         30.08
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                68.6,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -94,
+                                                             0.18,
+                                                             76.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         32.56
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                79.4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -64,
+                                                             0.18,
+                                                             85
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         32.56
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                100.6,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -32,
+                                                             0.18,
+                                                             85
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         32.57
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                107.9,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -0.5,
+                                                             0.18,
+                                                             77
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         35.51
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                80.3,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             32.5,
+                                                             0.18,
+                                                             75
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_08",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         34.93
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                66.4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             66,
+                                                             0.18,
+                                                             85
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_09",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         39.85
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                72.5,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             101,
+                                                             0.18,
+                                                             98
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "Creek_SouthBoundary_Segment_10",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.28,
+                                            "Material":  "Water",
+                                            "Color":  [
+                                                          0.08,
+                                                          0.34,
+                                                          0.62
+                                                      ],
+                                            "Size":  [
+                                                         10,
+                                                         0.22,
+                                                         50.04
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                92.3,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             145,
+                                                             0.18,
+                                                             103
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "SouthernCreek"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_01",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         75.66
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                97.6,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -107.5,
+                                                             0.32,
+                                                             -103
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_02",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         105.04
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                88.4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -17.5,
+                                                             0.32,
+                                                             -106.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_03",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         70.38
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                67.4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             67.5,
+                                                             0.32,
+                                                             -91.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_04",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         58.9
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                49.8,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             122.5,
+                                                             0.32,
+                                                             -59
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_05",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         85.15
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -3.4,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             142.5,
+                                                             0.32,
+                                                             2.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_06",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         69.81
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -52,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             112.5,
+                                                             0.32,
+                                                             66.5
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_07",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         86.15
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -80.6,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             42.5,
+                                                             0.32,
+                                                             95
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_08",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         97.08
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -101.9,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -47.5,
+                                                             0.32,
+                                                             92
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_09",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         64.38
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -133.1,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -118.5,
+                                                             0.32,
+                                                             60
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_10",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         78.1
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -166.7,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -151,
+                                                             0.32,
+                                                             0
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "RealmBoundary_Segment_11",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.5,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.17,
+                                                          0.29,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         4,
+                                                         0.35,
+                                                         61.85
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                166,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -152.5,
+                                                             0.32,
+                                                             -68
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "BoundaryKind":  "RealmOutline"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_WestEscapeBank",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.36,
+                                                          0.42,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         34,
+                                                         0.18,
+                                                         3.2
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -18,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -134,
+                                                             0.28,
+                                                             84
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_FallbackBank",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.34,
+                                                          0.4,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         38,
+                                                         0.16,
+                                                         3
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                8,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -16,
+                                                             0.27,
+                                                             88
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_EconomyBank",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.38,
+                                                          0.44,
+                                                          0.26
+                                                      ],
+                                            "Size":  [
+                                                         44,
+                                                         0.16,
+                                                         3
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -6,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             -64,
+                                                             0.27,
+                                                             82
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_DockBank",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.37,
+                                                          0.43,
+                                                          0.25
+                                                      ],
+                                            "Size":  [
+                                                         42,
+                                                         0.16,
+                                                         3.2
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                18,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             92,
+                                                             0.27,
+                                                             91
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_ControlCrawlBerm",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.34,
+                                                          0.4,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         30,
+                                                         0.18,
+                                                         2.8
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                -8,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             98,
+                                                             0.3,
+                                                             -12
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
+                         "name":  "CreekRouteEdge_RescueEntryBerm",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.42,
+                                            "Material":  "Ground",
+                                            "Color":  [
+                                                          0.38,
+                                                          0.34,
+                                                          0.24
+                                                      ],
+                                            "Size":  [
+                                                         28,
+                                                         0.16,
+                                                         2.8
+                                                     ],
+                                            "Orientation":  [
+                                                                0,
+                                                                12,
+                                                                0
+                                                            ],
+                                            "Position":  [
+                                                             58,
+                                                             0.28,
+                                                             -62
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "GeneratedBlockout":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "TerrainEdgeShaping":  true,
+                                            "NonBlockingRouteSeam":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     }
+                 ]
 }
