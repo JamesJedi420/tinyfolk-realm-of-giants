@@ -54,6 +54,9 @@ local function run()
 					},
 				},
 			},
+			validatorMetadata = {
+				validatorProfileId = "probe_chunk_v1",
+			},
 			content = {
 				spawns = {},
 				escapeRoutes = {},
@@ -86,6 +89,9 @@ local function run()
 				},
 			},
 			declaredConnections = {},
+			validatorMetadata = {
+				validatorProfileId = "probe_assembly_v1",
+			},
 		}
 	end
 
@@ -361,6 +367,9 @@ local function run()
 							halfExtents = { x = 8, y = 3, z = 4 },
 						},
 					},
+					validatorMetadata = {
+						validatorProfileId = "occupied_probe_chunk_v1",
+					},
 					content = {
 						spawns = {},
 						escapeRoutes = {},
@@ -383,6 +392,9 @@ local function run()
 				},
 			},
 			declaredConnections = {},
+			validatorMetadata = {
+				validatorProfileId = "occupied_probe_assembly_v1",
+			},
 		}
 	end
 
@@ -589,6 +601,219 @@ local function run()
 		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
 		assertEqual(valid, false, "block37 input contract invalid")
 		assertEqual(reason, "assembly_input_placement_transform_yaw_invalid", "block37 yaw reason")
+	end
+
+	-- BLOCK 38: Assembly input contract rejects duplicate socket ids per chunk.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		table.insert(
+			input.chunkLibrary["Chunk_Start"].sockets,
+			table.clone(input.chunkLibrary["Chunk_Start"].sockets[1])
+		)
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block38 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_socket_id_duplicate", "block38 duplicate socket reason")
+	end
+
+	-- BLOCK 39: Assembly input contract rejects malformed socket data.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.chunkLibrary["Chunk_Start"].sockets[1].localForward = { x = 1, y = 0, z = "bad" }
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block39 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_socket_invalid", "block39 malformed socket reason")
+	end
+
+	-- BLOCK 40: Assembly input contract rejects malformed content arrays.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.chunkLibrary["Chunk_Start"].content.spawns = { { name = "", position = { x = 0, y = 0, z = 0 } } }
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block40 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_content_arrays_invalid", "block40 malformed content reason")
+	end
+
+	-- BLOCK 41: Assembly input contract rejects duplicate local route node names.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		table.insert(input.chunkLibrary["Chunk_Start"].content.routeGraph.nodes, {
+			name = "StartNode",
+			position = { x = 10, y = 0, z = 10 },
+			nodeType = "waypoint",
+			tier = "primary",
+		})
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block41 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_route_node_name_duplicate", "block41 duplicate route node reason")
+	end
+
+	-- BLOCK 42: Assembly input contract rejects route edges that reference missing local nodes.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.chunkLibrary["Chunk_Start"].content.routeGraph.edges[1].to = "MissingNode"
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block42 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_route_edge_node_missing", "block42 missing route edge node reason")
+	end
+
+	-- BLOCK 43: Assembly input contract rejects malformed occupiedSpace.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		input.chunkLibrary["Chunk_Start"].occupiedSpace[1].halfExtents.x = -1
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block43 input contract invalid")
+		assertEqual(reason, "assembly_input_chunk_occupied_space_invalid", "block43 occupied space reason")
+	end
+
+	-- BLOCK 44: Assembly input contract rejects missing or invalid validator metadata.
+	do
+		local missing = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		missing.validatorMetadata = nil
+		local missingValid, missingReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(missing)
+		assertEqual(missingValid, false, "block44 missing metadata invalid")
+		assertEqual(missingReason, "assembly_input_validator_metadata_invalid", "block44 missing metadata reason")
+
+		local invalid = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		invalid.validatorMetadata.validatorProfileId = ""
+		local invalidValid, invalidReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(invalid)
+		assertEqual(invalidValid, false, "block44 invalid metadata invalid")
+		assertEqual(invalidReason, "assembly_input_validator_metadata_invalid", "block44 invalid metadata reason")
+	end
+
+	-- BLOCK 45: Assembly input contract rejects missing or invalid chunk validator metadata.
+	do
+		local missing = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		missing.chunkLibrary["Chunk_Start"].validatorMetadata = nil
+		local missingValid, missingReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(missing)
+		assertEqual(missingValid, false, "block45 missing chunk metadata invalid")
+		assertEqual(
+			missingReason,
+			"assembly_input_chunk_validator_metadata_invalid",
+			"block45 missing chunk metadata reason"
+		)
+
+		local invalid = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		invalid.chunkLibrary["Chunk_Start"].validatorMetadata.validatorProfileId = ""
+		local invalidValid, invalidReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(invalid)
+		assertEqual(invalidValid, false, "block45 invalid chunk metadata invalid")
+		assertEqual(
+			invalidReason,
+			"assembly_input_chunk_validator_metadata_invalid",
+			"block45 invalid chunk metadata reason"
+		)
+	end
+
+	-- BLOCK 46: Assembly input contract rejects invalid structural metadata enum fields.
+	do
+		local invalidTile = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		invalidTile.chunkLibrary["Chunk_Start"].structuralMetadata.tileSizeClass = "huge"
+		local tileValid, tileReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(invalidTile)
+		assertEqual(tileValid, false, "block46 invalid tile enum invalid")
+		assertEqual(tileReason, "assembly_input_chunk_structural_metadata_invalid", "block46 invalid tile enum reason")
+
+		local invalidEnvironment = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		invalidEnvironment.chunkLibrary["Chunk_Start"].structuralMetadata.environmentClass = "cave"
+		local environmentValid, environmentReason =
+			RealmChunkAssemblySchema.ValidateAssemblyInputContract(invalidEnvironment)
+		assertEqual(environmentValid, false, "block46 invalid env enum invalid")
+		assertEqual(
+			environmentReason,
+			"assembly_input_chunk_structural_metadata_invalid",
+			"block46 invalid env enum reason"
+		)
+
+		local invalidDensity = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		invalidDensity.chunkLibrary["Chunk_Start"].structuralMetadata.traversalDensityClass = "jammed"
+		local densityValid, densityReason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(invalidDensity)
+		assertEqual(densityValid, false, "block46 invalid density enum invalid")
+		assertEqual(
+			densityReason,
+			"assembly_input_chunk_structural_metadata_invalid",
+			"block46 invalid density enum reason"
+		)
+	end
+
+	-- BLOCK 47: Validator handoff records descriptor readiness and validator profile id.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.validatorHandoff.descriptorReady, true, "block47 descriptor ready")
+		assertEqual(
+			output.validatorHandoff.validatorProfileId,
+			"prototype_realm_topology_v1",
+			"block47 validator profile"
+		)
+		assertEqual(#output.validatorHandoff.blockingAssemblyIssueCodes, 0, "block47 no blocking issues")
+	end
+
+	-- BLOCK 48: Validator handoff records blocking assembly issue codes deterministically.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetDuplicateSocketUseAssemblyInput()
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+		assertEqual(output.validatorHandoff.descriptorReady, false, "block48 descriptor blocked")
+		assertEqual(output.validatorHandoff.blockingAssemblyIssueCodes[1], "duplicate_socket_use", "block48 first code")
+		assertEqual(
+			output.validatorHandoff.blockingAssemblyIssueCodes[2],
+			"unstitchable_connection",
+			"block48 second code"
+		)
+	end
+
+	-- BLOCK 49: Prototype fixture exposes explicit assembled descriptor/handoff path.
+	do
+		local assembled = RealmAssemblyPrototypeFixture.GetPrototypeAssembledRealmDescriptorHandoff()
+		assertTrue(assembled.descriptor ~= nil, "block49 descriptor present")
+		assertTrue(#assembled.descriptor.routeGraph.nodes > 0, "block49 descriptor route nodes present")
+		assertEqual(assembled.handoff.descriptorReady, true, "block49 handoff ready")
+		assertEqual(assembled.handoff.validatorProfileId, "prototype_realm_topology_v1", "block49 profile")
+	end
+
+	-- BLOCK 50: Misaligned socket positions block descriptor handoff inspectably.
+	do
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			RealmAssemblyPrototypeFixture.GetMisalignedSocketAssemblyInput()
+		)
+		assertEqual(output.integrity.passed, false, "block50 integrity failed")
+		assertIssueCode(output, "socket_position_mismatch", "block50 position mismatch issue")
+		assertIssueCode(output, "unstitchable_connection", "block50 unstitchable issue")
+		assertIssueCode(output, "disconnected_placement", "block50 disconnected issue")
+		assertEqual(output.validatorHandoff.descriptorReady, false, "block50 descriptor blocked")
+		assertEqual(
+			output.validatorHandoff.blockingAssemblyIssueCodes[1],
+			"socket_position_mismatch",
+			"block50 first blocking code"
+		)
+	end
+
+	-- BLOCK 51: Non-opposing socket forward vectors block descriptor handoff inspectably.
+	do
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			RealmAssemblyPrototypeFixture.GetMisorientedSocketAssemblyInput()
+		)
+		assertEqual(output.integrity.passed, false, "block51 integrity failed")
+		assertIssueCode(output, "socket_forward_mismatch", "block51 forward mismatch issue")
+		assertIssueCode(output, "unstitchable_connection", "block51 unstitchable issue")
+		assertEqual(output.validatorHandoff.descriptorReady, false, "block51 descriptor blocked")
+		assertEqual(
+			output.validatorHandoff.blockingAssemblyIssueCodes[1],
+			"socket_forward_mismatch",
+			"block51 first blocking code"
+		)
+	end
+
+	-- BLOCK 52: Disconnected placements block descriptor handoff inspectably.
+	do
+		local output = RealmChunkAssemblySchema.BuildAssemblyOutput(
+			RealmAssemblyPrototypeFixture.GetDisconnectedPlacementAssemblyInput()
+		)
+		assertEqual(output.integrity.passed, false, "block52 integrity failed")
+		assertIssueCode(output, "disconnected_placement", "block52 disconnected issue")
+		assertEqual(output.validatorHandoff.descriptorReady, false, "block52 descriptor blocked")
+		assertEqual(
+			output.validatorHandoff.blockingAssemblyIssueCodes[1],
+			"disconnected_placement",
+			"block52 first blocking code"
+		)
 	end
 
 	print("realm_chunk_assembly_schema: all checks passed")

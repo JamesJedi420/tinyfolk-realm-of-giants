@@ -2,6 +2,7 @@
 
 local RealmMetadataRegistry = require("./RealmMetadataRegistry")
 local RealmThemeFamilySchema = require("./RealmThemeFamilySchema")
+local RealmChunkAssemblySchema = require("./RealmChunkAssemblySchema")
 
 local Fixture: any = {}
 
@@ -80,6 +81,9 @@ function Fixture.GetPrototypeAssemblyInput(): any
 			environmentClass = "outdoor",
 			traversalDensityClass = "moderate",
 		},
+		validatorMetadata = {
+			validatorProfileId = "prototype_chunk_start_v1",
+		},
 		content = {
 			spawns = {
 				{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
@@ -151,6 +155,9 @@ function Fixture.GetPrototypeAssemblyInput(): any
 			environmentClass = "indoor",
 			traversalDensityClass = "sparse",
 		},
+		validatorMetadata = {
+			validatorProfileId = "prototype_chunk_exit_v1",
+		},
 		content = {
 			spawns = {},
 			escapeRoutes = {
@@ -205,6 +212,9 @@ function Fixture.GetPrototypeAssemblyInput(): any
 				toSocketId = "west_path",
 			},
 		},
+		validatorMetadata = {
+			validatorProfileId = "prototype_realm_topology_v1",
+		},
 	}
 end
 
@@ -226,6 +236,25 @@ function Fixture.GetIncompatibleSocketAssemblyInput(): any
 	return input
 end
 
+function Fixture.GetMisalignedSocketAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.placements[2].transform.position.x += 0.01
+	return input
+end
+
+function Fixture.GetMisorientedSocketAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Exit"].sockets[1].localForward = { x = 1, y = 0, z = 0 }
+	return input
+end
+
+function Fixture.GetDisconnectedPlacementAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.placements[2].transform.position.x = 260
+	input.declaredConnections = {}
+	return input
+end
+
 function Fixture.GetDuplicateSocketUseAssemblyInput(): any
 	local input = Fixture.GetPrototypeAssemblyInput()
 	table.insert(input.declaredConnections, {
@@ -239,9 +268,10 @@ end
 
 function Fixture.GetSelfConnectionAssemblyInput(allowSelfConnection: boolean?): any
 	local input = Fixture.GetPrototypeAssemblyInput()
+	input.placements = { input.placements[1] }
 	table.insert(input.chunkLibrary["Chunk_Start"].sockets, {
 		socketId = "west_path_self",
-		localPosition = { x = -60, y = 0, z = 0 },
+		localPosition = { x = 60, y = 0, z = 0 },
 		localForward = { x = -1, y = 0, z = 0 },
 		compatibility = {
 			connectionClass = "route_main",
@@ -291,6 +321,15 @@ function Fixture.SelectAssemblyInputFromMetadata(selectionInput: any?, registry:
 	end
 
 	return input, selected.realmTemplateId
+end
+
+function Fixture.GetPrototypeAssembledRealmDescriptorHandoff(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	local output = RealmChunkAssemblySchema.BuildAssemblyOutput(input)
+	return {
+		descriptor = RealmChunkAssemblySchema.ToRealmDescriptor(output),
+		handoff = output.validatorHandoff,
+	}
 end
 
 return Fixture

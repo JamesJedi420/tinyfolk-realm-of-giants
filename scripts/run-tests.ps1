@@ -63,6 +63,7 @@ $testFiles = @(
     'tests\rescue_admission_service_runtime_entrypoint.spec.luau',
     'tests\realm_metadata_registry.spec.luau',
     'tests\realm_theme_family_schema.spec.luau',
+    'tests\realm_chunk_assembly_schema.spec.luau',
     'tests\district_placement_assembly_selection_runtime_entrypoint.spec.luau',
     'tests\active_realm_capacity_state.spec.luau',
     'tests\active_realm_capacity_store.spec.luau',

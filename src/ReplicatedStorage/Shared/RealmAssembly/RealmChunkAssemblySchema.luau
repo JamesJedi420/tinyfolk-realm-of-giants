@@ -14,6 +14,10 @@ export type RealmDescriptor = RealmTopologyValidator.RealmDescriptor
 
 export type SocketRole = "male" | "female"
 
+export type ChunkValidatorMetadata = {
+	validatorProfileId: string,
+}
+
 export type ChunkSocketCompatibility = {
 	connectionClass: string,
 	socketRole: SocketRole,
@@ -73,7 +77,12 @@ export type AuthoredChunk = {
 	sockets: { ChunkSocket },
 	occupiedSpace: { ChunkOccupiedBox }?,
 	structuralMetadata: ChunkStructuralMetadata?,
+	validatorMetadata: ChunkValidatorMetadata,
 	content: ChunkLocalContent,
+}
+
+export type AssemblyValidatorMetadata = {
+	validatorProfileId: string,
 }
 
 export type ChunkTransform = {
@@ -99,6 +108,7 @@ export type AssemblyInput = {
 	chunkLibrary: { [string]: AuthoredChunk },
 	placements: { ChunkPlacement },
 	declaredConnections: { DeclaredChunkConnection },
+	validatorMetadata: AssemblyValidatorMetadata,
 }
 
 export type ResolvedWorldSocket = {
@@ -180,6 +190,12 @@ export type AssemblyIntegrityResult = {
 	issues: { AssemblyIntegrityIssue },
 }
 
+export type ValidatorHandoff = {
+	descriptorReady: boolean,
+	validatorProfileId: string,
+	blockingAssemblyIssueCodes: { string },
+}
+
 export type AssemblyOutput = {
 	descriptor: RealmDescriptor,
 	placements: { ChunkPlacement },
@@ -192,6 +208,7 @@ export type AssemblyOutput = {
 	resolvedConnections: { ResolvedChunkConnection },
 	stitchedGraph: AssemblyStitchedGraph,
 	integrity: AssemblyIntegrityResult,
+	validatorHandoff: ValidatorHandoff,
 }
 
 local function normalizeYawQuarterTurns(turns: number): number
@@ -341,6 +358,20 @@ local function addIntegrityIssue(issues: { AssemblyIntegrityIssue }, issue: Asse
 	table.insert(issues, issue)
 end
 
+local SOCKET_ALIGNMENT_TOLERANCE = 0.001
+
+local function collectBlockingIssueCodes(issues: { AssemblyIntegrityIssue }): { string }
+	local codes: { string } = {}
+	local seen: { [string]: boolean } = {}
+	for _, issue in ipairs(issues) do
+		if not seen[issue.code] then
+			seen[issue.code] = true
+			table.insert(codes, issue.code)
+		end
+	end
+	return codes
+end
+
 local function resolveWorldSocket(placement: ChunkPlacement, socket: ChunkSocket): ResolvedWorldSocket
 	return {
 		placementId = placement.placementId,
@@ -370,6 +401,14 @@ local function resolveOccupiedBox(placement: ChunkPlacement, box: ChunkOccupiedB
 		worldCenter = transformPoint(box.localCenter, placement.transform),
 		halfExtents = resolveOccupiedBoxHalfExtents(box.halfExtents, placement.transform.yawQuarterTurns),
 	}
+end
+
+local function vectorDeltaWithinTolerance(a: Vector3Data, b: Vector3Data, tolerance: number): boolean
+	return math.abs(a.x - b.x) <= tolerance and math.abs(a.y - b.y) <= tolerance and math.abs(a.z - b.z) <= tolerance
+end
+
+local function vectorsOpposeWithinTolerance(a: Vector3Data, b: Vector3Data, tolerance: number): boolean
+	return math.abs(a.x + b.x) <= tolerance and math.abs(a.y + b.y) <= tolerance and math.abs(a.z + b.z) <= tolerance
 end
 
 local function isFiniteNumber(value: any): boolean
@@ -408,6 +447,225 @@ local function isValidVector3Data(value: any): boolean
 	return true
 end
 
+local function isStringArray(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	for _, item in ipairs(value) do
+		if type(item) ~= "string" then
+			return false
+		end
+	end
+	return true
+end
+
+local function isValidOptionalBoolean(value: any): boolean
+	return value == nil or type(value) == "boolean"
+end
+
+local function isValidOptionalString(value: any): boolean
+	return value == nil or type(value) == "string"
+end
+
+local function isValidSocketCompatibility(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isNonEmptyString(value.connectionClass) then
+		return false
+	end
+	if value.socketRole ~= "male" and value.socketRole ~= "female" then
+		return false
+	end
+	if value.lane ~= nil and not isNonEmptyString(value.lane) then
+		return false
+	end
+	if value.elevationTier ~= nil and (not isFiniteNumber(value.elevationTier) or value.elevationTier % 1 ~= 0) then
+		return false
+	end
+	return true
+end
+
+local function isValidSocket(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isNonEmptyString(value.socketId) then
+		return false
+	end
+	if not isValidVector3Data(value.localPosition) then
+		return false
+	end
+	if not isValidVector3Data(value.localForward) then
+		return false
+	end
+	if not isValidSocketCompatibility(value.compatibility) then
+		return false
+	end
+	if not isValidOptionalBoolean(value.allowMultipleConnections) then
+		return false
+	end
+	if value.tags ~= nil and not isStringArray(value.tags) then
+		return false
+	end
+	return true
+end
+
+local function isValidNamedPart(value: any): boolean
+	return type(value) == "table" and isNonEmptyString(value.name) and isValidVector3Data(value.position)
+end
+
+local function isValidNamedZone(value: any): boolean
+	if not isValidNamedPart(value) then
+		return false
+	end
+	if not isFiniteNumber(value.radius) or value.radius <= 0 then
+		return false
+	end
+	return isValidOptionalString(value.tag)
+end
+
+local function isValidNamedProp(value: any): boolean
+	if not isValidNamedPart(value) then
+		return false
+	end
+	return isNonEmptyString(value.propType)
+end
+
+local function isValidPartArray(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	for _, part in ipairs(value) do
+		if not isValidNamedPart(part) then
+			return false
+		end
+	end
+	return true
+end
+
+local function isValidZoneArray(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	for _, zone in ipairs(value) do
+		if not isValidNamedZone(zone) then
+			return false
+		end
+	end
+	return true
+end
+
+local function isValidPropArray(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	for _, prop in ipairs(value) do
+		if not isValidNamedProp(prop) then
+			return false
+		end
+	end
+	return true
+end
+
+local function isValidRouteNode(value: any): boolean
+	if not isValidNamedPart(value) then
+		return false
+	end
+	if value.nodeType ~= nil and type(value.nodeType) ~= "string" then
+		return false
+	end
+	if value.tier ~= nil and type(value.tier) ~= "string" then
+		return false
+	end
+	return true
+end
+
+local function isValidRouteEdge(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isNonEmptyString(value.from) or not isNonEmptyString(value.to) then
+		return false
+	end
+	if value.distance ~= nil and (not isFiniteNumber(value.distance) or value.distance < 0) then
+		return false
+	end
+	return true
+end
+
+local function isValidOccupiedBox(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if value.tag ~= nil and type(value.tag) ~= "string" then
+		return false
+	end
+	if not isValidVector3Data(value.localCenter) then
+		return false
+	end
+	if not isValidVector3Data(value.halfExtents) then
+		return false
+	end
+	return value.halfExtents.x >= 0 and value.halfExtents.y >= 0 and value.halfExtents.z >= 0
+end
+
+local function isValidValidatorMetadata(value: any): boolean
+	return type(value) == "table" and isNonEmptyString(value.validatorProfileId)
+end
+
+local VALID_TILE_SIZE_CLASSES: { [string]: boolean } = {
+	small = true,
+	medium = true,
+	large = true,
+	xlarge = true,
+}
+
+local VALID_ENVIRONMENT_CLASSES: { [string]: boolean } = {
+	indoor = true,
+	outdoor = true,
+	mixed = true,
+}
+
+local VALID_TRAVERSAL_DENSITY_CLASSES: { [string]: boolean } = {
+	open = true,
+	sparse = true,
+	moderate = true,
+	dense = true,
+}
+
+local function isValidOptionalEnum(value: any, allowed: { [string]: boolean }): boolean
+	return value == nil or (type(value) == "string" and allowed[value] == true)
+end
+
+local function isValidStructuralMetadata(value: any): boolean
+	if value == nil then
+		return true
+	end
+	if type(value) ~= "table" then
+		return false
+	end
+	if value.isLandmarkAnchor ~= nil and type(value.isLandmarkAnchor) ~= "boolean" then
+		return false
+	end
+	if value.landmarkAnchorId ~= nil and not isNonEmptyString(value.landmarkAnchorId) then
+		return false
+	end
+	if not isValidOptionalEnum(value.tileSizeClass, VALID_TILE_SIZE_CLASSES) then
+		return false
+	end
+	if value.recurringStructureTags ~= nil and not isStringArray(value.recurringStructureTags) then
+		return false
+	end
+	if not isValidOptionalEnum(value.environmentClass, VALID_ENVIRONMENT_CLASSES) then
+		return false
+	end
+	if not isValidOptionalEnum(value.traversalDensityClass, VALID_TRAVERSAL_DENSITY_CLASSES) then
+		return false
+	end
+	return true
+end
+
 function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (boolean, string?)
 	if type(input) ~= "table" then
 		return false, "assembly_input_invalid"
@@ -421,6 +679,9 @@ function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (bo
 	end
 	if type(input.declaredConnections) ~= "table" then
 		return false, "assembly_input_declared_connections_invalid"
+	end
+	if not isValidValidatorMetadata(input.validatorMetadata) then
+		return false, "assembly_input_validator_metadata_invalid"
 	end
 
 	local chunkCount = 0
@@ -448,17 +709,77 @@ function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (bo
 		if type(chunk.tags) ~= "table" then
 			return false, "assembly_input_chunk_tags_invalid"
 		end
+		if not isStringArray(chunk.tags) then
+			return false, "assembly_input_chunk_tags_invalid"
+		end
 		if type(chunk.sockets) ~= "table" then
 			return false, "assembly_input_chunk_sockets_invalid"
 		end
+		local seenSocketIds: { [string]: boolean } = {}
+		for _, socket in ipairs(chunk.sockets) do
+			if not isValidSocket(socket) then
+				return false, "assembly_input_chunk_socket_invalid"
+			end
+			if seenSocketIds[socket.socketId] then
+				return false, "assembly_input_chunk_socket_id_duplicate"
+			end
+			seenSocketIds[socket.socketId] = true
+		end
+		if chunk.occupiedSpace ~= nil then
+			if type(chunk.occupiedSpace) ~= "table" then
+				return false, "assembly_input_chunk_occupied_space_invalid"
+			end
+			for _, box in ipairs(chunk.occupiedSpace) do
+				if not isValidOccupiedBox(box) then
+					return false, "assembly_input_chunk_occupied_space_invalid"
+				end
+			end
+		end
+		if not isValidStructuralMetadata(chunk.structuralMetadata) then
+			return false, "assembly_input_chunk_structural_metadata_invalid"
+		end
+		if not isValidValidatorMetadata(chunk.validatorMetadata) then
+			return false, "assembly_input_chunk_validator_metadata_invalid"
+		end
 		if type(chunk.content) ~= "table" then
 			return false, "assembly_input_chunk_content_invalid"
+		end
+		if
+			not isValidPartArray(chunk.content.spawns)
+			or not isValidPartArray(chunk.content.escapeRoutes)
+			or not isValidPartArray(chunk.content.returnPoints)
+			or not isValidPartArray(chunk.content.stations)
+			or not isValidPartArray(chunk.content.constructionSites)
+			or not isValidPartArray(chunk.content.upgradeBoards)
+			or not isValidZoneArray(chunk.content.controlZones)
+			or not isValidZoneArray(chunk.content.captureZones)
+			or not isValidPropArray(chunk.content.props)
+		then
+			return false, "assembly_input_chunk_content_arrays_invalid"
 		end
 		if type(chunk.content.routeGraph) ~= "table" then
 			return false, "assembly_input_chunk_route_graph_invalid"
 		end
 		if type(chunk.content.routeGraph.nodes) ~= "table" or type(chunk.content.routeGraph.edges) ~= "table" then
 			return false, "assembly_input_chunk_route_graph_shape_invalid"
+		end
+		local seenNodeNames: { [string]: boolean } = {}
+		for _, node in ipairs(chunk.content.routeGraph.nodes) do
+			if not isValidRouteNode(node) then
+				return false, "assembly_input_chunk_route_node_invalid"
+			end
+			if seenNodeNames[node.name] then
+				return false, "assembly_input_chunk_route_node_name_duplicate"
+			end
+			seenNodeNames[node.name] = true
+		end
+		for _, edge in ipairs(chunk.content.routeGraph.edges) do
+			if not isValidRouteEdge(edge) then
+				return false, "assembly_input_chunk_route_edge_invalid"
+			end
+			if not seenNodeNames[edge.from] or not seenNodeNames[edge.to] then
+				return false, "assembly_input_chunk_route_edge_node_missing"
+			end
 		end
 	end
 	if chunkCount < 1 then
@@ -741,6 +1062,47 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 					})
 				end
 
+				local fromWorldSocket =
+					resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.fromPlacementId, conn.fromSocketId)]
+				local toWorldSocket =
+					resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(conn.toPlacementId, conn.toSocketId)]
+				if fromWorldSocket ~= nil and toWorldSocket ~= nil then
+					if
+						not vectorDeltaWithinTolerance(
+							fromWorldSocket.worldPosition,
+							toWorldSocket.worldPosition,
+							SOCKET_ALIGNMENT_TOLERANCE
+						)
+					then
+						addIntegrityIssue(integrityIssues, {
+							code = "socket_position_mismatch",
+							message = "Declared connection socket world positions do not align",
+							declaredConnectionIndex = index,
+							fromPlacementId = conn.fromPlacementId,
+							fromSocketId = conn.fromSocketId,
+							toPlacementId = conn.toPlacementId,
+							toSocketId = conn.toSocketId,
+						})
+					end
+					if
+						not vectorsOpposeWithinTolerance(
+							fromWorldSocket.worldForward,
+							toWorldSocket.worldForward,
+							SOCKET_ALIGNMENT_TOLERANCE
+						)
+					then
+						addIntegrityIssue(integrityIssues, {
+							code = "socket_forward_mismatch",
+							message = "Declared connection socket worldForward vectors do not oppose",
+							declaredConnectionIndex = index,
+							fromPlacementId = conn.fromPlacementId,
+							fromSocketId = conn.fromSocketId,
+							toPlacementId = conn.toPlacementId,
+							toSocketId = conn.toSocketId,
+						})
+					end
+				end
+
 				local fromKey = socketUsageKey(conn.fromPlacementId, conn.fromSocketId)
 				local toKey = socketUsageKey(conn.toPlacementId, conn.toSocketId)
 				local fromCount = socketUseCount[fromKey] or 0
@@ -833,9 +1195,46 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		})
 	end
 
+	if #input.placements > 1 then
+		local visited: { [string]: boolean } = {}
+		local queue: { string } = { input.placements[1].placementId }
+		visited[input.placements[1].placementId] = true
+		local cursor = 1
+		while cursor <= #queue do
+			local placementId = queue[cursor]
+			cursor += 1
+			local adjacency = stitchedGraph.adjacencyByPlacement[placementId]
+			if adjacency ~= nil then
+				for _, edge in ipairs(adjacency) do
+					if not visited[edge.neighborPlacementId] then
+						visited[edge.neighborPlacementId] = true
+						table.insert(queue, edge.neighborPlacementId)
+					end
+				end
+			end
+		end
+
+		for _, placement in ipairs(input.placements) do
+			if not visited[placement.placementId] then
+				addIntegrityIssue(integrityIssues, {
+					code = "disconnected_placement",
+					message = "Placement is not connected through stitched connections",
+					fromPlacementId = placement.placementId,
+				})
+			end
+		end
+	end
+
 	local integrity: AssemblyIntegrityResult = {
 		passed = #integrityIssues == 0,
 		issues = integrityIssues,
+	}
+	local validatorHandoff: ValidatorHandoff = {
+		descriptorReady = integrity.passed,
+		validatorProfileId = if input.validatorMetadata ~= nil
+			then input.validatorMetadata.validatorProfileId
+			else "unspecified_validator_profile",
+		blockingAssemblyIssueCodes = collectBlockingIssueCodes(integrityIssues),
 	}
 
 	return {
@@ -850,6 +1249,7 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		resolvedConnections = resolvedConnections,
 		stitchedGraph = stitchedGraph,
 		integrity = integrity,
+		validatorHandoff = validatorHandoff,
 	}
 end
 
