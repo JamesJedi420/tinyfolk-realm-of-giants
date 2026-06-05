@@ -233,6 +233,7 @@ local mapFolder = makeNode("Map", "Folder", "Workspace.Map")
 local stationsFolder = makeNode("Stations", "Folder", "Workspace.Map.Stations")
 addChild(stationsFolder, "WorkStation_A", makeBasePart("WorkStation_A", 10, 0, 10))
 addChild(stationsFolder, "WorkStation_B", makeBasePart("WorkStation_B", 12, 0, 10))
+addChild(stationsFolder, "WorkStation_C", makeBasePart("WorkStation_C", 20, 0, 10))
 addChild(stationsFolder, "MiningStation_A", makeBasePart("MiningStation_A", 14, 0, 10))
 addChild(stationsFolder, "Warehouse_A", makeBasePart("Warehouse_A", 30, 0, 10))
 addChild(stationsFolder, "Granary_A", makeBasePart("Granary_A", 35, 0, 10))
@@ -291,8 +292,28 @@ local taskPlayer = makeAlivePlayer(7102, Vector3.new(10, 0, 10))
 taskPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 taskPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Woodcutter)
 
+local interactionAssignPlayer = makeAlivePlayer(7104, Vector3.new(20, 0, 10))
+interactionAssignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+interactionAssignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.None)
+interactionAssignPlayer:SetAttribute("SpecialistAssignedStationId", nil)
+
 table.insert(playersList, legacyPlayer)
 table.insert(playersList, taskPlayer)
+table.insert(playersList, interactionAssignPlayer)
+
+local interactionAssignCalls: { any } = {}
+_G._SpecialistAssignmentService_QueryAPI = {
+	AssignForInteraction = function(player: any, specialistRole: string, assignedStationId: string): (boolean, string)
+		table.insert(interactionAssignCalls, {
+			userId = player.UserId,
+			specialistRole = specialistRole,
+			assignedStationId = assignedStationId,
+		})
+		player:SetAttribute("SpecialistRole", specialistRole)
+		player:SetAttribute("SpecialistAssignedStationId", assignedStationId)
+		return true, "assigned"
+	end,
+}
 
 local loaded, loadError = pcall(function()
 	require("../src/ServerScriptService/Services/StationService.server")
@@ -305,6 +326,32 @@ assertTrue(activateRemote._Handler ~= nil, "station service binds StationActivat
 
 local stationStateById = _G._StationService_StationState
 assertTrue(type(stationStateById) == "table", "station state export present")
+
+StationConfig.RequestCooldownSeconds = 0
+StationConfig.RequiredSpecialistRoleByStationId.WorkStation_C = SpecialistConfig.SpecialistRoles.Woodcutter
+activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
+assertEqual(
+	interactionAssignPlayer:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Woodcutter,
+	"station activation assigns required specialist role"
+)
+assertEqual(
+	interactionAssignPlayer:GetAttribute("SpecialistAssignedStationId"),
+	"WorkStation_C",
+	"station activation assigns station id"
+)
+assertEqual(#interactionAssignCalls, 1, "station activation called interaction assignment API")
+assertEqual(stationStateById["WorkStation_C"].isActive, true, "station activation starts after assignment")
+
+runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
+assertTrue(stationStateById["WorkStation_C"].resourceTotal > 0, "assigned station generates material on tick")
+assertEqual(stationStateById["WorkStation_C"].isActive, true, "assigned station remains active after valid tick")
+
+local ResourceFlowState = require("../src/ServerScriptService/Services/ResourceFlowState")
+local flowBeforeHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
+activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
+local flowAfterHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
+assertTrue(flowAfterHaul.inTransit > flowBeforeHaul.inTransit, "assigned specialist moves produced Wood to transit")
 
 activateRemote:FireServer(legacyPlayer, "WorkStation_B")
 assertEqual(stationStateById["WorkStation_B"].isActive, true, "legacy string payload still activates station")

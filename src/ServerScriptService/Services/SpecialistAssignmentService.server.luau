@@ -391,6 +391,93 @@ local function snapshotForPlayer(player: Player)
 	}
 end
 
+local function assignSpecialistState(
+	player: Player,
+	specialistRole: string,
+	assignedStationId: string?,
+	reason: string,
+	allowIdempotent: boolean,
+	source: string
+): (boolean, string)
+	if not isTinyfolk(player) then
+		return false, "requester_not_tinyfolk"
+	end
+
+	if HAULING_RESERVED_LABELS[specialistRole] == true then
+		return false, "hauling_not_specialist_role"
+	end
+
+	if not validSpecialistRoleSet[specialistRole] then
+		return false, "invalid_specialist_role"
+	end
+
+	if assignedStationId ~= nil and type(assignedStationId) ~= "string" then
+		return false, "malformed_payload"
+	end
+
+	local stationValid, stationError = validateAssignedStationForRole(specialistRole, assignedStationId)
+	if not stationValid then
+		return false, stationError
+	end
+
+	local state = getOrCreateState(player.UserId)
+	if state.specialistRole ~= SpecialistConfig.SpecialistRoles.None then
+		if state.specialistRole == specialistRole and state.assignedStationId == assignedStationId then
+			if allowIdempotent then
+				debugLog(
+					string.format(
+						"Accepted SpecialistAssignRequest idempotent source=%s userId=%d specialistRole=%s assignedStationId=%s",
+						source,
+						player.UserId,
+						specialistRole,
+						tostring(assignedStationId)
+					)
+				)
+				return true, "already_assigned"
+			end
+
+			return false, string.format("already_assigned specialistRole=%s", state.specialistRole)
+		end
+
+		local previousSpecialistRole = state.specialistRole
+		local previousAssignedStationId = state.assignedStationId
+
+		setState(player, specialistRole, assignedStationId, reason)
+		local updatedState = getOrCreateState(player.UserId)
+		persistSpecialistRole(player, specialistRole)
+		persistAssignedStationId(player, assignedStationId)
+		persistLastAssignedAt(player, updatedState.lastAssignedAt)
+		debugLog(
+			string.format(
+				"Accepted SpecialistAssignRequest reassigned source=%s userId=%d fromSpecialistRole=%s fromAssignedStationId=%s toSpecialistRole=%s toAssignedStationId=%s",
+				source,
+				player.UserId,
+				previousSpecialistRole,
+				tostring(previousAssignedStationId),
+				specialistRole,
+				tostring(assignedStationId)
+			)
+		)
+		return true, "reassigned"
+	end
+
+	setState(player, specialistRole, assignedStationId, reason)
+	local updatedState = getOrCreateState(player.UserId)
+	persistSpecialistRole(player, specialistRole)
+	persistAssignedStationId(player, assignedStationId)
+	persistLastAssignedAt(player, updatedState.lastAssignedAt)
+	debugLog(
+		string.format(
+			"Accepted SpecialistAssignRequest source=%s userId=%d specialistRole=%s assignedStationId=%s",
+			source,
+			player.UserId,
+			specialistRole,
+			tostring(assignedStationId)
+		)
+	)
+	return true, "assigned"
+end
+
 local function rejectAssign(player: Player, reason: string)
 	debugWarn(string.format("Rejected SpecialistAssignRequest userId=%d reason=%s", player.UserId, reason))
 end
@@ -428,73 +515,17 @@ assignRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	if not isTinyfolk(player) then
-		rejectAssign(player, "requester_not_tinyfolk")
-		return
-	end
-
-	if HAULING_RESERVED_LABELS[parsed.specialistRole] == true then
-		rejectAssign(player, "hauling_not_specialist_role")
-		return
-	end
-
-	if not validSpecialistRoleSet[parsed.specialistRole] then
-		rejectAssign(player, "invalid_specialist_role")
-		return
-	end
-
-	if parsed.assignedStationId ~= nil and type(parsed.assignedStationId) ~= "string" then
-		rejectAssign(player, "malformed_payload")
-		return
-	end
-
-	local stationValid, stationError = validateAssignedStationForRole(parsed.specialistRole, parsed.assignedStationId)
-	if not stationValid then
-		rejectAssign(player, stationError)
-		return
-	end
-
-	local state = getOrCreateState(player.UserId)
-	if state.specialistRole ~= SpecialistConfig.SpecialistRoles.None then
-		if state.specialistRole == parsed.specialistRole and state.assignedStationId == parsed.assignedStationId then
-			rejectAssign(player, string.format("already_assigned specialistRole=%s", state.specialistRole))
-			return
-		end
-
-		local previousSpecialistRole = state.specialistRole
-		local previousAssignedStationId = state.assignedStationId
-
-		setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
-		local updatedState = getOrCreateState(player.UserId)
-		persistSpecialistRole(player, parsed.specialistRole)
-		persistAssignedStationId(player, parsed.assignedStationId)
-		persistLastAssignedAt(player, updatedState.lastAssignedAt)
-		debugLog(
-			string.format(
-				"Accepted SpecialistAssignRequest reassigned userId=%d fromSpecialistRole=%s fromAssignedStationId=%s toSpecialistRole=%s toAssignedStationId=%s",
-				player.UserId,
-				previousSpecialistRole,
-				tostring(previousAssignedStationId),
-				parsed.specialistRole,
-				tostring(parsed.assignedStationId)
-			)
-		)
-		return
-	end
-
-	setState(player, parsed.specialistRole, parsed.assignedStationId, SpecialistConfig.AssignmentReasons.Assigned)
-	local updatedState = getOrCreateState(player.UserId)
-	persistSpecialistRole(player, parsed.specialistRole)
-	persistAssignedStationId(player, parsed.assignedStationId)
-	persistLastAssignedAt(player, updatedState.lastAssignedAt)
-	debugLog(
-		string.format(
-			"Accepted SpecialistAssignRequest userId=%d specialistRole=%s assignedStationId=%s",
-			player.UserId,
-			parsed.specialistRole,
-			tostring(parsed.assignedStationId)
-		)
+	local assigned, reason = assignSpecialistState(
+		player,
+		parsed.specialistRole,
+		parsed.assignedStationId,
+		SpecialistConfig.AssignmentReasons.Assigned,
+		false,
+		"remote"
 	)
+	if not assigned then
+		rejectAssign(player, reason)
+	end
 end)
 
 clearRemote.OnServerEvent:Connect(function(player: Player)
@@ -583,5 +614,26 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
 	specialistStateByUserId[player.UserId] = nil
 end)
+
+-- selene: allow(global_usage)
+_G._SpecialistAssignmentService_QueryAPI = {
+	AssignForInteraction = function(
+		player: Player,
+		specialistRole: string,
+		assignedStationId: string?
+	): (boolean, string)
+		return assignSpecialistState(
+			player,
+			specialistRole,
+			assignedStationId,
+			SpecialistConfig.AssignmentReasons.Assigned,
+			true,
+			"interaction"
+		)
+	end,
+	GetSnapshotForPlayer = function(player: Player): any
+		return snapshotForPlayer(player)
+	end,
+}
 
 debugLog("SpecialistAssignmentService initialized")

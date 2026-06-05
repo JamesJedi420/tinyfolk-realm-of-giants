@@ -235,6 +235,7 @@ local stationsFolder = makeNode("Stations", "Folder", "Workspace.Map.Stations")
 addChild(stationsFolder, "Shrine_A", makeBasePart("Shrine_A", -8, 0, 10))
 addChild(stationsFolder, "Shrine_B", makeBasePart("Shrine_B", -6, 0, 10))
 addChild(stationsFolder, "Shrine_C", makeBasePart("Shrine_C", -10, 0, 10))
+addChild(stationsFolder, "Shrine_D", makeBasePart("Shrine_D", -12, 0, 10))
 addChild(mapFolder, "Stations", stationsFolder)
 addChild(workspaceService, "Map", mapFolder)
 
@@ -298,8 +299,28 @@ local taskPlayer = makeAlivePlayer(7202, Vector3.new(-8, 0, 10))
 taskPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 taskPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Worshipper)
 
+local interactionAssignPlayer = makeAlivePlayer(7204, Vector3.new(-12, 0, 10))
+interactionAssignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+interactionAssignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Miner)
+interactionAssignPlayer:SetAttribute("SpecialistAssignedStationId", "MiningStation_A")
+
 table.insert(playersList, legacyPlayer)
 table.insert(playersList, taskPlayer)
+table.insert(playersList, interactionAssignPlayer)
+
+local interactionAssignCalls: { any } = {}
+_G._SpecialistAssignmentService_QueryAPI = {
+	AssignForInteraction = function(player: any, specialistRole: string, assignedStationId: string): (boolean, string)
+		table.insert(interactionAssignCalls, {
+			userId = player.UserId,
+			specialistRole = specialistRole,
+			assignedStationId = assignedStationId,
+		})
+		player:SetAttribute("SpecialistRole", specialistRole)
+		player:SetAttribute("SpecialistAssignedStationId", assignedStationId)
+		return true, "reassigned"
+	end,
+}
 
 local loaded, loadError = pcall(function()
 	require("../src/ServerScriptService/Services/ShrineService.server")
@@ -317,6 +338,25 @@ local shrineQueryApi = globalEnv._ShrineService_QueryAPI
 assertTrue(type(shrineQueryApi) == "table", "shrine query API export present")
 assertTrue(type(shrineQueryApi.BuildPersistenceState) == "function", "shrine query API exposes build persistence")
 assertTrue(type(shrineQueryApi.ApplyPersistenceState) == "function", "shrine query API exposes apply persistence")
+
+ShrineConfig.RequestCooldownSeconds = 0
+activateRemote:FireServer(interactionAssignPlayer, "Shrine_D")
+assertEqual(
+	interactionAssignPlayer:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Worshipper,
+	"shrine activation assigns Worshipper"
+)
+assertEqual(
+	interactionAssignPlayer:GetAttribute("SpecialistAssignedStationId"),
+	"Shrine_D",
+	"shrine activation assigns shrine id"
+)
+assertEqual(#interactionAssignCalls, 1, "shrine activation called interaction assignment API")
+assertEqual(shrineStateById["Shrine_D"].isActive, true, "shrine activation starts after assignment")
+
+runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
+assertTrue(shrineStateById["Shrine_D"].essenceTotal > 0, "assigned worshipper shrine generates Essence")
+assertEqual(shrineStateById["Shrine_D"].isActive, true, "assigned worshipper shrine remains active after valid tick")
 
 activateRemote:FireServer(legacyPlayer, "Shrine_B")
 assertEqual(shrineStateById["Shrine_B"].isActive, true, "legacy string payload still activates shrine")
@@ -449,10 +489,11 @@ assertEqual(
 
 local persistenceSnapshot = shrineQueryApi.BuildPersistenceState()
 assertTrue(type(persistenceSnapshot) == "table", "persistence snapshot is table")
-assertEqual(#persistenceSnapshot.shrines, 3, "persistence snapshot includes shrine count")
+assertEqual(#persistenceSnapshot.shrines, 4, "persistence snapshot includes shrine count")
 assertEqual(persistenceSnapshot.shrines[1].shrineId, "Shrine_A", "persistence snapshot deterministic order A")
 assertEqual(persistenceSnapshot.shrines[2].shrineId, "Shrine_B", "persistence snapshot deterministic order B")
 assertEqual(persistenceSnapshot.shrines[3].shrineId, "Shrine_C", "persistence snapshot deterministic order C")
+assertEqual(persistenceSnapshot.shrines[4].shrineId, "Shrine_D", "persistence snapshot deterministic order D")
 
 local malformedApplyOk, malformedApplyReason = shrineQueryApi.ApplyPersistenceState("bad")
 assertTrue(not malformedApplyOk, "malformed persistence apply rejects")

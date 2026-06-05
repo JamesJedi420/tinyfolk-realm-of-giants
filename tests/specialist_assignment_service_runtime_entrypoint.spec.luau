@@ -212,6 +212,8 @@ local clearOk = makePlayer(4003)
 local clearUpdateFailure = makePlayer(4004)
 local cooldownPlayer = makePlayer(4005)
 local malformedPlayer = makePlayer(4006)
+local interactionAssign = makePlayer(4007)
+local interactionReassign = makePlayer(4008)
 
 local playersList = {
 	restoreValid,
@@ -228,6 +230,8 @@ local playersList = {
 	clearUpdateFailure,
 	cooldownPlayer,
 	malformedPlayer,
+	interactionAssign,
+	interactionReassign,
 }
 
 local playerAdded = makeSignal()
@@ -370,6 +374,21 @@ local profileDataByUserId: { [number]: any } = {
 		userId = 4006,
 		marker = "malformed",
 	},
+	[4007] = {
+		schemaVersion = 1,
+		userId = 4007,
+		marker = "interaction-assign",
+	},
+	[4008] = {
+		schemaVersion = 1,
+		userId = 4008,
+		specialistPreference = {
+			specialistRole = SpecialistConfig.SpecialistRoles.Woodcutter,
+			assignedStationId = "WorkStation_A",
+			lastAssignedAt = 1234567890,
+		},
+		marker = "interaction-reassign",
+	},
 }
 
 local readFailureByUserId: { [number]: boolean } = {
@@ -463,6 +482,13 @@ ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, 
 end
 
 require("../src/ServerScriptService/Services/SpecialistAssignmentService.server")
+
+local specialistQueryApi = _G._SpecialistAssignmentService_QueryAPI
+assertTrue(type(specialistQueryApi) == "table", "specialist assignment query API export present")
+assertTrue(
+	type(specialistQueryApi.AssignForInteraction) == "function",
+	"specialist assignment query API exposes interaction assign"
+)
 
 assertEqual(
 	restoreValid:GetAttribute("SpecialistRole"),
@@ -711,5 +737,49 @@ assignRemote:FireServer(cooldownPlayer, {
 })
 assertEqual(updateCallCountByUserId[4005], 3, "cooldown preserves one accepted assign with three gateway updates")
 assertTrue(sawWarnContaining("reason=request_cooldown"), "cooldown rejection behavior unchanged")
+
+local interactionAssigned, interactionAssignReason = specialistQueryApi.AssignForInteraction(
+	interactionAssign,
+	SpecialistConfig.SpecialistRoles.Miner,
+	"MiningStation_A"
+)
+assertEqual(interactionAssigned, true, "interaction assign accepts unassigned Tinyfolk")
+assertEqual(interactionAssignReason, "assigned", "interaction assign reports assigned reason")
+assertEqual(
+	interactionAssign:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Miner,
+	"interaction assign sets SpecialistRole"
+)
+assertEqual(
+	interactionAssign:GetAttribute("SpecialistAssignedStationId"),
+	"MiningStation_A",
+	"interaction assign sets assigned station"
+)
+
+local interactionIdempotent, interactionIdempotentReason = specialistQueryApi.AssignForInteraction(
+	interactionAssign,
+	SpecialistConfig.SpecialistRoles.Miner,
+	"MiningStation_A"
+)
+assertEqual(interactionIdempotent, true, "interaction assign is idempotent for same role and station")
+assertEqual(interactionIdempotentReason, "already_assigned", "interaction idempotent reason")
+
+local interactionReassigned, interactionReassignReason = specialistQueryApi.AssignForInteraction(
+	interactionReassign,
+	SpecialistConfig.SpecialistRoles.Worshipper,
+	"Shrine_A"
+)
+assertEqual(interactionReassigned, true, "interaction assign replaces previous specialist role")
+assertEqual(interactionReassignReason, "reassigned", "interaction reassign reports reassigned")
+assertEqual(
+	interactionReassign:GetAttribute("SpecialistRole"),
+	SpecialistConfig.SpecialistRoles.Worshipper,
+	"interaction reassign sets Worshipper"
+)
+assertEqual(
+	interactionReassign:GetAttribute("SpecialistAssignedStationId"),
+	"Shrine_A",
+	"interaction reassign targets shrine"
+)
 
 print("specialist_assignment_service_runtime_entrypoint: all checks passed")

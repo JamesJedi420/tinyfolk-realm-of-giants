@@ -189,6 +189,21 @@ local function getRequiredSpecialistRoleForStation(stationId: string): string?
 	return nil
 end
 
+local function getSpecialistAssignmentQueryApi(): any?
+	-- selene: allow(global_usage)
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._SpecialistAssignmentService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function findStationsRoot(): Instance?
 	local current: Instance = Workspace
 	for _, childName in STATION_FOLDER_PATH do
@@ -314,7 +329,11 @@ local function getTaskStateForStation(stationId: string): any
 	return created
 end
 
-local function validateActivationRequest(player: Player, stationState: StationState): (boolean, string?)
+local function validateActivationRequest(
+	player: Player,
+	stationState: StationState,
+	skipSpecialistRoleCheck: boolean?
+): (boolean, string?)
 	if not isPlayerAlive(player) then
 		return false, "player_not_alive"
 	end
@@ -324,7 +343,7 @@ local function validateActivationRequest(player: Player, stationState: StationSt
 	end
 
 	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
-	if requiredSpecialistRole then
+	if requiredSpecialistRole and skipSpecialistRoleCheck ~= true then
 		local specialistRole = player:GetAttribute("SpecialistRole")
 		if type(specialistRole) ~= "string" or specialistRole == SpecialistConfig.SpecialistRoles.None then
 			return false, string.format("specialist_role_required required=%s", requiredSpecialistRole)
@@ -347,6 +366,50 @@ local function validateActivationRequest(player: Player, stationState: StationSt
 		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, StationConfig.ActivationRangeStuds)
 	end
 
+	return true, nil
+end
+
+local function ensureInteractionSpecialistAssignment(player: Player, stationState: StationState): (boolean, string?)
+	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
+	if not requiredSpecialistRole then
+		return true, nil
+	end
+
+	local allowed, reason = validateActivationRequest(player, stationState, true)
+	if not allowed then
+		return false, reason
+	end
+
+	if
+		player:GetAttribute("SpecialistRole") == requiredSpecialistRole
+		and player:GetAttribute("SpecialistAssignedStationId") == stationState.stationId
+	then
+		return true, nil
+	end
+
+	local queryApi = getSpecialistAssignmentQueryApi()
+	if queryApi == nil or type(queryApi.AssignForInteraction) ~= "function" then
+		if player:GetAttribute("SpecialistRole") == requiredSpecialistRole then
+			return true, nil
+		end
+
+		return false, "specialist_assignment_api_missing"
+	end
+
+	local assigned, assignReason = queryApi.AssignForInteraction(player, requiredSpecialistRole, stationState.stationId)
+	if assigned ~= true then
+		return false, string.format("specialist_assignment_rejected detail=%s", tostring(assignReason))
+	end
+
+	debugLog(
+		string.format(
+			"Ensured station specialist assignment userId=%d stationId=%s specialistRole=%s reason=%s",
+			player.UserId,
+			stationState.stationId,
+			requiredSpecialistRole,
+			tostring(assignReason)
+		)
+	)
 	return true, nil
 end
 
@@ -487,6 +550,12 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		end
 	elseif requestMode ~= "legacy" then
 		rejectActivate(player, "invalid_mode")
+		return
+	end
+
+	local assigned, assignReason = ensureInteractionSpecialistAssignment(player, stationState)
+	if not assigned then
+		rejectActivate(player, assignReason :: string)
 		return
 	end
 

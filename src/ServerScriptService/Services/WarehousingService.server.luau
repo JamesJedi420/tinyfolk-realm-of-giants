@@ -225,15 +225,29 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	end
 
 	local deliverAmount = math.min(2, inTransitTotal)
+	local deliveredMaterial = "None"
+	local movedAmount = 0
 	if flowSnapshot.Wood.inTransit > 0 then
-		ResourceFlowState.TransferInTransitToStored("Wood", deliverAmount)
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Wood", deliverAmount)
+		deliveredMaterial = "Wood"
+		movedAmount = flowSnapshot.Wood.inTransit - afterSnapshot.inTransit
 	elseif flowSnapshot.Stone.inTransit > 0 then
-		ResourceFlowState.TransferInTransitToStored("Stone", deliverAmount)
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Stone", deliverAmount)
+		deliveredMaterial = "Stone"
+		movedAmount = flowSnapshot.Stone.inTransit - afterSnapshot.inTransit
 	end
 
 	applyDebugAttributes(warehouseState)
 
-	debugLog(string.format("Accepted WarehouseDeliverRequest userId=%d warehouseId=%s", player.UserId, warehouseId))
+	debugLog(
+		string.format(
+			"Accepted WarehouseDeliverRequest userId=%d warehouseId=%s material=%s moved=%.0f",
+			player.UserId,
+			warehouseId,
+			deliveredMaterial,
+			movedAmount
+		)
+	)
 end)
 
 debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)

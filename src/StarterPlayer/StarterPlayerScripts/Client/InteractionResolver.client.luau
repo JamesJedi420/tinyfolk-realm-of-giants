@@ -24,8 +24,6 @@ local WAREHOUSE_DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local UPGRADE_SELECT_REMOTE_NAME = "UpgradeBoardSelectRequest"
-local SPECIALIST_ASSIGN_REMOTE_NAME = "SpecialistAssignRequest"
-local SPECIALIST_CLEAR_REMOTE_NAME = "SpecialistClearRequest"
 local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
 
 local INTERACT_KEY = Enum.KeyCode.F
@@ -39,8 +37,6 @@ local warehouseDeliverRemote = remotesFolder:WaitForChild(WAREHOUSE_DELIVER_REMO
 local escapeAttemptRemote = remotesFolder:WaitForChild(ESCAPE_ATTEMPT_REMOTE_NAME) :: RemoteEvent
 local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_REMOTE_NAME) :: RemoteEvent
 local upgradeSelectRemote = remotesFolder:WaitForChild(UPGRADE_SELECT_REMOTE_NAME) :: RemoteEvent
-local specialistAssignRemote = remotesFolder:WaitForChild(SPECIALIST_ASSIGN_REMOTE_NAME) :: RemoteEvent
-local specialistClearRemote = remotesFolder:WaitForChild(SPECIALIST_CLEAR_REMOTE_NAME) :: RemoteEvent
 local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
@@ -416,14 +412,6 @@ local function shouldSendCandidate(candidate: Candidate): boolean
 end
 
 local function fireCandidate(candidate: Candidate)
-	local function sendAssignThenActivate(assignPayload: any, activateRemote: RemoteEvent, activatePayload: any)
-		specialistAssignRemote:FireServer(assignPayload)
-		-- Small defer helps ensure server-side SpecialistRole is updated before activation validation runs.
-		task.delay(0.05, function()
-			activateRemote:FireServer(activatePayload)
-		end)
-	end
-
 	if candidate.action == "escape_attempt" then
 		escapeAttemptRemote:FireServer(candidate.payload)
 		return
@@ -446,17 +434,12 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "station_pickup_or_assign" then
 		if candidate.mode == "assign" then
-			sendAssignThenActivate(candidate.payload, stationActivateRemote, candidate.targetId)
+			stationActivateRemote:FireServer(candidate.targetId)
 			return
 		end
 
 		if candidate.mode == "assign_replace" then
-			sendAssignThenActivate(candidate.payload, stationActivateRemote, candidate.targetId)
-			return
-		end
-
-		if candidate.mode == "clear_then_assign" then
-			specialistClearRemote:FireServer()
+			stationActivateRemote:FireServer(candidate.targetId)
 			return
 		end
 
@@ -466,17 +449,12 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "shrine_assign_worshipper" then
 		if candidate.mode == "assign_worshipper" then
-			sendAssignThenActivate(candidate.payload, shrineActivateRemote, candidate.targetId)
+			shrineActivateRemote:FireServer(candidate.targetId)
 			return
 		end
 
 		if candidate.mode == "assign_worshipper_replace" then
-			sendAssignThenActivate(candidate.payload, shrineActivateRemote, candidate.targetId)
-			return
-		end
-
-		if candidate.mode == "clear_then_assign_worshipper" then
-			specialistClearRemote:FireServer()
+			shrineActivateRemote:FireServer(candidate.targetId)
 			return
 		end
 

@@ -173,6 +173,21 @@ local function isPlayerTinyfolkWorshipper(player: Player): boolean
 	return specialistRole == SpecialistConfig.SpecialistRoles.Worshipper
 end
 
+local function getSpecialistAssignmentQueryApi(): any?
+	-- selene: allow(global_usage)
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._SpecialistAssignmentService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function applyDebugAttributes(state: ShrineState)
 	state.part:SetAttribute(ATTRIBUTE_IS_ACTIVE, state.isActive)
 	state.part:SetAttribute(ATTRIBUTE_ESSENCE_TOTAL, state.essenceTotal)
@@ -409,7 +424,11 @@ local function getTaskStateForShrine(shrineId: string): any
 	return created
 end
 
-local function validateActivationRequest(player: Player, shrineState: ShrineState): (boolean, string?)
+local function validateActivationRequest(
+	player: Player,
+	shrineState: ShrineState,
+	skipWorshipperRoleCheck: boolean?
+): (boolean, string?)
 	if not isPlayerAlive(player) then
 		return false, "player_not_alive"
 	end
@@ -425,10 +444,50 @@ local function validateActivationRequest(player: Player, shrineState: ShrineStat
 		return false, string.format("out_of_range distance=%.2f max=%.2f", distance, ShrineConfig.ActivationRangeStuds)
 	end
 
-	if not isPlayerTinyfolkWorshipper(player) then
+	if skipWorshipperRoleCheck ~= true and not isPlayerTinyfolkWorshipper(player) then
 		return false, "worshipper_role_required"
 	end
 
+	return true, nil
+end
+
+local function ensureInteractionWorshipperAssignment(player: Player, shrineState: ShrineState): (boolean, string?)
+	local allowed, reason = validateActivationRequest(player, shrineState, true)
+	if not allowed then
+		return false, reason
+	end
+
+	if
+		player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
+		and player:GetAttribute("SpecialistRole") == SpecialistConfig.SpecialistRoles.Worshipper
+		and player:GetAttribute("SpecialistAssignedStationId") == shrineState.shrineId
+	then
+		return true, nil
+	end
+
+	local queryApi = getSpecialistAssignmentQueryApi()
+	if queryApi == nil or type(queryApi.AssignForInteraction) ~= "function" then
+		if isPlayerTinyfolkWorshipper(player) then
+			return true, nil
+		end
+
+		return false, "specialist_assignment_api_missing"
+	end
+
+	local assigned, assignReason =
+		queryApi.AssignForInteraction(player, SpecialistConfig.SpecialistRoles.Worshipper, shrineState.shrineId)
+	if assigned ~= true then
+		return false, string.format("specialist_assignment_rejected detail=%s", tostring(assignReason))
+	end
+
+	debugLog(
+		string.format(
+			"Ensured shrine worshipper assignment userId=%d shrineId=%s reason=%s",
+			player.UserId,
+			shrineState.shrineId,
+			tostring(assignReason)
+		)
+	)
 	return true, nil
 end
 
@@ -568,6 +627,12 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 		end
 	elseif requestMode ~= "legacy" then
 		rejectActivate(player, "invalid_mode")
+		return
+	end
+
+	local assigned, assignReason = ensureInteractionWorshipperAssignment(player, shrineState)
+	if not assigned then
+		rejectActivate(player, assignReason :: string)
 		return
 	end
 
