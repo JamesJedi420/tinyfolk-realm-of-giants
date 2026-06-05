@@ -122,7 +122,7 @@ function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: 
 		operationId = operationId,
 		partyId = partyId,
 		targetRealmId = input.targetRealmId,
-		entryType = "matchmaking_queue",
+		entryType = "direct_invite",
 		partyMemberUserIds = { userId },
 		priority = input.priority,
 		createdAt = createdAt,

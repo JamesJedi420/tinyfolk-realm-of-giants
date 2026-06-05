@@ -6,6 +6,7 @@ export type QueueStatus = "pending" | "accepted" | "resolved" | "expired"
 
 export type QueueEntry = {
 	queueEntryId: string,
+	operationId: string,
 	capturedUserId: number,
 	realmId: string,
 	sessionId: string,
@@ -44,6 +45,7 @@ end
 local function cloneEntry(entry: QueueEntry): QueueEntry
 	return {
 		queueEntryId = entry.queueEntryId,
+		operationId = entry.operationId,
 		capturedUserId = entry.capturedUserId,
 		realmId = entry.realmId,
 		sessionId = entry.sessionId,

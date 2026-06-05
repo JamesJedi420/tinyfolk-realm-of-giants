@@ -271,7 +271,7 @@ function PartyMatchmakingAdmissionService.RequestPartyAdmission(input: any): any
 end
 
 function PartyMatchmakingAdmissionService.RequestPartyMatchAdmission(input: any): any
-	return requestAdmissionWithEntryType(input, "matchmaking_queue", "party_queue_match")
+	return requestAdmissionWithEntryType(input, "direct_invite", "party_queue_match")
 end
 
 function PartyMatchmakingAdmissionService.ConfigureForTests(config: any)

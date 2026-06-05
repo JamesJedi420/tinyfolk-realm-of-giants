@@ -256,7 +256,6 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					continue
 				end
 				if not removeFromQueue(queued.receiptId) then
-					releaseReservedCapacity(entry, nowAt)
 					releaseOperationLock(entry.operationId)
 					outcome.cleanupDeferred += 1
 					continue

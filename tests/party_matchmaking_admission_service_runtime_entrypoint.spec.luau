@@ -89,7 +89,7 @@ local queueAccepted = serviceApi.RequestPartyMatchAdmission({
 })
 assertEqual(queueAccepted.accepted, true, "queue-match accepted")
 assertEqual(queueAccepted.reason, "accepted", "queue-match accepted reason")
-assertEqual(queueAccepted.payload.entryType, "matchmaking_queue", "queue-match entry type")
+assertEqual(queueAccepted.payload.entryType, "direct_invite", "queue-match entry type")
 assertEqual(queueAccepted.payload.partySize, 2, "queue-match deduped party size")
 assertEqual(queueAccepted.payload.operationId, "party_queue_match_party-queue-alpha_123000", "queue-match operation id")
 assertEqual(queueAccepted.payload.partyMemberUserIds[1], 77, "queue-match normalized member ordering first")
@@ -97,7 +97,7 @@ assertEqual(queueAccepted.payload.partyMemberUserIds[2], 88, "queue-match normal
 assertEqual(#enqueuePayloads, 2, "queue-match enqueue invoked")
 local queueAcceptedDiagnostics = serviceApi.GetAdmissionDiagnostics()
 assertEqual(queueAcceptedDiagnostics.totalRequests, 2, "diagnostics total requests after queue acceptance")
-assertEqual(queueAcceptedDiagnostics.lastEntryType, "matchmaking_queue", "diagnostics last entry type queue acceptance")
+assertEqual(queueAcceptedDiagnostics.lastEntryType, "direct_invite", "diagnostics last entry type queue acceptance")
 assertEqual(queueAcceptedDiagnostics.enqueueAttempts, 2, "diagnostics enqueue attempts after queue acceptance")
 assertEqual(queueAcceptedDiagnostics.enqueueSucceeded, 2, "diagnostics enqueue success after queue acceptance")
 

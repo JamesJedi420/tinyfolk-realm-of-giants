@@ -15,6 +15,15 @@ local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSche
 local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
 	else (require :: any)("./AdmissionQueueProducer")
+local MemoryStoreAdapter = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreAdapter"))
+	else (require :: any)("./MemoryStoreAdapter")
+local MemoryStoreStructurePolicy = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
+	else (require :: any)("./MemoryStoreStructurePolicy")
+local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("QueueProcessingIdempotencyStore"))
+	else (require :: any)("./QueueProcessingIdempotencyStore")
 local QueueNotificationFanout = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("QueueNotificationFanout"))
 	else (require :: any)("./QueueNotificationFanout")
@@ -33,6 +42,7 @@ local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
 local nextQueueSequence = 0
+local rescueQueueIdempotencyStore: any = nil
 local admissionIngressDiagnostics = {
 	totalAttempts = 0,
 	primaryAttempts = 0,
@@ -322,6 +332,92 @@ local function getRealmAdmissionQueueQueryApi(): any?
 	end
 
 	return queryApi
+end
+
+local function makeRescueQueueOperationId(queueEntryId: any): string?
+	if type(queueEntryId) ~= "string" or queueEntryId == "" then
+		return nil
+	end
+	return string.format("rescue_accept_%s", queueEntryId)
+end
+
+local function makeLocalIdempotencyAdapter(): any
+	local valuesByMap: { [string]: { [string]: any } } = {}
+	return {
+		HashMapUpdateAsync = function(mapName: string, key: string, transform: (any) -> any, _ttlSeconds: number)
+			if valuesByMap[mapName] == nil then
+				valuesByMap[mapName] = {}
+			end
+			local nextValue = transform(valuesByMap[mapName][key])
+			valuesByMap[mapName][key] = nextValue
+			return nextValue
+		end,
+	}
+end
+
+local function getMemoryStoreAdapter(): any?
+	local fromEnv = rawget(globalEnv, "_MemoryStoreAdapter_QueryAPI")
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_MemoryStoreAdapter_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	local activeCapacityPolicy = MemoryStoreStructurePolicy.GetPolicy("activeRealmCapacity")
+	local mapName = if type(activeCapacityPolicy) == "table" then activeCapacityPolicy.name else nil
+	return MemoryStoreAdapter.CreateDefault({
+		activeRealmCapacityMapName = mapName,
+	})
+end
+
+local function getRescueQueueIdempotencyStore(): any
+	if rescueQueueIdempotencyStore ~= nil then
+		return rescueQueueIdempotencyStore
+	end
+
+	local adapter = getMemoryStoreAdapter()
+	if adapter == nil then
+		adapter = makeLocalIdempotencyAdapter()
+	end
+	rescueQueueIdempotencyStore = QueueProcessingIdempotencyStore.Create({
+		adapter = adapter,
+		structurePolicy = MemoryStoreStructurePolicy,
+		now = now,
+	})
+	return rescueQueueIdempotencyStore
+end
+
+local function tryBeginRescueQueueOperation(operationId: any): any
+	local store = getRescueQueueIdempotencyStore()
+	if type(store) ~= "table" or type(store.TryBegin) ~= "function" then
+		return { accepted = false, reason = "idempotency_store_unavailable" }
+	end
+	local ok, result = pcall(store.TryBegin, operationId)
+	if not ok or type(result) ~= "table" then
+		return { accepted = false, reason = "idempotency_try_begin_failed" }
+	end
+	return result
+end
+
+local function markRescueQueueOperationCompleted(operationId: any): boolean
+	local store = getRescueQueueIdempotencyStore()
+	if type(store) ~= "table" or type(store.MarkCompleted) ~= "function" then
+		return false
+	end
+	local ok, result = pcall(store.MarkCompleted, operationId)
+	return ok and type(result) == "table" and result.accepted == true
+end
+
+local function releaseRescueQueueOperation(operationId: any)
+	local store = getRescueQueueIdempotencyStore()
+	if type(store) ~= "table" or type(store.ReleaseProcessing) ~= "function" then
+		return
+	end
+	pcall(store.ReleaseProcessing, operationId)
 end
 
 local function getRescueAdmissionQueryApi(): any?
@@ -740,8 +836,10 @@ local function publishRescueQueueEntry(contract: any, target: Player?, at: numbe
 		sessionId = "local_session"
 	end
 
+	local queueEntryId = makeQueueEntryId(contract.rescuerUserId, contract.targetUserId, at)
 	local queueEntry = {
-		queueEntryId = makeQueueEntryId(contract.rescuerUserId, contract.targetUserId, at),
+		queueEntryId = queueEntryId,
+		operationId = makeRescueQueueOperationId(queueEntryId),
 		capturedUserId = contract.targetUserId,
 		realmId = realmId,
 		sessionId = sessionId,
@@ -759,6 +857,7 @@ local function publishRescueQueueEntry(contract: any, target: Player?, at: numbe
 	rescueQueueState = RescueContractQueueState.UpsertPending(rescueQueueState, queueEntry)
 	emitRescueQueueFanout("rescue_queue_published", {
 		queueEntryId = queueEntry.queueEntryId,
+		operationId = queueEntry.operationId,
 		capturedUserId = queueEntry.capturedUserId,
 		realmId = queueEntry.realmId,
 		sessionId = queueEntry.sessionId,
@@ -1000,12 +1099,39 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 	end
 
 	local queueEntry = RescueContractQueueState.GetEntry(rescueQueueState, queueEntryId)
-	if queueEntry == nil or queueEntry.status ~= "pending" then
+	if queueEntry == nil then
+		return { accepted = false, reason = "queue_entry_missing" }
+	end
+	local operationId = if type(queueEntry.operationId) == "string" and queueEntry.operationId ~= ""
+		then queueEntry.operationId
+		else makeRescueQueueOperationId(queueEntry.queueEntryId)
+	if type(operationId) ~= "string" or operationId == "" then
+		return { accepted = false, reason = "operation_id_invalid" }
+	end
+
+	local beginResult = tryBeginRescueQueueOperation(operationId)
+	if beginResult.accepted == true and beginResult.status == "completed" then
+		return {
+			accepted = true,
+			reason = "duplicate_completed",
+			queueEntry = queueEntry,
+			duplicate = true,
+		}
+	end
+	if beginResult.accepted ~= true then
+		return {
+			accepted = false,
+			reason = if type(beginResult.reason) == "string" then beginResult.reason else "idempotency_rejected",
+		}
+	end
+	if queueEntry.status ~= "pending" then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "queue_entry_missing" }
 	end
 
 	local handoffApi = getRescueHandoffQueryApi()
 	if handoffApi == nil or type(handoffApi.CreateHandoffLock) ~= "function" then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "handoff_lock_unavailable" }
 	end
 
@@ -1027,6 +1153,7 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		})
 	end)
 	if not lockOk then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "handoff_lock_failed" }
 	end
 
@@ -1035,16 +1162,25 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		if type(lockResult) == "table" and type((lockResult :: any).reason) == "string" then
 			rejectedReason = (lockResult :: any).reason
 		end
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = rejectedReason }
 	end
 
+	local currentQueueEntry = RescueContractQueueState.GetEntry(rescueQueueState, queueEntryId)
+	if currentQueueEntry == nil or currentQueueEntry.status ~= "pending" then
+		releaseRescueQueueOperation(operationId)
+		return { accepted = false, reason = "queue_entry_not_pending" }
+	end
+	queueEntry = currentQueueEntry
+
 	local admissionMemberUserIds = buildAdmissionPartyMemberUserIds(queueEntry, acceptedByUserId)
 	if #admissionMemberUserIds <= 0 then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "admission_party_members_invalid" }
 	end
 
 	local admissionPayload = {
-		operationId = string.format("rescue_accept_%s", queueEntry.queueEntryId),
+		operationId = operationId,
 		partyId = string.format("rescue_party_%s", queueEntry.queueEntryId),
 		targetRealmId = queueEntry.realmId,
 		entryType = "rescue_contract",
@@ -1057,6 +1193,7 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 
 	local enqueueResult = requestRescueContractAdmission(admissionPayload)
 	if enqueueResult.accepted ~= true then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = enqueueResult.reason }
 	end
 
@@ -1064,11 +1201,18 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 	rescueQueueState, queueEntry, acceptedTransition =
 		RescueContractQueueState.MarkAccepted(rescueQueueState, queueEntryId, acceptedByUserId, resolvedNow)
 	if acceptedTransition ~= true or queueEntry == nil or queueEntry.status ~= "accepted" then
+		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "queue_entry_not_pending" }
+	end
+
+	if not markRescueQueueOperationCompleted(operationId) then
+		releaseRescueQueueOperation(operationId)
+		return { accepted = false, reason = "idempotency_mark_completed_failed" }
 	end
 
 	emitRescueQueueFanout("rescue_queue_accepted", {
 		queueEntryId = queueEntry.queueEntryId,
+		operationId = queueEntry.operationId,
 		capturedUserId = queueEntry.capturedUserId,
 		realmId = queueEntry.realmId,
 		sessionId = queueEntry.sessionId,
@@ -1117,6 +1261,7 @@ local function buildPersistenceState(): any
 	for _, entry in ipairs(RescueContractQueueState.GetEntries(rescueQueueState)) do
 		table.insert(queueEntries, {
 			queueEntryId = entry.queueEntryId,
+			operationId = entry.operationId,
 			capturedUserId = entry.capturedUserId,
 			realmId = entry.realmId,
 			sessionId = entry.sessionId,
@@ -1190,8 +1335,12 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 
 	local nextEntriesById: { [string]: any } = {}
 	for _, entry in ipairs(persistedState.queueEntries) do
+		local operationId = if type(entry.operationId) == "string" and entry.operationId ~= ""
+			then entry.operationId
+			else makeRescueQueueOperationId(entry.queueEntryId)
 		nextEntriesById[entry.queueEntryId] = {
 			queueEntryId = entry.queueEntryId,
+			operationId = operationId,
 			capturedUserId = entry.capturedUserId,
 			realmId = entry.realmId,
 			sessionId = entry.sessionId,
@@ -1330,6 +1479,7 @@ globalEnv._RescueContractService_QueryAPI = {
 	ResetForTests = function()
 		state = RescueContractState.NewState()
 		rescueQueueState = RescueContractQueueState.NewState()
+		rescueQueueIdempotencyStore = nil
 		nextQueueSequence = 0
 		lastRequestAtByUserId = {}
 		lastRejectedRequestAtByUserId = {}

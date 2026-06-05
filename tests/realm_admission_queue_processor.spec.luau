@@ -334,7 +334,7 @@ do
 	assertEqual(outcome.cleanupDeferred, 1, "remove failure becomes cleanup deferred")
 	assertEqual(outcome.failed, 0, "remove failure does not hard-fail")
 	assertEqual(#dispatchCalls, 1, "remove failure path still dispatched once")
-	assertEqual(#capacityCalls, 2, "remove failure path compensates capacity")
+	assertEqual(#capacityCalls, 1, "remove failure path keeps completed capacity state")
 	assertEqual(queueCalls[2].method, "Remove", "remove attempted on success path")
 	assertEqual(#unregisterCalls, 0, "remove-failure retry path does not unregister")
 end

@@ -56,6 +56,7 @@ local accepted = serviceApi.RequestTeleportHandoffAdmission({
 })
 assertEqual(accepted.accepted, true, "accepted teleport admission")
 assertEqual(accepted.reason, "accepted", "accepted reason")
+assertEqual(accepted.payload.entryType, "direct_invite", "accepted entry type")
 assertEqual(accepted.payload.operationId, "handoff_token_1", "operation id defaults to handoff token")
 assertEqual(
 	accepted.payload.partyId,

@@ -413,12 +413,22 @@ do
 	local persistedQueue = rescueApi.GetRescueQueueEntries(90.1)
 	assertEqual(#persistedQueue, 1, "apply persistence restores pending queue entry")
 	assertEqual(persistedQueue[1].queueEntryId, "PersistedQueue_1", "apply persistence queue entry id")
+	assertEqual(
+		persistedQueue[1].operationId,
+		"rescue_accept_PersistedQueue_1",
+		"apply persistence backfills queue operation id"
+	)
 
 	local builtPersistence = rescueApi.BuildPersistenceState()
 	assertEqual(#builtPersistence.contracts, 1, "build persistence includes restored contract")
 	assertEqual(#builtPersistence.queueEntries, 1, "build persistence includes restored queue entry")
 	assertEqual(builtPersistence.contracts[1].rescuerUserId, rescuer.UserId, "build persistence contract rescuer")
 	assertEqual(builtPersistence.queueEntries[1].queueEntryId, "PersistedQueue_1", "build persistence queue entry")
+	assertEqual(
+		builtPersistence.queueEntries[1].operationId,
+		"rescue_accept_PersistedQueue_1",
+		"build persistence preserves backfilled operation id"
+	)
 
 	local multiApplyOk, multiApplyReason = rescueApi.ApplyPersistenceState({
 		contracts = {},
@@ -655,6 +665,11 @@ do
 
 	local queueEntries = rescueApi.GetRescueQueueEntries(100.1)
 	assertEqual(#queueEntries, 1, "accepted contract publishes one queue entry")
+	assertEqual(
+		queueEntries[1].operationId,
+		"rescue_accept_" .. queueEntries[1].queueEntryId,
+		"published queue entry exposes operation id"
+	)
 	assertEqual(queueEntries[1].capturedUserId, target.UserId, "queue entry stores captured user")
 	assertEqual(queueEntries[1].realmId, "giant_realm_9001", "queue entry stores fallback realm id")
 	assertEqual(queueEntries[1].rewardHint, "rescue_contract", "queue entry stores reward hint")
@@ -665,6 +680,11 @@ do
 		latestFanoutEvent.payload.queueEntryId,
 		queueEntries[1].queueEntryId,
 		"fanout publish payload queue entry id"
+	)
+	assertEqual(
+		latestFanoutEvent.payload.operationId,
+		queueEntries[1].operationId,
+		"fanout publish payload operation id"
 	)
 end
 
@@ -703,6 +723,12 @@ do
 
 	local pendingAfterAccept = rescueApi.GetRescueQueueEntries(140.3)
 	assertEqual(#pendingAfterAccept, 0, "accepted queue entry no longer returned as pending")
+
+	local duplicateAccept = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 140.4)
+	assertTrue(duplicateAccept.accepted, "duplicate queue accept is idempotent")
+	assertEqual(duplicateAccept.reason, "duplicate_completed", "duplicate queue accept reason")
+	assertEqual(#handoffRequests, 1, "duplicate queue accept does not create second handoff lock")
+	assertEqual(#admissionEnqueueRequests, 1, "duplicate queue accept does not enqueue second admission")
 end
 
 do
@@ -739,6 +765,12 @@ do
 	assertEqual(#handoffRequests, 1, "handoff lock attempted before admission enqueue rejection")
 	assertEqual(#admissionEnqueueRequests, 1, "admission enqueue request attempted before rejection")
 	assertEqual(#rescueApi.GetRescueQueueEntries(144.8), 1, "queue remains pending when admission enqueue rejects")
+
+	admissionEnqueueRejectReason = nil
+	local retryAccept = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 144.9)
+	assertTrue(retryAccept.accepted, "queue accept retries after admission enqueue rejection")
+	assertEqual(#handoffRequests, 2, "retry after enqueue rejection creates second handoff attempt")
+	assertEqual(#admissionEnqueueRequests, 2, "retry after enqueue rejection enqueues once")
 end
 
 do
@@ -777,6 +809,12 @@ do
 
 	local pendingAfterReject = rescueApi.GetRescueQueueEntries(145.3)
 	assertEqual(#pendingAfterReject, 1, "queue entry remains pending when handoff lock rejects")
+
+	handoffShouldReject = false
+	local retryAccept = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 145.4)
+	assertTrue(retryAccept.accepted, "queue accept retries after handoff lock rejection")
+	assertEqual(#handoffRequests, 2, "retry after handoff rejection creates second handoff attempt")
+	assertEqual(#admissionEnqueueRequests, 1, "retry after handoff rejection enqueues admission once")
 end
 
 do
@@ -791,6 +829,7 @@ do
 	local queueResult = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 146.2)
 	assertFalse(queueResult.accepted, "queue accept rejects if entry is no longer pending after lock call")
 	assertEqual(queueResult.reason, "queue_entry_not_pending", "queue race-like rejection reason")
+	assertEqual(#admissionEnqueueRequests, 0, "queue race-like rejection does not enqueue admission")
 end
 
 do

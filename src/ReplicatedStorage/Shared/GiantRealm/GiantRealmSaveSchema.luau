@@ -59,6 +59,7 @@ export type RescueContractSaveRecord = {
 
 export type RescueQueueEntrySaveRecord = {
 	queueEntryId: string,
+	operationId: string?,
 	capturedUserId: number,
 	realmId: string,
 	sessionId: string,
@@ -356,6 +357,9 @@ function GiantRealmSaveSchema.ValidateRescueQueueEntrySaveRecord(record: any): (
 	if type(record.queueEntryId) ~= "string" or record.queueEntryId == "" then
 		return false, "rescue_queue_entry_id_invalid"
 	end
+	if record.operationId ~= nil and (type(record.operationId) ~= "string" or record.operationId == "") then
+		return false, "rescue_queue_operation_id_invalid"
+	end
 	if not isPositiveNumber(record.capturedUserId) then
 		return false, "rescue_queue_captured_user_id_invalid"
 	end
@@ -608,6 +612,7 @@ end
 function GiantRealmSaveSchema.SerializeRescueQueueEntrySaveRecord(state: any): RescueQueueEntrySaveRecord
 	return {
 		queueEntryId = state.queueEntryId,
+		operationId = state.operationId,
 		capturedUserId = state.capturedUserId,
 		realmId = state.realmId,
 		sessionId = state.sessionId,
