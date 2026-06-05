@@ -816,6 +816,115 @@ local function run()
 		)
 	end
 
+	-- BLOCK 53: Prototype route-transition metadata validates through the input contract.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, true, "block53 route transition contract valid")
+		assertEqual(reason, nil, "block53 route transition reason nil")
+		assertEqual(#input.chunkLibrary["Chunk_Start"].routeTransitions, 1, "block53 start transition count")
+		assertEqual(
+			input.chunkLibrary["Chunk_Start"].routeTransitions[1].transitionKind,
+			"main",
+			"block53 transition kind"
+		)
+	end
+
+	-- BLOCK 54: Route-transition metadata is preserved in resolved output and validator handoff.
+	do
+		local output =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		assertEqual(#output.resolvedRouteTransitions, 2, "block54 resolved transition count")
+		assertEqual(
+			#output.resolvedRouteTransitionsByPlacement["P_Start"],
+			1,
+			"block54 start placement transition count"
+		)
+		local startTransition = output.resolvedRouteTransitionsByPlacement["P_Start"][1]
+		assertEqual(startTransition.placementId, "P_Start", "block54 placement id")
+		assertEqual(startTransition.chunkId, "Chunk_Start", "block54 chunk id")
+		assertEqual(startTransition.transitionId, "start_to_main", "block54 transition id")
+		assertEqual(startTransition.socketId, "east_path", "block54 socket id")
+		assertEqual(startTransition.transitionRole, "exit", "block54 transition role")
+		assertEqual(startTransition.tags[1], "PrimaryRoute", "block54 first tag")
+		assertTrue(startTransition.worldSocket ~= nil, "block54 world socket present")
+		assertEqual(startTransition.worldSocket.socketId, "east_path", "block54 world socket id")
+		assertEqual(#output.validatorHandoff.routeTransitions, 2, "block54 handoff transition count")
+		assertEqual(
+			output.validatorHandoff.routeTransitionsByPlacement["P_Exit"][1].transitionId,
+			"main_to_exit",
+			"block54 handoff by placement"
+		)
+	end
+
+	-- BLOCK 55: Repeated runs preserve route-transition metadata ordering deterministically.
+	do
+		local outA =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		local outB =
+			RealmChunkAssemblySchema.BuildAssemblyOutput(RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput())
+		assertEqual(#outA.resolvedRouteTransitions, #outB.resolvedRouteTransitions, "block55 transition count stable")
+		for index, transitionA in ipairs(outA.resolvedRouteTransitions) do
+			local transitionB = outB.resolvedRouteTransitions[index]
+			assertEqual(
+				transitionA.placementId,
+				transitionB.placementId,
+				"block55 placement stable " .. tostring(index)
+			)
+			assertEqual(
+				transitionA.transitionId,
+				transitionB.transitionId,
+				"block55 transition id stable " .. tostring(index)
+			)
+			assertEqual(
+				transitionA.transitionKind,
+				transitionB.transitionKind,
+				"block55 transition kind stable " .. tostring(index)
+			)
+			assertEqual(
+				transitionA.transitionRole,
+				transitionB.transitionRole,
+				"block55 transition role stable " .. tostring(index)
+			)
+		end
+	end
+
+	-- BLOCK 56: Assembly input contract rejects duplicate route-transition ids per chunk.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetDuplicateRouteTransitionAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block56 duplicate transition id invalid")
+		assertEqual(
+			reason,
+			"assembly_input_chunk_route_transition_id_duplicate",
+			"block56 duplicate transition id reason"
+		)
+	end
+
+	-- BLOCK 57: Assembly input contract rejects invalid route-transition enum fields.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetMalformedRouteTransitionAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block57 malformed transition invalid")
+		assertEqual(reason, "assembly_input_chunk_route_transition_invalid", "block57 malformed transition reason")
+	end
+
+	-- BLOCK 58: Assembly input contract rejects duplicate route-transition tags.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetRouteTransitionDuplicateTagsAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block58 duplicate transition tags invalid")
+		assertEqual(reason, "assembly_input_chunk_route_transition_invalid", "block58 duplicate transition tags reason")
+	end
+
+	-- BLOCK 59: Assembly input contract rejects route transitions pointing at missing sockets.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetRouteTransitionMissingSocketAssemblyInput()
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block59 missing transition socket invalid")
+		assertEqual(reason, "assembly_input_chunk_route_transition_invalid", "block59 missing transition socket reason")
+	end
+
 	print("realm_chunk_assembly_schema: all checks passed")
 end
 

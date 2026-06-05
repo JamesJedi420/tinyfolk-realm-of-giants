@@ -70,6 +70,15 @@ function Fixture.GetPrototypeAssemblyInput(): any
 				tags = { "PrimaryRoute" },
 			},
 		},
+		routeTransitions = {
+			{
+				transitionId = "start_to_main",
+				socketId = "east_path",
+				transitionKind = "main",
+				transitionRole = "exit",
+				tags = { "PrimaryRoute", "SpawnToExit" },
+			},
+		},
 		occupiedSpace = {
 			{ tag = "main", localCenter = { x = 30, y = 0, z = 0 }, halfExtents = { x = 60, y = 4, z = 40 } },
 		},
@@ -143,6 +152,15 @@ function Fixture.GetPrototypeAssemblyInput(): any
 					elevationTier = 0,
 				},
 				tags = { "PrimaryRoute" },
+			},
+		},
+		routeTransitions = {
+			{
+				transitionId = "main_to_exit",
+				socketId = "west_path",
+				transitionKind = "main",
+				transitionRole = "entry",
+				tags = { "PrimaryRoute", "ExitApproach" },
 			},
 		},
 		occupiedSpace = {
@@ -263,6 +281,36 @@ function Fixture.GetDuplicateSocketUseAssemblyInput(): any
 		toPlacementId = "P_Exit",
 		toSocketId = "west_path",
 	})
+	return input
+end
+
+function Fixture.GetDuplicateRouteTransitionAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	table.insert(input.chunkLibrary["Chunk_Start"].routeTransitions, {
+		transitionId = "start_to_main",
+		socketId = "east_path",
+		transitionKind = "side",
+		transitionRole = "through",
+		tags = { "SecondaryRoute" },
+	})
+	return input
+end
+
+function Fixture.GetMalformedRouteTransitionAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Start"].routeTransitions[1].transitionKind = "shortcut"
+	return input
+end
+
+function Fixture.GetRouteTransitionDuplicateTagsAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Start"].routeTransitions[1].tags = { "PrimaryRoute", "PrimaryRoute" }
+	return input
+end
+
+function Fixture.GetRouteTransitionMissingSocketAssemblyInput(): any
+	local input = Fixture.GetPrototypeAssemblyInput()
+	input.chunkLibrary["Chunk_Start"].routeTransitions[1].socketId = "missing_socket"
 	return input
 end
 

@@ -59,6 +59,16 @@ export type ChunkOccupiedBox = {
 export type ChunkTileSizeClass = "small" | "medium" | "large" | "xlarge"
 export type ChunkTraversalDensityClass = "open" | "sparse" | "moderate" | "dense"
 export type ChunkEnvironmentClass = "indoor" | "outdoor" | "mixed"
+export type ChunkRouteTransitionKind = "main" | "side" | "rescue" | "service"
+export type ChunkRouteTransitionRole = "entry" | "exit" | "through"
+
+export type ChunkRouteTransitionMetadata = {
+	transitionId: string,
+	socketId: string,
+	transitionKind: ChunkRouteTransitionKind,
+	transitionRole: ChunkRouteTransitionRole,
+	tags: { string }?,
+}
 
 export type ChunkStructuralMetadata = {
 	isLandmarkAnchor: boolean?,
@@ -75,6 +85,7 @@ export type AuthoredChunk = {
 	authoringVersion: number,
 	tags: { string },
 	sockets: { ChunkSocket },
+	routeTransitions: { ChunkRouteTransitionMetadata }?,
 	occupiedSpace: { ChunkOccupiedBox }?,
 	structuralMetadata: ChunkStructuralMetadata?,
 	validatorMetadata: ChunkValidatorMetadata,
@@ -141,6 +152,17 @@ export type ResolvedChunkMetadata = {
 	traversalDensityClass: ChunkTraversalDensityClass?,
 }
 
+export type ResolvedRouteTransitionMetadata = {
+	placementId: string,
+	chunkId: string,
+	transitionId: string,
+	socketId: string,
+	transitionKind: ChunkRouteTransitionKind,
+	transitionRole: ChunkRouteTransitionRole,
+	tags: { string }?,
+	worldSocket: ResolvedWorldSocket?,
+}
+
 export type ResolvedChunkConnection = {
 	fromPlacementId: string,
 	fromSocketId: string,
@@ -194,6 +216,8 @@ export type ValidatorHandoff = {
 	descriptorReady: boolean,
 	validatorProfileId: string,
 	blockingAssemblyIssueCodes: { string },
+	routeTransitions: { ResolvedRouteTransitionMetadata },
+	routeTransitionsByPlacement: { [string]: { ResolvedRouteTransitionMetadata } },
 }
 
 export type AssemblyOutput = {
@@ -205,6 +229,8 @@ export type AssemblyOutput = {
 	resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } },
 	resolvedMetadata: { ResolvedChunkMetadata },
 	resolvedMetadataByPlacement: { [string]: ResolvedChunkMetadata },
+	resolvedRouteTransitions: { ResolvedRouteTransitionMetadata },
+	resolvedRouteTransitionsByPlacement: { [string]: { ResolvedRouteTransitionMetadata } },
 	resolvedConnections: { ResolvedChunkConnection },
 	stitchedGraph: AssemblyStitchedGraph,
 	integrity: AssemblyIntegrityResult,
@@ -459,6 +485,20 @@ local function isStringArray(value: any): boolean
 	return true
 end
 
+local function isStringArrayWithUniqueValues(value: any): boolean
+	if not isStringArray(value) then
+		return false
+	end
+	local seen: { [string]: boolean } = {}
+	for _, item in ipairs(value) do
+		if seen[item] then
+			return false
+		end
+		seen[item] = true
+	end
+	return true
+end
+
 local function isValidOptionalBoolean(value: any): boolean
 	return value == nil or type(value) == "boolean"
 end
@@ -634,6 +674,19 @@ local VALID_TRAVERSAL_DENSITY_CLASSES: { [string]: boolean } = {
 	dense = true,
 }
 
+local VALID_ROUTE_TRANSITION_KINDS: { [string]: boolean } = {
+	main = true,
+	side = true,
+	rescue = true,
+	service = true,
+}
+
+local VALID_ROUTE_TRANSITION_ROLES: { [string]: boolean } = {
+	entry = true,
+	exit = true,
+	through = true,
+}
+
 local function isValidOptionalEnum(value: any, allowed: { [string]: boolean }): boolean
 	return value == nil or (type(value) == "string" and allowed[value] == true)
 end
@@ -661,6 +714,28 @@ local function isValidStructuralMetadata(value: any): boolean
 		return false
 	end
 	if not isValidOptionalEnum(value.traversalDensityClass, VALID_TRAVERSAL_DENSITY_CLASSES) then
+		return false
+	end
+	return true
+end
+
+local function isValidRouteTransitionMetadata(value: any, seenSocketIds: { [string]: boolean }): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	if not isNonEmptyString(value.transitionId) then
+		return false
+	end
+	if not isNonEmptyString(value.socketId) or not seenSocketIds[value.socketId] then
+		return false
+	end
+	if not isValidOptionalEnum(value.transitionKind, VALID_ROUTE_TRANSITION_KINDS) or value.transitionKind == nil then
+		return false
+	end
+	if not isValidOptionalEnum(value.transitionRole, VALID_ROUTE_TRANSITION_ROLES) or value.transitionRole == nil then
+		return false
+	end
+	if value.tags ~= nil and not isStringArrayWithUniqueValues(value.tags) then
 		return false
 	end
 	return true
@@ -724,6 +799,21 @@ function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (bo
 				return false, "assembly_input_chunk_socket_id_duplicate"
 			end
 			seenSocketIds[socket.socketId] = true
+		end
+		if chunk.routeTransitions ~= nil then
+			if type(chunk.routeTransitions) ~= "table" then
+				return false, "assembly_input_chunk_route_transitions_invalid"
+			end
+			local seenTransitionIds: { [string]: boolean } = {}
+			for _, transition in ipairs(chunk.routeTransitions) do
+				if not isValidRouteTransitionMetadata(transition, seenSocketIds) then
+					return false, "assembly_input_chunk_route_transition_invalid"
+				end
+				if seenTransitionIds[transition.transitionId] then
+					return false, "assembly_input_chunk_route_transition_id_duplicate"
+				end
+				seenTransitionIds[transition.transitionId] = true
+			end
 		end
 		if chunk.occupiedSpace ~= nil then
 			if type(chunk.occupiedSpace) ~= "table" then
@@ -874,10 +964,13 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 	local resolvedOccupiedSpaceByPlacement: { [string]: { ResolvedOccupiedBox } } = {}
 	local resolvedMetadata: { ResolvedChunkMetadata } = {}
 	local resolvedMetadataByPlacement: { [string]: ResolvedChunkMetadata } = {}
+	local resolvedRouteTransitions: { ResolvedRouteTransitionMetadata } = {}
+	local resolvedRouteTransitionsByPlacement: { [string]: { ResolvedRouteTransitionMetadata } } = {}
 	for _, placement in ipairs(input.placements) do
 		stitchedGraph.adjacencyByPlacement[placement.placementId] = {}
 		resolvedWorldSocketsByPlacement[placement.placementId] = {}
 		resolvedOccupiedSpaceByPlacement[placement.placementId] = {}
+		resolvedRouteTransitionsByPlacement[placement.placementId] = {}
 	end
 
 	local integrityIssues: { AssemblyIntegrityIssue } = {}
@@ -903,6 +996,26 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 			table.insert(resolvedWorldSocketsByPlacement[placement.placementId], resolvedSocket)
 			resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(placement.placementId, socket.socketId)] =
 				resolvedSocket
+		end
+
+		if chunk.routeTransitions ~= nil then
+			for _, transition in ipairs(chunk.routeTransitions) do
+				local resolvedTransition: ResolvedRouteTransitionMetadata = {
+					placementId = placement.placementId,
+					chunkId = placement.chunkId,
+					transitionId = transition.transitionId,
+					socketId = transition.socketId,
+					transitionKind = transition.transitionKind,
+					transitionRole = transition.transitionRole,
+					tags = transition.tags,
+					worldSocket = resolvedWorldSocketByPlacementSocketId[resolvedSocketKey(
+						placement.placementId,
+						transition.socketId
+					)],
+				}
+				table.insert(resolvedRouteTransitions, resolvedTransition)
+				table.insert(resolvedRouteTransitionsByPlacement[placement.placementId], resolvedTransition)
+			end
 		end
 
 		if chunk.occupiedSpace ~= nil then
@@ -1235,6 +1348,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 			then input.validatorMetadata.validatorProfileId
 			else "unspecified_validator_profile",
 		blockingAssemblyIssueCodes = collectBlockingIssueCodes(integrityIssues),
+		routeTransitions = resolvedRouteTransitions,
+		routeTransitionsByPlacement = resolvedRouteTransitionsByPlacement,
 	}
 
 	return {
@@ -1246,6 +1361,8 @@ function RealmChunkAssemblySchema.BuildAssemblyOutput(input: AssemblyInput): Ass
 		resolvedOccupiedSpaceByPlacement = resolvedOccupiedSpaceByPlacement,
 		resolvedMetadata = resolvedMetadata,
 		resolvedMetadataByPlacement = resolvedMetadataByPlacement,
+		resolvedRouteTransitions = resolvedRouteTransitions,
+		resolvedRouteTransitionsByPlacement = resolvedRouteTransitionsByPlacement,
 		resolvedConnections = resolvedConnections,
 		stitchedGraph = stitchedGraph,
 		integrity = integrity,
