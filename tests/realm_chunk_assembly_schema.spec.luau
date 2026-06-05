@@ -925,6 +925,30 @@ local function run()
 		assertEqual(reason, "assembly_input_chunk_route_transition_invalid", "block59 missing transition socket reason")
 	end
 
+	-- BLOCK 60: Assembly input contract rejects sparse route-transition arrays.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local transition = input.chunkLibrary["Chunk_Start"].routeTransitions[1]
+		input.chunkLibrary["Chunk_Start"].routeTransitions = {
+			[2] = transition,
+		}
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block60 sparse route transitions invalid")
+		assertEqual(reason, "assembly_input_chunk_route_transitions_invalid", "block60 sparse route transitions reason")
+	end
+
+	-- BLOCK 61: Assembly input contract rejects map-shaped route-transition tables.
+	do
+		local input = RealmAssemblyPrototypeFixture.GetPrototypeAssemblyInput()
+		local transition = input.chunkLibrary["Chunk_Start"].routeTransitions[1]
+		input.chunkLibrary["Chunk_Start"].routeTransitions = {
+			bogus = transition,
+		}
+		local valid, reason = RealmChunkAssemblySchema.ValidateAssemblyInputContract(input)
+		assertEqual(valid, false, "block61 map route transitions invalid")
+		assertEqual(reason, "assembly_input_chunk_route_transitions_invalid", "block61 map route transitions reason")
+	end
+
 	print("realm_chunk_assembly_schema: all checks passed")
 end
 

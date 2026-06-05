@@ -499,6 +499,25 @@ local function isStringArrayWithUniqueValues(value: any): boolean
 	return true
 end
 
+local function isDenseArray(value: any): boolean
+	if type(value) ~= "table" then
+		return false
+	end
+	local count = 0
+	for key, _ in pairs(value) do
+		if type(key) ~= "number" or key < 1 or key % 1 ~= 0 then
+			return false
+		end
+		count += 1
+	end
+	for index = 1, count do
+		if value[index] == nil then
+			return false
+		end
+	end
+	return true
+end
+
 local function isValidOptionalBoolean(value: any): boolean
 	return value == nil or type(value) == "boolean"
 end
@@ -801,7 +820,7 @@ function RealmChunkAssemblySchema.ValidateAssemblyInputContract(input: any): (bo
 			seenSocketIds[socket.socketId] = true
 		end
 		if chunk.routeTransitions ~= nil then
-			if type(chunk.routeTransitions) ~= "table" then
+			if not isDenseArray(chunk.routeTransitions) then
 				return false, "assembly_input_chunk_route_transitions_invalid"
 			end
 			local seenTransitionIds: { [string]: boolean } = {}
