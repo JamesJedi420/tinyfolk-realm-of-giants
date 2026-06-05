@@ -28,6 +28,17 @@
 - Keep `Role` as the gameplay compatibility attribute for role-gated systems.
 - Do not implement in-session role swapping unless a future issue explicitly requires it.
 
+## Post-Implementation Pre-Commit Rule
+- After every implementation and before any commit, audit the current implementation against the active issue, fix all in-boundary gaps and edge cases until validation is clean, then prepare an implementation plan for the next issue without coding that next issue.
+- Use the active Linear/GitHub issue, issue comments with durable scope or acceptance notes, repository docs, tests, existing architecture, and current code as the source of truth. Preserve the issue boundary and do not expand scope.
+- Before coding, inspect relevant files, tests, docs, routes, state models, schemas, fixtures, and existing patterns; identify the smallest correct implementation boundary; determine whether the issue is complete, partial, incorrect, or blocked; and report relevant files, current behavior, expected behavior, implementation boundary, risks, validation plan, and required docs updates.
+- Re-run these audit passes iteratively, fixing and re-auditing until no in-boundary issues remain: scope/integration, edge cases, determinism/state, regression, documentation/authoring, and cleanup.
+- Validation must run the most specific test command first, then broader relevant validation. When available, include typecheck, lint, unit tests, and affected integration tests. If validation fails, fix and rerun until clean or a real blocker is identified.
+- If validation cannot be run, state the exact command, the reason it could not run, and what evidence remains unverified. Do not claim completion without that caveat.
+- An issue is ready for review only when the implementation matches the issue boundary, edge cases are addressed or explicitly deferred, changed behavior is covered by tests, required docs are updated, validation passes, no unrelated scope is added, and the final diff is clean and explainable.
+- After the post-implementation pre-commit rule passes all required tests and validation, commit all in-boundary changes, then check out `master`. Do not commit or switch branches if any validation gate is failing or blocked.
+- After checkout to `master`, use Linear as the source of truth to determine the next issue to implement, then switch to planning mode and prepare a concise implementation plan formatted for handoff to an AI agent in another session. The handoff plan must include issue id/title, durable scope and constraints, relevant source-of-truth links or notes, expected implementation boundary, key files/tests/docs to inspect, validation commands, known risks, and explicit deferred work. Do not start coding the next issue in this planning step.
+
 ## World Model Direction (for consistency)
 - Shared Tinyfolk world is the long-term social/economic base.
 - Future per-Giant realms are distinct layers.
