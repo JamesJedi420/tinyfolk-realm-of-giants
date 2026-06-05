@@ -724,6 +724,11 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 				deactivateShrine(shrineState, "worshipper_role_lost")
 				break
 			end
+			if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= shrineState.shrineId then
+				applyDebugAttributes(shrineState)
+				deactivateShrine(shrineState, "worshipper_assignment_target_lost")
+				break
+			end
 			local activePlayer = activatingPlayer :: Player
 
 			shrineState.accumulatorSeconds -= ShrineConfig.GenerationIntervalSeconds

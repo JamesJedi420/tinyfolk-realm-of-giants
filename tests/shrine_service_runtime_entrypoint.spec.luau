@@ -304,9 +304,15 @@ interactionAssignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 interactionAssignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Miner)
 interactionAssignPlayer:SetAttribute("SpecialistAssignedStationId", "MiningStation_A")
 
+local targetReassignPlayer = makeAlivePlayer(7205, Vector3.new(-8, 0, 10))
+targetReassignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+targetReassignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.None)
+targetReassignPlayer:SetAttribute("SpecialistAssignedStationId", nil)
+
 table.insert(playersList, legacyPlayer)
 table.insert(playersList, taskPlayer)
 table.insert(playersList, interactionAssignPlayer)
+table.insert(playersList, targetReassignPlayer)
 
 local interactionAssignCalls: { any } = {}
 _G._SpecialistAssignmentService_QueryAPI = {
@@ -357,6 +363,24 @@ assertEqual(shrineStateById["Shrine_D"].isActive, true, "shrine activation start
 runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
 assertTrue(shrineStateById["Shrine_D"].essenceTotal > 0, "assigned worshipper shrine generates Essence")
 assertEqual(shrineStateById["Shrine_D"].isActive, true, "assigned worshipper shrine remains active after valid tick")
+
+activateRemote:FireServer(targetReassignPlayer, "Shrine_A")
+runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
+local shrineATickCountBeforeReassign = shrineStateById["Shrine_A"].tickCount
+assertTrue(shrineATickCountBeforeReassign > 0, "Shrine_A generates before target reassignment")
+
+_G._SpecialistAssignmentService_QueryAPI.AssignForInteraction(
+	targetReassignPlayer,
+	SpecialistConfig.SpecialistRoles.Worshipper,
+	"Shrine_B"
+)
+runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
+assertEqual(shrineStateById["Shrine_A"].isActive, false, "Shrine_A stops after assignment target changes")
+assertEqual(
+	shrineStateById["Shrine_A"].tickCount,
+	shrineATickCountBeforeReassign,
+	"Shrine_A does not tick after target reassignment"
+)
 
 activateRemote:FireServer(legacyPlayer, "Shrine_B")
 assertEqual(shrineStateById["Shrine_B"].isActive, true, "legacy string payload still activates shrine")

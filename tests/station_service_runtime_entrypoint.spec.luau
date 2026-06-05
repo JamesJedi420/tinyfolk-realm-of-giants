@@ -297,9 +297,15 @@ interactionAssignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 interactionAssignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.None)
 interactionAssignPlayer:SetAttribute("SpecialistAssignedStationId", nil)
 
+local targetReassignPlayer = makeAlivePlayer(7105, Vector3.new(10, 0, 10))
+targetReassignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+targetReassignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.None)
+targetReassignPlayer:SetAttribute("SpecialistAssignedStationId", nil)
+
 table.insert(playersList, legacyPlayer)
 table.insert(playersList, taskPlayer)
 table.insert(playersList, interactionAssignPlayer)
+table.insert(playersList, targetReassignPlayer)
 
 local interactionAssignCalls: { any } = {}
 _G._SpecialistAssignmentService_QueryAPI = {
@@ -328,6 +334,7 @@ local stationStateById = _G._StationService_StationState
 assertTrue(type(stationStateById) == "table", "station state export present")
 
 StationConfig.RequestCooldownSeconds = 0
+StationConfig.RequiredSpecialistRoleByStationId.WorkStation_B = SpecialistConfig.SpecialistRoles.Woodcutter
 StationConfig.RequiredSpecialistRoleByStationId.WorkStation_C = SpecialistConfig.SpecialistRoles.Woodcutter
 activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
 assertEqual(
@@ -352,6 +359,25 @@ local flowBeforeHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
 activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
 local flowAfterHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
 assertTrue(flowAfterHaul.inTransit > flowBeforeHaul.inTransit, "assigned specialist moves produced Wood to transit")
+
+activateRemote:FireServer(targetReassignPlayer, "WorkStation_A")
+runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
+local workstationATickCountBeforeReassign = stationStateById["WorkStation_A"].tickCount
+assertTrue(workstationATickCountBeforeReassign > 0, "WorkStation_A generates before target reassignment")
+
+_G._SpecialistAssignmentService_QueryAPI.AssignForInteraction(
+	targetReassignPlayer,
+	SpecialistConfig.SpecialistRoles.Woodcutter,
+	"WorkStation_B"
+)
+runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
+assertEqual(stationStateById["WorkStation_A"].isActive, false, "WorkStation_A stops after assignment target changes")
+assertEqual(
+	stationStateById["WorkStation_A"].tickCount,
+	workstationATickCountBeforeReassign,
+	"WorkStation_A does not tick after target reassignment"
+)
+ResourceFlowState.TransferProducedToInTransit("Wood", 999)
 
 activateRemote:FireServer(legacyPlayer, "WorkStation_B")
 assertEqual(stationStateById["WorkStation_B"].isActive, true, "legacy string payload still activates station")

@@ -712,6 +712,11 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 					deactivateStation(stationState, "specialist_role_lost")
 					break
 				end
+
+				if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= stationState.stationId then
+					deactivateStation(stationState, "specialist_assignment_target_lost")
+					break
+				end
 			end
 
 			stationState.accumulatorSeconds -= StationConfig.GenerationIntervalSeconds
