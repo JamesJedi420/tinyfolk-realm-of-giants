@@ -83,6 +83,22 @@ export type RescuePersistenceSaveRecord = {
 	queueEntries: { RescueQueueEntrySaveRecord },
 }
 
+export type DefenseHistoryEscapeOutcomeRecord = {
+	operationId: string,
+	escapedUserId: number,
+	escapedAt: number,
+	sourceKind: string,
+	sourceId: string,
+	routeId: string?,
+	difficulty: number,
+	lootValue: number,
+	rewardPoints: number,
+}
+
+export type DefenseHistorySaveRecord = {
+	escapeOutcomes: { DefenseHistoryEscapeOutcomeRecord },
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -90,6 +106,7 @@ export type GiantRealmSaveRoot = {
 	emergencyReinforcement: EmergencyReinforcementSaveRecord?,
 	shrinePersistence: ShrinePersistenceSaveRecord?,
 	rescuePersistence: RescuePersistenceSaveRecord?,
+	defenseHistory: DefenseHistorySaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -467,6 +484,66 @@ function GiantRealmSaveSchema.ValidateRescuePersistenceRecord(record: any): (boo
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateDefenseHistoryEscapeOutcomeRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "defense_escape_outcome_record_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "defense_escape_operation_id_invalid"
+	end
+	if not isPositiveNumber(record.escapedUserId) then
+		return false, "defense_escape_escaped_user_id_invalid"
+	end
+	if not isFiniteNumber(record.escapedAt) or record.escapedAt < 0 then
+		return false, "defense_escape_escaped_at_invalid"
+	end
+	if type(record.sourceKind) ~= "string" or record.sourceKind == "" then
+		return false, "defense_escape_source_kind_invalid"
+	end
+	if type(record.sourceId) ~= "string" or record.sourceId == "" then
+		return false, "defense_escape_source_id_invalid"
+	end
+	if record.routeId ~= nil and type(record.routeId) ~= "string" then
+		return false, "defense_escape_route_id_invalid"
+	end
+	if not isFiniteNumber(record.difficulty) or record.difficulty <= 0 then
+		return false, "defense_escape_difficulty_invalid"
+	end
+	if not isFiniteNumber(record.lootValue) or record.lootValue < 0 then
+		return false, "defense_escape_loot_value_invalid"
+	end
+	if not isFiniteNumber(record.rewardPoints) or record.rewardPoints < 0 then
+		return false, "defense_escape_reward_points_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateDefenseHistoryRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "defense_history_invalid"
+	end
+	if type(record.escapeOutcomes) ~= "table" then
+		return false, "defense_history_escape_outcomes_invalid"
+	end
+
+	local seenOperationIds: { [string]: boolean } = {}
+	for index, outcomeRecord in ipairs(record.escapeOutcomes) do
+		local valid, reason = GiantRealmSaveSchema.ValidateDefenseHistoryEscapeOutcomeRecord(outcomeRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "defense_escape_outcome_invalid", index)
+		end
+		if seenOperationIds[outcomeRecord.operationId] then
+			return false, string.format("defense_escape_operation_id_duplicate index=%d", index)
+		end
+		seenOperationIds[outcomeRecord.operationId] = true
+	end
+
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -502,6 +579,11 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	local rescueValid, rescueReason = GiantRealmSaveSchema.ValidateRescuePersistenceRecord(root.rescuePersistence)
 	if not rescueValid then
 		return false, rescueReason
+	end
+
+	local defenseValid, defenseReason = GiantRealmSaveSchema.ValidateDefenseHistoryRecord(root.defenseHistory)
+	if not defenseValid then
+		return false, defenseReason
 	end
 
 	return true, nil
@@ -678,12 +760,57 @@ function GiantRealmSaveSchema.SerializeRescuePersistenceRecord(state: any): Resc
 	}
 end
 
+function GiantRealmSaveSchema.SerializeDefenseHistoryEscapeOutcomeRecord(state: any): DefenseHistoryEscapeOutcomeRecord
+	return {
+		operationId = state.operationId,
+		escapedUserId = state.escapedUserId,
+		escapedAt = state.escapedAt,
+		sourceKind = state.sourceKind,
+		sourceId = state.sourceId,
+		routeId = state.routeId,
+		difficulty = state.difficulty,
+		lootValue = state.lootValue,
+		rewardPoints = state.rewardPoints,
+	}
+end
+
+function GiantRealmSaveSchema.SerializeDefenseHistoryRecord(state: any): DefenseHistorySaveRecord?
+	if state == nil then
+		return nil
+	end
+
+	local escapeOutcomeEntries = state.escapeOutcomes
+	if type(escapeOutcomeEntries) ~= "table" then
+		return {
+			escapeOutcomes = {},
+		}
+	end
+
+	local records = {}
+	for _, outcome in ipairs(escapeOutcomeEntries) do
+		if type(outcome) == "table" then
+			table.insert(records, GiantRealmSaveSchema.SerializeDefenseHistoryEscapeOutcomeRecord(outcome))
+		end
+	end
+	table.sort(records, function(a: DefenseHistoryEscapeOutcomeRecord, b: DefenseHistoryEscapeOutcomeRecord): boolean
+		if a.escapedAt == b.escapedAt then
+			return a.operationId < b.operationId
+		end
+		return a.escapedAt < b.escapedAt
+	end)
+
+	return {
+		escapeOutcomes = records,
+	}
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
 	emergencyReinforcementState: any?,
 	shrinePersistenceState: any?,
-	rescuePersistenceState: any?
+	rescuePersistenceState: any?,
+	defenseHistoryState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -692,6 +819,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		emergencyReinforcement = nil,
 		shrinePersistence = nil,
 		rescuePersistence = nil,
+		defenseHistory = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -707,6 +835,11 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	local rescueRecord = GiantRealmSaveSchema.SerializeRescuePersistenceRecord(rescuePersistenceState)
 	if rescueRecord ~= nil then
 		root.rescuePersistence = rescueRecord
+	end
+
+	local defenseRecord = GiantRealmSaveSchema.SerializeDefenseHistoryRecord(defenseHistoryState)
+	if defenseRecord ~= nil then
+		root.defenseHistory = defenseRecord
 	end
 
 	return root

@@ -870,6 +870,35 @@ assertStoredTotals(
 	"non-overlapping accept debits exact structure cost"
 )
 
+for index = 1, 52 do
+	local recordedDefense = queryApi.RecordEscapeDefenseOutcome({
+		operationId = string.format("escape-defense-op-%02d", index),
+		escapedUserId = 8000 + index,
+		escapedAt = index,
+		sourceKind = "route_escape",
+		sourceId = "EscapeRoute_A",
+		routeId = "EscapeRoute_A",
+		difficulty = 1,
+		lootValue = index,
+		rewardPoints = 100 + index,
+	})
+	assertTrue(recordedDefense.accepted, "defense history record accepted")
+end
+
+local duplicateDefense = queryApi.RecordEscapeDefenseOutcome({
+	operationId = "escape-defense-op-52",
+	escapedUserId = 8052,
+	escapedAt = 52,
+	sourceKind = "route_escape",
+	sourceId = "EscapeRoute_A",
+	routeId = "EscapeRoute_A",
+	difficulty = 1,
+	lootValue = 52,
+	rewardPoints = 152,
+})
+assertTrue(duplicateDefense.accepted, "duplicate defense history record no-ops")
+assertEqual(duplicateDefense.duplicate, true, "duplicate defense history flag")
+
 local saveRoot, saveRootReason = queryApi.BuildSaveSnapshot(acceptedPlayer.UserId)
 assertTrue(saveRoot ~= nil, "save snapshot returns root for valid owner")
 assertEqual(saveRootReason, nil, "save snapshot valid owner has no failure reason")
@@ -888,6 +917,18 @@ if saveRoot then
 	assertTrue(type(saveRoot.emergencyReinforcement) == "table", "save snapshot includes reinforcement state")
 	assertTrue(type(saveRoot.shrinePersistence) == "table", "save snapshot includes shrine persistence")
 	assertTrue(type(saveRoot.rescuePersistence) == "table", "save snapshot includes rescue persistence")
+	assertTrue(type(saveRoot.defenseHistory) == "table", "save snapshot includes defense history")
+	assertEqual(#saveRoot.defenseHistory.escapeOutcomes, 50, "save snapshot bounds defense history")
+	assertEqual(
+		saveRoot.defenseHistory.escapeOutcomes[1].operationId,
+		"escape-defense-op-03",
+		"save snapshot prunes oldest defense history"
+	)
+	assertEqual(
+		saveRoot.defenseHistory.escapeOutcomes[50].operationId,
+		"escape-defense-op-52",
+		"save snapshot keeps latest defense history"
+	)
 	assertEqual(saveRoot.shrinePersistence.shrines[1].shrineId, "Shrine_A", "save snapshot shrine order first")
 	assertEqual(saveRoot.shrinePersistence.shrines[2].shrineId, "Shrine_B", "save snapshot shrine order second")
 	assertEqual(
@@ -1108,6 +1149,21 @@ local applyRoot = {
 			},
 		},
 	},
+	defenseHistory = {
+		escapeOutcomes = {
+			{
+				operationId = "applied-defense-op-1",
+				escapedUserId = 9101,
+				escapedAt = 70,
+				sourceKind = "transport",
+				sourceId = "Transport_A",
+				routeId = "EscapeRoute_A",
+				difficulty = 3,
+				lootValue = 4,
+				rewardPoints = 190,
+			},
+		},
+	},
 }
 
 local applyRootValid, applyRootReason = GiantRealmSaveSchema.ValidateSaveRoot(applyRoot)
@@ -1209,6 +1265,11 @@ if snapshotAfterApply then
 		snapshotAfterApply.placedStructures[2].structureId,
 		appliedStructureB,
 		"post-apply save snapshot deterministic second"
+	)
+	assertEqual(
+		snapshotAfterApply.defenseHistory.escapeOutcomes[1].operationId,
+		"applied-defense-op-1",
+		"post-apply save snapshot preserves defense history"
 	)
 end
 

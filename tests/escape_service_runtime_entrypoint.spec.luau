@@ -872,6 +872,11 @@ do
 	assertEqual(escaped.accepted, true, "open fallback accepts last Tinyfolk escape")
 	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Resolved", "fallback resolves after escape")
 	assertEqual(firstTinyfolk:GetAttribute("Escaped"), true, "fallback escape marks Tinyfolk escaped")
+	assertEqual(
+		firstTinyfolk.Character.LastPivotCFrame.Position.z,
+		-50,
+		"fallback escape returns Tinyfolk to shared hub"
+	)
 	assertEqual(crossingHooks[1], "EscapeRoute_B", "fallback escape preserves route-crossing hook")
 
 	local resolvedAttempt = EscapeService.requestEscapeAttempt(firstTinyfolk, "EscapeRoute_B")
@@ -931,6 +936,11 @@ do
 	assertEqual(openAttempt.accepted, true, "open final exit accepts route escape")
 	assertEqual(routeAttributes.FinalExitPhase, "Resolved", "successful escape resolves final exit")
 	assertEqual(routeAttributes.FinalExitResolvedAt, 105, "resolved timestamp projected to route attributes")
+	assertEqual(
+		openTinyfolk.Character.LastPivotCFrame.Position.z,
+		-50,
+		"successful final exit returns Tinyfolk to shared hub"
+	)
 
 	local resolvedTinyfolk = MockPlayer.new(74, "ResolvedTinyfolk", { role = "Tinyfolk" })
 	local resolvedAttempt = EscapeService.requestEscapeAttempt(resolvedTinyfolk, "EscapeRoute_A")
@@ -1129,6 +1139,13 @@ do
 	local result = EscapeService.resolveTransportDeparture("Transport_A", { 31, 32 })
 	assertTrue(result.accepted, "transport departure resolution accepted")
 	assertEqual(boardedTinyfolk:GetAttribute("Escaped"), true, "boarded tinyfolk marked escaped")
+	assertEqual(
+		boardedTinyfolk.Character.LastPivotCFrame.Position.z,
+		-50,
+		"boarded transport escape returns Tinyfolk to shared hub"
+	)
+	assertTrue(type(result.escapeOutcomesByUserId[31]) == "table", "boarded transport records escape outcome")
+	assertEqual(result.escapeOutcomesByUserId[31].returnedToHub, true, "boarded transport outcome returned to hub")
 	assertEqual(unboardedTinyfolk:GetAttribute("Escaped"), false, "unboarded tinyfolk remains not escaped")
 	assertTrue(unboardedTinyfolk.Character.LastPivotCFrame ~= nil, "unboarded tinyfolk moved to return point")
 	assertEqual(

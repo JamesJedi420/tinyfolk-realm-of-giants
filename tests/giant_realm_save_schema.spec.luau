@@ -80,6 +80,10 @@ type RescuePersistenceSaveRecord = {
 	queueEntries: { RescueQueueEntrySaveRecord },
 }
 
+type DefenseHistorySaveRecord = {
+	escapeOutcomes: { any },
+}
+
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
 		error(
@@ -242,6 +246,35 @@ local function makeRescuePersistenceRecord(): RescuePersistenceSaveRecord
 	}
 end
 
+local function makeDefenseHistoryRecord(): DefenseHistorySaveRecord
+	return {
+		escapeOutcomes = {
+			{
+				operationId = "escape:101:EscapeRoute_A:10",
+				escapedUserId = 101,
+				escapedAt = 10,
+				sourceKind = "final_exit",
+				sourceId = "EscapeRoute_A",
+				routeId = "EscapeRoute_A",
+				difficulty = 2,
+				lootValue = 3,
+				rewardPoints = 155,
+			},
+			{
+				operationId = "escape_transport:Transport_A:102:20",
+				escapedUserId = 102,
+				escapedAt = 20,
+				sourceKind = "transport",
+				sourceId = "Transport_A",
+				routeId = nil,
+				difficulty = 1,
+				lootValue = 0,
+				rewardPoints = 100,
+			},
+		},
+	}
+end
+
 local function assertVector3Equal(actual: Vector3Data, expected: Vector3Data, label: string)
 	assertEqual(actual.x, expected.x, label .. " x")
 	assertEqual(actual.y, expected.y, label .. " y")
@@ -348,6 +381,12 @@ local function run()
 	end
 
 	do
+		local root = makeSaveRoot()
+		root.defenseHistory = makeDefenseHistoryRecord()
+		assertValid("valid save root with defense history", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local serialized =
 			GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(makeEmergencyReinforcementRecord())
 		assertEqual(serialized.used, true, "serialized reinforcement used")
@@ -400,6 +439,17 @@ local function run()
 	end
 
 	do
+		local serialized = GiantRealmSaveSchema.SerializeDefenseHistoryRecord(makeDefenseHistoryRecord())
+		assertEqual(#serialized.escapeOutcomes, 2, "serialized defense history count")
+		assertEqual(serialized.escapeOutcomes[1].operationId, "escape:101:EscapeRoute_A:10", "defense order first")
+		assertEqual(
+			serialized.escapeOutcomes[2].operationId,
+			"escape_transport:Transport_A:102:20",
+			"defense order second"
+		)
+	end
+
+	do
 		local statesById = {
 			GiantStructure_Runtime_B = makePlacedStructureRecord("GiantStructure_Runtime_B"),
 			GiantStructure_Runtime_A = makePlacedStructureRecord("GiantStructure_Runtime_A"),
@@ -410,6 +460,13 @@ local function run()
 		assertEqual(root.rescuePersistence.contracts[1].rescuerUserId, 9401, "built root rescue contract first")
 		assertEqual(root.rescuePersistence.queueEntries[1].queueEntryId, "RQ_01", "built root rescue queue first")
 		assertValid("built root with rescue persistence validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, {}, nil, nil, nil, makeDefenseHistoryRecord())
+		assertTrue(type(root.defenseHistory) == "table", "built root includes defense history")
+		assertEqual(root.defenseHistory.escapeOutcomes[1].escapedUserId, 101, "built defense first user")
+		assertValid("built root with defense history validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
 	end
 
 	do
@@ -463,6 +520,17 @@ local function run()
 		assertInvalid(
 			"rescue_queue_entry_id_duplicate index=2",
 			"invalid rescue queue duplicate id",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.defenseHistory = makeDefenseHistoryRecord()
+		root.defenseHistory.escapeOutcomes[2].operationId = root.defenseHistory.escapeOutcomes[1].operationId
+		assertInvalid(
+			"defense_escape_operation_id_duplicate index=2",
+			"invalid defense duplicate operation id",
 			GiantRealmSaveSchema.ValidateSaveRoot(root)
 		)
 	end

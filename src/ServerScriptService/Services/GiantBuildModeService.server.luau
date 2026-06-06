@@ -34,11 +34,13 @@ type AcceptedStructurePlacementState = {
 
 local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
 local snareTrapByTrapId: { [string]: any? } = {}
+local defenseEscapeOutcomes: { any } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastSnareTrapPlacementAtByUserId: { [number]: number? } = {}
 local snareTrapSequence = 0
 local realmOwnerUserId: number? = nil
 local globalEnv: any = getfenv()
+local DEFENSE_HISTORY_ESCAPE_LIMIT = 50
 
 local function debugLog(message: string)
 	print(string.format("[GiantBuildModeService] %s", message))
@@ -918,6 +920,53 @@ local function GetSaveablePlacedStructures(): { [string]: AcceptedStructurePlace
 	return result
 end
 
+local function cloneDefenseEscapeOutcome(record: any): any
+	return GiantRealmSaveSchema.SerializeDefenseHistoryEscapeOutcomeRecord(record)
+end
+
+local function BuildDefenseHistoryState(): any
+	local escapeOutcomes = {}
+	for _, record in ipairs(defenseEscapeOutcomes) do
+		table.insert(escapeOutcomes, cloneDefenseEscapeOutcome(record))
+	end
+	return {
+		escapeOutcomes = escapeOutcomes,
+	}
+end
+
+local function RecordEscapeDefenseOutcome(record: any): any
+	local valid, reason = GiantRealmSaveSchema.ValidateDefenseHistoryEscapeOutcomeRecord(record)
+	if not valid then
+		return {
+			accepted = false,
+			reason = reason or "defense_escape_outcome_invalid",
+		}
+	end
+
+	for _, existing in ipairs(defenseEscapeOutcomes) do
+		if existing.operationId == record.operationId then
+			return {
+				accepted = true,
+				reason = "duplicate_operation",
+				duplicate = true,
+				snapshot = BuildDefenseHistoryState(),
+			}
+		end
+	end
+
+	table.insert(defenseEscapeOutcomes, cloneDefenseEscapeOutcome(record))
+	while #defenseEscapeOutcomes > DEFENSE_HISTORY_ESCAPE_LIMIT do
+		table.remove(defenseEscapeOutcomes, 1)
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		duplicate = false,
+		snapshot = BuildDefenseHistoryState(),
+	}
+end
+
 local function findSnareTrapRecord(trapIdOrStructureId: string): (string?, any?)
 	local direct = snareTrapByTrapId[trapIdOrStructureId]
 	if direct ~= nil then
@@ -1309,7 +1358,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		GetSaveablePlacedStructures(),
 		emergencyReinforcementState,
 		shrinePersistenceState,
-		rescuePersistenceState
+		rescuePersistenceState,
+		BuildDefenseHistoryState()
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1388,6 +1438,13 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		end
 	end
 
+	defenseEscapeOutcomes = {}
+	if root.defenseHistory ~= nil and type(root.defenseHistory.escapeOutcomes) == "table" then
+		for _, record in ipairs(root.defenseHistory.escapeOutcomes) do
+			table.insert(defenseEscapeOutcomes, cloneDefenseEscapeOutcome(record))
+		end
+	end
+
 	local structureIds = {}
 	for structureId in pairs(placedStructureById) do
 		table.insert(structureIds, structureId)
@@ -1419,6 +1476,7 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	RefreshSnareTrapLegality = RefreshSnareTrapLegality,
 	ResetSnareTrapRechargeForTests = ResetSnareTrapRechargeForTests,
 	IsStructurePlaced = IsStructurePlaced,
+	RecordEscapeDefenseOutcome = RecordEscapeDefenseOutcome,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,
 }
