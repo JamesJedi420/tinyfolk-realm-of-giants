@@ -68,6 +68,8 @@ Closure evidence for the 2026-05-22 Giant staged threat progression slice is rec
 - Anti-abuse detection (repeated targeting, custody duration, forced interaction patterns)
 - Live score feedback
 
+**Current implementation status:** TIN-65 adds bounded containment custody-end reward resolution through `ContainmentRewardResolver` and `CaptureService` integration, including deterministic diminishing returns for repeated Giant/Tinyfolk pair outcomes plus durable operation idempotency (`containmentRewardIdempotency`). Pair anti-farming history is currently maintained in resolver memory and is therefore scoped to a single active server instance. If product requirements call for cross-server anti-farming continuity, fold in a durable shared pair-history store (atomic read/merge/write keyed by Giant/Tinyfolk pair with bounded retention) and treat that as required scope for the reward slice.
+
 ### Event Log and Runtime Observability System
 - Structured runtime event recording for simulation/debug readability
 - Bounded event schema (`timestamp`, `category`, `message`, `severity`)
