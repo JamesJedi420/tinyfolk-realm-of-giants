@@ -32,6 +32,7 @@ $testFiles = @(
     'tests\capture_service_runtime_entrypoint.spec.luau',
     'tests\score_state.spec.luau',
     'tests\score_service_runtime_entrypoint.spec.luau',
+    'tests\front_desk_hub_presentation.spec.luau',
     'tests\realm_objective_state.spec.luau',
     'tests\realm_objective_service_runtime_entrypoint.spec.luau',
     'tests\tinyfolk_giant_proximity_warning.spec.luau',
