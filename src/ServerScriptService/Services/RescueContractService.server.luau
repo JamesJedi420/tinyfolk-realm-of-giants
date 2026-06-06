@@ -1201,12 +1201,10 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 	rescueQueueState, queueEntry, acceptedTransition =
 		RescueContractQueueState.MarkAccepted(rescueQueueState, queueEntryId, acceptedByUserId, resolvedNow)
 	if acceptedTransition ~= true or queueEntry == nil or queueEntry.status ~= "accepted" then
-		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "queue_entry_not_pending" }
 	end
 
 	if not markRescueQueueOperationCompleted(operationId) then
-		releaseRescueQueueOperation(operationId)
 		return { accepted = false, reason = "idempotency_mark_completed_failed" }
 	end
 

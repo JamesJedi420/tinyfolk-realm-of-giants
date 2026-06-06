@@ -249,10 +249,8 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 			local dispatchResult = dispatchTeleport(entry)
 			if dispatchResult.ok == true then
 				if not markCompleted(entry.operationId) then
-					releaseReservedCapacity(entry, nowAt)
-					releaseProcessing(entry.operationId)
 					releaseOperationLock(entry.operationId)
-					outcome.retryDeferred += 1
+					outcome.cleanupDeferred += 1
 					continue
 				end
 				if not removeFromQueue(queued.receiptId) then

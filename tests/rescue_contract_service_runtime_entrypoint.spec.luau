@@ -248,6 +248,22 @@ local rescueFanoutEvents: { any } = {}
 local admissionEnqueueRequests: { any } = {}
 local admissionEnqueueRejectReason: string? = nil
 local admissionEnqueueThrow = false
+local idempotencyValuesByMap: { [string]: { [string]: any } } = {}
+local failNextIdempotencyCompletion = false
+globalEnv._MemoryStoreAdapter_QueryAPI = {
+	HashMapUpdateAsync = function(mapName: string, key: string, transform: (any) -> any, _ttlSeconds: number): any
+		if idempotencyValuesByMap[mapName] == nil then
+			idempotencyValuesByMap[mapName] = {}
+		end
+		local nextValue = transform(idempotencyValuesByMap[mapName][key])
+		if failNextIdempotencyCompletion and type(nextValue) == "table" and nextValue.status == "completed" then
+			failNextIdempotencyCompletion = false
+			error("idempotency_completion_failed")
+		end
+		idempotencyValuesByMap[mapName][key] = nextValue
+		return nextValue
+	end,
+}
 globalEnv._RescueHandoffService_QueryAPI = {
 	CreateHandoffLock = function(payload: any): any
 		table.insert(handoffRequests, payload)
@@ -361,6 +377,8 @@ local function resetState()
 	admissionEnqueueRequests = {}
 	admissionEnqueueRejectReason = nil
 	admissionEnqueueThrow = false
+	idempotencyValuesByMap = {}
+	failNextIdempotencyCompletion = false
 	globalEnv._RealmAdmissionQueue_QueryAPI = defaultAdmissionQueueApi
 end
 
@@ -729,6 +747,29 @@ do
 	assertEqual(duplicateAccept.reason, "duplicate_completed", "duplicate queue accept reason")
 	assertEqual(#handoffRequests, 1, "duplicate queue accept does not create second handoff lock")
 	assertEqual(#admissionEnqueueRequests, 1, "duplicate queue accept does not enqueue second admission")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 142)
+	assertTrue(accepted.accepted, "accepted before idempotency completion failure check")
+
+	local queueEntries = rescueApi.GetRescueQueueEntries(142.1)
+	local queueEntryId = queueEntries[1].queueEntryId
+	failNextIdempotencyCompletion = true
+
+	local queueReject = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 142.2)
+	assertFalse(queueReject.accepted, "queue accept rejects when idempotency completion write fails")
+	assertEqual(queueReject.reason, "idempotency_mark_completed_failed", "queue accept completion failure reason")
+	assertEqual(#handoffRequests, 1, "completion failure still creates one handoff lock")
+	assertEqual(#admissionEnqueueRequests, 1, "completion failure still enqueues one admission")
+	assertEqual(#rescueApi.GetRescueQueueEntries(142.3), 0, "completion failure does not reopen pending queue entry")
+
+	local duplicateReject = rescueApi.AcceptRescueQueueEntry(rescuerTwo.UserId, queueEntryId, 142.4)
+	assertFalse(duplicateReject.accepted, "duplicate after completion failure is blocked")
+	assertEqual(duplicateReject.reason, "already_processing", "duplicate after completion failure reason")
+	assertEqual(#handoffRequests, 1, "duplicate after completion failure does not create handoff")
+	assertEqual(#admissionEnqueueRequests, 1, "duplicate after completion failure does not enqueue admission")
 end
 
 do

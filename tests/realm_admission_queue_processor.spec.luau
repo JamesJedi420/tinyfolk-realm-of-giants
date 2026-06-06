@@ -601,6 +601,69 @@ end
 
 do
 	local queueStore, _queueCalls = makeQueueStore({
+		{ receiptId = "completion-write-fails", entry = makeEntry({ operationId = "op-completion-write-fails" }) },
+	})
+	local operationStatusById: { [string]: string? } = {}
+	local dispatchCalls = 0
+	local capacityReleaseCalls = 0
+	local processingReleaseCalls = 0
+
+	local processor = RealmAdmissionQueueProcessor.Create({
+		queueStore = queueStore,
+		queueState = queueState,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return { accepted = true, reason = "accepted" }
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				capacityReleaseCalls += 1
+				return { accepted = true }
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				dispatchCalls += 1
+				return { ok = true, retryable = false }
+			end,
+		},
+		idempotencyStore = {
+			TryBegin = function(operationId: string)
+				if operationStatusById[operationId] == "processing" then
+					return { accepted = false, reason = "already_processing", status = "processing" }
+				end
+				operationStatusById[operationId] = "processing"
+				return { accepted = true, reason = "accepted", status = "begun" }
+			end,
+			MarkCompleted = function(_operationId: string)
+				return { accepted = false, reason = "adapter_update_failed" }
+			end,
+			ReleaseProcessing = function(operationId: string)
+				processingReleaseCalls += 1
+				operationStatusById[operationId] = nil
+				return { accepted = true, reason = "accepted", status = "released" }
+			end,
+		},
+		now = function(): number
+			return 120
+		end,
+	})
+
+	local firstOutcome = processor.ProcessBatch(1)
+	assertEqual(firstOutcome.cleanupDeferred, 1, "completion failure after dispatch becomes cleanup debt")
+	assertEqual(firstOutcome.retryDeferred, 0, "completion failure after dispatch is not reopened for retry")
+	assertEqual(dispatchCalls, 1, "completion failure after dispatch dispatched once")
+	assertEqual(capacityReleaseCalls, 0, "completion failure after dispatch keeps reserved capacity")
+	assertEqual(processingReleaseCalls, 0, "completion failure after dispatch keeps processing record")
+
+	local secondOutcome = processor.ProcessBatch(1)
+	assertEqual(secondOutcome.retryDeferred, 1, "completion failure duplicate remains blocked by processing record")
+	assertEqual(dispatchCalls, 1, "completion failure duplicate does not redispatch")
+	assertEqual(capacityReleaseCalls, 0, "completion failure duplicate does not release capacity")
+	assertEqual(processingReleaseCalls, 0, "completion failure duplicate does not release processing")
+end
+
+do
+	local queueStore, _queueCalls = makeQueueStore({
 		{ receiptId = "retry-release", entry = makeEntry({ operationId = "op-retry-release" }) },
 	})
 	local released = false
