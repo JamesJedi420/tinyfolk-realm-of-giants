@@ -210,6 +210,26 @@ end
 
 do
 	resetState()
+	local reward = scoreApi.RequestScoreEvent(giant.UserId, "containment_reward", 1, {
+		contributionRatio = 0.5,
+		endReason = "released",
+		targetUserId = tinyfolk.UserId,
+	})
+	assertTrue(reward.accepted, "containment reward score accepted")
+	assertEqual(reward.record.category, "control", "containment reward score category")
+	assertEqual(reward.record.contributionRatio, 0.5, "containment reward contribution ratio")
+	assertEqual(reward.record.rawPoints, 25, "containment reward raw points")
+	assertEqual(reward.record.feedbackKey, "score_containment_reward", "containment reward feedback key")
+	local attrs = giant:GetAttributes()
+	assertEqual(attrs["ScoreLastFeedbackKey"], "score_containment_reward", "containment reward feedback attribute")
+
+	local mismatch = scoreApi.RequestScoreEvent(tinyfolk.UserId, "containment_reward", 2, { contributionRatio = 1 })
+	assertFalse(mismatch.accepted, "containment reward rejects Tinyfolk")
+	assertEqual(mismatch.reason, "actor_role_mismatch", "containment reward role mismatch")
+end
+
+do
+	resetState()
 
 	for i = 1, 10 do
 		scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", i * 100, nil)

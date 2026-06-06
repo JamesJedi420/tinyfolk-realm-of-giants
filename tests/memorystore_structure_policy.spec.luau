@@ -39,9 +39,9 @@ local policySetResult = MemoryStoreStructurePolicy.ValidatePolicySet()
 assertEqual(policySetResult.ok, true, "policy set valid")
 
 local structureIds = MemoryStoreStructurePolicy.GetStructureIds()
-assertEqual(#structureIds, 9, "structure count")
+assertEqual(#structureIds, 10, "structure count")
 assertEqual(structureIds[1], "liveRealmRegistry", "stable order first")
-assertEqual(structureIds[9], "captureTimers", "stable order last")
+assertEqual(structureIds[10], "captureTimers", "stable order last")
 
 local expectedPolicies: { [string]: any } = {
 	liveRealmRegistry = {
@@ -91,6 +91,14 @@ local expectedPolicies: { [string]: any } = {
 		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
 		maxPayloadBytes = 1024,
 		parts = { "op-375" },
+	},
+	containmentRewardIdempotency = {
+		kind = "HashMap",
+		name = "tin_containment_reward_idempotency_v1",
+		key = "containreward:op-400",
+		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
+		maxPayloadBytes = 1024,
+		parts = { "op-400" },
 	},
 	activeRealmCapacity = {
 		kind = "HashMap",

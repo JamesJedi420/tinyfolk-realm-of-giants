@@ -91,6 +91,23 @@ end
 
 game = fakeGame
 
+local scoreEvents: { any } = {}
+_G._ScoreService_QueryAPI = {
+	RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
+		table.insert(scoreEvents, {
+			userId = userId,
+			eventId = eventId,
+			at = at,
+			metadata = metadata,
+		})
+		return {
+			accepted = true,
+			reason = "accepted",
+			awardedPoints = 50,
+		}
+	end,
+}
+
 require("../src/ServerScriptService/Services/CaptureService.server")
 
 local captureApi: any = _G._CaptureService_QueryAPI
@@ -141,6 +158,7 @@ end
 
 local function resetState()
 	captureApi.ResetForTests()
+	scoreEvents = {}
 	setRole(giant, "Giant")
 	setRole(giantB, "Giant")
 	setRole(tinyfolk, "Tinyfolk")
@@ -159,6 +177,8 @@ resetState()
 local accepted = captureApi.RequestCapture(2101, 2102, 1.0)
 assertTrue(accepted.accepted == true, "valid request accepted")
 assertEqual(accepted.reason, "accepted", "accepted reason")
+assertEqual(#scoreEvents, 1, "accepted capture emits capture success score")
+assertEqual(scoreEvents[1].eventId, "capture_success", "accepted capture score event")
 
 resetState()
 setRole(giant, "Tinyfolk")
@@ -239,6 +259,34 @@ local activeAtSeven = captureApi.GetTargetCapture(2102, 7.0)
 assertTrue(activeAtSeven ~= nil, "capture remains active before expiry")
 local prunedAtNine = captureApi.GetTargetCapture(2102, 9.0)
 assertTrue(prunedAtNine == nil, "capture pruned after expiry")
+assertEqual(#scoreEvents, 2, "timeout emits terminal containment score")
+assertEqual(scoreEvents[2].eventId, "containment_reward", "timeout containment score event")
+assertEqual(scoreEvents[2].metadata.endReason, "timeout", "timeout containment metadata reason")
+assertEqual(
+	scoreEvents[2].metadata.operationId,
+	"containment-timeout-2101-2102-1000",
+	"timeout containment operation id uses capture start"
+)
+
+local duplicateTimeoutCheck = captureApi.GetTargetCapture(2102, 10.0)
+assertTrue(duplicateTimeoutCheck == nil, "duplicate timeout prune remains cleared")
+assertEqual(#scoreEvents, 2, "duplicate timeout prune does not duplicate containment score")
+
+resetState()
+local releaseCaptureBaseline = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(releaseCaptureBaseline.accepted == true, "accepted before release")
+local wrongRelease = captureApi.ReleaseCapture(2105, 2102, 4.0)
+assertFalse(wrongRelease.accepted, "wrong custodian release rejected")
+assertEqual(wrongRelease.reason, "custodian_mismatch", "wrong custodian release reason")
+local releaseResult = captureApi.ReleaseCapture(2101, 2102, 4.0)
+assertTrue(releaseResult.accepted, "release capture accepted")
+assertEqual(releaseResult.reason, "released", "release capture reason")
+assertTrue(captureApi.GetTargetCapture(2102, 4.1) == nil, "release clears active capture")
+assertEqual(#scoreEvents, 2, "release emits terminal containment score")
+assertEqual(scoreEvents[2].metadata.endReason, "released", "release containment metadata reason")
+local missingRelease = captureApi.ReleaseCapture(2101, 2102, 4.2)
+assertFalse(missingRelease.accepted, "missing release rejected")
+assertEqual(missingRelease.reason, "capture_missing", "missing release reason")
 
 resetState()
 local toClear = captureApi.RequestCapture(2101, 2102, 1.0)
@@ -246,6 +294,8 @@ assertTrue(toClear.accepted == true, "accepted before player removing")
 playersService.PlayerRemoving:Fire(giant)
 local afterRemove = captureApi.GetTargetCapture(2102, 1.1)
 assertTrue(afterRemove == nil, "player removing clears active capture")
+assertEqual(#scoreEvents, 2, "player removing emits terminal containment score")
+assertEqual(scoreEvents[2].metadata.endReason, "logout", "player removing containment metadata reason")
 
 resetState()
 setDowned(targetA, false)
@@ -290,5 +340,26 @@ local antiGuardingExpiredFirst = captureApi.RequestCapture(2101, 2102, 1.0)
 assertTrue(antiGuardingExpiredFirst.accepted == true, "anti-guarding expiry baseline accepted")
 local antiGuardingAfterExpiry = captureApi.RequestCapture(2101, 2102, 13.0)
 assertTrue(antiGuardingAfterExpiry.accepted == true, "anti-guarding allows repeat target after cooldown")
+
+resetState()
+local pairOne = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(pairOne.accepted == true, "pair diminishing first capture accepted")
+captureApi.ReleaseCapture(2101, 2102, 9.0)
+local pairTwo = captureApi.RequestCapture(2101, 2102, 14.0)
+assertTrue(pairTwo.accepted == true, "pair diminishing second capture accepted")
+captureApi.ReleaseCapture(2101, 2102, 22.0)
+local pairThree = captureApi.RequestCapture(2101, 2102, 27.0)
+assertTrue(pairThree.accepted == true, "pair diminishing third capture accepted")
+captureApi.ReleaseCapture(2101, 2102, 35.0)
+local pairFour = captureApi.RequestCapture(2101, 2102, 40.0)
+assertTrue(pairFour.accepted == true, "pair diminishing fourth capture accepted")
+local pairFourthRelease = captureApi.ReleaseCapture(2101, 2102, 47.9)
+assertTrue(pairFourthRelease.accepted, "pair diminishing fourth release accepted")
+assertEqual(scoreEvents[2].metadata.contributionRatio, 1, "pair first terminal reward full ratio")
+assertEqual(scoreEvents[4].metadata.contributionRatio, 0.5, "pair second terminal reward half ratio")
+assertEqual(scoreEvents[6].metadata.contributionRatio, 0.25, "pair third terminal reward quarter ratio")
+assertEqual(pairFourthRelease.reward.reason, "pair_reward_cap_reached", "pair fourth terminal reward capped")
+assertEqual(#scoreEvents, 7, "pair fourth terminal reward does not emit containment score")
+assertTrue(captureApi.GetTargetCapture(2102, 48.1) == nil, "pair fourth capped reward still clears capture")
 
 print("capture_service_runtime_entrypoint: all checks passed")

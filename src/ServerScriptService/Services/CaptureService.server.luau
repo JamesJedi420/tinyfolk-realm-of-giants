@@ -8,6 +8,18 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
+local ContainmentRewardResolver = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("ContainmentRewardResolver"))
+	else (require :: any)("./ContainmentRewardResolver")
+local MemoryStoreAdapter = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreAdapter"))
+	else (require :: any)("./MemoryStoreAdapter")
+local MemoryStoreStructurePolicy = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
+	else (require :: any)("./MemoryStoreStructurePolicy")
+local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("QueueProcessingIdempotencyStore"))
+	else (require :: any)("./QueueProcessingIdempotencyStore")
 
 local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
@@ -18,6 +30,8 @@ local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local lastCaptureAtByCustodianTargetKey: { [string]: number? } = {}
+local containmentRewardResolver: any = nil
+local containmentRewardIdempotencyStore: any = nil
 local applyCaptureAttributesFromState: () -> ()
 
 local function now(): number
@@ -96,6 +110,78 @@ local function getScoreServiceQueryApi(): any?
 	end
 
 	return queryApi
+end
+
+local function makeLocalIdempotencyAdapter(): any
+	local mapsByName: { [string]: { [string]: any } } = {}
+	return {
+		HashMapUpdateAsync = function(mapName: string, key: string, transform: (any) -> any, _ttlSeconds: number?): any
+			local map = mapsByName[mapName]
+			if map == nil then
+				map = {}
+				mapsByName[mapName] = map
+			end
+			local nextValue = transform(map[key])
+			map[key] = nextValue
+			return nextValue
+		end,
+	}
+end
+
+local function getMemoryStoreAdapter(): any
+	local globalValue: any = _G
+	if type(globalValue) == "table" and type(globalValue._MemoryStoreAdapter_QueryAPI) == "table" then
+		return globalValue._MemoryStoreAdapter_QueryAPI
+	end
+
+	if type(MemoryStoreAdapter) == "table" and type(MemoryStoreAdapter.CreateDefault) == "function" then
+		local ok, adapter = pcall(function()
+			return MemoryStoreAdapter.CreateDefault({
+				activeRealmCapacityMapName = MemoryStoreStructurePolicy.GetPolicy("activeRealmCapacity").name,
+			})
+		end)
+		if ok and type(adapter) == "table" then
+			return adapter
+		end
+	end
+
+	return makeLocalIdempotencyAdapter()
+end
+
+local function getContainmentRewardResolver(): any?
+	if containmentRewardResolver ~= nil then
+		return containmentRewardResolver
+	end
+	if type(ContainmentRewardResolver) ~= "table" or type(ContainmentRewardResolver.Create) ~= "function" then
+		return nil
+	end
+	if containmentRewardIdempotencyStore == nil and type(QueueProcessingIdempotencyStore) == "table" then
+		containmentRewardIdempotencyStore = QueueProcessingIdempotencyStore.Create({
+			adapter = getMemoryStoreAdapter(),
+			structurePolicy = MemoryStoreStructurePolicy,
+			structureId = "containmentRewardIdempotency",
+			now = now,
+		})
+	end
+	containmentRewardResolver = ContainmentRewardResolver.Create({
+		now = now,
+		idempotencyStore = containmentRewardIdempotencyStore,
+		pairRetentionSeconds = CaptureConfig.ContainmentRewardPairCooldownSeconds,
+	})
+	return containmentRewardResolver
+end
+
+local VALID_CUSTODY_END_REASONS = {
+	released = true,
+	rescued = true,
+	escaped = true,
+	timeout = true,
+	logout = true,
+	safe_return = true,
+}
+
+local function isValidCustodyEndReason(endReason: any): boolean
+	return type(endReason) == "string" and VALID_CUSTODY_END_REASONS[endReason] == true
 end
 local function getDownedState(target: Player): boolean
 	local roleQueryApi = getRoleServiceQueryApi()
@@ -215,7 +301,62 @@ local function clearAntiGuardingHistoryForUser(userId: number)
 	end
 end
 
+local function setCaptureLastReason(player: Player?, reason: string)
+	if player == nil then
+		return
+	end
+
+	local attrs = CaptureConfig.StateAttributes
+	player:SetAttribute(attrs.CaptureLastReason, reason)
+end
+
+local function resolveContainmentRewardForRecord(
+	record: any,
+	endReason: string,
+	endedAt: number,
+	operationId: string?
+): any
+	local resolver = getContainmentRewardResolver()
+	if resolver == nil or type(resolver.Resolve) ~= "function" then
+		return {
+			accepted = false,
+			reason = "containment_reward_resolver_unavailable",
+		}
+	end
+
+	local ok, result = pcall(function()
+		return resolver.Resolve({
+			operationId = operationId,
+			custodianUserId = record.custodianUserId,
+			targetUserId = record.targetUserId,
+			captureStartedAt = record.startedAt,
+			captureExpiresAt = record.expiresAt,
+			endedAt = endedAt,
+			endReason = endReason,
+			custodyWindowSeconds = CaptureConfig.CustodyWindowSeconds,
+		})
+	end)
+	if not ok or type(result) ~= "table" then
+		return {
+			accepted = false,
+			reason = "containment_reward_resolver_fault",
+		}
+	end
+	return result
+end
+
+local function projectCustodyEndReason(record: any, endReason: string)
+	setCaptureLastReason(getPlayerByUserId(record.custodianUserId), endReason)
+	setCaptureLastReason(getPlayerByUserId(record.targetUserId), endReason)
+end
+
 local function pruneExpiredCaptures(at: number)
+	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
+		if type(record.expiresAt) == "number" and record.expiresAt <= at then
+			resolveContainmentRewardForRecord(record, "timeout", record.expiresAt, nil)
+			projectCustodyEndReason(record, "timeout")
+		end
+	end
 	state = CaptureState.PruneExpired(state, at)
 	applyCaptureAttributesFromState()
 end
@@ -244,15 +385,6 @@ applyCaptureAttributesFromState = function()
 			target:SetAttribute(attrs.CaptureExpiresAt, record.expiresAt)
 		end
 	end
-end
-
-local function setCaptureLastReason(player: Player?, reason: string)
-	if player == nil then
-		return
-	end
-
-	local attrs = CaptureConfig.StateAttributes
-	player:SetAttribute(attrs.CaptureLastReason, reason)
 end
 
 local function requestCapture(custodian: Player, targetUserId: any, at: number?): any
@@ -345,7 +477,71 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 	}
 end
 
+local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?, operationId: string?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	if type(targetUserId) ~= "number" then
+		return { accepted = false, reason = "target_user_id_invalid" }
+	end
+	if not isValidCustodyEndReason(endReason) then
+		return { accepted = false, reason = "end_reason_invalid" }
+	end
+
+	local record = CaptureState.GetTargetCapture(state, targetUserId)
+	if record == nil then
+		return { accepted = false, reason = "capture_missing" }
+	end
+
+	local transition = CaptureState.ResolveRelease(state, {
+		now = resolvedNow,
+		targetUserId = targetUserId,
+	})
+	if transition.accepted ~= true or transition.record == nil then
+		return {
+			accepted = false,
+			reason = transition.reason,
+		}
+	end
+
+	state = transition.state
+	projectCustodyEndReason(transition.record, endReason)
+	local reward = resolveContainmentRewardForRecord(transition.record, endReason, resolvedNow, operationId)
+	applyCaptureAttributesFromState()
+
+	return {
+		accepted = true,
+		reason = endReason,
+		record = transition.record,
+		reward = reward,
+	}
+end
+
+local function releaseCapture(custodianUserId: any, targetUserId: any, at: number?): any
+	if type(custodianUserId) ~= "number" then
+		return { accepted = false, reason = "custodian_user_id_invalid" }
+	end
+	if type(targetUserId) ~= "number" then
+		return { accepted = false, reason = "target_user_id_invalid" }
+	end
+
+	local record = CaptureState.GetTargetCapture(state, targetUserId)
+	if record == nil then
+		return { accepted = false, reason = "capture_missing" }
+	end
+	if record.custodianUserId ~= custodianUserId then
+		return { accepted = false, reason = "custodian_mismatch" }
+	end
+
+	return resolveCustodyEnd(targetUserId, "released", at, nil)
+end
+
 Players.PlayerRemoving:Connect(function(player: Player)
+	local resolvedNow = now()
+	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
+		if record.custodianUserId == player.UserId or record.targetUserId == player.UserId then
+			resolveContainmentRewardForRecord(record, "logout", resolvedNow, nil)
+			projectCustodyEndReason(record, "logout")
+		end
+	end
 	lastRequestAtByUserId[player.UserId] = nil
 	lastRejectedRequestAtByUserId[player.UserId] = nil
 	clearAntiGuardingHistoryForUser(player.UserId)
@@ -379,11 +575,19 @@ _G._CaptureService_QueryAPI = {
 		end
 		return CaptureState.GetAllCaptures(state)
 	end,
+	ResolveCustodyEnd = function(targetUserId: number, endReason: string, at: number?, operationId: string?): any
+		return resolveCustodyEnd(targetUserId, endReason, at, operationId)
+	end,
+	ReleaseCapture = function(custodianUserId: number, targetUserId: number, at: number?): any
+		return releaseCapture(custodianUserId, targetUserId, at)
+	end,
 	ResetForTests = function()
 		state = CaptureState.NewState()
 		lastRequestAtByUserId = {}
 		lastRejectedRequestAtByUserId = {}
 		lastCaptureAtByCustodianTargetKey = {}
+		containmentRewardResolver = nil
+		containmentRewardIdempotencyStore = nil
 		applyCaptureAttributesFromState()
 	end,
 }

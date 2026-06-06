@@ -16,6 +16,7 @@ local FEEDBACK_LABELS = {
 	score_rescue_complete = "Rescue complete",
 	score_capture_success = "Capture success",
 	score_capture_release = "Capture released",
+	score_containment_reward = "Containment reward",
 	score_objective_partial = "Objective progress",
 	score_tutorial_bonus = "Tutorial bonus",
 	score_hidden_discovery = "Hidden discovery",

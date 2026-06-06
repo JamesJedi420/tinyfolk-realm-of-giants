@@ -266,6 +266,7 @@ local scoreQueryFault = false
 local movementHookFault = false
 local remoteBarrierSnapshot: any = nil
 local memoryStoreValuesByMap: { [string]: { [string]: any } } = {}
+local captureCustodyEndRequests: { any } = {}
 globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		if roleQueryFault == true then
@@ -324,6 +325,17 @@ globalEnv._ScoreService_QueryAPI = {
 			error("score query fault")
 		end
 		return { accepted = true, reason = "accepted" }
+	end,
+}
+globalEnv._CaptureService_QueryAPI = {
+	ResolveCustodyEnd = function(targetUserId: number, endReason: string, at: number, operationId: string?): any
+		table.insert(captureCustodyEndRequests, {
+			targetUserId = targetUserId,
+			endReason = endReason,
+			at = at,
+			operationId = operationId,
+		})
+		return { accepted = true, reason = endReason }
 	end,
 }
 globalEnv._MemoryStoreAdapter_QueryAPI = {
@@ -410,6 +422,7 @@ local function resetRouteDefaults()
 	scoreQueryFault = false
 	movementHookFault = false
 	remoteBarrierSnapshot = nil
+	captureCustodyEndRequests = {}
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
@@ -887,6 +900,10 @@ do
 		"escape-6501-EscapeRoute_B-107.000",
 		"fallback escape uses stable resolved operation id"
 	)
+	assertEqual(#captureCustodyEndRequests, 1, "fallback escape resolves capture custody end")
+	assertEqual(captureCustodyEndRequests[1].targetUserId, 6501, "fallback escape custody end target")
+	assertEqual(captureCustodyEndRequests[1].endReason, "escaped", "fallback escape custody end reason")
+	assertEqual(captureCustodyEndRequests[1].at, 107, "fallback escape custody end timestamp")
 	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Resolved", "fallback resolves after escape")
 	assertEqual(firstTinyfolk:GetAttribute("Escaped"), true, "fallback escape marks Tinyfolk escaped")
 	assertEqual(
@@ -956,6 +973,10 @@ do
 		"escape-73-EscapeRoute_A-105.000",
 		"final escape uses stable resolved operation id"
 	)
+	assertEqual(#captureCustodyEndRequests, 1, "final exit resolves capture custody end")
+	assertEqual(captureCustodyEndRequests[1].targetUserId, 73, "final exit custody end target")
+	assertEqual(captureCustodyEndRequests[1].endReason, "escaped", "final exit custody end reason")
+	assertEqual(captureCustodyEndRequests[1].at, 105, "final exit custody end timestamp")
 	assertEqual(routeAttributes.FinalExitPhase, "Resolved", "successful escape resolves final exit")
 	assertEqual(routeAttributes.FinalExitResolvedAt, 105, "resolved timestamp projected to route attributes")
 	assertEqual(
@@ -1132,6 +1153,10 @@ do
 		"plain route escape stores stable operation id timestamp"
 	)
 	assertEqual(routeAttributes.EscapeOutcomeResolvedAt, 130, "plain route escape stores stable resolved timestamp")
+	assertEqual(#captureCustodyEndRequests, 1, "plain route escape resolves capture custody end")
+	assertEqual(captureCustodyEndRequests[1].targetUserId, 82, "plain route custody end target")
+	assertEqual(captureCustodyEndRequests[1].endReason, "escaped", "plain route custody end reason")
+	assertEqual(captureCustodyEndRequests[1].at, 130, "plain route custody end timestamp")
 
 	currentTime = 999
 	EscapeService.ResetEscapeAttemptStateForTests()
@@ -1224,6 +1249,13 @@ do
 		"escape-transport-Transport_A-31-222.000",
 		"transport escape uses stable departed operation id"
 	)
+	assertEqual(#captureCustodyEndRequests, 2, "transport resolves custody end for boarded and unboarded")
+	assertEqual(captureCustodyEndRequests[1].targetUserId, 31, "boarded transport custody end target")
+	assertEqual(captureCustodyEndRequests[1].endReason, "escaped", "boarded transport custody end reason")
+	assertEqual(captureCustodyEndRequests[1].at, 222, "boarded transport custody end timestamp")
+	assertEqual(captureCustodyEndRequests[2].targetUserId, 32, "safe-return transport custody end target")
+	assertEqual(captureCustodyEndRequests[2].endReason, "safe_return", "safe-return transport custody end reason")
+	assertEqual(captureCustodyEndRequests[2].at, 222, "safe-return transport custody end timestamp")
 	assertTrue(
 		type(memoryStoreValuesByMap.tin_escape_outcome_idempotency_v1) == "table",
 		"runtime escape resolver uses durable idempotency map"

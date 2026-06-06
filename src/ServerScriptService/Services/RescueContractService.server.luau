@@ -292,6 +292,20 @@ local function getEscapeServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getCaptureServiceQueryApi(): any?
+	local globalValue: any = globalEnv
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._CaptureService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function getRescueHandoffQueryApi(): any?
 	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
@@ -1061,6 +1075,10 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 			"rescued",
 			resolvedNow
 		)
+		local captureApi = getCaptureServiceQueryApi()
+		if captureApi ~= nil and type(captureApi.ResolveCustodyEnd) == "function" then
+			pcall(captureApi.ResolveCustodyEnd, targetUserId, "rescued", resolvedNow, nil)
+		end
 		grantPostRescueProtection(target, resolvedNow)
 		grantRescueAcceleration(rescuer, resolvedNow)
 		local scoreApi = getScoreServiceQueryApi()

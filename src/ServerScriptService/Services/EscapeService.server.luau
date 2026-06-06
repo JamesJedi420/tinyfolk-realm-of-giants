@@ -728,6 +728,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return queryApi
 	end
 
+	local function getCaptureServiceQueryApi(): any?
+		local globalValue: any = globalEnv
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._CaptureService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
 	local function getObjectiveServiceQueryApi(): any?
 		local globalValue: any = globalEnv
 		if type(globalValue) ~= "table" then
@@ -931,6 +943,24 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			}
 		end
 		return result
+	end
+
+	local function resolveCaptureCustodyEnd(userId: number, endReason: string, at: number?): any?
+		if type(at) ~= "number" then
+			return nil
+		end
+		local captureApi = getCaptureServiceQueryApi()
+		if captureApi == nil or type(captureApi.ResolveCustodyEnd) ~= "function" then
+			return nil
+		end
+		local ok, result = pcall(captureApi.ResolveCustodyEnd, userId, endReason, at, nil)
+		if ok then
+			return result
+		end
+		return {
+			accepted = false,
+			reason = "capture_custody_end_fault",
+		}
 	end
 
 	local function markPlayerEscaped(player: any, _sourceId: string?): boolean
@@ -1807,6 +1837,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local escapedNow = markPlayerEscaped(player, routeId)
 		local escapeOutcome = nil
+		local custodyEndOutcome = nil
 		if escapedNow then
 			local sourceKind = if isFallbackEscapeCandidate(routePart)
 				then "fallback_escape"
@@ -1826,6 +1857,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				end
 				stableResolvedAt = routeOutcomeResolvedAt
 			end
+			custodyEndOutcome = resolveCaptureCustodyEnd(player.UserId, "escaped", stableResolvedAt)
 			escapeOutcome = resolveEscapeOutcome(player, {
 				operationId = string.format("escape-%d-%s-%.3f", player.UserId, routeId, stableResolvedAt),
 				userId = player.UserId,
@@ -1844,7 +1876,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		routePart:SetAttribute(ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE, successfulEscapes + 1)
 		trySendToTinyfolkMovementTraitService(player, routeId)
 
-		return { accepted = true, reason = "accepted", escapeOutcome = escapeOutcome }
+		return {
+			accepted = true,
+			reason = "accepted",
+			escapeOutcome = escapeOutcome,
+			custodyEndOutcome = custodyEndOutcome,
+		}
 	end
 
 	function service.resolveTransportDeparture(endpointId: string, candidateTinyfolkUserIds: { number }): any
@@ -1902,6 +1939,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local safeReturnedUserIds: { number } = {}
 		local unresolvedUserIds: { number } = {}
 		local escapeOutcomesByUserId: { [number]: any } = {}
+		local custodyEndOutcomesByUserId: { [number]: any } = {}
 		local boardedByUserId: { [number]: boolean } = {}
 		local unboardedProcessedByUserId: { [number]: boolean } = {}
 
@@ -1916,6 +1954,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 					local player = getPlayerByUserId(userId)
 					if player ~= nil and isTinyfolk(player) then
 						if markPlayerEscaped(player, endpointId) then
+							custodyEndOutcomesByUserId[userId] =
+								resolveCaptureCustodyEnd(userId, "escaped", transportResolvedAt)
 							escapeOutcomesByUserId[userId] = resolveEscapeOutcome(player, {
 								operationId = string.format(
 									"escape-transport-%s-%d-%.3f",
@@ -1954,6 +1994,8 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 							player:SetAttribute(ESCAPED_ATTRIBUTE, false)
 						end
 
+						custodyEndOutcomesByUserId[userId] =
+							resolveCaptureCustodyEnd(userId, "safe_return", transportResolvedAt)
 						if relocatePlayerToTinyfolkReturn(player) then
 							table.insert(safeReturnedUserIds, userId)
 						else
@@ -1993,6 +2035,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			unresolvedUserIds = unresolvedUserIds,
 			resolvedTransportFinalExit = resolvedTransportFinalExit,
 			escapeOutcomesByUserId = escapeOutcomesByUserId,
+			custodyEndOutcomesByUserId = custodyEndOutcomesByUserId,
 			outcome = transportResult.outcome,
 		}
 	end

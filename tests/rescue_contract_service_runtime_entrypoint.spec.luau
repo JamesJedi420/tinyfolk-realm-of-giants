@@ -241,6 +241,19 @@ globalEnv._ScoreService_QueryAPI = {
 	end,
 }
 
+local captureCustodyEndRequests: { any } = {}
+globalEnv._CaptureService_QueryAPI = {
+	ResolveCustodyEnd = function(targetUserId: number, endReason: string, at: number, operationId: string?): any
+		table.insert(captureCustodyEndRequests, {
+			targetUserId = targetUserId,
+			endReason = endReason,
+			at = at,
+			operationId = operationId,
+		})
+		return { accepted = true, reason = endReason }
+	end,
+}
+
 local handoffRequests: { any } = {}
 local handoffShouldReject = false
 local handoffExpiryProbeAt: number? = nil
@@ -370,6 +383,7 @@ local function resetState()
 	rescueRouteMode = "accepted"
 	routeRequests = {}
 	scoreRequests = {}
+	captureCustodyEndRequests = {}
 	handoffRequests = {}
 	handoffShouldReject = false
 	handoffExpiryProbeAt = nil
@@ -1001,6 +1015,10 @@ do
 	assertEqual(scoreRequests[1].metadata.targetRealmOwnerUserId, 9001, "completion score metadata target realm")
 	assertEqual(scoreRequests[1].metadata.entryRouteId, "RescueEntryRoute_9001", "completion score metadata route")
 	assertEqual(scoreRequests[1].metadata.entryRouteKind, "RescueEntry", "completion score metadata route kind")
+	assertEqual(#captureCustodyEndRequests, 1, "completion resolves capture custody end")
+	assertEqual(captureCustodyEndRequests[1].targetUserId, target.UserId, "completion custody end target")
+	assertEqual(captureCustodyEndRequests[1].endReason, "rescued", "completion custody end reason")
+	assertEqual(captureCustodyEndRequests[1].at, 401, "completion custody end timestamp")
 end
 
 do

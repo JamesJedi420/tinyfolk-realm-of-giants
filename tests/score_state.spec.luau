@@ -172,6 +172,33 @@ end
 
 do
 	local state = newState()
+	local accepted = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 1014,
+		eventId = "containment_reward",
+		actorRole = "Giant",
+		metadata = { contributionRatio = 0.5 },
+	})
+	assertTrue(accepted.accepted, "containment reward event accepted")
+	assertEqual(accepted.record.category, "control", "containment reward category")
+	assertEqual(accepted.record.bucket, "normal", "containment reward bucket")
+	assertEqual(accepted.record.contributionRatio, 0.5, "containment reward proportional contribution")
+	assertEqual(accepted.record.rawPoints, 25, "containment reward raw points")
+	assertEqual(accepted.record.feedbackKey, "score_containment_reward", "containment reward feedback key")
+
+	local mismatch = ScoreState.ResolveScoreEvent(accepted.state, {
+		now = 2,
+		userId = 1015,
+		eventId = "containment_reward",
+		actorRole = "Tinyfolk",
+		metadata = { contributionRatio = 1 },
+	})
+	assertFalse(mismatch.accepted, "containment reward rejects Tinyfolk actor")
+	assertEqual(mismatch.reason, "actor_role_mismatch", "containment reward role mismatch")
+end
+
+do
+	local state = newState()
 	local first = ScoreState.ResolveScoreEvent(state, {
 		now = 1,
 		userId = 1001,

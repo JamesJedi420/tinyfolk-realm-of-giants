@@ -114,4 +114,18 @@ do
 	assertEqual(calls[1].ttlSeconds, MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS, "escape policy ttl")
 end
 
+do
+	local adapter, calls = makeAdapter()
+	local store = QueueProcessingIdempotencyStore.Create({
+		adapter = adapter,
+		structurePolicy = MemoryStoreStructurePolicy,
+		structureId = "containmentRewardIdempotency",
+	})
+	local begun = store.TryBegin("containment-op-1")
+	assertTrue(begun.accepted, "containment reward idempotency begin accepted")
+	assertEqual(calls[1].mapName, "tin_containment_reward_idempotency_v1", "containment policy map name")
+	assertEqual(calls[1].key, "containreward:containment-op-1", "containment policy key")
+	assertEqual(calls[1].ttlSeconds, MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS, "containment policy ttl")
+end
+
 print("queue_processing_idempotency_store: all checks passed")
