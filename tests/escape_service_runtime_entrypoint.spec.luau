@@ -382,6 +382,7 @@ local function resetRouteDefaults()
 	routeAttributes.FinalExitBlockedEndsAt = nil
 	routeAttributes.FinalExitResolvedAt = nil
 	routeAttributes.FinalExitBlockedByUserId = nil
+	routeAttributes.EscapeOutcomeResolvedAt = nil
 	routeAttributes.PlayerCreatedRoute = nil
 	routeAttributes.RouteCreatedByUserId = nil
 	routeAttributes.RouteCreationTimestamp = nil
@@ -1120,6 +1121,34 @@ end
 do
 	resetRouteDefaults()
 	routeAttributes.FinalExitManaged = false
+	currentTime = 130
+	local tinyfolk = MockPlayer.new(82, "StableRouteOutcomeTinyfolk", { role = "Tinyfolk" })
+
+	local first = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(first.accepted, true, "plain route escape accepted")
+	assertEqual(
+		first.escapeOutcome.operationId,
+		"escape-82-EscapeRoute_A-130.000",
+		"plain route escape stores stable operation id timestamp"
+	)
+	assertEqual(routeAttributes.EscapeOutcomeResolvedAt, 130, "plain route escape stores stable resolved timestamp")
+
+	currentTime = 999
+	EscapeService.ResetEscapeAttemptStateForTests()
+	local replayTinyfolk = MockPlayer.new(82, "StableRouteOutcomeTinyfolkReplay", { role = "Tinyfolk" })
+	local replay = EscapeService.requestEscapeAttempt(replayTinyfolk, "EscapeRoute_A")
+	assertEqual(replay.accepted, true, "plain route escape replay accepted")
+	assertEqual(
+		replay.escapeOutcome.operationId,
+		first.escapeOutcome.operationId,
+		"plain route escape replay reuses stored operation id timestamp"
+	)
+	assertEqual(replay.escapeOutcome.duplicate, true, "plain route replay is duplicate no-op")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
 	movementHookFault = true
 	local tinyfolk = MockPlayer.new(81, "FaultyMovementHookTinyfolk", { role = "Tinyfolk" })
 	local result = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
@@ -1137,6 +1166,28 @@ do
 	local result = EscapeService.requestEscapeAttempt(player, "EscapeRoute_A")
 	assertEqual(result.accepted, false, "safe-zone gate takes precedence over final-exit gate")
 	assertEqual(result.reason, "shared_hub_no_capture", "safe-zone precedence reason is preserved")
+end
+
+do
+	resetRouteDefaults()
+	local boardedTinyfolk = MockPlayer.new(30, "TinyfolkMissingDepartedAt", { role = "Tinyfolk" })
+	playersByUserId[30] = boardedTinyfolk
+
+	transportDepartureOutcome = {
+		accepted = true,
+		reason = "accepted",
+		outcome = {
+			canResolve = true,
+			boardedEscapedUserIds = { 30 },
+			unboardedRemainingUserIds = {},
+		},
+	}
+
+	local result = EscapeService.resolveTransportDeparture("Transport_A", { 30 })
+	assertFalse(result.accepted, "transport missing departedAt rejected")
+	assertEqual(result.reason, "transport_departed_at_required", "transport missing departedAt reason")
+	assertEqual(boardedTinyfolk:GetAttribute("Escaped"), nil, "transport missing departedAt does not mark escaped")
+	assertEqual(boardedTinyfolk.Character.LastPivotCFrame, nil, "transport missing departedAt does not return to hub")
 end
 
 do
@@ -1199,6 +1250,7 @@ do
 		reason = "accepted",
 		outcome = {
 			canResolve = true,
+			departedAt = 223,
 			boardedEscapedUserIds = { 33, 33 },
 			unboardedRemainingUserIds = { 33, 33 },
 		},
@@ -1225,6 +1277,7 @@ do
 		reason = "accepted",
 		outcome = {
 			canResolve = true,
+			departedAt = 224,
 			boardedEscapedUserIds = { 35 },
 			unboardedRemainingUserIds = { 35 },
 		},
@@ -1263,6 +1316,7 @@ do
 		reason = "accepted",
 		outcome = {
 			canResolve = true,
+			departedAt = 225,
 			routeId = "EscapeRoute_A",
 			boardedEscapedUserIds = { 41 },
 			unboardedRemainingUserIds = {},

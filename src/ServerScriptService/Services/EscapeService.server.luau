@@ -14,6 +14,7 @@ local ESCAPE_ROUTES_FOLDER_PATH = { "Map", "EscapeRoutes" }
 local ESCAPED_ATTRIBUTE = "Escaped"
 local ROUTE_ENABLED_ATTRIBUTE = "RouteEnabled"
 local ROUTE_SUCCESSFUL_ESCAPES_ATTRIBUTE = "SuccessfulEscapes"
+local ROUTE_ESCAPE_OUTCOME_RESOLVED_AT_ATTRIBUTE = "EscapeOutcomeResolvedAt"
 
 local function debugLog(message: string)
 	print(string.format("[EscapeService] %s", message))
@@ -675,6 +676,20 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		pcall(function()
 			TinyfolkMovementTraitService.OnValidRouteCrossing(player, routeId)
 		end)
+	end
+
+	local function getOrCreateRouteEscapeOutcomeResolvedAt(routePart: BasePart, at: number): number?
+		local existing = routePart:GetAttribute(ROUTE_ESCAPE_OUTCOME_RESOLVED_AT_ATTRIBUTE)
+		if type(existing) == "number" then
+			return existing
+		end
+
+		routePart:SetAttribute(ROUTE_ESCAPE_OUTCOME_RESOLVED_AT_ATTRIBUTE, at)
+		local stored = routePart:GetAttribute(ROUTE_ESCAPE_OUTCOME_RESOLVED_AT_ATTRIBUTE)
+		if type(stored) == "number" then
+			return stored
+		end
+		return nil
 	end
 
 	local function getRoleServiceQueryApi(): any?
@@ -1797,6 +1812,20 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				then "fallback_escape"
 				elseif finalExitStateByRouteId[routeId] ~= nil then "final_exit"
 				else "route_escape"
+			if sourceKind == "route_escape" then
+				local routeOutcomeResolvedAt = getOrCreateRouteEscapeOutcomeResolvedAt(routePart, stableResolvedAt)
+				if type(routeOutcomeResolvedAt) ~= "number" then
+					return {
+						accepted = true,
+						reason = "accepted",
+						escapeOutcome = {
+							accepted = false,
+							reason = "route_escape_stable_timestamp_unavailable",
+						},
+					}
+				end
+				stableResolvedAt = routeOutcomeResolvedAt
+			end
 			escapeOutcome = resolveEscapeOutcome(player, {
 				operationId = string.format("escape-%d-%s-%.3f", player.UserId, routeId, stableResolvedAt),
 				userId = player.UserId,
@@ -1857,9 +1886,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local boardedEscapedUserIds = transportResult.outcome.boardedEscapedUserIds
 		local unboardedRemainingUserIds = transportResult.outcome.unboardedRemainingUserIds
-		local transportResolvedAt = if type(transportResult.outcome.departedAt) == "number"
-			then transportResult.outcome.departedAt
-			else now()
+		local transportResolvedAt = transportResult.outcome.departedAt
+		if
+			type(boardedEscapedUserIds) == "table"
+			and #boardedEscapedUserIds > 0
+			and type(transportResolvedAt) ~= "number"
+		then
+			return {
+				accepted = false,
+				reason = "transport_departed_at_required",
+				outcome = transportResult.outcome,
+			}
+		end
 		local escapedUserIds: { number } = {}
 		local safeReturnedUserIds: { number } = {}
 		local unresolvedUserIds: { number } = {}

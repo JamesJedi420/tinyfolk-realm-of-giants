@@ -111,7 +111,7 @@ do
 	assertTrue(begun.accepted, "escape idempotency begin accepted")
 	assertEqual(calls[1].mapName, "tin_escape_outcome_idempotency_v1", "escape policy map name")
 	assertEqual(calls[1].key, "escapeop:escape-op-1", "escape policy key")
-	assertEqual(calls[1].ttlSeconds, 900, "escape policy ttl")
+	assertEqual(calls[1].ttlSeconds, MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS, "escape policy ttl")
 end
 
 print("queue_processing_idempotency_store: all checks passed")

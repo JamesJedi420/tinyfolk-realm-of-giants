@@ -88,7 +88,7 @@ local expectedPolicies: { [string]: any } = {
 		kind = "HashMap",
 		name = "tin_escape_outcome_idempotency_v1",
 		key = "escapeop:op-375",
-		ttlSeconds = 900,
+		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
 		maxPayloadBytes = 1024,
 		parts = { "op-375" },
 	},

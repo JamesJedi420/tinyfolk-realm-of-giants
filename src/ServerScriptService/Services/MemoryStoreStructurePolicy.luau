@@ -96,10 +96,10 @@ local STRUCTURES: { [string]: StructurePolicy } = {
 		kind = "HashMap",
 		name = "tin_escape_outcome_idempotency_v1",
 		keyPrefix = "escapeop",
-		ttlSeconds = 900,
+		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
 		maxPayloadBytes = 1024,
 		parts = { "operationId" },
-		description = "Short-lived escape outcome idempotency records.",
+		description = "Long-retention escape outcome idempotency records.",
 	},
 	activeRealmCapacity = {
 		id = "activeRealmCapacity",
