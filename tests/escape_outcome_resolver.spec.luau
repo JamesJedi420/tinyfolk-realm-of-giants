@@ -213,4 +213,102 @@ do
 	assertEqual(profileCalls, 1, "profile failure duplicate skips profile")
 end
 
+do
+	local scoreCalls = 0
+	local lootCalls = 0
+	local profileCalls = 0
+	local defenseCalls = 0
+	local returnCalls = 0
+	local releaseCalls = 0
+	local recordStatus: string? = nil
+	local markCompletedShouldFail = true
+
+	local resolver = EscapeOutcomeResolver.Create({
+		idempotencyStore = {
+			TryBegin = function(_operationId: any): any
+				if recordStatus == "processing" then
+					return { accepted = false, reason = "already_processing", status = "processing" }
+				end
+				if recordStatus == "completed" then
+					return { accepted = true, reason = "accepted", status = "completed" }
+				end
+				recordStatus = "processing"
+				return { accepted = true, reason = "accepted", status = "begun" }
+			end,
+			MarkCompleted = function(_operationId: any): any
+				if markCompletedShouldFail then
+					return { accepted = false, reason = "adapter_update_failed" }
+				end
+				recordStatus = "completed"
+				return { accepted = true, reason = "accepted", status = "completed" }
+			end,
+			ReleaseProcessing = function(_operationId: any): any
+				releaseCalls += 1
+				recordStatus = nil
+				return { accepted = true, reason = "accepted", status = "released" }
+			end,
+		},
+		scoreApi = {
+			RequestScoreEvent = function(_userId: number, _eventId: string, _at: number, _metadata: any): any
+				scoreCalls += 1
+				return { accepted = true, reason = "accepted" }
+			end,
+		},
+		carriedLootApi = {
+			ConsumeForEscape = function(_userId: number, _operationId: string): any
+				lootCalls += 1
+				return { accepted = true, reason = "accepted", loot = { value = 1 } }
+			end,
+		},
+		profileGateway = {
+			UpdateLoadedPlayerProfileData = function(_player: any, updater: any): any
+				profileCalls += 1
+				updater({ schemaVersion = 1, userId = 404 })
+				return { ok = true, reason = nil }
+			end,
+		},
+		defenseHistoryApi = {
+			RecordEscapeDefenseOutcome = function(_record: any): any
+				defenseCalls += 1
+				return { accepted = true, reason = "accepted" }
+			end,
+		},
+		returnToHub = function(_player: any): boolean
+			returnCalls += 1
+			return true
+		end,
+	})
+
+	local first = resolver.Resolve({
+		operationId = "op-completion-fails",
+		userId = 404,
+		player = makePlayer(404),
+		sourceKind = "route_escape",
+		sourceId = "EscapeRoute_A",
+		routeId = "EscapeRoute_A",
+	})
+	assertFalse(first.accepted, "completion failure rejected")
+	assertEqual(first.reason, "idempotency_mark_completed_failed", "completion failure reason")
+	assertTrue(first.cleanupDebt, "completion failure leaves cleanup debt")
+	assertEqual(releaseCalls, 0, "completion failure does not release processing")
+	assertEqual(recordStatus, "processing", "completion failure leaves operation processing")
+
+	markCompletedShouldFail = false
+	local retry = resolver.Resolve({
+		operationId = "op-completion-fails",
+		userId = 404,
+		player = makePlayer(404),
+		sourceKind = "route_escape",
+		sourceId = "EscapeRoute_A",
+		routeId = "EscapeRoute_A",
+	})
+	assertFalse(retry.accepted, "completion failure retry blocked")
+	assertEqual(retry.reason, "already_processing", "completion failure retry reason")
+	assertEqual(scoreCalls, 1, "completion failure retry skips score")
+	assertEqual(lootCalls, 1, "completion failure retry skips loot")
+	assertEqual(profileCalls, 1, "completion failure retry skips profile")
+	assertEqual(defenseCalls, 1, "completion failure retry skips defense")
+	assertEqual(returnCalls, 1, "completion failure retry skips return")
+end
+
 print("escape_outcome_resolver: all checks passed")

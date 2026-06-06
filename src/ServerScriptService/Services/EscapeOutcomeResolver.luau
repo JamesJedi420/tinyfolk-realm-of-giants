@@ -356,13 +356,13 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 
 		local completedOk, completedResult = pcall(idempotencyStore.MarkCompleted, operationId)
 		if not completedOk or type(completedResult) ~= "table" or completedResult.accepted ~= true then
-			pcall(idempotencyStore.ReleaseProcessing, operationId)
 			return {
 				accepted = false,
 				reason = "idempotency_mark_completed_failed",
 				operationId = operationId,
 				reward = reward,
 				lootTransferred = lootAccepted,
+				cleanupDebt = true,
 			}
 		end
 

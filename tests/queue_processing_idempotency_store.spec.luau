@@ -100,4 +100,18 @@ do
 	assertEqual(invalidOperation.reason, "operation_id_invalid", "invalid operation reason")
 end
 
+do
+	local adapter, calls = makeAdapter()
+	local store = QueueProcessingIdempotencyStore.Create({
+		adapter = adapter,
+		structurePolicy = MemoryStoreStructurePolicy,
+		structureId = "escapeOutcomeIdempotency",
+	})
+	local begun = store.TryBegin("escape-op-1")
+	assertTrue(begun.accepted, "escape idempotency begin accepted")
+	assertEqual(calls[1].mapName, "tin_escape_outcome_idempotency_v1", "escape policy map name")
+	assertEqual(calls[1].key, "escapeop:escape-op-1", "escape policy key")
+	assertEqual(calls[1].ttlSeconds, 900, "escape policy ttl")
+end
+
 print("queue_processing_idempotency_store: all checks passed")

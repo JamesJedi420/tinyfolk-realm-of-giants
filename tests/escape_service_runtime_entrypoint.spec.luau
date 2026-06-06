@@ -265,6 +265,7 @@ local transportQueryFault = false
 local scoreQueryFault = false
 local movementHookFault = false
 local remoteBarrierSnapshot: any = nil
+local memoryStoreValuesByMap: { [string]: { [string]: any } } = {}
 globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		if roleQueryFault == true then
@@ -323,6 +324,16 @@ globalEnv._ScoreService_QueryAPI = {
 			error("score query fault")
 		end
 		return { accepted = true, reason = "accepted" }
+	end,
+}
+globalEnv._MemoryStoreAdapter_QueryAPI = {
+	HashMapUpdateAsync = function(mapName: string, key: string, transform: any, _ttlSeconds: number): any
+		if memoryStoreValuesByMap[mapName] == nil then
+			memoryStoreValuesByMap[mapName] = {}
+		end
+		local nextValue = transform(memoryStoreValuesByMap[mapName][key])
+		memoryStoreValuesByMap[mapName][key] = nextValue
+		return nextValue
 	end,
 }
 globalEnv._RemoteControlStationService_QueryAPI = {
@@ -870,6 +881,11 @@ do
 
 	local escaped = EscapeService.requestEscapeAttempt(firstTinyfolk, "EscapeRoute_B")
 	assertEqual(escaped.accepted, true, "open fallback accepts last Tinyfolk escape")
+	assertEqual(
+		escaped.escapeOutcome.operationId,
+		"escape-6501-EscapeRoute_B-107.000",
+		"fallback escape uses stable resolved operation id"
+	)
 	assertEqual(fallbackRouteAttributes.FallbackEscapePhase, "Resolved", "fallback resolves after escape")
 	assertEqual(firstTinyfolk:GetAttribute("Escaped"), true, "fallback escape marks Tinyfolk escaped")
 	assertEqual(
@@ -934,6 +950,11 @@ do
 	local openTinyfolk = MockPlayer.new(73, "OpenTinyfolk", { role = "Tinyfolk" })
 	local openAttempt = EscapeService.requestEscapeAttempt(openTinyfolk, "EscapeRoute_A")
 	assertEqual(openAttempt.accepted, true, "open final exit accepts route escape")
+	assertEqual(
+		openAttempt.escapeOutcome.operationId,
+		"escape-73-EscapeRoute_A-105.000",
+		"final escape uses stable resolved operation id"
+	)
 	assertEqual(routeAttributes.FinalExitPhase, "Resolved", "successful escape resolves final exit")
 	assertEqual(routeAttributes.FinalExitResolvedAt, 105, "resolved timestamp projected to route attributes")
 	assertEqual(
@@ -1131,6 +1152,7 @@ do
 		reason = "accepted",
 		outcome = {
 			canResolve = true,
+			departedAt = 222,
 			boardedEscapedUserIds = { 31 },
 			unboardedRemainingUserIds = { 32 },
 		},
@@ -1146,6 +1168,15 @@ do
 	)
 	assertTrue(type(result.escapeOutcomesByUserId[31]) == "table", "boarded transport records escape outcome")
 	assertEqual(result.escapeOutcomesByUserId[31].returnedToHub, true, "boarded transport outcome returned to hub")
+	assertEqual(
+		result.escapeOutcomesByUserId[31].operationId,
+		"escape-transport-Transport_A-31-222.000",
+		"transport escape uses stable departed operation id"
+	)
+	assertTrue(
+		type(memoryStoreValuesByMap.tin_escape_outcome_idempotency_v1) == "table",
+		"runtime escape resolver uses durable idempotency map"
+	)
 	assertEqual(unboardedTinyfolk:GetAttribute("Escaped"), false, "unboarded tinyfolk remains not escaped")
 	assertTrue(unboardedTinyfolk.Character.LastPivotCFrame ~= nil, "unboarded tinyfolk moved to return point")
 	assertEqual(

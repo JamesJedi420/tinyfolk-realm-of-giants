@@ -613,6 +613,7 @@ function TransportEscapeState.ResolveDepartureOutcome(state: State, candidateTin
 	return {
 		phase = state.phase,
 		canResolve = state.phase == TransportEscapeState.EndpointPhases.Departed,
+		departedAt = state.departedAt,
 		boardedEscapedUserIds = boardedEscapedUserIds,
 		unboardedRemainingUserIds = unboardedRemainingUserIds,
 	}

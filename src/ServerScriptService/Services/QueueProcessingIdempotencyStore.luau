@@ -2,7 +2,7 @@
 
 local QueueProcessingIdempotencyStore: any = {}
 
-local STRUCTURE_ID = "queueProcessingIdempotency"
+local DEFAULT_STRUCTURE_ID = "queueProcessingIdempotency"
 
 export type StoreResult = {
 	accepted: boolean,
@@ -47,18 +47,18 @@ local function cloneRecord(record: any): any?
 	return table.clone(record)
 end
 
-local function resolvePolicy(structurePolicy: any): (string?, number?, string?)
+local function resolvePolicy(structurePolicy: any, structureId: string): (string?, number?, string?)
 	if type(structurePolicy) ~= "table" or type(structurePolicy.GetPolicy) ~= "function" then
 		return nil, nil, "policy_unavailable"
 	end
-	local policy = structurePolicy.GetPolicy(STRUCTURE_ID)
+	local policy = structurePolicy.GetPolicy(structureId)
 	if type(policy) ~= "table" or not isNonEmptyString(policy.name) then
 		return nil, nil, "policy_unavailable"
 	end
 	if type(structurePolicy.ResolveExpiration) ~= "function" then
 		return nil, nil, "policy_unavailable"
 	end
-	local ttlResult = structurePolicy.ResolveExpiration(STRUCTURE_ID)
+	local ttlResult = structurePolicy.ResolveExpiration(structureId)
 	if type(ttlResult) ~= "table" or ttlResult.ok ~= true or type(ttlResult.ttlSeconds) ~= "number" then
 		return nil, nil, "policy_unavailable"
 	end
@@ -69,6 +69,9 @@ function QueueProcessingIdempotencyStore.Create(deps: any?): any
 	local depsAny = deps
 	local adapter = if type(depsAny) == "table" then depsAny.adapter else nil
 	local structurePolicy = if type(depsAny) == "table" then depsAny.structurePolicy else nil
+	local configuredStructureId = if type(depsAny) == "table" and isNonEmptyString(depsAny.structureId)
+		then depsAny.structureId
+		else DEFAULT_STRUCTURE_ID
 	local nowFn = if type(depsAny) == "table" and type(depsAny.now) == "function" then depsAny.now else defaultNow
 
 	local store: any = {}
@@ -80,11 +83,11 @@ function QueueProcessingIdempotencyStore.Create(deps: any?): any
 		if type(structurePolicy) ~= "table" or type(structurePolicy.MakeKey) ~= "function" then
 			return nil, "policy_unavailable"
 		end
-		return structurePolicy.MakeKey(STRUCTURE_ID, { operationId })
+		return structurePolicy.MakeKey(configuredStructureId, { operationId })
 	end
 
 	local function update(operationId: any, transform: (any) -> any): (any?, string?)
-		local mapName, ttlSeconds, policyReason = resolvePolicy(structurePolicy)
+		local mapName, ttlSeconds, policyReason = resolvePolicy(structurePolicy, configuredStructureId)
 		if mapName == nil or ttlSeconds == nil then
 			return nil, policyReason or "policy_unavailable"
 		end

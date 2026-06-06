@@ -128,6 +128,34 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			EscapeOutcomeResolverModule = outcomeModule
 		end
 	end
+	local QueueProcessingIdempotencyStoreModule: any = nil
+	if options ~= nil and type(options.queueProcessingIdempotencyStoreModule) == "table" then
+		QueueProcessingIdempotencyStoreModule = options.queueProcessingIdempotencyStoreModule
+	else
+		local idempotencyLoaded, idempotencyModule = pcall(function()
+			if script ~= nil and script.Parent ~= nil then
+				return require(script.Parent:WaitForChild("QueueProcessingIdempotencyStore"))
+			end
+			return require("./QueueProcessingIdempotencyStore")
+		end)
+		if idempotencyLoaded then
+			QueueProcessingIdempotencyStoreModule = idempotencyModule
+		end
+	end
+	local MemoryStoreStructurePolicyModule: any = nil
+	if options ~= nil and type(options.memoryStoreStructurePolicy) == "table" then
+		MemoryStoreStructurePolicyModule = options.memoryStoreStructurePolicy
+	else
+		local policyLoaded, policyModule = pcall(function()
+			if script ~= nil and script.Parent ~= nil then
+				return require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
+			end
+			return require("./MemoryStoreStructurePolicy")
+		end)
+		if policyLoaded then
+			MemoryStoreStructurePolicyModule = policyModule
+		end
+	end
 
 	local TinyfolkMovementTraitService: any = nil
 	if options ~= nil and type(options.tinyfolkMovementTraitService) == "table" then
@@ -154,6 +182,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local lastDashRequestAtByUserId: { [number]: number? } = {}
 	local safeZoneAbuseStateByUserId: { [number]: any? } = {}
 	local escapeOutcomeResolver: any = nil
+	local escapeOutcomeIdempotencyStore: any = nil
 
 	local function resolveAttributeName(configValue: any, fallback: string): string
 		if type(configValue) == "string" and configValue ~= "" then
@@ -822,8 +851,34 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if EscapeOutcomeResolverModule == nil or type(EscapeOutcomeResolverModule.Create) ~= "function" then
 			return nil
 		end
+		if escapeOutcomeIdempotencyStore == nil and type(QueueProcessingIdempotencyStoreModule) == "table" then
+			local memoryStoreAdapter = if options ~= nil and type(options.memoryStoreAdapter) == "table"
+				then options.memoryStoreAdapter
+				else nil
+			if memoryStoreAdapter == nil and type(globalEnv) == "table" then
+				local globalAdapter = globalEnv._MemoryStoreAdapter_QueryAPI
+				if type(globalAdapter) == "table" then
+					memoryStoreAdapter = globalAdapter
+				end
+			end
+			if memoryStoreAdapter == nil and type(_G) == "table" then
+				local globalAdapter = rawget(_G, "_MemoryStoreAdapter_QueryAPI")
+				if type(globalAdapter) == "table" then
+					memoryStoreAdapter = globalAdapter
+				end
+			end
+			if memoryStoreAdapter ~= nil and type(QueueProcessingIdempotencyStoreModule.Create) == "function" then
+				escapeOutcomeIdempotencyStore = QueueProcessingIdempotencyStoreModule.Create({
+					adapter = memoryStoreAdapter,
+					structurePolicy = MemoryStoreStructurePolicyModule,
+					structureId = "escapeOutcomeIdempotency",
+					now = now,
+				})
+			end
+		end
 		escapeOutcomeResolver = EscapeOutcomeResolverModule.Create({
 			now = now,
+			idempotencyStore = escapeOutcomeIdempotencyStore,
 			returnToHub = function(player: any): boolean
 				return relocatePlayerToTinyfolkReturn(player)
 			end,
@@ -1706,22 +1761,32 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "traversal_gap_block_active" }
 		end
 
+		local stableResolvedAt = now()
 		if finalExitStateByRouteId[routeId] ~= nil then
 			local resolvedTransition =
-				FinalExitState.ResolveEscape(finalExitStateByRouteId[routeId], player.UserId, now())
+				FinalExitState.ResolveEscape(finalExitStateByRouteId[routeId], player.UserId, stableResolvedAt)
 			if resolvedTransition.accepted ~= true then
 				return { accepted = false, reason = "final_exit_resolution_failed" }
 			end
 			finalExitStateByRouteId[routeId] = resolvedTransition.state
+			stableResolvedAt = if type(resolvedTransition.state.resolvedAt) == "number"
+				then resolvedTransition.state.resolvedAt
+				else stableResolvedAt
 			applyFinalExitAttributes(routePart, FinalExitState.GetSnapshot(resolvedTransition.state))
 		end
 		if fallbackEscapeStateByRouteId[routeId] ~= nil then
-			local resolvedFallback =
-				FallbackEscapeState.ResolveEscape(fallbackEscapeStateByRouteId[routeId], player.UserId, now())
+			local resolvedFallback = FallbackEscapeState.ResolveEscape(
+				fallbackEscapeStateByRouteId[routeId],
+				player.UserId,
+				stableResolvedAt
+			)
 			if resolvedFallback.accepted ~= true then
 				return { accepted = false, reason = "fallback_escape_resolution_failed" }
 			end
 			fallbackEscapeStateByRouteId[routeId] = resolvedFallback.state
+			stableResolvedAt = if type(resolvedFallback.state.resolvedAt) == "number"
+				then resolvedFallback.state.resolvedAt
+				else stableResolvedAt
 			applyFallbackEscapeAttributes(routePart, FallbackEscapeState.GetSnapshot(resolvedFallback.state))
 		end
 
@@ -1733,12 +1798,13 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				elseif finalExitStateByRouteId[routeId] ~= nil then "final_exit"
 				else "route_escape"
 			escapeOutcome = resolveEscapeOutcome(player, {
+				operationId = string.format("escape-%d-%s-%.3f", player.UserId, routeId, stableResolvedAt),
 				userId = player.UserId,
 				sourceKind = sourceKind,
 				sourceId = routeId,
 				routeId = routeId,
 				difficulty = readPositiveAttribute(routePart, "EscapeDifficulty"),
-				now = now(),
+				now = stableResolvedAt,
 			})
 		end
 
@@ -1791,6 +1857,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		local boardedEscapedUserIds = transportResult.outcome.boardedEscapedUserIds
 		local unboardedRemainingUserIds = transportResult.outcome.unboardedRemainingUserIds
+		local transportResolvedAt = if type(transportResult.outcome.departedAt) == "number"
+			then transportResult.outcome.departedAt
+			else now()
 		local escapedUserIds: { number } = {}
 		local safeReturnedUserIds: { number } = {}
 		local unresolvedUserIds: { number } = {}
@@ -1810,13 +1879,19 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 					if player ~= nil and isTinyfolk(player) then
 						if markPlayerEscaped(player, endpointId) then
 							escapeOutcomesByUserId[userId] = resolveEscapeOutcome(player, {
+								operationId = string.format(
+									"escape-transport-%s-%d-%.3f",
+									endpointId,
+									userId,
+									transportResolvedAt
+								),
 								userId = userId,
 								sourceKind = "transport",
 								sourceId = endpointId,
 								endpointId = endpointId,
 								routeId = transportResult.outcome.routeId,
 								difficulty = 1,
-								now = now(),
+								now = transportResolvedAt,
 							})
 							table.insert(escapedUserIds, userId)
 						end
