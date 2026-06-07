@@ -166,10 +166,12 @@ local giant = makePlayer(9102, "Giant")
 assertTrue(ProfilePersistenceGateway.LoadPlayerProfile(tinyfolk).ok, "tinyfolk profile loaded")
 assertTrue(ProfilePersistenceGateway.LoadPlayerProfile(giant).ok, "giant profile loaded")
 
-require("../src/ServerScriptService/Services/TinyfolkToolLoadoutService.server")
+local TinyfolkToolLoadoutService = require("../src/ServerScriptService/Services/TinyfolkToolLoadoutService.server")
 
 local api: any = _G._TinyfolkToolLoadoutService_QueryAPI
 assertTrue(type(api) == "table", "query api exposed")
+assertEqual(type(api.SelectLoadoutForTests), "nil", "test select seam hidden from runtime api")
+assertEqual(type(api.BuildEntryPayloadForTests), "nil", "test payload seam hidden from runtime api")
 
 do
 	local selected =
@@ -218,7 +220,11 @@ do
 	assertFalse(rejected.accepted, "public select rejects spoof catalog tool")
 	assertEqual(rejected.reason, "tool_missing", "public select uses canonical catalog")
 
-	local acceptedViaTestSeam = api.SelectLoadoutForTests(tinyfolk, { "spoof_only_tool" }, spoofCatalog)
+	local acceptedViaTestSeam = TinyfolkToolLoadoutService.TestHarness.SelectLoadoutWithCatalogOverride(
+		tinyfolk,
+		{ "spoof_only_tool" },
+		spoofCatalog
+	)
 	assertTrue(acceptedViaTestSeam.accepted, "explicit test seam accepts spoof catalog")
 	assertEqual(acceptedViaTestSeam.selectedBySlot.tool_1, "spoof_only_tool", "test seam selects spoof tool")
 end

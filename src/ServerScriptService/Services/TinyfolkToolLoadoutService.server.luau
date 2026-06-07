@@ -17,7 +17,7 @@ local TinyfolkToolCatalogSchema = if script ~= nil and script.Parent ~= nil
 	then require(Shared:WaitForChild("Config"):WaitForChild("TinyfolkToolCatalogSchema"))
 	else require("../../ReplicatedStorage/Shared/Config/TinyfolkToolCatalogSchema")
 
-local TinyfolkToolLoadoutService = {}
+local TinyfolkToolLoadoutService: any = {}
 local CANONICAL_CATALOG = TinyfolkToolCatalogSchema.DEFAULT_TOOL_CATALOG
 
 local function readProfileData(player: Player): any?
@@ -130,13 +130,19 @@ _G._TinyfolkToolLoadoutService_QueryAPI = {
 	BuildEntryPayload = function(player: Player, operationId: any, _catalog: any?, nowAt: any): any
 		return buildEntryPayload(player, operationId, CANONICAL_CATALOG, nowAt)
 	end,
+}
 
-	-- Explicit test/internal seam. Do not use in public/external request paths.
-	SelectLoadoutForTests = function(player: Player, selectedToolIds: any, catalogOverride: any?): any
+-- Explicit test harness path. Keep off _G runtime query API.
+TinyfolkToolLoadoutService.TestHarness = {
+	SelectLoadoutWithCatalogOverride = function(player: Player, selectedToolIds: any, catalogOverride: any?): any
 		return selectLoadout(player, selectedToolIds, catalogOverride)
 	end,
-	-- Explicit test/internal seam. Do not use in public/external request paths.
-	BuildEntryPayloadForTests = function(player: Player, operationId: any, catalogOverride: any?, nowAt: any): any
+	BuildEntryPayloadWithCatalogOverride = function(
+		player: Player,
+		operationId: any,
+		catalogOverride: any?,
+		nowAt: any
+	): any
 		return buildEntryPayload(player, operationId, catalogOverride, nowAt)
 	end,
 }

@@ -189,7 +189,7 @@ do
 				assertEqual(teleportData.tinyfolkToolPayloadFailures[1].userId, 101, "failure diagnostic user id")
 				assertEqual(
 					teleportData.tinyfolkToolPayloadFailures[1].reason,
-					"tool_cooldown_metadata_missing",
+					"payload_invalid",
 					"failure diagnostic reason"
 				)
 			end,
@@ -232,7 +232,7 @@ do
 	)
 	assertEqual(
 		acceptedWithDiagnostics.tinyfolkToolPayloadFailures[1].reason,
-		"tool_cooldown_metadata_missing",
+		"payload_invalid",
 		"result payload failure reason surfaced"
 	)
 end

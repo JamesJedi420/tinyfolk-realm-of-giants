@@ -204,6 +204,25 @@ local function appendPayloadFailure(failures: { any }, maxEntries: number, userI
 	})
 end
 
+local function mapPayloadFailureReasonToPublic(reason: string): string
+	if reason == "player_profile_not_loaded" then
+		return "profile_unavailable"
+	end
+	if reason == "tool_missing" or reason == "tool_locked_or_unavailable" then
+		return "loadout_unavailable"
+	end
+	if reason == "tool_cooldown_metadata_missing" then
+		return "payload_invalid"
+	end
+	if reason == "tinyfolk_role_required" then
+		return "role_not_eligible"
+	end
+	if reason == "tinyfolk_tool_payload_build_failed" then
+		return "payload_build_failed"
+	end
+	return "payload_rejected"
+end
+
 function RealmTeleportDispatcher.Create(config: any?): any
 	local teleportService = resolveTeleportService(config)
 	local playersService = resolvePlayersService(config)
@@ -313,13 +332,16 @@ function RealmTeleportDispatcher.Create(config: any?): any
 							local resultReason = if payloadOk and type(payloadResult) == "table"
 								then (payloadResult :: any).reason
 								else "tinyfolk_tool_payload_build_failed"
+							local publicReason = mapPayloadFailureReasonToPublic(
+								if type(resultReason) == "string" and resultReason ~= ""
+									then resultReason
+									else "tinyfolk_tool_payload_rejected"
+							)
 							appendPayloadFailure(
 								tinyfolkToolPayloadFailures,
 								maxPayloadFailureDiagnostics,
 								player.UserId,
-								if type(resultReason) == "string" and resultReason ~= ""
-									then resultReason
-									else "tinyfolk_tool_payload_rejected"
+								publicReason
 							)
 						end
 					end
