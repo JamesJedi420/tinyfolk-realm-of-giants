@@ -194,6 +194,16 @@ local function resolveDestinationPlaceId(config: any?, entry: any): number?
 	return nil
 end
 
+local function appendPayloadFailure(failures: { any }, maxEntries: number, userId: number, reason: string)
+	if #failures >= maxEntries then
+		return
+	end
+	table.insert(failures, {
+		userId = userId,
+		reason = reason,
+	})
+end
+
 function RealmTeleportDispatcher.Create(config: any?): any
 	local teleportService = resolveTeleportService(config)
 	local playersService = resolvePlayersService(config)
@@ -288,6 +298,8 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		if type(tinyfolkToolLoadoutApi) == "table" and type(tinyfolkToolLoadoutApi.BuildEntryPayload) == "function" then
 			local tinyfolkToolApiAny: any = tinyfolkToolLoadoutApi
 			local tinyfolkToolLoadoutByUserId: { [number]: any } = {}
+			local tinyfolkToolPayloadFailures: { any } = {}
+			local maxPayloadFailureDiagnostics = 5
 			for _, player in ipairs(players) do
 				if isPositiveInteger(player.UserId) and type(player.GetAttribute) == "function" then
 					local role = player:GetAttribute("Role")
@@ -297,6 +309,18 @@ function RealmTeleportDispatcher.Create(config: any?): any
 						end)
 						if payloadOk and type(payloadResult) == "table" and (payloadResult :: any).accepted == true then
 							tinyfolkToolLoadoutByUserId[player.UserId] = (payloadResult :: any).payload
+						else
+							local resultReason = if payloadOk and type(payloadResult) == "table"
+								then (payloadResult :: any).reason
+								else "tinyfolk_tool_payload_build_failed"
+							appendPayloadFailure(
+								tinyfolkToolPayloadFailures,
+								maxPayloadFailureDiagnostics,
+								player.UserId,
+								if type(resultReason) == "string" and resultReason ~= ""
+									then resultReason
+									else "tinyfolk_tool_payload_rejected"
+							)
 						end
 					end
 				end
@@ -304,6 +328,9 @@ function RealmTeleportDispatcher.Create(config: any?): any
 
 			if next(tinyfolkToolLoadoutByUserId) ~= nil then
 				(teleportData :: any).tinyfolkToolLoadoutByUserId = tinyfolkToolLoadoutByUserId
+			end
+			if #tinyfolkToolPayloadFailures > 0 then
+				(teleportData :: any).tinyfolkToolPayloadFailures = tinyfolkToolPayloadFailures
 			end
 		end
 
@@ -314,10 +341,14 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			return makeFailure("teleport_dispatch_failed", true)
 		end
 
-		return makeSuccess({
+		local extraResult: any = {
 			accessCode = serverCodeOrError,
 			destinationPlaceId = placeId,
-		})
+		}
+		if type((teleportData :: any).tinyfolkToolPayloadFailures) == "table" then
+			extraResult.tinyfolkToolPayloadFailures = (teleportData :: any).tinyfolkToolPayloadFailures
+		end
+		return makeSuccess(extraResult)
 	end
 
 	return dispatcher

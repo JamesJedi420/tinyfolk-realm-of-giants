@@ -142,6 +142,7 @@ function TinyfolkToolEntryPayload.Build(input: any): any
 
 	local selectedBySlot = if type(input.selectedBySlot) == "table" then input.selectedBySlot else {}
 	local nowAt = if isFiniteNumber(input.now) and input.now >= 0 then input.now else os.clock()
+	local cooldownState = TinyfolkToolCooldownState.BuildFromSelectedLoadout(selectedBySlot, input.catalog)
 
 	local tools = {}
 	for slotId, toolId in pairs(selectedBySlot) do
@@ -163,7 +164,6 @@ function TinyfolkToolEntryPayload.Build(input: any): any
 			return { accepted = false, reason = "tool_cooldown_metadata_missing", payload = nil }
 		end
 
-		local cooldownState = TinyfolkToolCooldownState.BuildFromSelectedLoadout(selectedBySlot, input.catalog)
 		local cooldownRecord = TinyfolkToolCooldownState.GetRecord(cooldownState, toolId)
 
 		table.insert(tools, {

@@ -195,6 +195,35 @@ do
 end
 
 do
+	local spoofCatalog = {
+		{
+			toolId = "spoof_only_tool",
+			displayName = "Spoof Tool",
+			description = "Injected tool should be ignored by public API",
+			role = "Tinyfolk",
+			categories = { "escape" },
+			tags = { "spoof" },
+			unlockSource = "starter",
+			availability = "available",
+			cooldown = {
+				key = "spoof_tool",
+				seconds = 5,
+			},
+			chargesMax = 1,
+			sourceId = "tin68_spoof_tool",
+		},
+	}
+
+	local rejected = api.SelectLoadout(tinyfolk, { "spoof_only_tool" }, spoofCatalog)
+	assertFalse(rejected.accepted, "public select rejects spoof catalog tool")
+	assertEqual(rejected.reason, "tool_missing", "public select uses canonical catalog")
+
+	local acceptedViaTestSeam = api.SelectLoadoutForTests(tinyfolk, { "spoof_only_tool" }, spoofCatalog)
+	assertTrue(acceptedViaTestSeam.accepted, "explicit test seam accepts spoof catalog")
+	assertEqual(acceptedViaTestSeam.selectedBySlot.tool_1, "spoof_only_tool", "test seam selects spoof tool")
+end
+
+do
 	local rejectedRole = api.SelectLoadout(giant, { "grappling_hook" }, TinyfolkToolCatalogSchema.DEFAULT_TOOL_CATALOG)
 	assertFalse(rejectedRole.accepted, "giant select rejected")
 	assertEqual(rejectedRole.reason, "tinyfolk_role_required", "giant select reason")
@@ -221,6 +250,31 @@ do
 		api.BuildEntryPayload(tinyfolk, "op-corrupt", TinyfolkToolCatalogSchema.DEFAULT_TOOL_CATALOG, 200)
 	assertFalse(payloadResult.accepted, "invalid loadout payload rejected")
 	assertEqual(payloadResult.reason, "tool_missing", "invalid loadout payload reason")
+end
+
+do
+	local spoofCatalog = {
+		{
+			toolId = "missing_tool",
+			displayName = "Spoof Missing Tool",
+			description = "Injected payload tool should be ignored by public API",
+			role = "Tinyfolk",
+			categories = { "escape" },
+			tags = { "spoof" },
+			unlockSource = "starter",
+			availability = "available",
+			cooldown = {
+				key = "spoof_missing_tool",
+				seconds = 5,
+			},
+			chargesMax = 1,
+			sourceId = "tin68_spoof_missing_tool",
+		},
+	}
+
+	local rejected = api.BuildEntryPayload(tinyfolk, "op-spoof", spoofCatalog, 210)
+	assertFalse(rejected.accepted, "public payload build rejects spoof catalog")
+	assertEqual(rejected.reason, "tool_missing", "public payload build uses canonical catalog")
 end
 
 print("tinyfolk_tool_loadout_service_runtime_entrypoint: all checks passed")

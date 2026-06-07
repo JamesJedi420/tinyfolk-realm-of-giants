@@ -139,6 +139,104 @@ assertEqual(reserveCalls, 1, "reserve called once")
 assertEqual(teleportCalls, 1, "teleport called once")
 assertEqual(#handoffCalls, 2, "handoff called per player")
 
+do
+	local telemetryTeleportCalls = 0
+	local dispatcherWithPayloadFailure = RealmTeleportDispatcher.Create({
+		partyResolver = function(partyId: string): { number }
+			if partyId == "party-good" then
+				return { 101, 102 }
+			end
+			return {}
+		end,
+		playersService = {
+			GetPlayerByUserId = function(_self: any, userId: number): any
+				return fakePlayersByUserId[userId]
+			end,
+		},
+		handoffApi = {
+			BeginCrossServerHandoff = function(player: any, _context: any): any
+				if player.UserId == 102 then
+					return {
+						ok = true,
+						handoffToken = "token-102",
+					}
+				end
+				return {
+					ok = true,
+					handoffToken = "token-101",
+				}
+			end,
+		},
+		teleportService = {
+			ReserveServer = function(_self: any, _placeId: number): string
+				return "reserved-access-code-telemetry"
+			end,
+			TeleportToPrivateServer = function(
+				_self: any,
+				_placeId: number,
+				_accessCode: string,
+				_players: { any },
+				_spawnName: any,
+				teleportData: any
+			)
+				telemetryTeleportCalls += 1
+				assertEqual(teleportData.tinyfolkToolLoadoutByUserId, nil, "payload omitted on build failure")
+				assertEqual(
+					type(teleportData.tinyfolkToolPayloadFailures),
+					"table",
+					"payload failure diagnostics attached"
+				)
+				assertEqual(teleportData.tinyfolkToolPayloadFailures[1].userId, 101, "failure diagnostic user id")
+				assertEqual(
+					teleportData.tinyfolkToolPayloadFailures[1].reason,
+					"tool_cooldown_metadata_missing",
+					"failure diagnostic reason"
+				)
+			end,
+		},
+		tinyfolkToolLoadoutApi = {
+			BuildEntryPayload = function(player: any, _operationId: string): any
+				if player.UserId == 101 then
+					return {
+						accepted = false,
+						reason = "tool_cooldown_metadata_missing",
+						payload = nil,
+					}
+				end
+				return {
+					accepted = false,
+					reason = "tinyfolk_role_required",
+					payload = nil,
+				}
+			end,
+		},
+		destinationResolver = function(_entry: any): any
+			return {
+				placeId = 12345,
+			}
+		end,
+	})
+
+	local acceptedWithDiagnostics = dispatcherWithPayloadFailure.Dispatch({
+		operationId = "op-telemetry",
+		partyId = "party-good",
+		targetRealmId = "realm-100",
+	})
+	assertEqual(acceptedWithDiagnostics.ok, true, "dispatch still accepted on payload failure")
+	assertEqual(acceptedWithDiagnostics.reason, "accepted", "dispatch reason still accepted")
+	assertEqual(telemetryTeleportCalls, 1, "teleport still executes on payload failure")
+	assertEqual(
+		type(acceptedWithDiagnostics.tinyfolkToolPayloadFailures),
+		"table",
+		"result surfaces payload failure diagnostics"
+	)
+	assertEqual(
+		acceptedWithDiagnostics.tinyfolkToolPayloadFailures[1].reason,
+		"tool_cooldown_metadata_missing",
+		"result payload failure reason surfaced"
+	)
+end
+
 local missingParty = dispatcher.Dispatch({
 	operationId = "op-missing-party",
 	partyId = "party-missing",

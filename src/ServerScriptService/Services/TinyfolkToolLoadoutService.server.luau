@@ -18,6 +18,7 @@ local TinyfolkToolCatalogSchema = if script ~= nil and script.Parent ~= nil
 	else require("../../ReplicatedStorage/Shared/Config/TinyfolkToolCatalogSchema")
 
 local TinyfolkToolLoadoutService = {}
+local CANONICAL_CATALOG = TinyfolkToolCatalogSchema.DEFAULT_TOOL_CATALOG
 
 local function readProfileData(player: Player): any?
 	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
@@ -104,8 +105,8 @@ local function buildEntryPayload(player: Player, operationId: any, catalog: any?
 end
 
 _G._TinyfolkToolLoadoutService_QueryAPI = {
-	SelectLoadout = function(player: Player, selectedToolIds: any, catalog: any?): any
-		return selectLoadout(player, selectedToolIds, catalog)
+	SelectLoadout = function(player: Player, selectedToolIds: any, _catalog: any?): any
+		return selectLoadout(player, selectedToolIds, CANONICAL_CATALOG)
 	end,
 	GetSelectedLoadout = function(player: Player): any
 		local requesterRole = getRole(player)
@@ -118,16 +119,25 @@ _G._TinyfolkToolLoadoutService_QueryAPI = {
 		end
 		return TinyfolkToolLoadoutState.GetSelectedLoadout(profileData, requesterRole)
 	end,
-	GetDefaultLoadout = function(player: Player, catalog: any?): any
+	GetDefaultLoadout = function(player: Player, _catalog: any?): any
 		local requesterRole = getRole(player)
 		if requesterRole ~= TinyfolkToolCatalogSchema.Roles.Tinyfolk then
 			return {}
 		end
 		local profileData = readProfileData(player)
-		return TinyfolkToolLoadoutState.BuildDefaultLoadout(profileData or {}, requesterRole, catalog)
+		return TinyfolkToolLoadoutState.BuildDefaultLoadout(profileData or {}, requesterRole, CANONICAL_CATALOG)
 	end,
-	BuildEntryPayload = function(player: Player, operationId: any, catalog: any?, nowAt: any): any
-		return buildEntryPayload(player, operationId, catalog, nowAt)
+	BuildEntryPayload = function(player: Player, operationId: any, _catalog: any?, nowAt: any): any
+		return buildEntryPayload(player, operationId, CANONICAL_CATALOG, nowAt)
+	end,
+
+	-- Explicit test/internal seam. Do not use in public/external request paths.
+	SelectLoadoutForTests = function(player: Player, selectedToolIds: any, catalogOverride: any?): any
+		return selectLoadout(player, selectedToolIds, catalogOverride)
+	end,
+	-- Explicit test/internal seam. Do not use in public/external request paths.
+	BuildEntryPayloadForTests = function(player: Player, operationId: any, catalogOverride: any?, nowAt: any): any
+		return buildEntryPayload(player, operationId, catalogOverride, nowAt)
 	end,
 }
 
