@@ -30,6 +30,7 @@ $testFiles = @(
     'tests\emergency_reinforcement_service_runtime_entrypoint.spec.luau',
     'tests\capture_state.spec.luau',
     'tests\trait_registry_schema.spec.luau',
+    'tests\giant_trait_state.spec.luau',
     'tests\containment_reward_resolver.spec.luau',
     'tests\capture_service_runtime_entrypoint.spec.luau',
     'tests\score_state.spec.luau',

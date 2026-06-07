@@ -340,6 +340,9 @@ function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): Profile
 		playerStoreName = "TinyfolkPlayerProfiles",
 		playerProfileTemplate = {
 			schemaVersion = 1,
+			giantTraitState = {
+				unlockedTraitIds = {},
+			},
 		},
 		giantRealmStoreName = "TinyfolkGiantRealmProfiles",
 		giantRealmProfileTemplate = {

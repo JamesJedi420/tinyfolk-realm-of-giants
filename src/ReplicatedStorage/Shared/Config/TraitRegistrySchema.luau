@@ -27,6 +27,10 @@ export type TraitDurationType = "instant" | "timed" | "persistent" | "toggle"
 export type TraitStackingPolicy = "none" | "refresh" | "additive" | "replace" | "exclusive"
 export type TraitVisibility = "hidden" | "loadout_only" | "role_select" | "public"
 export type TraitUnlockOwner = "playerProfile" | "realmProfile"
+export type TraitModifierRecord = {
+	stationProductionMultiplier: number?,
+	scoreEventMultiplier: number?,
+}
 
 export type TraitRecord = {
 	traitId: string,
@@ -50,6 +54,7 @@ export type TraitRecord = {
 	antiAbuseTags: { string },
 	testCoverageHooks: { string },
 	sourceId: string,
+	modifiers: TraitModifierRecord?,
 }
 
 TraitRegistrySchema.SCHEMA_VERSION = 1
@@ -252,6 +257,7 @@ local ALLOWED_RECORD_FIELDS = {
 	antiAbuseTags = true,
 	testCoverageHooks = true,
 	sourceId = true,
+	modifiers = true,
 }
 
 TraitRegistrySchema.VALID_ROLES = VALID_ROLES
@@ -290,6 +296,33 @@ local defaultTraitRegistry: { TraitRecord } = {
 		sourceId = "tin172_tinyfolk_post_crossing_burst",
 	},
 	{
+		traitId = "Giant_Builder_WorksiteEfficiency",
+		name = "Builder: Worksite Efficiency",
+		description = "Improves station production through disciplined Giant planning.",
+		role = "Giant",
+		category = "resource",
+		slotType = "passive",
+		tier = "starter",
+		unlockSource = "initial",
+		unlockOwner = nil,
+		unlockTrackId = nil,
+		unlockSourceId = nil,
+		trigger = "passive",
+		durationType = "persistent",
+		durationSeconds = nil,
+		cooldownSeconds = 0,
+		sharedCooldownKey = nil,
+		stacking = "none",
+		visibility = "role_select",
+		antiAbuseTags = { "duplicate_trait_guard", "role_safe_use" },
+		testCoverageHooks = { "trait.registry.giant_builder_worksite_efficiency" },
+		sourceId = "tin100_giant_builder_worksite_efficiency",
+		modifiers = {
+			stationProductionMultiplier = 1.1,
+			scoreEventMultiplier = 1.05,
+		},
+	},
+	{
 		traitId = "Giant_ControlStationScan",
 		name = "Control Station Scan",
 		description = "A bounded Giant-side awareness pulse.",
@@ -311,6 +344,7 @@ local defaultTraitRegistry: { TraitRecord } = {
 		antiAbuseTags = { "cooldown_spam_guard", "role_safe_use" },
 		testCoverageHooks = { "trait.registry.giant_control_station_scan" },
 		sourceId = "tin172_giant_control_station_scan",
+		modifiers = nil,
 	},
 	{
 		traitId = "Shared_CampCoordination",
@@ -334,6 +368,7 @@ local defaultTraitRegistry: { TraitRecord } = {
 		antiAbuseTags = { "account_unlock_guard" },
 		testCoverageHooks = { "trait.registry.shared_camp_coordination" },
 		sourceId = "tin172_shared_camp_coordination",
+		modifiers = nil,
 	},
 }
 
@@ -435,6 +470,15 @@ local function validateAntiAbuseTags(values: any): (boolean, string?)
 end
 
 local function cloneRecord(record: TraitRecord): TraitRecord
+	local modifiers: TraitModifierRecord? = nil
+	local sourceModifiers: any = record.modifiers
+	if type(sourceModifiers) == "table" then
+		modifiers = {
+			stationProductionMultiplier = sourceModifiers["stationProductionMultiplier"],
+			scoreEventMultiplier = sourceModifiers["scoreEventMultiplier"],
+		}
+	end
+
 	return {
 		traitId = record.traitId,
 		name = record.name,
@@ -457,7 +501,32 @@ local function cloneRecord(record: TraitRecord): TraitRecord
 		antiAbuseTags = cloneStringArray(record.antiAbuseTags),
 		testCoverageHooks = cloneStringArray(record.testCoverageHooks),
 		sourceId = record.sourceId,
+		modifiers = modifiers,
 	}
+end
+
+local function validateModifiers(record: any): (boolean, string?)
+	if record.modifiers == nil then
+		return true, nil
+	end
+
+	if type(record.modifiers) ~= "table" then
+		return false, "trait_modifiers_invalid"
+	end
+
+	for key, value in pairs(record.modifiers) do
+		if key ~= "stationProductionMultiplier" and key ~= "scoreEventMultiplier" then
+			return false, "trait_modifiers_unknown_field"
+		end
+		if key == "stationProductionMultiplier" and (not isFiniteNumber(value) or value <= 0) then
+			return false, "trait_modifier_station_production_multiplier_invalid"
+		end
+		if key == "scoreEventMultiplier" and (not isFiniteNumber(value) or value <= 0) then
+			return false, "trait_modifier_score_event_multiplier_invalid"
+		end
+	end
+
+	return true, nil
 end
 
 local function validateUnlockFields(record: any): (boolean, string?)
@@ -571,6 +640,10 @@ function TraitRegistrySchema.ValidateTraitRecord(record: any): (boolean, string?
 		validateStringArray(record.testCoverageHooks, "trait_test_coverage_hooks_invalid", true)
 	if not hooksOk then
 		return false, hooksReason
+	end
+	local modifiersOk, modifiersReason = validateModifiers(record)
+	if not modifiersOk then
+		return false, modifiersReason
 	end
 	return true, nil
 end

@@ -411,6 +411,22 @@ local function clampMultiplier(multiplier: number, minMultiplier: number): numbe
 	return multiplier
 end
 
+local function resolveEconomyMultiplier(metadata: any?): number
+	if type(metadata) ~= "table" then
+		return 1
+	end
+
+	local value = metadata.traitEconomyMultiplier
+	if not validNumber(value) then
+		return 1
+	end
+	if value <= 0 then
+		return 1
+	end
+
+	return value
+end
+
 local function getRepeatKey(userId: number, eventId: string): string
 	return string.format("%d|%s", userId, eventId)
 end
@@ -523,9 +539,10 @@ function ScoreState.ResolveScoreEvent(state: State, input: ResolveInput): Transi
 	local decayPower = nextCount - 1
 	local rawMultiplier = eventDefinition.decayMultiplier ^ decayPower
 	local multiplier = clampMultiplier(rawMultiplier, eventDefinition.minMultiplier)
+	local economyMultiplier = resolveEconomyMultiplier(input.metadata)
 	local rawPointsFloat = eventDefinition.basePoints * contributionRatio
 	local rawPoints = math.floor(rawPointsFloat + 0.5)
-	local pointsFloat = rawPoints * multiplier
+	local pointsFloat = rawPoints * multiplier * economyMultiplier
 	local points = math.floor(pointsFloat + 0.5)
 
 	local categoryName = eventDefinition.category

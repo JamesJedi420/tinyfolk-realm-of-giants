@@ -92,13 +92,32 @@ local function makeDefaultPlayerProfileData(userId: number): any
 	return {
 		schemaVersion = 1,
 		userId = userId,
+		giantTraitState = {
+			unlockedTraitIds = {},
+		},
 	}
 end
 
 local function copyDefaultPlayerProfileData(data: any): any
+	local giantTraitState: any = data.giantTraitState
+	local unlockedTraitIds = {}
+	local unlockedTraitIdsValue: any = if type(giantTraitState) == "table"
+		then giantTraitState["unlockedTraitIds"]
+		else nil
+	if type(unlockedTraitIdsValue) == "table" then
+		for _, traitId in ipairs(unlockedTraitIdsValue) do
+			if type(traitId) == "string" and traitId ~= "" then
+				table.insert(unlockedTraitIds, traitId)
+			end
+		end
+	end
+
 	return {
 		schemaVersion = data.schemaVersion,
 		userId = data.userId,
+		giantTraitState = {
+			unlockedTraitIds = unlockedTraitIds,
+		},
 	}
 end
 

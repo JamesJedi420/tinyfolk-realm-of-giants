@@ -199,6 +199,29 @@ end
 
 do
 	local state = newState()
+	local boosted = ScoreState.ResolveScoreEvent(state, {
+		now = 1,
+		userId = 1016,
+		eventId = "capture_success",
+		actorRole = "Giant",
+		metadata = { traitEconomyMultiplier = 1.2 },
+	})
+	assertTrue(boosted.accepted, "economy multiplier accepts giant control event")
+	assertEqual(boosted.record.awardedPoints, 108, "economy multiplier boosts awarded points")
+
+	local invalidMultiplier = ScoreState.ResolveScoreEvent(state, {
+		now = 2,
+		userId = 1016,
+		eventId = "capture_success",
+		actorRole = "Giant",
+		metadata = { traitEconomyMultiplier = -2 },
+	})
+	assertTrue(invalidMultiplier.accepted, "invalid economy multiplier ignored")
+	assertEqual(invalidMultiplier.record.awardedPoints, 90, "invalid economy multiplier falls back to neutral")
+end
+
+do
+	local state = newState()
 	local first = ScoreState.ResolveScoreEvent(state, {
 		now = 1,
 		userId = 1001,

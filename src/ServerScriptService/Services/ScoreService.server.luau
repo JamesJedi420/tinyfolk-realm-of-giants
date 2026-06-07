@@ -21,6 +21,29 @@ local function now(): number
 	return os.clock()
 end
 
+local function resolveGiantTraitScoreMultiplier(actor: Player): number
+	if actor:GetAttribute(ROLE_ATTRIBUTE) ~= "Giant" then
+		return 1
+	end
+
+	local queryApi = _G._GiantTraitService_QueryAPI
+	if type(queryApi) ~= "table" or type(queryApi.GetModifierSnapshot) ~= "function" then
+		return 1
+	end
+
+	local ok, result = pcall(queryApi.GetModifierSnapshot, actor)
+	if not ok or type(result) ~= "table" then
+		return 1
+	end
+
+	local multiplier = result.scoreEventMultiplier
+	if type(multiplier) ~= "number" or multiplier ~= multiplier or multiplier <= 0 then
+		return 1
+	end
+
+	return multiplier
+end
+
 local function ensureRemotesFolder(): Folder
 	local existing = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
 	if existing and existing:IsA("Folder") then
@@ -96,6 +119,17 @@ end
 
 local function requestScoreEvent(actor: Player, eventId: any, at: number?, metadata: any?): any
 	local resolvedNow = if type(at) == "number" then at else now()
+	local resolvedMetadata = metadata
+	local traitMultiplier = resolveGiantTraitScoreMultiplier(actor)
+	if traitMultiplier ~= 1 then
+		if type(resolvedMetadata) ~= "table" then
+			resolvedMetadata = {}
+		else
+			resolvedMetadata = table.clone(resolvedMetadata :: any)
+		end
+
+		(resolvedMetadata :: any).traitEconomyMultiplier = traitMultiplier
+	end
 
 	if type(eventId) ~= "string" then
 		setLastReason(actor, "invalid_event_id")
@@ -108,7 +142,7 @@ local function requestScoreEvent(actor: Player, eventId: any, at: number?, metad
 		userId = actor.UserId,
 		eventId = eventId,
 		actorRole = actor:GetAttribute(ROLE_ATTRIBUTE),
-		metadata = metadata,
+		metadata = resolvedMetadata,
 	})
 
 	state = transition.state

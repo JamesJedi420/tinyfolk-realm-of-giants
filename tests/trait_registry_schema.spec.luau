@@ -83,6 +83,22 @@ do
 end
 
 do
+	local builderRecord, reason = TraitRegistrySchema.GetTraitRecord("Giant_Builder_WorksiteEfficiency")
+	assertEqual(reason, nil, "builder trait lookup reason")
+	assertTrue(builderRecord ~= nil, "builder trait exists")
+	assertEqual(
+		builderRecord and builderRecord.modifiers and builderRecord.modifiers.stationProductionMultiplier or 0,
+		1.1,
+		"builder trait station production modifier"
+	)
+	assertEqual(
+		builderRecord and builderRecord.modifiers and builderRecord.modifiers.scoreEventMultiplier or 0,
+		1.05,
+		"builder trait score event modifier"
+	)
+end
+
+do
 	local invalidRole = makeTrait({ role = "TinyFolk" })
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidRole)
 	assertInvalid(valid, reason, "trait_role_invalid", "invalid role rejected")
@@ -180,7 +196,7 @@ do
 	local duplicateRegistry = TraitRegistrySchema.GetAllTraitRecords()
 	table.insert(duplicateRegistry, TraitRegistrySchema.GetAllTraitRecords()[1])
 	local valid, reason = TraitRegistrySchema.ValidateTraitRegistry(duplicateRegistry)
-	assertInvalid(valid, reason, "trait_id_duplicate index=4", "duplicate trait id rejected")
+	assertInvalid(valid, reason, "trait_id_duplicate index=5", "duplicate trait id rejected")
 end
 
 do
@@ -193,4 +209,38 @@ do
 	local unknownField = makeTrait({ sourceLabel = "unexpected" })
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(unknownField)
 	assertInvalid(valid, reason, "trait_record_unknown_field_invalid", "unknown record field rejected")
+end
+
+do
+	local invalidModifiers = makeTrait({ modifiers = "bad" })
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidModifiers)
+	assertInvalid(valid, reason, "trait_modifiers_invalid", "non-table modifiers rejected")
+end
+
+do
+	local invalidModifierValue = makeTrait({ modifiers = { stationProductionMultiplier = -1 } })
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidModifierValue)
+	assertInvalid(
+		valid,
+		reason,
+		"trait_modifier_station_production_multiplier_invalid",
+		"invalid station production multiplier rejected"
+	)
+end
+
+do
+	local invalidScoreModifierValue = makeTrait({ modifiers = { scoreEventMultiplier = -1 } })
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidScoreModifierValue)
+	assertInvalid(
+		valid,
+		reason,
+		"trait_modifier_score_event_multiplier_invalid",
+		"invalid score event multiplier rejected"
+	)
+end
+
+do
+	local unknownModifierField = makeTrait({ modifiers = { fearExposureMultiplier = 1.2 } })
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(unknownModifierField)
+	assertInvalid(valid, reason, "trait_modifiers_unknown_field", "unknown modifier field rejected")
 end
