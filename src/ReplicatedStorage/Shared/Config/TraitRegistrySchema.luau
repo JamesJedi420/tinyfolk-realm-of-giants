@@ -31,6 +31,15 @@ export type TraitModifierRecord = {
 	stationProductionMultiplier: number?,
 	scoreEventMultiplier: number?,
 }
+export type TraitLoadoutPatternType = "cooldown" | "exhaustion" | "token" | "active_channel"
+export type TraitLoadoutPatternRecord = {
+	patternType: TraitLoadoutPatternType,
+	activeChannel: string?,
+	cooldownKey: string?,
+	exhaustionKey: string?,
+	tokenKey: string?,
+	tokenCapacity: number?,
+}
 
 export type TraitRecord = {
 	traitId: string,
@@ -55,6 +64,7 @@ export type TraitRecord = {
 	testCoverageHooks: { string },
 	sourceId: string,
 	modifiers: TraitModifierRecord?,
+	loadoutPattern: TraitLoadoutPatternRecord?,
 }
 
 TraitRegistrySchema.SCHEMA_VERSION = 1
@@ -147,6 +157,13 @@ TraitRegistrySchema.AntiAbuseTags = {
 	VisibilityGate = "visibility_gate",
 }
 
+TraitRegistrySchema.LoadoutPatternTypes = {
+	Cooldown = "cooldown",
+	Exhaustion = "exhaustion",
+	Token = "token",
+	ActiveChannel = "active_channel",
+}
+
 local VALID_ROLES = {
 	Giant = true,
 	Tinyfolk = true,
@@ -235,6 +252,13 @@ local VALID_ANTI_ABUSE_TAGS = {
 	visibility_gate = true,
 }
 
+local VALID_LOADOUT_PATTERN_TYPES = {
+	cooldown = true,
+	exhaustion = true,
+	token = true,
+	active_channel = true,
+}
+
 local ALLOWED_RECORD_FIELDS = {
 	traitId = true,
 	name = true,
@@ -258,6 +282,7 @@ local ALLOWED_RECORD_FIELDS = {
 	testCoverageHooks = true,
 	sourceId = true,
 	modifiers = true,
+	loadoutPattern = true,
 }
 
 TraitRegistrySchema.VALID_ROLES = VALID_ROLES
@@ -479,6 +504,19 @@ local function cloneRecord(record: TraitRecord): TraitRecord
 		}
 	end
 
+	local loadoutPattern: TraitLoadoutPatternRecord? = nil
+	local sourceLoadoutPattern: any = record.loadoutPattern
+	if type(sourceLoadoutPattern) == "table" then
+		loadoutPattern = {
+			patternType = sourceLoadoutPattern["patternType"],
+			activeChannel = sourceLoadoutPattern["activeChannel"],
+			cooldownKey = sourceLoadoutPattern["cooldownKey"],
+			exhaustionKey = sourceLoadoutPattern["exhaustionKey"],
+			tokenKey = sourceLoadoutPattern["tokenKey"],
+			tokenCapacity = sourceLoadoutPattern["tokenCapacity"],
+		}
+	end
+
 	return {
 		traitId = record.traitId,
 		name = record.name,
@@ -502,6 +540,7 @@ local function cloneRecord(record: TraitRecord): TraitRecord
 		testCoverageHooks = cloneStringArray(record.testCoverageHooks),
 		sourceId = record.sourceId,
 		modifiers = modifiers,
+		loadoutPattern = loadoutPattern,
 	}
 end
 
@@ -524,6 +563,69 @@ local function validateModifiers(record: any): (boolean, string?)
 		if key == "scoreEventMultiplier" and (not isFiniteNumber(value) or value <= 0) then
 			return false, "trait_modifier_score_event_multiplier_invalid"
 		end
+	end
+
+	return true, nil
+end
+
+local function validateLoadoutPattern(record: any): (boolean, string?)
+	local loadoutPattern = record.loadoutPattern
+	if loadoutPattern == nil then
+		return true, nil
+	end
+
+	if type(loadoutPattern) ~= "table" then
+		return false, "trait_loadout_pattern_invalid"
+	end
+
+	for key, _ in pairs(loadoutPattern) do
+		if
+			key ~= "patternType"
+			and key ~= "activeChannel"
+			and key ~= "cooldownKey"
+			and key ~= "exhaustionKey"
+			and key ~= "tokenKey"
+			and key ~= "tokenCapacity"
+		then
+			return false, "trait_loadout_pattern_unknown_field"
+		end
+	end
+
+	if not isEnumValue(loadoutPattern.patternType, VALID_LOADOUT_PATTERN_TYPES) then
+		return false, "trait_loadout_pattern_type_invalid"
+	end
+	if loadoutPattern.activeChannel ~= nil and not isNonEmptyString(loadoutPattern.activeChannel) then
+		return false, "trait_loadout_pattern_active_channel_invalid"
+	end
+	if loadoutPattern.cooldownKey ~= nil and not isNonEmptyString(loadoutPattern.cooldownKey) then
+		return false, "trait_loadout_pattern_cooldown_key_invalid"
+	end
+	if loadoutPattern.exhaustionKey ~= nil and not isNonEmptyString(loadoutPattern.exhaustionKey) then
+		return false, "trait_loadout_pattern_exhaustion_key_invalid"
+	end
+	if loadoutPattern.tokenKey ~= nil and not isNonEmptyString(loadoutPattern.tokenKey) then
+		return false, "trait_loadout_pattern_token_key_invalid"
+	end
+	if loadoutPattern.tokenCapacity ~= nil and not isPositiveNumber(loadoutPattern.tokenCapacity) then
+		return false, "trait_loadout_pattern_token_capacity_invalid"
+	end
+
+	if loadoutPattern.patternType == "cooldown" and not isNonEmptyString(loadoutPattern.cooldownKey) then
+		return false, "trait_loadout_pattern_cooldown_key_invalid"
+	end
+	if loadoutPattern.patternType == "exhaustion" and not isNonEmptyString(loadoutPattern.exhaustionKey) then
+		return false, "trait_loadout_pattern_exhaustion_key_invalid"
+	end
+	if loadoutPattern.patternType == "token" then
+		if not isNonEmptyString(loadoutPattern.tokenKey) then
+			return false, "trait_loadout_pattern_token_key_invalid"
+		end
+		if not isPositiveNumber(loadoutPattern.tokenCapacity) then
+			return false, "trait_loadout_pattern_token_capacity_invalid"
+		end
+	end
+	if loadoutPattern.patternType == "active_channel" and not isNonEmptyString(loadoutPattern.activeChannel) then
+		return false, "trait_loadout_pattern_active_channel_invalid"
 	end
 
 	return true, nil
@@ -644,6 +746,10 @@ function TraitRegistrySchema.ValidateTraitRecord(record: any): (boolean, string?
 	local modifiersOk, modifiersReason = validateModifiers(record)
 	if not modifiersOk then
 		return false, modifiersReason
+	end
+	local loadoutPatternOk, loadoutPatternReason = validateLoadoutPattern(record)
+	if not loadoutPatternOk then
+		return false, loadoutPatternReason
 	end
 	return true, nil
 end

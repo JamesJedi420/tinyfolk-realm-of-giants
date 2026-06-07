@@ -127,6 +127,12 @@ assertSuccess(defaultB, "LoadDefaultPlayerProfile", "PlayerProfile:9402", "defau
 assertTrue(defaultA.data ~= defaultB.data, "default profile returns separate tables")
 assertEqual(defaultA.data.schemaVersion, defaultB.data.schemaVersion, "default schema stable")
 assertEqual(defaultA.data.userId, defaultB.data.userId, "default user stable")
+assertTrue(type(defaultA.data.roleLoadoutState) == "table", "default role loadout state exists")
+assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole) == "table", "default role loadout selectedByRole exists")
+assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole.Giant) == "table", "default giant loadout exists")
+assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole.Tinyfolk) == "table", "default tinyfolk loadout exists")
+defaultA.data.roleLoadoutState.selectedByRole.Giant.passive_1 = "mutated"
+assertTrue(defaultB.data.roleLoadoutState.selectedByRole.Giant.passive_1 == nil, "default loadout tables cloned")
 
 local calls: { any } = {}
 local ownerLayer: any = {}
@@ -204,13 +210,33 @@ local updaterReceivedData: any = nil
 local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
 	updaterReceivedData = currentData
 	currentData.counters.coins = 25
+	if type(currentData.roleLoadoutState) ~= "table" then
+		currentData.roleLoadoutState = { selectedByRole = {} }
+	end
+	if type(currentData.roleLoadoutState.selectedByRole) ~= "table" then
+		currentData.roleLoadoutState.selectedByRole = {}
+	end
+	currentData.roleLoadoutState.selectedByRole.Giant = {
+		passive_1 = "Giant_Builder_WorksiteEfficiency",
+	}
 	return currentData
 end)
 assertSuccess(updateResult, "UpdateLoadedPlayerProfileData", "PlayerProfile:9402", "update loaded")
 assertEqual(updateResult.data.counters.coins, 25, "update result data")
+assertEqual(
+	updateResult.data.roleLoadoutState.selectedByRole.Giant.passive_1,
+	"Giant_Builder_WorksiteEfficiency",
+	"update result loadout data"
+)
 updaterReceivedData.counters.coins = 333
+updaterReceivedData.roleLoadoutState.selectedByRole.Giant.passive_1 = "tampered"
 local afterUpdaterMutation = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
 assertEqual(afterUpdaterMutation.data.counters.coins, 25, "updater receives clone")
+assertEqual(
+	afterUpdaterMutation.data.roleLoadoutState.selectedByRole.Giant.passive_1,
+	"Giant_Builder_WorksiteEfficiency",
+	"updater loadout receives clone"
+)
 
 local failedUpdate = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(_currentData: any): any
 	return nil, "refused_by_test"
@@ -254,6 +280,11 @@ assertEqual(calls[2].profileKey, "PlayerProfile:9402", "save owner key")
 assertEqual(calls[2].userId, 9402, "save owner id")
 assertEqual(calls[2].data.loaded, true, "save owner uses loaded data")
 assertEqual(calls[2].data.counters.coins, 25, "save owner uses updated active data")
+assertEqual(
+	calls[2].data.roleLoadoutState.selectedByRole.Giant.passive_1,
+	"Giant_Builder_WorksiteEfficiency",
+	"save owner uses updated loadout data"
+)
 
 assertSuccess(
 	ProfilePersistenceGateway.ReleasePlayerProfile(player),

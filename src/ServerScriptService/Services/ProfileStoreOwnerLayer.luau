@@ -343,6 +343,12 @@ function ProfileStoreOwnerLayer.CreateDefault(profileStoreModule: any?): Profile
 			giantTraitState = {
 				unlockedTraitIds = {},
 			},
+			roleLoadoutState = {
+				selectedByRole = {
+					Giant = {},
+					Tinyfolk = {},
+				},
+			},
 		},
 		giantRealmStoreName = "TinyfolkGiantRealmProfiles",
 		giantRealmProfileTemplate = {

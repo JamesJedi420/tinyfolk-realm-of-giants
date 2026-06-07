@@ -99,6 +99,34 @@ do
 end
 
 do
+	local patterned = makeTrait({
+		loadoutPattern = {
+			patternType = "active_channel",
+			activeChannel = "mobility",
+		},
+	})
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(patterned)
+	assertValid(valid, reason, "valid active-channel loadout pattern")
+
+	local patternedRecord = TraitRegistrySchema.GetTraitRecord("Tinyfolk_PostCrossingBurst", {
+		makeTrait({
+			traitId = "Tinyfolk_PostCrossingBurst",
+			loadoutPattern = {
+				patternType = "token",
+				tokenKey = "mobility_charge",
+				tokenCapacity = 2,
+			},
+		}),
+	})
+	assertTrue(patternedRecord ~= nil, "patterned record exists")
+	assertEqual(
+		patternedRecord and patternedRecord.loadoutPattern and patternedRecord.loadoutPattern.tokenCapacity or 0,
+		2,
+		"patterned record clones loadout pattern"
+	)
+end
+
+do
 	local invalidRole = makeTrait({ role = "TinyFolk" })
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidRole)
 	assertInvalid(valid, reason, "trait_role_invalid", "invalid role rejected")
@@ -243,4 +271,37 @@ do
 	local unknownModifierField = makeTrait({ modifiers = { fearExposureMultiplier = 1.2 } })
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(unknownModifierField)
 	assertInvalid(valid, reason, "trait_modifiers_unknown_field", "unknown modifier field rejected")
+end
+
+do
+	local invalidPattern = makeTrait({
+		loadoutPattern = {
+			patternType = "active_channel",
+		},
+	})
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidPattern)
+	assertInvalid(valid, reason, "trait_loadout_pattern_active_channel_invalid", "missing active channel rejected")
+end
+
+do
+	local invalidTokenPattern = makeTrait({
+		loadoutPattern = {
+			patternType = "token",
+			tokenKey = "mobility_charge",
+		},
+	})
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidTokenPattern)
+	assertInvalid(valid, reason, "trait_loadout_pattern_token_capacity_invalid", "missing token capacity rejected")
+end
+
+do
+	local unknownPatternField = makeTrait({
+		loadoutPattern = {
+			patternType = "cooldown",
+			cooldownKey = "mobility",
+			budget = 2,
+		},
+	})
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(unknownPatternField)
+	assertInvalid(valid, reason, "trait_loadout_pattern_unknown_field", "unknown loadout pattern field rejected")
 end
