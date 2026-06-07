@@ -157,8 +157,61 @@ end
 
 local function resetState()
 	scoreApi.ResetForTests()
+	_G._GiantTraitService_QueryAPI = nil
 	setRole(tinyfolk, "Tinyfolk")
 	setRole(giant, "Giant")
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = {
+		GetModifierSnapshot = function(_player: any)
+			return { scoreEventMultiplier = 1.2 }
+		end,
+	}
+
+	local boosted = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+	assertTrue(boosted.accepted, "giant event accepts multiplier integration")
+	assertEqual(boosted.record.awardedPoints, 108, "giant event applies injected multiplier")
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = nil
+
+	local fallbackAbsent = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+	assertTrue(fallbackAbsent.accepted, "giant event accepted when trait api absent")
+	assertEqual(fallbackAbsent.record.awardedPoints, 90, "giant event falls back safely when trait api absent")
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = {
+		GetModifierSnapshot = function(_player: any)
+			return {}
+		end,
+	}
+
+	local fallbackNoMultiplier = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+	assertTrue(fallbackNoMultiplier.accepted, "giant event accepted when trait api omits multiplier")
+	assertEqual(
+		fallbackNoMultiplier.record.awardedPoints,
+		90,
+		"giant event falls back safely when trait api omits multiplier"
+	)
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = {
+		GetModifierSnapshot = function(_player: any)
+			return { scoreEventMultiplier = 1.5 }
+		end,
+	}
+
+	local tinyfolkResult = scoreApi.RequestScoreEvent(tinyfolk.UserId, "escape_success", 1, nil)
+	assertTrue(tinyfolkResult.accepted, "tinyfolk event accepted with giant trait api present")
+	assertEqual(tinyfolkResult.record.awardedPoints, 100, "tinyfolk event is not affected by giant multiplier")
 end
 
 do
