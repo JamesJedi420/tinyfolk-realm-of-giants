@@ -230,6 +230,30 @@ local VALID_ANTI_ABUSE_TAGS = {
 	visibility_gate = true,
 }
 
+local ALLOWED_RECORD_FIELDS = {
+	traitId = true,
+	name = true,
+	description = true,
+	role = true,
+	category = true,
+	slotType = true,
+	tier = true,
+	unlockSource = true,
+	unlockOwner = true,
+	unlockTrackId = true,
+	unlockSourceId = true,
+	trigger = true,
+	durationType = true,
+	durationSeconds = true,
+	cooldownSeconds = true,
+	sharedCooldownKey = true,
+	stacking = true,
+	visibility = true,
+	antiAbuseTags = true,
+	testCoverageHooks = true,
+	sourceId = true,
+}
+
 TraitRegistrySchema.VALID_ROLES = VALID_ROLES
 TraitRegistrySchema.VALID_CATEGORIES = VALID_CATEGORIES
 TraitRegistrySchema.VALID_SLOT_TYPES = VALID_SLOT_TYPES
@@ -477,6 +501,14 @@ end
 function TraitRegistrySchema.ValidateTraitRecord(record: any): (boolean, string?)
 	if type(record) ~= "table" then
 		return false, "trait_record_invalid"
+	end
+	for key, _ in pairs(record) do
+		if type(key) ~= "string" then
+			return false, "trait_record_unknown_field_invalid"
+		end
+		if ALLOWED_RECORD_FIELDS[key] ~= true then
+			return false, "trait_record_unknown_field_invalid"
+		end
 	end
 	if not isNonEmptyString(record.traitId) then
 		return false, "trait_id_invalid"

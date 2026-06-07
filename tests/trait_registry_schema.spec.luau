@@ -38,7 +38,6 @@ local function makeTrait(overrides: any?): any
 		tier = TraitRegistrySchema.Tiers.Common,
 		unlockSource = TraitRegistrySchema.UnlockSources.Initial,
 		unlockTrackId = nil,
-		unlockThreshold = nil,
 		unlockSourceId = nil,
 		trigger = TraitRegistrySchema.Triggers.RouteCrossing,
 		durationType = TraitRegistrySchema.DurationTypes.Timed,
@@ -49,8 +48,6 @@ local function makeTrait(overrides: any?): any
 		antiAbuseTags = { TraitRegistrySchema.AntiAbuseTags.PairFarming },
 		testCoverageHooks = { "trait.schema.test_hook" },
 		sourceId = "tin172_schema_test",
-		sourceLabel = "TIN-172 schema test",
-		testHookId = "TIN172_TestHook",
 	}
 
 	if type(overrides) == "table" then
@@ -119,7 +116,6 @@ do
 	local invalidAccountMastery = makeTrait({
 		unlockSource = TraitRegistrySchema.UnlockSources.AccountMastery,
 		unlockTrackId = nil,
-		unlockThreshold = 3,
 		unlockSourceId = nil,
 	})
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidAccountMastery)
@@ -130,7 +126,6 @@ do
 	local invalidAchievement = makeTrait({
 		unlockSource = TraitRegistrySchema.UnlockSources.Achievement,
 		unlockTrackId = nil,
-		unlockThreshold = nil,
 		unlockSourceId = nil,
 	})
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidAchievement)
@@ -192,4 +187,10 @@ do
 	local invalidSourceId = makeTrait({ sourceId = "" })
 	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(invalidSourceId)
 	assertInvalid(valid, reason, "trait_source_id_invalid", "empty source id rejected")
+end
+
+do
+	local unknownField = makeTrait({ sourceLabel = "unexpected" })
+	local valid, reason = TraitRegistrySchema.ValidateTraitRecord(unknownField)
+	assertInvalid(valid, reason, "trait_record_unknown_field_invalid", "unknown record field rejected")
 end
