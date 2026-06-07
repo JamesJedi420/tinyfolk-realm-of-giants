@@ -116,6 +116,15 @@ local function resolveHandoffApi(config: any?): any?
 	return getGlobalTable("_ProfileTeleportHandoffService_QueryAPI")
 end
 
+local function resolveTinyfolkToolLoadoutApi(config: any?): any?
+	local configAny: any = config
+	if type(configAny) == "table" and (configAny :: any).tinyfolkToolLoadoutApi ~= nil then
+		return (configAny :: any).tinyfolkToolLoadoutApi
+	end
+
+	return getGlobalTable("_TinyfolkToolLoadoutService_QueryAPI")
+end
+
 local function resolvePartyMembers(config: any?, entry: any): { number }?
 	local configAny: any = config
 	local partyResolver = if type(configAny) == "table" then configAny.partyResolver else nil
@@ -189,6 +198,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 	local teleportService = resolveTeleportService(config)
 	local playersService = resolvePlayersService(config)
 	local handoffApi = resolveHandoffApi(config)
+	local tinyfolkToolLoadoutApi = resolveTinyfolkToolLoadoutApi(config)
 
 	local dispatcher: any = {}
 
@@ -274,6 +284,28 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			targetRealmId = entry.targetRealmId,
 			handoffTokensByUserId = handoffTokensByUserId,
 		}
+
+		if type(tinyfolkToolLoadoutApi) == "table" and type(tinyfolkToolLoadoutApi.BuildEntryPayload) == "function" then
+			local tinyfolkToolApiAny: any = tinyfolkToolLoadoutApi
+			local tinyfolkToolLoadoutByUserId: { [number]: any } = {}
+			for _, player in ipairs(players) do
+				if isPositiveInteger(player.UserId) and type(player.GetAttribute) == "function" then
+					local role = player:GetAttribute("Role")
+					if role == "Tinyfolk" then
+						local payloadOk, payloadResult = pcall(function()
+							return tinyfolkToolApiAny.BuildEntryPayload(player, entry.operationId)
+						end)
+						if payloadOk and type(payloadResult) == "table" and (payloadResult :: any).accepted == true then
+							tinyfolkToolLoadoutByUserId[player.UserId] = (payloadResult :: any).payload
+						end
+					end
+				end
+			end
+
+			if next(tinyfolkToolLoadoutByUserId) ~= nil then
+				(teleportData :: any).tinyfolkToolLoadoutByUserId = tinyfolkToolLoadoutByUserId
+			end
+		end
 
 		local teleportOk = pcall(function()
 			teleportService:TeleportToPrivateServer(placeId, serverCodeOrError, players, nil, teleportData)

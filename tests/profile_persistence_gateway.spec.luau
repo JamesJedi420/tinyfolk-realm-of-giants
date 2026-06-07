@@ -131,8 +131,19 @@ assertTrue(type(defaultA.data.roleLoadoutState) == "table", "default role loadou
 assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole) == "table", "default role loadout selectedByRole exists")
 assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole.Giant) == "table", "default giant loadout exists")
 assertTrue(type(defaultA.data.roleLoadoutState.selectedByRole.Tinyfolk) == "table", "default tinyfolk loadout exists")
+assertTrue(type(defaultA.data.tinyfolkToolLoadoutState) == "table", "default tinyfolk tool loadout state exists")
+assertEqual(defaultA.data.tinyfolkToolLoadoutState.schemaVersion, 1, "default tinyfolk tool loadout schema version")
+assertTrue(
+	type(defaultA.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk) == "table",
+	"default tinyfolk tool selectedByRole exists"
+)
 defaultA.data.roleLoadoutState.selectedByRole.Giant.passive_1 = "mutated"
+defaultA.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1 = "mutated"
 assertTrue(defaultB.data.roleLoadoutState.selectedByRole.Giant.passive_1 == nil, "default loadout tables cloned")
+assertTrue(
+	defaultB.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1 == nil,
+	"default tinyfolk tool loadout tables cloned"
+)
 
 local calls: { any } = {}
 local ownerLayer: any = {}

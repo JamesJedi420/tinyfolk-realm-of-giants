@@ -14,9 +14,15 @@ local handoffCalls = {}
 local reserveCalls = 0
 local teleportCalls = 0
 local fakePlayersByUserId = {
-	[101] = { UserId = 101, Name = "Player101" },
-	[102] = { UserId = 102, Name = "Player102" },
+	[101] = { UserId = 101, Name = "Player101", _Attributes = { Role = "Tinyfolk" } },
+	[102] = { UserId = 102, Name = "Player102", _Attributes = { Role = "Giant" } },
 }
+
+for _, player in pairs(fakePlayersByUserId) do
+	function player:GetAttribute(attributeName: string): any
+		return self._Attributes[attributeName]
+	end
+end
 
 local dispatcher = RealmTeleportDispatcher.Create({
 	partyResolver = function(partyId: string): { number }
@@ -64,6 +70,54 @@ local dispatcher = RealmTeleportDispatcher.Create({
 			assertEqual(accessCode, "reserved-access-code", "teleport access code")
 			assertEqual(#players, 2, "teleport player count")
 			assertEqual(teleportData.partyId, "party-good", "teleport data party id")
+			assertEqual(type(teleportData.tinyfolkToolLoadoutByUserId), "table", "teleport tinyfolk payload attached")
+			assertEqual(
+				teleportData.tinyfolkToolLoadoutByUserId[101].tools[1].toolId,
+				"grappling_hook",
+				"teleport tinyfolk payload includes tool"
+			)
+			assertEqual(
+				teleportData.tinyfolkToolLoadoutByUserId[102],
+				nil,
+				"teleport payload excludes non-tinyfolk user"
+			)
+		end,
+	},
+	tinyfolkToolLoadoutApi = {
+		BuildEntryPayload = function(player: any, operationId: string): any
+			if player.UserId ~= 101 then
+				return {
+					accepted = false,
+					reason = "tinyfolk_role_required",
+					payload = nil,
+				}
+			end
+			return {
+				accepted = true,
+				reason = "accepted",
+				payload = {
+					schemaVersion = 1,
+					ownerUserId = 101,
+					role = "Tinyfolk",
+					source = "shared_hub_loadout",
+					transferId = "tool_loadout:101:" .. operationId,
+					tools = {
+						{
+							slotId = "tool_1",
+							toolId = "grappling_hook",
+							displayName = "Grappling Hook",
+							categories = { "escape" },
+							cooldownSeconds = 30,
+							cooldownReadyAt = 0,
+						},
+					},
+					validation = {
+						validatedAt = 100,
+						catalogVersion = "tinyfolk_tools_v1",
+						loadoutStateVersion = 1,
+					},
+				},
+			}
 		end,
 	},
 	destinationResolver = function(_entry: any): any

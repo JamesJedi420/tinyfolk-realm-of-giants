@@ -101,12 +101,19 @@ local function makeDefaultPlayerProfileData(userId: number): any
 				Tinyfolk = {},
 			},
 		},
+		tinyfolkToolLoadoutState = {
+			schemaVersion = 1,
+			selectedByRole = {
+				Tinyfolk = {},
+			},
+		},
 	}
 end
 
 local function copyDefaultPlayerProfileData(data: any): any
 	local giantTraitState: any = data.giantTraitState
 	local roleLoadoutState: any = data.roleLoadoutState
+	local tinyfolkToolLoadoutState: any = data.tinyfolkToolLoadoutState
 	local unlockedTraitIds = {}
 	local unlockedTraitIdsValue: any = if type(giantTraitState) == "table"
 		then giantTraitState["unlockedTraitIds"]
@@ -136,6 +143,23 @@ local function copyDefaultPlayerProfileData(data: any): any
 		return copied
 	end
 
+	local function copyTinyfolkToolSelectedByRole(roleName: string): { [string]: string }
+		local copied = {}
+		local selectedByRole: any = if type(tinyfolkToolLoadoutState) == "table"
+			then tinyfolkToolLoadoutState["selectedByRole"]
+			else nil
+		local selectedSlots: any = if type(selectedByRole) == "table" then selectedByRole[roleName] else nil
+		if type(selectedSlots) ~= "table" then
+			return copied
+		end
+		for slotId, toolId in pairs(selectedSlots) do
+			if type(slotId) == "string" and slotId ~= "" and type(toolId) == "string" and toolId ~= "" then
+				copied[slotId] = toolId
+			end
+		end
+		return copied
+	end
+
 	return {
 		schemaVersion = data.schemaVersion,
 		userId = data.userId,
@@ -146,6 +170,15 @@ local function copyDefaultPlayerProfileData(data: any): any
 			selectedByRole = {
 				Giant = copySelectedByRole("Giant"),
 				Tinyfolk = copySelectedByRole("Tinyfolk"),
+			},
+		},
+		tinyfolkToolLoadoutState = {
+			schemaVersion = if type(tinyfolkToolLoadoutState) == "table"
+					and type(tinyfolkToolLoadoutState["schemaVersion"]) == "number"
+				then tinyfolkToolLoadoutState["schemaVersion"]
+				else 1,
+			selectedByRole = {
+				Tinyfolk = copyTinyfolkToolSelectedByRole("Tinyfolk"),
 			},
 		},
 	}
