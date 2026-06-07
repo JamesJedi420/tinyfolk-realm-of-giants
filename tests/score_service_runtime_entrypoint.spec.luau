@@ -202,6 +202,61 @@ do
 end
 
 do
+	local invalidMultiplierCases = {
+		{ label = "non-number", value = "boost" },
+		{ label = "negative", value = -1 },
+		{ label = "nan", value = 0 / 0 },
+	}
+
+	for _, caseData in ipairs(invalidMultiplierCases) do
+		resetState()
+		_G._GiantTraitService_QueryAPI = {
+			GetModifierSnapshot = function(_player: any)
+				return { scoreEventMultiplier = caseData.value }
+			end,
+		}
+
+		local fallbackInvalid = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+		assertTrue(
+			fallbackInvalid.accepted,
+			"giant event accepted when trait api returns invalid " .. caseData.label .. " multiplier"
+		)
+		assertEqual(
+			fallbackInvalid.record.awardedPoints,
+			90,
+			"giant event falls back safely when trait api returns invalid " .. caseData.label .. " multiplier"
+		)
+	end
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = {
+		GetModifierSnapshot = function(_player: any)
+			error("query_failed")
+		end,
+	}
+
+	local fallbackError = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+	assertTrue(fallbackError.accepted, "giant event accepted when trait api call errors")
+	assertEqual(fallbackError.record.awardedPoints, 90, "giant event falls back safely when trait api call errors")
+end
+
+do
+	resetState()
+	_G._GiantTraitService_QueryAPI = {
+	}
+
+	local fallbackMissingFunction = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
+	assertTrue(fallbackMissingFunction.accepted, "giant event accepted when trait api lacks query function")
+	assertEqual(
+		fallbackMissingFunction.record.awardedPoints,
+		90,
+		"giant event falls back safely when trait api lacks query function"
+	)
+end
+
+do
 	resetState()
 	_G._GiantTraitService_QueryAPI = {
 		GetModifierSnapshot = function(_player: any)
