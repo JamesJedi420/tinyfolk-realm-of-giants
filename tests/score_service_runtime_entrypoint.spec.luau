@@ -244,8 +244,7 @@ end
 
 do
 	resetState()
-	_G._GiantTraitService_QueryAPI = {
-	}
+	_G._GiantTraitService_QueryAPI = {}
 
 	local fallbackMissingFunction = scoreApi.RequestScoreEvent(giant.UserId, "capture_success", 1, nil)
 	assertTrue(fallbackMissingFunction.accepted, "giant event accepted when trait api lacks query function")
