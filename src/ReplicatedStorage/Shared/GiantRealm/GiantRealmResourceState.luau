@@ -17,6 +17,7 @@ GiantRealmResourceState.SourceKinds = {
 
 GiantRealmResourceState.SpendKinds = {
 	StructurePlacement = "structure_placement",
+	WorksiteUpgrade = "worksite_upgrade",
 }
 
 local AWARD_HISTORY_LIMIT = 50
