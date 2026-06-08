@@ -8,6 +8,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 local GiantBuildModeConfig: any
 local GiantStructureCatalog: any
 local GiantRealmSaveSchema: any
+local GiantRealmResourceState: any
 local ResourceFlowState: any
 local SnareTrapConfig: any
 local SnareTrapState: any
@@ -35,12 +36,26 @@ type AcceptedStructurePlacementState = {
 local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
 local snareTrapByTrapId: { [string]: any? } = {}
 local defenseEscapeOutcomes: { any } = {}
+local resourceLedgerState: any = nil
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastSnareTrapPlacementAtByUserId: { [number]: number? } = {}
 local snareTrapSequence = 0
 local realmOwnerUserId: number? = nil
 local globalEnv: any = getfenv()
 local DEFENSE_HISTORY_ESCAPE_LIMIT = 50
+local spendStructureCost: (
+	structureId: string,
+	spendOperationId: string,
+	placedAt: number
+) -> (boolean, any, string?, number, number, string?)
+local rollbackStructureSpend: (
+	spentFrom: string?,
+	spendOperationId: string,
+	woodCost: number,
+	stoneCost: number,
+	structureId: string,
+	placedAt: number
+) -> ()
 
 local function debugLog(message: string)
 	print(string.format("[GiantBuildModeService] %s", message))
@@ -100,6 +115,7 @@ local function resolveDependencies()
 	end
 	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
 	GiantRealmSaveSchema = requireChildModule(giantRealm, "GiantRealmSaveSchema")
+	GiantRealmResourceState = requireChildModule(giantRealm, "GiantRealmResourceState")
 	SnareTrapState = requireChildModule(giantRealm, "SnareTrapState")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
@@ -594,28 +610,6 @@ local function getStructureCost(structureId: string): (number?, number?)
 	return woodCost, stoneCost
 end
 
-local function spendStructureCost(structureId: string): (boolean, any, string?, number, number)
-	local woodCost, stoneCost = getStructureCost(structureId)
-	if woodCost == nil or stoneCost == nil then
-		return false, ResourceFlowState.GetSnapshot(), "insufficient_resources", 0, 0
-	end
-
-	local spent, flowSnapshot, spendError =
-		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "GiantBuildMode:" .. structureId)
-	if not spent then
-		debugWarn(
-			string.format(
-				"Rejected GiantStructurePlacementRequest structureId=%s reason=insufficient_resources detail=%s",
-				structureId,
-				tostring(spendError)
-			)
-		)
-		return false, flowSnapshot, "insufficient_resources", woodCost, stoneCost
-	end
-
-	return true, flowSnapshot, nil, woodCost, stoneCost
-end
-
 local function isAuthorizedRealmOwner(player: Player): boolean
 	return realmOwnerUserId == nil or realmOwnerUserId == player.UserId
 end
@@ -812,7 +806,9 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	local spent, flowSnapshot, spendError, woodCost, stoneCost = spendStructureCost(request.structureId)
+	local spendOperationId = string.format("structure-spend:%d:%s:%.6f", player.UserId, request.structureId, placedAt)
+	local spent, flowSnapshot, spendError, woodCost, stoneCost, spentFrom =
+		spendStructureCost(request.structureId, spendOperationId, placedAt)
 	if not spent then
 		local reason = spendError or "insufficient_resources"
 		rejectPlacement(player, reason)
@@ -832,7 +828,7 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		if trapRecord == nil then
 			rejectPlacement(player, "snare_trap_invalid_state")
 			logPlacementOutcome("rejected", player, request.structureId, "snare_trap_invalid_state")
-			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+			rollbackStructureSpend(spentFrom, spendOperationId, woodCost, stoneCost, request.structureId, placedAt)
 			return
 		end
 		if
@@ -848,7 +844,7 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		end)
 		if not appliedTrap then
 			snareTrapByTrapId[trapRecord.trapId] = nil
-			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+			rollbackStructureSpend(spentFrom, spendOperationId, woodCost, stoneCost, request.structureId, placedAt)
 			local applyFailureReason = string.format("snare_trap_apply_failed detail=%s", tostring(trapError))
 			rejectPlacement(player, applyFailureReason)
 			logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
@@ -864,7 +860,7 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 		if not appliedPlacement then
 			placedStructureById[request.structureId] = previousState
-			ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. request.structureId)
+			rollbackStructureSpend(spentFrom, spendOperationId, woodCost, stoneCost, request.structureId, placedAt)
 			local applyFailureReason = string.format("placement_apply_failed detail=%s", tostring(placementError))
 			rejectPlacement(player, applyFailureReason)
 			logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
@@ -934,6 +930,218 @@ local function BuildDefenseHistoryState(): any
 	}
 end
 
+local function ensureResourceLedgerState(): any
+	if resourceLedgerState == nil then
+		resourceLedgerState = GiantRealmResourceState.CreateEmptyLedger()
+	end
+	return resourceLedgerState
+end
+
+local function BuildResourceLedgerState(): any
+	return ensureResourceLedgerState()
+end
+
+local function GetResourceLedgerSnapshot(): any
+	local ledger = ensureResourceLedgerState()
+	return {
+		essence = ledger.essence,
+		wood = ledger.wood,
+		stone = ledger.stone,
+		recentAwardCount = if type(ledger.recentAwards) == "table" then #ledger.recentAwards else 0,
+	}
+end
+
+local function ApplyResourceAward(award: any): any
+	if GiantRealmResourceState == nil then
+		return { accepted = false, reason = "resource_state_unavailable" }
+	end
+
+	local ledger = ensureResourceLedgerState()
+	local applyResult = GiantRealmResourceState.ApplyAward(ledger, award)
+	if type(applyResult) ~= "table" or applyResult.accepted ~= true then
+		return applyResult
+	end
+	if type(applyResult.ledger) == "table" then
+		resourceLedgerState = applyResult.ledger
+	end
+	return applyResult
+end
+
+local function recordResourceSpendLog(ownerUserId: number, at: number, result: any)
+	local eventLogApi = globalEnv._EventLogService_QueryAPI
+	if type(eventLogApi) ~= "table" or type(eventLogApi.RecordEvent) ~= "function" then
+		return
+	end
+	pcall(eventLogApi.RecordEvent, "realm_resource_spend", "Giant realm resource spend processed", "info", at, {
+		ownerUserId = ownerUserId,
+		operationId = result.operationId,
+		spendKind = result.spendKind,
+		essence = result.essence,
+		wood = result.wood,
+		stone = result.stone,
+		accepted = result.accepted,
+		reason = result.reason,
+	})
+end
+
+local function ApplyResourceSpend(spend: any): any
+	if GiantRealmResourceState == nil then
+		return { accepted = false, reason = "resource_state_unavailable" }
+	end
+
+	local ledger = ensureResourceLedgerState()
+	local spendResult = GiantRealmResourceState.ApplySpend(ledger, spend)
+	if type(spendResult) ~= "table" or spendResult.accepted ~= true then
+		return spendResult
+	end
+	if type(spendResult.ledger) == "table" then
+		resourceLedgerState = spendResult.ledger
+	end
+	if spendResult.duplicate ~= true and type(realmOwnerUserId) == "number" then
+		recordResourceSpendLog(
+			realmOwnerUserId,
+			if type(spend.spentAt) == "number" then spend.spentAt else os.clock(),
+			{
+				operationId = spend.operationId,
+				spendKind = spend.spendKind,
+				essence = spend.essence,
+				wood = spend.wood,
+				stone = spend.stone,
+				accepted = true,
+				reason = spendResult.reason,
+			}
+		)
+	end
+	return spendResult
+end
+
+local function refundLedgerSpend(spendOperationId: string, woodCost: number, stoneCost: number, placedAt: number)
+	local refundOperationId = string.format("refund:%s", spendOperationId)
+	ApplyResourceAward({
+		operationId = refundOperationId,
+		sourceKind = "structure_placement_refund",
+		awardedAt = placedAt,
+		essence = 0,
+		wood = woodCost,
+		stone = stoneCost,
+		counterpartyUserId = nil,
+	})
+end
+
+rollbackStructureSpend = function(
+	spentFrom: string?,
+	spendOperationId: string,
+	woodCost: number,
+	stoneCost: number,
+	structureId: string,
+	placedAt: number
+)
+	if spentFrom == "ledger" then
+		refundLedgerSpend(spendOperationId, woodCost, stoneCost, placedAt)
+		return
+	end
+	ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "GiantBuildModeRollback:" .. structureId)
+end
+
+spendStructureCost = function(
+	structureId: string,
+	spendOperationId: string,
+	placedAt: number
+): (boolean, any, string?, number, number, string?)
+	local woodCost, stoneCost = getStructureCost(structureId)
+	if woodCost == nil or stoneCost == nil then
+		return false, ResourceFlowState.GetSnapshot(), "insufficient_resources", 0, 0, nil
+	end
+
+	local ledger = ensureResourceLedgerState()
+	if
+		GiantRealmResourceState.CanAffordSpend(ledger, 0, woodCost, stoneCost)
+		and type(spendOperationId) == "string"
+		and spendOperationId ~= ""
+	then
+		local spendResult = ApplyResourceSpend({
+			operationId = spendOperationId,
+			spendKind = GiantRealmResourceState.SpendKinds.StructurePlacement,
+			spentAt = placedAt,
+			essence = 0,
+			wood = woodCost,
+			stone = stoneCost,
+		})
+		if type(spendResult) == "table" and spendResult.accepted == true and spendResult.duplicate ~= true then
+			return true, ResourceFlowState.GetSnapshot(), nil, woodCost, stoneCost, "ledger"
+		end
+		if type(spendResult) == "table" and spendResult.reason == "insufficient_resources" then
+			return false, ResourceFlowState.GetSnapshot(), "insufficient_resources", woodCost, stoneCost, nil
+		end
+	end
+
+	local spent, flowSnapshot, spendError =
+		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "GiantBuildMode:" .. structureId)
+	if not spent then
+		debugWarn(
+			string.format(
+				"Rejected GiantStructurePlacementRequest structureId=%s reason=insufficient_resources detail=%s",
+				structureId,
+				tostring(spendError)
+			)
+		)
+		return false, flowSnapshot, "insufficient_resources", woodCost, stoneCost, nil
+	end
+
+	return true, flowSnapshot, nil, woodCost, stoneCost, "session"
+end
+
+local function GetRealmOwnerUserId(): number?
+	return realmOwnerUserId
+end
+
+local function getGiantRealmResourceResolver(): any?
+	local globalValue = globalEnv
+	if
+		type(globalValue._GiantRealmResourceResolver) == "table"
+		and type(globalValue._GiantRealmResourceResolver.Create) == "function"
+	then
+		return globalValue._GiantRealmResourceResolver.Create()
+	end
+
+	local ok, moduleValue = pcall(function()
+		return require(script.Parent:WaitForChild("GiantRealmResourceResolver"))
+	end)
+	if not ok or type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+		return nil
+	end
+	return moduleValue.Create()
+end
+
+local function awardDefenseEscapeResources(record: any, duplicate: boolean)
+	if duplicate == true then
+		return
+	end
+	if type(realmOwnerUserId) ~= "number" or realmOwnerUserId <= 0 then
+		return
+	end
+
+	local resolver = getGiantRealmResourceResolver()
+	if resolver == nil or type(resolver.Resolve) ~= "function" then
+		return
+	end
+
+	pcall(resolver.Resolve, {
+		sourceKind = GiantRealmResourceState.SourceKinds.DefenseEscapeOutcome,
+		operationId = string.format("realm-resource:%s", record.operationId),
+		ownerUserId = realmOwnerUserId,
+		counterpartyUserId = record.escapedUserId,
+		at = record.escapedAt,
+		metadata = {
+			lootValue = record.lootValue,
+			difficulty = record.difficulty,
+			sourceKind = record.sourceKind,
+			sourceId = record.sourceId,
+			routeId = record.routeId,
+		},
+	})
+end
+
 local function RecordEscapeDefenseOutcome(record: any): any
 	local valid, reason = GiantRealmSaveSchema.ValidateDefenseHistoryEscapeOutcomeRecord(record)
 	if not valid then
@@ -945,6 +1153,7 @@ local function RecordEscapeDefenseOutcome(record: any): any
 
 	for _, existing in ipairs(defenseEscapeOutcomes) do
 		if existing.operationId == record.operationId then
+			awardDefenseEscapeResources(record, true)
 			return {
 				accepted = true,
 				reason = "duplicate_operation",
@@ -958,6 +1167,8 @@ local function RecordEscapeDefenseOutcome(record: any): any
 	while #defenseEscapeOutcomes > DEFENSE_HISTORY_ESCAPE_LIMIT do
 		table.remove(defenseEscapeOutcomes, 1)
 	end
+
+	awardDefenseEscapeResources(record, false)
 
 	return {
 		accepted = true,
@@ -1318,6 +1529,14 @@ local function getRescueContractQueryApi(): any
 	return nil
 end
 
+local function getVillageWorksiteUpgradeQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._VillageWorksiteUpgradeService_QueryAPI) == "table" then
+		return globalValue._VillageWorksiteUpgradeService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -1353,13 +1572,24 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		rescuePersistenceState = rescueContractQueryApi.BuildPersistenceState()
 	end
 
+	local worksiteUpgradeState = nil
+	local villageUpgradeQueryApi = getVillageWorksiteUpgradeQueryApi()
+	if villageUpgradeQueryApi ~= nil then
+		if type(villageUpgradeQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "worksite_upgrade_build_persistence_missing"
+		end
+		worksiteUpgradeState = villageUpgradeQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
 		emergencyReinforcementState,
 		shrinePersistenceState,
 		rescuePersistenceState,
-		BuildDefenseHistoryState()
+		BuildDefenseHistoryState(),
+		BuildResourceLedgerState(),
+		worksiteUpgradeState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1445,6 +1675,33 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		end
 	end
 
+	if GiantRealmResourceState ~= nil then
+		resourceLedgerState = GiantRealmResourceState.ReconcileLedger(root.resourceLedger)
+	else
+		resourceLedgerState = nil
+	end
+
+	local villageUpgradeQueryApi = getVillageWorksiteUpgradeQueryApi()
+	if root.worksiteUpgrades ~= nil then
+		if villageUpgradeQueryApi == nil then
+			return false, "worksite_upgrade_query_api_missing"
+		end
+		if type(villageUpgradeQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "worksite_upgrade_apply_persistence_missing"
+		end
+
+		local appliedWorksiteUpgrades, worksiteUpgradeReason =
+			villageUpgradeQueryApi.ApplyPersistenceState(root.worksiteUpgrades)
+		if not appliedWorksiteUpgrades then
+			return false, worksiteUpgradeReason or "worksite_upgrade_apply_persistence_failed"
+		end
+	elseif villageUpgradeQueryApi ~= nil and type(villageUpgradeQueryApi.ApplyPersistenceState) == "function" then
+		local appliedWorksiteUpgrades, worksiteUpgradeReason = villageUpgradeQueryApi.ApplyPersistenceState(nil)
+		if not appliedWorksiteUpgrades then
+			return false, worksiteUpgradeReason or "worksite_upgrade_apply_persistence_failed"
+		end
+	end
+
 	local structureIds = {}
 	for structureId in pairs(placedStructureById) do
 		table.insert(structureIds, structureId)
@@ -1477,6 +1734,10 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	ResetSnareTrapRechargeForTests = ResetSnareTrapRechargeForTests,
 	IsStructurePlaced = IsStructurePlaced,
 	RecordEscapeDefenseOutcome = RecordEscapeDefenseOutcome,
+	GetRealmOwnerUserId = GetRealmOwnerUserId,
+	GetResourceLedgerSnapshot = GetResourceLedgerSnapshot,
+	ApplyResourceAward = ApplyResourceAward,
+	ApplyResourceSpend = ApplyResourceSpend,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,
 }

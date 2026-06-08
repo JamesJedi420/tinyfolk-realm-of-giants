@@ -84,6 +84,14 @@ type DefenseHistorySaveRecord = {
 	escapeOutcomes: { any },
 }
 
+type ResourceLedgerSaveRecord = {
+	essence: number,
+	wood: number,
+	stone: number,
+	recentAwards: { any },
+	recentSpends: { any },
+}
+
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
 		error(
@@ -241,6 +249,63 @@ local function makeRescuePersistenceRecord(): RescuePersistenceSaveRecord
 				acceptedByUserId = 9401,
 				resolvedAt = nil,
 				resolvedReason = nil,
+			},
+		},
+	}
+end
+
+local function makeWorksiteUpgradePersistenceRecord(): any
+	return {
+		upgrades = {
+			{
+				worksiteId = "MiningStation_A",
+				worksiteKind = "mining_station",
+				level = 2,
+				lastUpgradedAt = 55,
+			},
+			{
+				worksiteId = "WorkStation_A",
+				worksiteKind = "work_station",
+				level = 1,
+				lastUpgradedAt = 45,
+			},
+		},
+	}
+end
+
+local function makeResourceLedgerRecord(): ResourceLedgerSaveRecord
+	return {
+		essence = 42,
+		wood = 16,
+		stone = 9,
+		recentAwards = {
+			{
+				operationId = "realm-resource:containment-op-1",
+				sourceKind = "containment_custody_end",
+				awardedAt = 30,
+				essence = 20,
+				wood = 8,
+				stone = 4,
+				counterpartyUserId = 101,
+			},
+			{
+				operationId = "realm-resource:escape-op-1",
+				sourceKind = "defense_escape_outcome",
+				awardedAt = 40,
+				essence = 10,
+				wood = 6,
+				stone = 3,
+				counterpartyUserId = 202,
+			},
+		},
+		recentSpends = {
+			{
+				operationId = "structure-spend:9402:GiantStructure_Runtime_A:10",
+				spendKind = "structure_placement",
+				spentAt = 50,
+				essence = 0,
+				wood = 12,
+				stone = 8,
 			},
 		},
 	}
@@ -467,6 +532,58 @@ local function run()
 		assertTrue(type(root.defenseHistory) == "table", "built root includes defense history")
 		assertEqual(root.defenseHistory.escapeOutcomes[1].escapedUserId, 101, "built defense first user")
 		assertValid("built root with defense history validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local serialized = GiantRealmSaveSchema.SerializeResourceLedgerRecord(makeResourceLedgerRecord())
+		assertEqual(serialized.essence, 42, "serialized resource essence")
+		assertEqual(#serialized.recentAwards, 2, "serialized resource award count")
+		assertEqual(
+			serialized.recentAwards[1].operationId,
+			"realm-resource:containment-op-1",
+			"resource award order first"
+		)
+	end
+
+	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, {}, nil, nil, nil, nil, makeResourceLedgerRecord())
+		assertTrue(type(root.resourceLedger) == "table", "built root includes resource ledger")
+		assertEqual(root.resourceLedger.wood, 16, "built root resource wood")
+		assertValid("built root with resource ledger validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local serialized =
+			GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(makeWorksiteUpgradePersistenceRecord())
+		assertEqual(#serialized.upgrades, 2, "serialized worksite upgrade count")
+		assertEqual(serialized.upgrades[1].worksiteId, "MiningStation_A", "serialized worksite order first")
+	end
+
+	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(
+			9402,
+			{},
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			makeWorksiteUpgradePersistenceRecord()
+		)
+		assertTrue(type(root.worksiteUpgrades) == "table", "built root includes worksite upgrades")
+		assertEqual(root.worksiteUpgrades.upgrades[1].level, 2, "built root worksite upgrade level")
+		assertValid("built root with worksite upgrades validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local root = makeSaveRoot()
+		root.resourceLedger = makeResourceLedgerRecord()
+		root.resourceLedger.recentAwards[2].operationId = root.resourceLedger.recentAwards[1].operationId
+		assertInvalid(
+			"resource_award_operation_id_duplicate index=2",
+			"invalid resource duplicate operation id",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
 	end
 
 	do

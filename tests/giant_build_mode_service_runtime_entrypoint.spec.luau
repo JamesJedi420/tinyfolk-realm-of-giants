@@ -124,6 +124,7 @@ configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["GiantRealmSaveSchema"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema"
+giantRealmFolder._Children["GiantRealmResourceState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 giantRealmFolder._Children["SnareTrapState"] = "../../ReplicatedStorage/Shared/GiantRealm/SnareTrapState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")

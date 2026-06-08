@@ -12,6 +12,7 @@ local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
+local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
 	else (require :: any)("./AdmissionQueueProducer")
@@ -276,6 +277,50 @@ local function getScoreServiceQueryApi(): any?
 	end
 
 	return queryApi
+end
+
+local function getGiantRealmResourceResolver(): any?
+	if
+		type(globalEnv._GiantRealmResourceResolver) == "table"
+		and type(globalEnv._GiantRealmResourceResolver.Create) == "function"
+	then
+		return globalEnv._GiantRealmResourceResolver.Create()
+	end
+
+	local ok, moduleValue = pcall(function()
+		return require(script.Parent:WaitForChild("GiantRealmResourceResolver"))
+	end)
+	if not ok or type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+		return nil
+	end
+	return moduleValue.Create()
+end
+
+local function awardRescueDefenseFailureResources(
+	ownerUserId: number,
+	targetUserId: number,
+	at: number,
+	operationId: string
+)
+	if ownerUserId <= 0 or targetUserId <= 0 then
+		return
+	end
+
+	local resolver = getGiantRealmResourceResolver()
+	if resolver == nil or type(resolver.Resolve) ~= "function" then
+		return
+	end
+
+	pcall(resolver.Resolve, {
+		sourceKind = GiantRealmResourceState.SourceKinds.RescueContractDefenseFailure,
+		operationId = string.format("realm-resource:%s", operationId),
+		ownerUserId = ownerUserId,
+		counterpartyUserId = targetUserId,
+		at = at,
+		metadata = {
+			targetUserId = targetUserId,
+		},
+	})
 end
 
 local function getEscapeServiceQueryApi(): any?
@@ -1081,15 +1126,23 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 		end
 		grantPostRescueProtection(target, resolvedNow)
 		grantRescueAcceleration(rescuer, resolvedNow)
+		local contract = transition.contract
 		local scoreApi = getScoreServiceQueryApi()
 		if scoreApi ~= nil and type(scoreApi.RequestScoreEvent) == "function" then
-			local contract = transition.contract
 			scoreApi.RequestScoreEvent(rescuer.UserId, "rescue_complete", resolvedNow, {
 				targetUserId = targetUserId,
 				targetRealmOwnerUserId = if contract ~= nil then contract.targetRealmOwnerUserId else nil,
 				entryRouteId = if contract ~= nil then contract.entryRouteId else nil,
 				entryRouteKind = if contract ~= nil then contract.entryRouteKind else nil,
 			})
+		end
+		if contract ~= nil and type(contract.targetRealmOwnerUserId) == "number" then
+			awardRescueDefenseFailureResources(
+				contract.targetRealmOwnerUserId,
+				targetUserId,
+				resolvedNow,
+				string.format("rescue-defense:%d:%d:%.6f", rescuer.UserId, targetUserId, resolvedNow)
+			)
 		end
 	end
 

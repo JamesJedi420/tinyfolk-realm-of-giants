@@ -99,6 +99,44 @@ export type DefenseHistorySaveRecord = {
 	escapeOutcomes: { DefenseHistoryEscapeOutcomeRecord },
 }
 
+export type ResourceAwardSaveRecord = {
+	operationId: string,
+	sourceKind: string,
+	awardedAt: number,
+	essence: number,
+	wood: number,
+	stone: number,
+	counterpartyUserId: number?,
+}
+
+export type ResourceSpendSaveRecord = {
+	operationId: string,
+	spendKind: string,
+	spentAt: number,
+	essence: number,
+	wood: number,
+	stone: number,
+}
+
+export type ResourceLedgerSaveRecord = {
+	essence: number,
+	wood: number,
+	stone: number,
+	recentAwards: { ResourceAwardSaveRecord },
+	recentSpends: { ResourceSpendSaveRecord },
+}
+
+export type WorksiteUpgradeSaveRecord = {
+	worksiteId: string,
+	worksiteKind: string,
+	level: number,
+	lastUpgradedAt: number,
+}
+
+export type WorksiteUpgradePersistenceSaveRecord = {
+	upgrades: { WorksiteUpgradeSaveRecord },
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -107,6 +145,8 @@ export type GiantRealmSaveRoot = {
 	shrinePersistence: ShrinePersistenceSaveRecord?,
 	rescuePersistence: RescuePersistenceSaveRecord?,
 	defenseHistory: DefenseHistorySaveRecord?,
+	resourceLedger: ResourceLedgerSaveRecord?,
+	worksiteUpgrades: WorksiteUpgradePersistenceSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -544,6 +584,153 @@ function GiantRealmSaveSchema.ValidateDefenseHistoryRecord(record: any): (boolea
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateResourceAwardSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "resource_award_record_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "resource_award_operation_id_invalid"
+	end
+	if type(record.sourceKind) ~= "string" or record.sourceKind == "" then
+		return false, "resource_award_source_kind_invalid"
+	end
+	if not isFiniteNumber(record.awardedAt) or record.awardedAt < 0 then
+		return false, "resource_award_awarded_at_invalid"
+	end
+	if not isFiniteNumber(record.essence) or record.essence < 0 then
+		return false, "resource_award_essence_invalid"
+	end
+	if not isFiniteNumber(record.wood) or record.wood < 0 then
+		return false, "resource_award_wood_invalid"
+	end
+	if not isFiniteNumber(record.stone) or record.stone < 0 then
+		return false, "resource_award_stone_invalid"
+	end
+	if record.counterpartyUserId ~= nil and not isPositiveNumber(record.counterpartyUserId) then
+		return false, "resource_award_counterparty_user_id_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateResourceSpendSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "resource_spend_record_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "resource_spend_operation_id_invalid"
+	end
+	if type(record.spendKind) ~= "string" or record.spendKind == "" then
+		return false, "resource_spend_kind_invalid"
+	end
+	if not isFiniteNumber(record.spentAt) or record.spentAt < 0 then
+		return false, "resource_spend_spent_at_invalid"
+	end
+	if not isFiniteNumber(record.essence) or record.essence < 0 then
+		return false, "resource_spend_essence_invalid"
+	end
+	if not isFiniteNumber(record.wood) or record.wood < 0 then
+		return false, "resource_spend_wood_invalid"
+	end
+	if not isFiniteNumber(record.stone) or record.stone < 0 then
+		return false, "resource_spend_stone_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateResourceLedgerRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "resource_ledger_invalid"
+	end
+	if not isFiniteNumber(record.essence) or record.essence < 0 then
+		return false, "resource_ledger_essence_invalid"
+	end
+	if not isFiniteNumber(record.wood) or record.wood < 0 then
+		return false, "resource_ledger_wood_invalid"
+	end
+	if not isFiniteNumber(record.stone) or record.stone < 0 then
+		return false, "resource_ledger_stone_invalid"
+	end
+	if type(record.recentAwards) ~= "table" then
+		return false, "resource_ledger_recent_awards_invalid"
+	end
+	if type(record.recentSpends) ~= "table" then
+		return false, "resource_ledger_recent_spends_invalid"
+	end
+
+	local seenOperationIds: { [string]: boolean } = {}
+	for index, awardRecord in ipairs(record.recentAwards) do
+		local valid, reason = GiantRealmSaveSchema.ValidateResourceAwardSaveRecord(awardRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "resource_award_record_invalid", index)
+		end
+		if seenOperationIds[awardRecord.operationId] then
+			return false, string.format("resource_award_operation_id_duplicate index=%d", index)
+		end
+		seenOperationIds[awardRecord.operationId] = true
+	end
+
+	for index, spendRecord in ipairs(record.recentSpends) do
+		local valid, reason = GiantRealmSaveSchema.ValidateResourceSpendSaveRecord(spendRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "resource_spend_record_invalid", index)
+		end
+		if seenOperationIds[spendRecord.operationId] then
+			return false, string.format("resource_spend_operation_id_duplicate index=%d", index)
+		end
+		seenOperationIds[spendRecord.operationId] = true
+	end
+
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateWorksiteUpgradeSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "worksite_upgrade_record_invalid"
+	end
+	if type(record.worksiteId) ~= "string" or record.worksiteId == "" then
+		return false, "worksite_upgrade_worksite_id_invalid"
+	end
+	if type(record.worksiteKind) ~= "string" or record.worksiteKind == "" then
+		return false, "worksite_upgrade_worksite_kind_invalid"
+	end
+	if not isFiniteNumber(record.level) or record.level < 0 or record.level > 3 then
+		return false, "worksite_upgrade_level_invalid"
+	end
+	if not isFiniteNumber(record.lastUpgradedAt) or record.lastUpgradedAt < 0 then
+		return false, "worksite_upgrade_last_upgraded_at_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "worksite_upgrade_persistence_invalid"
+	end
+	if type(record.upgrades) ~= "table" then
+		return false, "worksite_upgrade_persistence_upgrades_invalid"
+	end
+
+	local seenWorksiteIds: { [string]: boolean } = {}
+	for index, upgradeRecord in ipairs(record.upgrades) do
+		local valid, reason = GiantRealmSaveSchema.ValidateWorksiteUpgradeSaveRecord(upgradeRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "worksite_upgrade_record_invalid", index)
+		end
+		if seenWorksiteIds[upgradeRecord.worksiteId] then
+			return false, string.format("worksite_upgrade_worksite_id_duplicate index=%d", index)
+		end
+		seenWorksiteIds[upgradeRecord.worksiteId] = true
+	end
+
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -584,6 +771,17 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	local defenseValid, defenseReason = GiantRealmSaveSchema.ValidateDefenseHistoryRecord(root.defenseHistory)
 	if not defenseValid then
 		return false, defenseReason
+	end
+
+	local resourceValid, resourceReason = GiantRealmSaveSchema.ValidateResourceLedgerRecord(root.resourceLedger)
+	if not resourceValid then
+		return false, resourceReason
+	end
+
+	local worksiteUpgradeValid, worksiteUpgradeReason =
+		GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(root.worksiteUpgrades)
+	if not worksiteUpgradeValid then
+		return false, worksiteUpgradeReason
 	end
 
 	return true, nil
@@ -804,13 +1002,117 @@ function GiantRealmSaveSchema.SerializeDefenseHistoryRecord(state: any): Defense
 	}
 end
 
+function GiantRealmSaveSchema.SerializeResourceAwardSaveRecord(state: any): ResourceAwardSaveRecord
+	return {
+		operationId = state.operationId,
+		sourceKind = state.sourceKind,
+		awardedAt = state.awardedAt,
+		essence = state.essence,
+		wood = state.wood,
+		stone = state.stone,
+		counterpartyUserId = state.counterpartyUserId,
+	}
+end
+
+function GiantRealmSaveSchema.SerializeResourceSpendSaveRecord(state: any): ResourceSpendSaveRecord
+	return {
+		operationId = state.operationId,
+		spendKind = state.spendKind,
+		spentAt = state.spentAt,
+		essence = state.essence,
+		wood = state.wood,
+		stone = state.stone,
+	}
+end
+
+function GiantRealmSaveSchema.SerializeResourceLedgerRecord(state: any): ResourceLedgerSaveRecord?
+	if state == nil then
+		return nil
+	end
+
+	local awardEntries = state.recentAwards
+	if type(awardEntries) ~= "table" then
+		return {
+			essence = if isFiniteNumber(state.essence) and state.essence >= 0 then state.essence else 0,
+			wood = if isFiniteNumber(state.wood) and state.wood >= 0 then state.wood else 0,
+			stone = if isFiniteNumber(state.stone) and state.stone >= 0 then state.stone else 0,
+			recentAwards = {},
+			recentSpends = {},
+		}
+	end
+
+	local awardRecords = {}
+	for _, award in ipairs(awardEntries) do
+		if type(award) == "table" then
+			table.insert(awardRecords, GiantRealmSaveSchema.SerializeResourceAwardSaveRecord(award))
+		end
+	end
+	table.sort(awardRecords, function(a: ResourceAwardSaveRecord, b: ResourceAwardSaveRecord): boolean
+		if a.awardedAt == b.awardedAt then
+			return a.operationId < b.operationId
+		end
+		return a.awardedAt < b.awardedAt
+	end)
+
+	local spendEntries = state.recentSpends
+	local spendRecords = {}
+	if type(spendEntries) == "table" then
+		for _, spend in ipairs(spendEntries) do
+			if type(spend) == "table" then
+				table.insert(spendRecords, GiantRealmSaveSchema.SerializeResourceSpendSaveRecord(spend))
+			end
+		end
+	end
+	table.sort(spendRecords, function(a: ResourceSpendSaveRecord, b: ResourceSpendSaveRecord): boolean
+		if a.spentAt == b.spentAt then
+			return a.operationId < b.operationId
+		end
+		return a.spentAt < b.spentAt
+	end)
+
+	return {
+		essence = if isFiniteNumber(state.essence) and state.essence >= 0 then state.essence else 0,
+		wood = if isFiniteNumber(state.wood) and state.wood >= 0 then state.wood else 0,
+		stone = if isFiniteNumber(state.stone) and state.stone >= 0 then state.stone else 0,
+		recentAwards = awardRecords,
+		recentSpends = spendRecords,
+	}
+end
+
+function GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(
+	state: any
+): WorksiteUpgradePersistenceSaveRecord?
+	if state == nil then
+		return nil
+	end
+	if type(state) ~= "table" or type(state.upgrades) ~= "table" then
+		return { upgrades = {} }
+	end
+
+	local records = {}
+	for _, record in ipairs(state.upgrades) do
+		if type(record) == "table" then
+			table.insert(records, {
+				worksiteId = record.worksiteId,
+				worksiteKind = record.worksiteKind,
+				level = record.level,
+				lastUpgradedAt = record.lastUpgradedAt,
+			})
+		end
+	end
+
+	return { upgrades = records }
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
 	emergencyReinforcementState: any?,
 	shrinePersistenceState: any?,
 	rescuePersistenceState: any?,
-	defenseHistoryState: any?
+	defenseHistoryState: any?,
+	resourceLedgerState: any?,
+	worksiteUpgradeState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -820,6 +1122,8 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		shrinePersistence = nil,
 		rescuePersistence = nil,
 		defenseHistory = nil,
+		resourceLedger = nil,
+		worksiteUpgrades = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -840,6 +1144,16 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	local defenseRecord = GiantRealmSaveSchema.SerializeDefenseHistoryRecord(defenseHistoryState)
 	if defenseRecord ~= nil then
 		root.defenseHistory = defenseRecord
+	end
+
+	local resourceRecord = GiantRealmSaveSchema.SerializeResourceLedgerRecord(resourceLedgerState)
+	if resourceRecord ~= nil then
+		root.resourceLedger = resourceRecord
+	end
+
+	local worksiteUpgradeRecord = GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(worksiteUpgradeState)
+	if worksiteUpgradeRecord ~= nil then
+		root.worksiteUpgrades = worksiteUpgradeRecord
 	end
 
 	return root
