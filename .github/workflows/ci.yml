@@ -31,7 +31,7 @@ jobs:
 
       - name: Install luau-lsp
         run: |
-          curl -sL "https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.68.0/luau-lsp-x86_64-unknown-linux.zip" -o /tmp/luau-lsp.zip
+          curl -sL "https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.68.0/luau-lsp-linux-x86_64.zip" -o /tmp/luau-lsp.zip
           unzip -o /tmp/luau-lsp.zip -d /tmp/luau-lsp
           chmod +x /tmp/luau-lsp/luau-lsp
           echo "/tmp/luau-lsp" >> "$GITHUB_PATH"
