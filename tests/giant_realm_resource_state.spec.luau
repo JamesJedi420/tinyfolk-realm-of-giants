@@ -114,6 +114,26 @@ do
 end
 
 do
+	local ledger = GiantRealmResourceState.CreateEmptyLedger()
+	ledger.essence = 8
+	ledger.wood = 20
+	ledger.stone = 10
+
+	local spent = GiantRealmResourceState.ApplySpend(ledger, {
+		operationId = "worksite-spend-1",
+		spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
+		spentAt = 3,
+		essence = 8,
+		wood = 10,
+		stone = 4,
+	})
+	assertTrue(spent.accepted, "worksite upgrade spend accepted")
+	assertEqual(spent.ledger.essence, 0, "worksite upgrade ledger essence after spend")
+	assertEqual(spent.ledger.wood, 10, "worksite upgrade ledger wood after spend")
+	assertEqual(spent.spend.spendKind, "worksite_upgrade", "worksite upgrade spend kind")
+end
+
+do
 	local reconciled = GiantRealmResourceState.ReconcileLedger({
 		essence = 12,
 		wood = 3,

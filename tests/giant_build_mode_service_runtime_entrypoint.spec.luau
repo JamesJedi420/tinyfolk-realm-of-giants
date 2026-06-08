@@ -1572,4 +1572,73 @@ do
 	assertTrue(sawMalformedBoxReject, "malformed_payload_box_fields rejection reason is deterministic")
 end
 
+do
+	local buildApi = globalEnv._GiantBuildModeService_QueryAPI
+	assertTrue(type(buildApi.SpendWorksiteUpgradeCost) == "function", "worksite upgrade spend api exposed")
+
+	buildApi.ApplyResourceAward({
+		operationId = "test-seed-worksite-ledger-1",
+		sourceKind = "defense_escape_outcome",
+		awardedAt = 1,
+		essence = 0,
+		wood = 10,
+		stone = 4,
+		counterpartyUserId = nil,
+	})
+
+	local ledgerSpend = buildApi.SpendWorksiteUpgradeCost({
+		operationId = "worksite-upgrade-test-ledger-1",
+		spentAt = 10,
+		essence = 0,
+		wood = 10,
+		stone = 4,
+	})
+	assertTrue(ledgerSpend.accepted == true, "worksite upgrade spends from ledger when affordable")
+	assertEqual(ledgerSpend.spentFrom, "ledger", "worksite upgrade ledger spend source")
+
+	local sessionBaseline = ResourceFlowState.GetSnapshot()
+	local sessionSpend = buildApi.SpendWorksiteUpgradeCost({
+		operationId = "worksite-upgrade-test-session-1",
+		spentAt = 11,
+		essence = 0,
+		wood = 10,
+		stone = 4,
+	})
+	assertTrue(sessionSpend.accepted == true, "worksite upgrade spends from session when ledger lacks wood/stone")
+	assertEqual(sessionSpend.spentFrom, "session", "worksite upgrade session spend source")
+	assertEqual(
+		ResourceFlowState.GetSnapshot().Wood.stored,
+		sessionBaseline.Wood.stored - 10,
+		"session wood debited for worksite upgrade"
+	)
+
+	buildApi.ApplyResourceAward({
+		operationId = "test-seed-worksite-ledger-essence-1",
+		sourceKind = "defense_escape_outcome",
+		awardedAt = 12,
+		essence = 8,
+		wood = 0,
+		stone = 0,
+		counterpartyUserId = nil,
+	})
+	ResourceFlowState.ResetSession("worksite_upgrade_mixed_test")
+	ResourceFlowState.AddStoredAtomic(20, 10, "SeedWorksiteUpgradeMixedTest")
+	local mixedBaseline = ResourceFlowState.GetSnapshot()
+	local mixedSpend = buildApi.SpendWorksiteUpgradeCost({
+		operationId = "worksite-upgrade-test-mixed-1",
+		spentAt = 13,
+		essence = 8,
+		wood = 10,
+		stone = 4,
+	})
+	assertTrue(mixedSpend.accepted == true, "worksite upgrade mixed ledger essence and session wood/stone")
+	assertEqual(mixedSpend.spentFrom, "mixed", "worksite upgrade mixed spend source")
+	assertEqual(buildApi.GetResourceLedgerSnapshot().essence, 0, "mixed spend debits ledger essence")
+	assertEqual(
+		ResourceFlowState.GetSnapshot().Wood.stored,
+		mixedBaseline.Wood.stored - 10,
+		"mixed spend debits session wood"
+	)
+end
+
 print("giant_build_mode_service_runtime_entrypoint: all checks passed")

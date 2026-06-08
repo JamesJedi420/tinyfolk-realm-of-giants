@@ -1159,6 +1159,148 @@ spendStructureCost = function(
 	return true, flowSnapshot, nil, woodCost, stoneCost, "session"
 end
 
+local function refundWorksiteUpgradeLedgerSpend(
+	spendOperationId: string,
+	essence: number,
+	wood: number,
+	stone: number,
+	spentAt: number
+)
+	if essence <= 0 and wood <= 0 and stone <= 0 then
+		return
+	end
+
+	ApplyResourceAward({
+		operationId = string.format("refund:%s", spendOperationId),
+		sourceKind = "worksite_upgrade_refund",
+		awardedAt = spentAt,
+		essence = essence,
+		wood = wood,
+		stone = stone,
+		counterpartyUserId = nil,
+	})
+end
+
+local function SpendWorksiteUpgradeCost(spend: any): any
+	if GiantRealmResourceState == nil then
+		return { accepted = false, reason = "resource_state_unavailable" }
+	end
+	if type(spend) ~= "table" then
+		return { accepted = false, reason = "spend_invalid" }
+	end
+
+	local operationId = spend.operationId
+	if type(operationId) ~= "string" or operationId == "" then
+		return { accepted = false, reason = "operation_id_invalid" }
+	end
+
+	local spentAt = if type(spend.spentAt) == "number" then spend.spentAt else os.clock()
+	local essence = if type(spend.essence) == "number" and spend.essence >= 0 then spend.essence else 0
+	local wood = if type(spend.wood) == "number" and spend.wood >= 0 then spend.wood else 0
+	local stone = if type(spend.stone) == "number" and spend.stone >= 0 then spend.stone else 0
+	if essence <= 0 and wood <= 0 and stone <= 0 then
+		return { accepted = false, reason = "spend_amount_zero" }
+	end
+
+	local ledger = ensureResourceLedgerState()
+	if GiantRealmResourceState.CanAffordSpend(ledger, essence, wood, stone) then
+		local spendResult = ApplyResourceSpend({
+			operationId = operationId,
+			spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
+			spentAt = spentAt,
+			essence = essence,
+			wood = wood,
+			stone = stone,
+		})
+		if type(spendResult) == "table" and spendResult.accepted == true and spendResult.duplicate ~= true then
+			spendResult.spentFrom = "ledger"
+		end
+		return spendResult
+	end
+
+	if essence > 0 and ledger.essence < essence then
+		return { accepted = false, reason = "insufficient_resources" }
+	end
+
+	if wood > 0 or stone > 0 then
+		local flowSnapshot = ResourceFlowState.GetSnapshot()
+		if flowSnapshot.Wood.stored < wood or flowSnapshot.Stone.stored < stone then
+			return { accepted = false, reason = "insufficient_resources" }
+		end
+
+		if essence > 0 then
+			local essenceSpendResult = ApplyResourceSpend({
+				operationId = operationId,
+				spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
+				spentAt = spentAt,
+				essence = essence,
+				wood = 0,
+				stone = 0,
+			})
+			if
+				type(essenceSpendResult) ~= "table"
+				or essenceSpendResult.accepted ~= true
+				or essenceSpendResult.duplicate == true
+			then
+				return essenceSpendResult
+			end
+		end
+
+		local spent, _, spendError =
+			ResourceFlowState.SpendStoredAtomic(wood, stone, "VillageWorksiteUpgrade:" .. operationId)
+		if not spent then
+			if essence > 0 then
+				refundWorksiteUpgradeLedgerSpend(operationId, essence, 0, 0, spentAt)
+			end
+			return {
+				accepted = false,
+				reason = spendError or "insufficient_resources",
+			}
+		end
+
+		if type(realmOwnerUserId) == "number" then
+			recordResourceSpendLog(realmOwnerUserId, spentAt, {
+				operationId = operationId,
+				spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
+				essence = essence,
+				wood = wood,
+				stone = stone,
+				accepted = true,
+				reason = "accepted",
+				spentFrom = if essence > 0 then "mixed" else "session",
+			})
+			refreshTreasuryProjection()
+		end
+
+		return {
+			accepted = true,
+			reason = "accepted",
+			duplicate = false,
+			spentFrom = if essence > 0 then "mixed" else "session",
+		}
+	end
+
+	return { accepted = false, reason = "insufficient_resources" }
+end
+
+local function RollbackWorksiteUpgradeSpend(
+	spentFrom: string?,
+	spendOperationId: string,
+	essence: number,
+	wood: number,
+	stone: number,
+	spentAt: number
+)
+	if spentFrom == "ledger" then
+		refundWorksiteUpgradeLedgerSpend(spendOperationId, essence, wood, stone, spentAt)
+	elseif spentFrom == "session" then
+		ResourceFlowState.AddStoredAtomic(wood, stone, "VillageWorksiteUpgradeRollback:" .. spendOperationId)
+	elseif spentFrom == "mixed" then
+		refundWorksiteUpgradeLedgerSpend(spendOperationId, essence, 0, 0, spentAt)
+		ResourceFlowState.AddStoredAtomic(wood, stone, "VillageWorksiteUpgradeRollback:" .. spendOperationId)
+	end
+end
+
 local function GetRealmOwnerUserId(): number?
 	return realmOwnerUserId
 end
@@ -1807,6 +1949,8 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	GetResourceLedgerSnapshot = GetResourceLedgerSnapshot,
 	ApplyResourceAward = ApplyResourceAward,
 	ApplyResourceSpend = ApplyResourceSpend,
+	SpendWorksiteUpgradeCost = SpendWorksiteUpgradeCost,
+	RollbackWorksiteUpgradeSpend = RollbackWorksiteUpgradeSpend,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,
 }

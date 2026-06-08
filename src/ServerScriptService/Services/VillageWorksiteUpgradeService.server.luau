@@ -9,7 +9,6 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
-local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local REQUEST_REMOTE_NAME = "VillageWorksiteUpgradeRequest"
@@ -70,6 +69,9 @@ local function getGiantBuildModeQueryApi(): any?
 	if type(queryApi) == "table" then
 		return queryApi
 	end
+	if type(_G) == "table" and type((_G :: any)._GiantBuildModeService_QueryAPI) == "table" then
+		return (_G :: any)._GiantBuildModeService_QueryAPI
+	end
 	return nil
 end
 
@@ -83,13 +85,12 @@ end
 
 local function spendUpgradeCost(ownerUserId: number, operationId: string, at: number, cost: any): any
 	local buildApi = getGiantBuildModeQueryApi()
-	if type(buildApi) ~= "table" or type(buildApi.ApplyResourceSpend) ~= "function" then
+	if type(buildApi) ~= "table" or type(buildApi.SpendWorksiteUpgradeCost) ~= "function" then
 		return { accepted = false, reason = "ledger_spend_api_unavailable" }
 	end
 
-	local spendResult = buildApi.ApplyResourceSpend({
+	local spendResult = buildApi.SpendWorksiteUpgradeCost({
 		operationId = operationId,
-		spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
 		spentAt = at,
 		essence = cost.essence,
 		wood = cost.wood,
@@ -102,11 +103,21 @@ local function spendUpgradeCost(ownerUserId: number, operationId: string, at: nu
 		}
 	end
 
-	return { accepted = true, reason = "accepted", ownerUserId = ownerUserId }
+	return {
+		accepted = true,
+		reason = "accepted",
+		ownerUserId = ownerUserId,
+		spentFrom = spendResult.spentFrom,
+	}
 end
 
-local function refundUpgradeCost(operationId: string, at: number, cost: any)
+local function refundUpgradeCost(spentFrom: string?, operationId: string, at: number, cost: any)
 	local buildApi = getGiantBuildModeQueryApi()
+	if type(buildApi) == "table" and type(buildApi.RollbackWorksiteUpgradeSpend) == "function" then
+		buildApi.RollbackWorksiteUpgradeSpend(spentFrom, operationId, cost.essence, cost.wood, cost.stone, at)
+		return
+	end
+
 	if type(buildApi) ~= "table" or type(buildApi.ApplyResourceAward) ~= "function" then
 		return
 	end
