@@ -14,6 +14,8 @@ local ConstructionFolder = Shared:WaitForChild("Construction")
 local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
 local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
+local GiantRealm = Shared:WaitForChild("GiantRealm")
+local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ACTIVATE_REMOTE_NAME = "ShrineActivateRequest"
@@ -491,6 +493,58 @@ local function ensureInteractionWorshipperAssignment(player: Player, shrineState
 	return true, nil
 end
 
+local function getGiantBuildModeQueryApi(): any?
+	local queryApi = globalEnv._GiantBuildModeService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	return nil
+end
+
+local function getGiantRealmResourceResolver(): any?
+	if
+		type(globalEnv._GiantRealmResourceResolver) == "table"
+		and type(globalEnv._GiantRealmResourceResolver.Create) == "function"
+	then
+		return globalEnv._GiantRealmResourceResolver.Create()
+	end
+
+	local ok, moduleValue = pcall(function()
+		return require(script.Parent:WaitForChild("GiantRealmResourceResolver"))
+	end)
+	if not ok or type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+		return nil
+	end
+	return moduleValue.Create()
+end
+
+local function awardShrineTributeTick(shrineState: ShrineState, generatedAmount: number, at: number)
+	local buildApi = getGiantBuildModeQueryApi()
+	local ownerUserId = if type(buildApi) == "table" and type(buildApi.GetRealmOwnerUserId) == "function"
+		then buildApi.GetRealmOwnerUserId()
+		else nil
+	if type(ownerUserId) ~= "number" or ownerUserId <= 0 then
+		return
+	end
+
+	local resolver = getGiantRealmResourceResolver()
+	if resolver == nil or type(resolver.Resolve) ~= "function" then
+		return
+	end
+
+	pcall(resolver.Resolve, {
+		sourceKind = GiantRealmResourceState.SourceKinds.ShrineTributeTick,
+		operationId = string.format("realm-resource:shrine-tribute:%s:%d", shrineState.shrineId, shrineState.tickCount),
+		ownerUserId = ownerUserId,
+		at = at,
+		metadata = {
+			generatedAmount = generatedAmount,
+			shrineId = shrineState.shrineId,
+			tickCount = shrineState.tickCount,
+		},
+	})
+end
+
 local remotesFolder = ensureRemotesFolder()
 local shrineActivateRequestRemote = ensureRemoteEvent(remotesFolder, ACTIVATE_REMOTE_NAME)
 local shrineDebugStateRequestRemote = ensureRemoteEvent(remotesFolder, DEBUG_REQUEST_REMOTE_NAME)
@@ -749,6 +803,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 				"Shrine:" .. shrineState.shrineId,
 				generatedAmount
 			)
+			awardShrineTributeTick(shrineState, generatedAmount, shrineState.lastTickAt)
 
 			if shrineState.essenceTotal >= ShrineConfig.MaxEssenceTotal then
 				shrineState.essenceTotal = ShrineConfig.MaxEssenceTotal

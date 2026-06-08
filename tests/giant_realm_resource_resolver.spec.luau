@@ -90,4 +90,31 @@ do
 	assertEqual(ledger.wood >= 6, true, "ledger wood increased")
 end
 
+do
+	local result = resolver.Resolve({
+		sourceKind = GiantRealmResourceState.SourceKinds.ShrineTributeTick,
+		operationId = "shrine-tribute-op-1",
+		ownerUserId = 9402,
+		metadata = {
+			generatedAmount = 6,
+			shrineId = "Shrine_A",
+			tickCount = 3,
+		},
+	})
+	assertTrue(result.awardGranted, "shrine tribute award granted")
+	assertEqual(result.essence, 3, "shrine tribute essence")
+end
+
+do
+	local result = resolver.Resolve({
+		sourceKind = GiantRealmResourceState.SourceKinds.RescueContractDefenseFailure,
+		operationId = "rescue-defense-op-1",
+		ownerUserId = 9402,
+		counterpartyUserId = 303,
+		metadata = {},
+	})
+	assertTrue(result.awardGranted, "rescue defense failure award granted")
+	assertEqual(result.wood, 2, "rescue defense failure wood")
+end
+
 print("giant_realm_resource_resolver.spec.luau: all checks passed")

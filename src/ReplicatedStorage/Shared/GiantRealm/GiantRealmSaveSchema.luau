@@ -109,11 +109,21 @@ export type ResourceAwardSaveRecord = {
 	counterpartyUserId: number?,
 }
 
+export type ResourceSpendSaveRecord = {
+	operationId: string,
+	spendKind: string,
+	spentAt: number,
+	essence: number,
+	wood: number,
+	stone: number,
+}
+
 export type ResourceLedgerSaveRecord = {
 	essence: number,
 	wood: number,
 	stone: number,
 	recentAwards: { ResourceAwardSaveRecord },
+	recentSpends: { ResourceSpendSaveRecord },
 }
 
 export type GiantRealmSaveRoot = {
@@ -590,6 +600,31 @@ function GiantRealmSaveSchema.ValidateResourceAwardSaveRecord(record: any): (boo
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateResourceSpendSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "resource_spend_record_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "resource_spend_operation_id_invalid"
+	end
+	if type(record.spendKind) ~= "string" or record.spendKind == "" then
+		return false, "resource_spend_kind_invalid"
+	end
+	if not isFiniteNumber(record.spentAt) or record.spentAt < 0 then
+		return false, "resource_spend_spent_at_invalid"
+	end
+	if not isFiniteNumber(record.essence) or record.essence < 0 then
+		return false, "resource_spend_essence_invalid"
+	end
+	if not isFiniteNumber(record.wood) or record.wood < 0 then
+		return false, "resource_spend_wood_invalid"
+	end
+	if not isFiniteNumber(record.stone) or record.stone < 0 then
+		return false, "resource_spend_stone_invalid"
+	end
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateResourceLedgerRecord(record: any): (boolean, string?)
 	if record == nil then
 		return true, nil
@@ -609,6 +644,9 @@ function GiantRealmSaveSchema.ValidateResourceLedgerRecord(record: any): (boolea
 	if type(record.recentAwards) ~= "table" then
 		return false, "resource_ledger_recent_awards_invalid"
 	end
+	if type(record.recentSpends) ~= "table" then
+		return false, "resource_ledger_recent_spends_invalid"
+	end
 
 	local seenOperationIds: { [string]: boolean } = {}
 	for index, awardRecord in ipairs(record.recentAwards) do
@@ -620,6 +658,17 @@ function GiantRealmSaveSchema.ValidateResourceLedgerRecord(record: any): (boolea
 			return false, string.format("resource_award_operation_id_duplicate index=%d", index)
 		end
 		seenOperationIds[awardRecord.operationId] = true
+	end
+
+	for index, spendRecord in ipairs(record.recentSpends) do
+		local valid, reason = GiantRealmSaveSchema.ValidateResourceSpendSaveRecord(spendRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "resource_spend_record_invalid", index)
+		end
+		if seenOperationIds[spendRecord.operationId] then
+			return false, string.format("resource_spend_operation_id_duplicate index=%d", index)
+		end
+		seenOperationIds[spendRecord.operationId] = true
 	end
 
 	return true, nil
@@ -902,6 +951,17 @@ function GiantRealmSaveSchema.SerializeResourceAwardSaveRecord(state: any): Reso
 	}
 end
 
+function GiantRealmSaveSchema.SerializeResourceSpendSaveRecord(state: any): ResourceSpendSaveRecord
+	return {
+		operationId = state.operationId,
+		spendKind = state.spendKind,
+		spentAt = state.spentAt,
+		essence = state.essence,
+		wood = state.wood,
+		stone = state.stone,
+	}
+end
+
 function GiantRealmSaveSchema.SerializeResourceLedgerRecord(state: any): ResourceLedgerSaveRecord?
 	if state == nil then
 		return nil
@@ -914,27 +974,45 @@ function GiantRealmSaveSchema.SerializeResourceLedgerRecord(state: any): Resourc
 			wood = if isFiniteNumber(state.wood) and state.wood >= 0 then state.wood else 0,
 			stone = if isFiniteNumber(state.stone) and state.stone >= 0 then state.stone else 0,
 			recentAwards = {},
+			recentSpends = {},
 		}
 	end
 
-	local records = {}
+	local awardRecords = {}
 	for _, award in ipairs(awardEntries) do
 		if type(award) == "table" then
-			table.insert(records, GiantRealmSaveSchema.SerializeResourceAwardSaveRecord(award))
+			table.insert(awardRecords, GiantRealmSaveSchema.SerializeResourceAwardSaveRecord(award))
 		end
 	end
-	table.sort(records, function(a: ResourceAwardSaveRecord, b: ResourceAwardSaveRecord): boolean
+	table.sort(awardRecords, function(a: ResourceAwardSaveRecord, b: ResourceAwardSaveRecord): boolean
 		if a.awardedAt == b.awardedAt then
 			return a.operationId < b.operationId
 		end
 		return a.awardedAt < b.awardedAt
 	end)
 
+	local spendEntries = state.recentSpends
+	local spendRecords = {}
+	if type(spendEntries) == "table" then
+		for _, spend in ipairs(spendEntries) do
+			if type(spend) == "table" then
+				table.insert(spendRecords, GiantRealmSaveSchema.SerializeResourceSpendSaveRecord(spend))
+			end
+		end
+	end
+	table.sort(spendRecords, function(a: ResourceSpendSaveRecord, b: ResourceSpendSaveRecord): boolean
+		if a.spentAt == b.spentAt then
+			return a.operationId < b.operationId
+		end
+		return a.spentAt < b.spentAt
+	end)
+
 	return {
 		essence = if isFiniteNumber(state.essence) and state.essence >= 0 then state.essence else 0,
 		wood = if isFiniteNumber(state.wood) and state.wood >= 0 then state.wood else 0,
 		stone = if isFiniteNumber(state.stone) and state.stone >= 0 then state.stone else 0,
-		recentAwards = records,
+		recentAwards = awardRecords,
+		recentSpends = spendRecords,
 	}
 end
 

@@ -73,6 +73,47 @@ do
 end
 
 do
+	local amounts = GiantRealmResourceState.ComputeAwardAmounts(
+		GiantRealmResourceState.SourceKinds.ShrineTributeTick,
+		{ generatedAmount = 4 },
+		1
+	)
+	assertTrue(amounts.accepted, "shrine tribute accepted")
+	assertEqual(amounts.essence, 2, "shrine tribute essence half rounded")
+end
+
+do
+	local amounts = GiantRealmResourceState.ComputeAwardAmounts(
+		GiantRealmResourceState.SourceKinds.RescueContractDefenseFailure,
+		{},
+		1
+	)
+	assertTrue(amounts.accepted, "rescue defense failure accepted")
+	assertEqual(amounts.essence, 4, "rescue defense essence")
+	assertEqual(amounts.wood, 2, "rescue defense wood")
+	assertEqual(amounts.stone, 2, "rescue defense stone")
+end
+
+do
+	local ledger = GiantRealmResourceState.CreateEmptyLedger()
+	ledger.wood = 20
+	ledger.stone = 10
+
+	local spent = GiantRealmResourceState.ApplySpend(ledger, {
+		operationId = "structure-spend-1",
+		spendKind = GiantRealmResourceState.SpendKinds.StructurePlacement,
+		spentAt = 2,
+		essence = 0,
+		wood = 12,
+		stone = 8,
+	})
+	assertTrue(spent.accepted, "structure spend accepted")
+	assertEqual(spent.ledger.wood, 8, "ledger wood after spend")
+	assertEqual(spent.ledger.stone, 2, "ledger stone after spend")
+	assertEqual(#spent.ledger.recentSpends, 1, "recent spend count")
+end
+
+do
 	local reconciled = GiantRealmResourceState.ReconcileLedger({
 		essence = 12,
 		wood = 3,

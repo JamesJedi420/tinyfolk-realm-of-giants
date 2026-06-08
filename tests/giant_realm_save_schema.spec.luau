@@ -89,6 +89,7 @@ type ResourceLedgerSaveRecord = {
 	wood: number,
 	stone: number,
 	recentAwards: { any },
+	recentSpends: { any },
 }
 
 local function assertEqual(actual: any, expected: any, label: string)
@@ -276,6 +277,16 @@ local function makeResourceLedgerRecord(): ResourceLedgerSaveRecord
 				wood = 6,
 				stone = 3,
 				counterpartyUserId = 202,
+			},
+		},
+		recentSpends = {
+			{
+				operationId = "structure-spend:9402:GiantStructure_Runtime_A:10",
+				spendKind = "structure_placement",
+				spentAt = 50,
+				essence = 0,
+				wood = 12,
+				stone = 8,
 			},
 		},
 	}
