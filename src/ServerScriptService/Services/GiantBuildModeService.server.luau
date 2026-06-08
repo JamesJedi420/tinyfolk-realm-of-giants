@@ -9,6 +9,9 @@ local GiantBuildModeConfig: any
 local GiantStructureCatalog: any
 local GiantRealmSaveSchema: any
 local GiantRealmResourceState: any
+local GiantRealmTreasuryPresentation: any
+local GiantRealmTreasuryConfig: any
+local RoleConfig: any
 local ResourceFlowState: any
 local SnareTrapConfig: any
 local SnareTrapState: any
@@ -116,6 +119,9 @@ local function resolveDependencies()
 	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
 	GiantRealmSaveSchema = requireChildModule(giantRealm, "GiantRealmSaveSchema")
 	GiantRealmResourceState = requireChildModule(giantRealm, "GiantRealmResourceState")
+	GiantRealmTreasuryPresentation = requireChildModule(giantRealm, "GiantRealmTreasuryPresentation")
+	GiantRealmTreasuryConfig = requireChildModule(config, "GiantRealmTreasuryConfig")
+	RoleConfig = requireChildModule(config, "RoleConfig")
 	SnareTrapState = requireChildModule(giantRealm, "SnareTrapState")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
@@ -951,6 +957,64 @@ local function GetResourceLedgerSnapshot(): any
 	}
 end
 
+local function buildSessionTreasurySnapshot(): any
+	local sessionSnapshot = {
+		essenceStored = 0,
+		woodStored = 0,
+		stoneStored = 0,
+	}
+	if ResourceFlowState ~= nil and type(ResourceFlowState.GetSnapshot) == "function" then
+		local flowSnapshot = ResourceFlowState.GetSnapshot()
+		if type(flowSnapshot) == "table" then
+			if type(flowSnapshot.Wood) == "table" and type(flowSnapshot.Wood.Stored) == "number" then
+				sessionSnapshot.woodStored = flowSnapshot.Wood.Stored
+			end
+			if type(flowSnapshot.Stone) == "table" and type(flowSnapshot.Stone.Stored) == "number" then
+				sessionSnapshot.stoneStored = flowSnapshot.Stone.Stored
+			end
+		end
+	end
+	return sessionSnapshot
+end
+
+local function applyTreasuryProjectionToPlayer(player: any)
+	if GiantRealmTreasuryPresentation == nil or GiantRealmTreasuryConfig == nil or RoleConfig == nil then
+		return
+	end
+	if
+		type(player) ~= "table"
+		or type(player.GetAttribute) ~= "function"
+		or type(player.SetAttribute) ~= "function"
+	then
+		return
+	end
+	if player:GetAttribute("Role") ~= RoleConfig.Roles.Giant then
+		return
+	end
+	if type(realmOwnerUserId) == "number" and player.UserId ~= realmOwnerUserId then
+		return
+	end
+
+	local attributes = GiantRealmTreasuryConfig.Attributes
+	local model =
+		GiantRealmTreasuryPresentation.BuildHudModel(GetResourceLedgerSnapshot(), buildSessionTreasurySnapshot())
+	local updatedAt = os.clock()
+	player:SetAttribute(attributes.LedgerEssence, model.ledgerEssence)
+	player:SetAttribute(attributes.LedgerWood, model.ledgerWood)
+	player:SetAttribute(attributes.LedgerStone, model.ledgerStone)
+	player:SetAttribute(attributes.SessionEssence, model.sessionEssence)
+	player:SetAttribute(attributes.SessionWood, model.sessionWood)
+	player:SetAttribute(attributes.SessionStone, model.sessionStone)
+	player:SetAttribute(attributes.Summary, model.summary)
+	player:SetAttribute(attributes.UpdatedAt, updatedAt)
+end
+
+local function refreshTreasuryProjection()
+	for _, player in ipairs(Players:GetPlayers()) do
+		applyTreasuryProjectionToPlayer(player)
+	end
+end
+
 local function ApplyResourceAward(award: any): any
 	if GiantRealmResourceState == nil then
 		return { accepted = false, reason = "resource_state_unavailable" }
@@ -963,6 +1027,9 @@ local function ApplyResourceAward(award: any): any
 	end
 	if type(applyResult.ledger) == "table" then
 		resourceLedgerState = applyResult.ledger
+	end
+	if applyResult.duplicate ~= true then
+		refreshTreasuryProjection()
 	end
 	return applyResult
 end
@@ -1011,6 +1078,7 @@ local function ApplyResourceSpend(spend: any): any
 				reason = spendResult.reason,
 			}
 		)
+		refreshTreasuryProjection()
 	end
 	return spendResult
 end
@@ -1718,6 +1786,7 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 	end
 
 	realmOwnerUserId = root.ownerUserId
+	refreshTreasuryProjection()
 
 	return true, nil
 end
@@ -1743,6 +1812,10 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 }
 
 globalEnv._GiantBuildModeService_Registry = placedStructureById
+
+Players.PlayerAdded:Connect(function(player: Player)
+	applyTreasuryProjectionToPlayer(player)
+end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil

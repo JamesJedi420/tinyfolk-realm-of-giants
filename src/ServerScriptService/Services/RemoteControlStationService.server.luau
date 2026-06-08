@@ -79,6 +79,75 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		"RemoteControlStationState",
 		"../../ReplicatedStorage/Shared/GiantRealm/RemoteControlStationState"
 	)
+	local GiantRealmResourceState = resolveDependency(
+		GiantRealm,
+		"GiantRealmResourceState",
+		"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+	)
+
+	local function getGiantRealmResourceResolver(): any?
+		if
+			type(globalEnv._GiantRealmResourceResolver) == "table"
+			and type(globalEnv._GiantRealmResourceResolver.Create) == "function"
+		then
+			return globalEnv._GiantRealmResourceResolver.Create()
+		end
+
+		local ok, moduleValue = pcall(function()
+			return require("../../ServerScriptService/Services/GiantRealmResourceResolver")
+		end)
+		if not ok or type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+			return nil
+		end
+		return moduleValue.Create()
+	end
+
+	local function getBuildModeQueryApi(): any?
+		if type(globalEnv._GiantBuildModeService_QueryAPI) == "table" then
+			return globalEnv._GiantBuildModeService_QueryAPI
+		end
+		if type(_G) == "table" and type((_G :: any)._GiantBuildModeService_QueryAPI) == "table" then
+			return (_G :: any)._GiantBuildModeService_QueryAPI
+		end
+		return nil
+	end
+
+	local function awardDefendedRaidRoutePressure(
+		stationId: string,
+		routeId: string,
+		warningStartedAt: number,
+		at: number
+	)
+		local buildApi = getBuildModeQueryApi()
+		local ownerUserId = if type(buildApi) == "table" and type(buildApi.GetRealmOwnerUserId) == "function"
+			then buildApi.GetRealmOwnerUserId()
+			else nil
+		if type(ownerUserId) ~= "number" or ownerUserId <= 0 then
+			return
+		end
+
+		local resolver = getGiantRealmResourceResolver()
+		if resolver == nil or type(resolver.Resolve) ~= "function" then
+			return
+		end
+
+		pcall(resolver.Resolve, {
+			sourceKind = GiantRealmResourceState.SourceKinds.DefendedRaidRoutePressure,
+			operationId = string.format(
+				"realm-resource:defended-raid:%s:%s:%.6f",
+				stationId,
+				routeId,
+				warningStartedAt
+			),
+			ownerUserId = ownerUserId,
+			at = at,
+			metadata = {
+				stationId = stationId,
+				routeId = routeId,
+				warningStartedAt = warningStartedAt,
+			},
+		})
+	end
 
 	local stationStateById: { [string]: any } = {}
 	local stationPartById: { [string]: any } = {}
@@ -608,6 +677,9 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 				"remote route pressure accepted",
 				{ stationId = stationId, routeId = routeId, userId = player.UserId }
 			)
+			if type(result.record) == "table" and type(result.record.warningStartedAt) == "number" then
+				awardDefendedRaidRoutePressure(stationId, routeId, result.record.warningStartedAt, now())
+			end
 		end
 		return {
 			accepted = result.accepted,

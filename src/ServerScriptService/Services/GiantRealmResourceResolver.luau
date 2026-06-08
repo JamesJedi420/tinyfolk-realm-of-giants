@@ -9,6 +9,15 @@ local GiantRealmResourceState = if script ~= nil and script.Parent ~= nil
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState")
 
+local GiantRealmResourcePairHistoryState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("GiantRealmResourcePairHistoryState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourcePairHistoryState")
+
 local GiantRealmResourceResolver: any = {}
 
 local DEFAULT_PAIR_RETENTION_SECONDS = 300
@@ -46,7 +55,7 @@ local function defaultNow(): number
 end
 
 local function makePairKey(ownerUserId: number, counterpartyUserId: number, sourceKind: string): string
-	return string.format("%d|%d|%s", ownerUserId, counterpartyUserId, sourceKind)
+	return GiantRealmResourcePairHistoryState.BuildPairKey(ownerUserId, counterpartyUserId, sourceKind)
 end
 
 function GiantRealmResourceResolver.Create(deps: any?): any
@@ -85,7 +94,22 @@ function GiantRealmResourceResolver.Create(deps: any?): any
 		return getGlobalApi("_EventLogService_QueryAPI")
 	end
 
+	local function getPairHistoryStore(): any?
+		if type(depsAny.pairHistoryStore) == "table" then
+			return depsAny.pairHistoryStore
+		end
+		return getGlobalApi("_RealmResourcePairHistoryStore")
+	end
+
 	local function readPairCount(pairKey: string, at: number): number
+		local pairStore = getPairHistoryStore()
+		if type(pairStore) == "table" and type(pairStore.ReadPairCount) == "function" then
+			local ok, count = pcall(pairStore.ReadPairCount, pairKey, at)
+			if ok and type(count) == "number" then
+				return count
+			end
+		end
+
 		local history = pairHistoryByKey[pairKey]
 		if history == nil then
 			return 0
@@ -98,6 +122,11 @@ function GiantRealmResourceResolver.Create(deps: any?): any
 	end
 
 	local function writePairCount(pairKey: string, at: number, count: number)
+		local pairStore = getPairHistoryStore()
+		if type(pairStore) == "table" and type(pairStore.WritePairCount) == "function" then
+			pcall(pairStore.WritePairCount, pairKey, count, at)
+		end
+
 		pairHistoryByKey[pairKey] = {
 			count = count,
 			lastAt = at,
