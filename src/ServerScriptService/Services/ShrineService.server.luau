@@ -31,6 +31,18 @@ local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 local SHRINE_FOLDER_PATH = { "Map", "Stations" }
 local globalEnv: any = getfenv()
 
+local function resolveMaxEssenceTotal(shrineId: string): number
+	local multiplier = 1
+	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if type(upgradeApi) == "table" and type(upgradeApi.GetEssenceMaxCapacityMultiplier) == "function" then
+		local resolvedMultiplier = upgradeApi.GetEssenceMaxCapacityMultiplier(shrineId)
+		if type(resolvedMultiplier) == "number" and resolvedMultiplier > 0 then
+			multiplier = resolvedMultiplier
+		end
+	end
+	return math.max(1, math.floor(ShrineConfig.MaxEssenceTotal * multiplier + 0.5))
+end
+
 type ShrineState = {
 	shrineId: string,
 	part: BasePart,
@@ -329,7 +341,7 @@ local function validatePersistenceRecord(record: any): (boolean, string?)
 	if not isFiniteNumber(record.essenceTotal) or record.essenceTotal < 0 then
 		return false, "shrine_persistence_record_essence_total_invalid"
 	end
-	if record.essenceTotal > ShrineConfig.MaxEssenceTotal then
+	if record.essenceTotal > resolveMaxEssenceTotal(record.shrineId) then
 		return false, "shrine_persistence_record_essence_total_out_of_bounds"
 	end
 	if not isWholeNumber(record.tickCount) or record.tickCount < 0 then
@@ -387,7 +399,7 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 			resetShrineStateForPersistence(state)
 		else
 			state.isActive = record.isActive
-			state.essenceTotal = math.max(0, math.min(record.essenceTotal, ShrineConfig.MaxEssenceTotal))
+			state.essenceTotal = math.max(0, math.min(record.essenceTotal, resolveMaxEssenceTotal(shrineId)))
 			state.tickCount = record.tickCount
 			state.lastTickAt = record.lastTickAt
 			state.activatedByUserId = record.activatedByUserId
@@ -789,7 +801,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			shrineState.tickCount += 1
 			shrineState.lastTickAt = os.clock()
 
-			local remainingCapacity = ShrineConfig.MaxEssenceTotal - shrineState.essenceTotal
+			local maxEssenceTotal = resolveMaxEssenceTotal(shrineState.shrineId)
+			local remainingCapacity = maxEssenceTotal - shrineState.essenceTotal
 			local generatedAmount = math.min(ShrineConfig.EssencePerTick, math.max(0, remainingCapacity))
 			if generatedAmount <= 0 then
 				applyDebugAttributes(shrineState)
@@ -805,8 +818,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			)
 			awardShrineTributeTick(shrineState, generatedAmount, shrineState.lastTickAt)
 
-			if shrineState.essenceTotal >= ShrineConfig.MaxEssenceTotal then
-				shrineState.essenceTotal = ShrineConfig.MaxEssenceTotal
+			if shrineState.essenceTotal >= maxEssenceTotal then
+				shrineState.essenceTotal = maxEssenceTotal
 				applyDebugAttributes(shrineState)
 				debugLog(
 					string.format(

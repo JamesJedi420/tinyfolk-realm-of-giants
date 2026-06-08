@@ -244,6 +244,35 @@ local function GetProductionModifiers(worksiteId: string): any
 	return VillageWorksiteUpgradeState.ResolveProductionModifiers(level)
 end
 
+local function GetInTransitCapacityMultiplier(worksiteId: string): number
+	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId)
+	if worksiteKind == nil then
+		return 1
+	end
+	if
+		VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind) ~= VillageWorksiteUpgradeState.EffectKinds.Capacity
+	then
+		return 1
+	end
+	if
+		worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Warehouse
+		and worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Granary
+	then
+		return 1
+	end
+	local modifiers = VillageWorksiteUpgradeState.ResolveCapacityModifiers(GetUpgradeLevel(worksiteId))
+	return modifiers.inTransitMultiplier
+end
+
+local function GetEssenceMaxCapacityMultiplier(shrineId: string): number
+	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(shrineId)
+	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Shrine then
+		return 1
+	end
+	local modifiers = VillageWorksiteUpgradeState.ResolveCapacityModifiers(GetUpgradeLevel(shrineId))
+	return modifiers.essenceMaxMultiplier
+end
+
 local function BuildPersistenceState(): any
 	return VillageWorksiteUpgradeState.SerializePersistenceState(upgradeState)
 end
@@ -274,6 +303,8 @@ end)
 globalEnv._VillageWorksiteUpgradeService_QueryAPI = {
 	GetUpgradeLevel = GetUpgradeLevel,
 	GetProductionModifiers = GetProductionModifiers,
+	GetInTransitCapacityMultiplier = GetInTransitCapacityMultiplier,
+	GetEssenceMaxCapacityMultiplier = GetEssenceMaxCapacityMultiplier,
 	BuildPersistenceState = BuildPersistenceState,
 	ApplyPersistenceState = ApplyPersistenceState,
 	RequestUpgradeForTests = requestUpgrade,

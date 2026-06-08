@@ -1,6 +1,7 @@
 --!strict
 
 local StationConfig = require("../Config/StationConfig")
+local ShrineConfig = require("../Config/ShrineConfig")
 local VillageWorksiteUpgradeConfig = require("../Config/VillageWorksiteUpgradeConfig")
 
 local VillageWorksiteUpgradeState: any = {}
@@ -8,6 +9,14 @@ local VillageWorksiteUpgradeState: any = {}
 VillageWorksiteUpgradeState.WorksiteKinds = {
 	WorkStation = "work_station",
 	MiningStation = "mining_station",
+	Warehouse = "warehouse",
+	Granary = "granary",
+	Shrine = "shrine",
+}
+
+VillageWorksiteUpgradeState.EffectKinds = {
+	Production = "production",
+	Capacity = "capacity",
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -37,6 +46,32 @@ function VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId: string): st
 	end
 	if startsWithPrefix(worksiteId, StationConfig.MiningStationNamePrefix) then
 		return VillageWorksiteUpgradeState.WorksiteKinds.MiningStation
+	end
+	if startsWithPrefix(worksiteId, StationConfig.WarehouseNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.Warehouse
+	end
+	if startsWithPrefix(worksiteId, StationConfig.GranaryNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.Granary
+	end
+	if startsWithPrefix(worksiteId, ShrineConfig.ShrineNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.Shrine
+	end
+	return nil
+end
+
+function VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind: string): string?
+	if
+		worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.WorkStation
+		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.MiningStation
+	then
+		return VillageWorksiteUpgradeState.EffectKinds.Production
+	end
+	if
+		worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Warehouse
+		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Granary
+		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Shrine
+	then
+		return VillageWorksiteUpgradeState.EffectKinds.Capacity
 	end
 	return nil
 end
@@ -143,6 +178,20 @@ function VillageWorksiteUpgradeState.ResolveProductionModifiers(level: number): 
 		level = normalizedLevel,
 		perTickMultiplier = multipliers.perTick,
 		maxTotalMultiplier = multipliers.maxTotal,
+	}
+end
+
+function VillageWorksiteUpgradeState.ResolveCapacityModifiers(level: number): any
+	local normalizedLevel = if isFiniteNumber(level) and level >= 0
+		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
+		else 0
+	local multipliers = VillageWorksiteUpgradeConfig.CapacityMultipliersByLevel[normalizedLevel]
+		or VillageWorksiteUpgradeConfig.CapacityMultipliersByLevel[0]
+
+	return {
+		level = normalizedLevel,
+		inTransitMultiplier = multipliers.inTransit,
+		essenceMaxMultiplier = multipliers.essenceMax,
 	}
 end
 
