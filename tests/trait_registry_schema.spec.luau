@@ -1,6 +1,7 @@
 --!nocheck
 
 local TraitRegistrySchema = require("../src/ReplicatedStorage/Shared/Config/TraitRegistrySchema")
+local ReputationState = require("../src/ReplicatedStorage/Shared/Reputation/ReputationState")
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -96,6 +97,16 @@ do
 		1.05,
 		"builder trait score event modifier"
 	)
+end
+
+do
+	local reputationRecord, reason = TraitRegistrySchema.GetTraitRecord("Tinyfolk_Loadout_EvasiveMarker")
+	assertEqual(reason, nil, "reputation loadout trait lookup reason")
+	assertTrue(reputationRecord ~= nil, "reputation loadout trait exists")
+
+	local safe, safeReason = ReputationState.IsLoadoutSafeReputationTraitRecord(reputationRecord)
+	assertTrue(safe, "reputation loadout trait is loadout-safe")
+	assertEqual(safeReason, nil, "reputation loadout trait safety reason")
 end
 
 do
@@ -224,7 +235,7 @@ do
 	local duplicateRegistry = TraitRegistrySchema.GetAllTraitRecords()
 	table.insert(duplicateRegistry, TraitRegistrySchema.GetAllTraitRecords()[1])
 	local valid, reason = TraitRegistrySchema.ValidateTraitRegistry(duplicateRegistry)
-	assertInvalid(valid, reason, "trait_id_duplicate index=5", "duplicate trait id rejected")
+	assertInvalid(valid, reason, "trait_id_duplicate index=6", "duplicate trait id rejected")
 end
 
 do

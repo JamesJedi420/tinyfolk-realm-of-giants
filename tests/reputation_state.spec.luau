@@ -121,6 +121,63 @@ do
 end
 
 do
+	local profile = makeProfile()
+	local first = ReputationState.ApplyOutcome(profile, {
+		outcomeKind = ReputationState.OutcomeKinds.EscapeSuccess,
+		now = 2000,
+		operationId = "op-cooldown-1",
+		sourceKind = "escape",
+		sourceId = "Route_Cooldown_A",
+		difficulty = 1,
+		lootValue = 0,
+	})
+	local second = ReputationState.ApplyOutcome(first.profileData, {
+		outcomeKind = ReputationState.OutcomeKinds.EscapeSuccess,
+		now = 2010,
+		operationId = "op-cooldown-2",
+		sourceKind = "escape",
+		sourceId = "Route_Cooldown_B",
+		difficulty = 1,
+		lootValue = 0,
+	})
+
+	local sawCooldown = false
+	for _, update in ipairs(second.trackUpdates) do
+		if update.reason == "cooldown_active" then
+			sawCooldown = true
+		end
+	end
+	assertTrue(sawCooldown, "cooldown blocks repeated awards")
+end
+
+do
+	local profile = makeProfile()
+	local currentData = profile
+	local lastResult = nil
+
+	for index = 1, 16 do
+		lastResult = ReputationState.ApplyOutcome(currentData, {
+			outcomeKind = ReputationState.OutcomeKinds.EscapeSuccess,
+			now = 10000 + (index * 100),
+			operationId = string.format("op-daily-cap-%d", index),
+			sourceKind = "escape",
+			sourceId = string.format("Route_Daily_%d", index),
+			difficulty = 1,
+			lootValue = 0,
+		})
+		currentData = lastResult.profileData
+	end
+
+	local scoutDailyCapBlocked = false
+	for _, update in ipairs(lastResult.trackUpdates) do
+		if update.trackId == ReputationState.Tracks.Scout and update.reason == "daily_cap_reached" then
+			scoutDailyCapBlocked = true
+		end
+	end
+	assertTrue(scoutDailyCapBlocked, "daily cap blocks scout track awards")
+end
+
+do
 	local safeTrait = makeReputationTrait("Tinyfolk_Loadout_EvasiveMarker", true)
 	local unsafeTrait = makeReputationTrait("Tinyfolk_Loadout_EvasiveMarker", false)
 

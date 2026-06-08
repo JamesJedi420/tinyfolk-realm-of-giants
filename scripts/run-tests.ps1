@@ -34,6 +34,7 @@ $testFiles = @(
     'tests\giant_trait_state.spec.luau',
     'tests\role_loadout_state.spec.luau',
     'tests\reputation_state.spec.luau',
+    'tests\reputation_presentation.spec.luau',
     'tests\tinyfolk_tool_catalog_schema.spec.luau',
     'tests\tinyfolk_tool_loadout_state.spec.luau',
     'tests\tinyfolk_tool_loadout_service_runtime_entrypoint.spec.luau',

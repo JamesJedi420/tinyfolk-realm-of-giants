@@ -11,6 +11,15 @@ local EventStateOwnershipModel = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/GiantRealm/EventStateOwnershipModel")
 
+local ReputationState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Reputation")
+			:WaitForChild("ReputationState")
+	)
+	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -350,6 +359,23 @@ function ProfilePersistenceGateway.GetLoadedPlayerProfileData(player: any): Gate
 	end
 
 	return makeSuccess("GetLoadedPlayerProfileData", key, cloneTable(data))
+end
+
+function ProfilePersistenceGateway.GetLoadedPlayerReputationTitleIds(player: any): GatewayResult
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+	if not profileResult.ok then
+		return makeFailure(
+			"GetLoadedPlayerReputationTitleIds",
+			profileResult.reason or "player_profile_not_loaded",
+			profileResult.profileKey,
+			false
+		)
+	end
+
+	local titleIds = ReputationState.GetUnlockedCosmeticIds(profileResult.data)
+	return makeSuccess("GetLoadedPlayerReputationTitleIds", profileResult.profileKey, {
+		titleIds = titleIds,
+	})
 end
 
 function ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player: any, updater: any): GatewayResult
