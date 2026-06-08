@@ -1,6 +1,14 @@
 --!strict
 
 local ContainmentRewardResolver: any = {}
+local GiantRealmResourceState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("GiantRealmResourceState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState")
 local ReputationState = if script ~= nil and script.Parent ~= nil
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -216,6 +224,66 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		return reputationResult
 	end
 
+	local function getGiantRealmResourceResolver(): any?
+		if type(depsAny.resourceResolver) == "table" and type(depsAny.resourceResolver.Resolve) == "function" then
+			return depsAny.resourceResolver
+		end
+
+		local globalEnv: any = getfenv()
+		local cached = if type(globalEnv) == "table" then globalEnv._GiantRealmResourceResolverInstance else nil
+		if type(cached) == "table" and type(cached.Resolve) == "function" then
+			return cached
+		end
+
+		local moduleValue: any = nil
+		if script ~= nil and script.Parent ~= nil then
+			local ok, loaded = pcall(function()
+				return require(script.Parent:WaitForChild("GiantRealmResourceResolver"))
+			end)
+			if ok then
+				moduleValue = loaded
+			end
+		else
+			moduleValue = (require :: any)("./GiantRealmResourceResolver")
+		end
+		if type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+			return nil
+		end
+		local created = moduleValue.Create({
+			now = nowFn,
+			pairRetentionSeconds = pairRetentionSeconds,
+			eventLogApi = depsAny.eventLogApi,
+			ledgerApi = depsAny.ledgerApi,
+		})
+		if type(globalEnv) == "table" then
+			globalEnv._GiantRealmResourceResolverInstance = created
+		end
+		return created
+	end
+
+	local function awardRealmResources(metadata: any)
+		if metadata.rewardGranted ~= true and metadata.scoreAccepted ~= true then
+			return
+		end
+
+		local resourceResolver = getGiantRealmResourceResolver()
+		if resourceResolver == nil or type(resourceResolver.Resolve) ~= "function" then
+			return
+		end
+
+		pcall(resourceResolver.Resolve, {
+			sourceKind = GiantRealmResourceState.SourceKinds.ContainmentCustodyEnd,
+			operationId = string.format("realm-resource:%s", metadata.operationId),
+			ownerUserId = metadata.custodianUserId,
+			counterpartyUserId = metadata.targetUserId,
+			at = metadata.endedAt,
+			metadata = {
+				endReason = metadata.endReason,
+				contributionRatio = metadata.contributionRatio,
+			},
+		})
+	end
+
 	local function recordReputationLog(userId: number, metadata: any, reputationResult: any)
 		local eventLogApi = if type(depsAny.eventLogApi) == "table"
 			then depsAny.eventLogApi
@@ -366,6 +434,17 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		local scoreResult = requestScore(input.custodianUserId, endedAt, metadata)
 		local reputationResult = updateReputation(input.custodianUserId, metadata)
 		recordReputationLog(input.custodianUserId, metadata, reputationResult)
+		local rewardGranted = type(scoreResult) == "table" and scoreResult.accepted == true
+		awardRealmResources({
+			operationId = operationId,
+			custodianUserId = input.custodianUserId,
+			targetUserId = input.targetUserId,
+			endReason = endReason,
+			endedAt = endedAt,
+			contributionRatio = contributionRatio,
+			rewardGranted = rewardGranted,
+			scoreAccepted = rewardGranted,
+		})
 
 		local completedOk, completedResult = pcall(idempotencyStore.MarkCompleted, operationId)
 		if not completedOk or type(completedResult) ~= "table" or completedResult.accepted ~= true then

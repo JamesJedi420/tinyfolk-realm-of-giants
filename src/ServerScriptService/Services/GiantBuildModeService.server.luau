@@ -8,6 +8,7 @@ local STARTUP_WAIT_TIMEOUT_SECONDS = 10
 local GiantBuildModeConfig: any
 local GiantStructureCatalog: any
 local GiantRealmSaveSchema: any
+local GiantRealmResourceState: any
 local ResourceFlowState: any
 local SnareTrapConfig: any
 local SnareTrapState: any
@@ -35,6 +36,7 @@ type AcceptedStructurePlacementState = {
 local placedStructureById: { [string]: AcceptedStructurePlacementState? } = {}
 local snareTrapByTrapId: { [string]: any? } = {}
 local defenseEscapeOutcomes: { any } = {}
+local resourceLedgerState: any = nil
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastSnareTrapPlacementAtByUserId: { [number]: number? } = {}
 local snareTrapSequence = 0
@@ -100,6 +102,7 @@ local function resolveDependencies()
 	end
 	GiantStructureCatalog = requireChildModule(config, structureCatalogModuleName)
 	GiantRealmSaveSchema = requireChildModule(giantRealm, "GiantRealmSaveSchema")
+	GiantRealmResourceState = requireChildModule(giantRealm, "GiantRealmResourceState")
 	SnareTrapState = requireChildModule(giantRealm, "SnareTrapState")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
@@ -934,6 +937,90 @@ local function BuildDefenseHistoryState(): any
 	}
 end
 
+local function ensureResourceLedgerState(): any
+	if resourceLedgerState == nil then
+		resourceLedgerState = GiantRealmResourceState.CreateEmptyLedger()
+	end
+	return resourceLedgerState
+end
+
+local function BuildResourceLedgerState(): any
+	return ensureResourceLedgerState()
+end
+
+local function GetResourceLedgerSnapshot(): any
+	local ledger = ensureResourceLedgerState()
+	return {
+		essence = ledger.essence,
+		wood = ledger.wood,
+		stone = ledger.stone,
+		recentAwardCount = if type(ledger.recentAwards) == "table" then #ledger.recentAwards else 0,
+	}
+end
+
+local function ApplyResourceAward(award: any): any
+	if GiantRealmResourceState == nil then
+		return { accepted = false, reason = "resource_state_unavailable" }
+	end
+
+	local ledger = ensureResourceLedgerState()
+	local applyResult = GiantRealmResourceState.ApplyAward(ledger, award)
+	if type(applyResult) ~= "table" or applyResult.accepted ~= true then
+		return applyResult
+	end
+	if type(applyResult.ledger) == "table" then
+		resourceLedgerState = applyResult.ledger
+	end
+	return applyResult
+end
+
+local function getGiantRealmResourceResolver(): any?
+	local globalValue = globalEnv
+	if
+		type(globalValue._GiantRealmResourceResolver) == "table"
+		and type(globalValue._GiantRealmResourceResolver.Create) == "function"
+	then
+		return globalValue._GiantRealmResourceResolver.Create()
+	end
+
+	local ok, moduleValue = pcall(function()
+		return require(script.Parent:WaitForChild("GiantRealmResourceResolver"))
+	end)
+	if not ok or type(moduleValue) ~= "table" or type(moduleValue.Create) ~= "function" then
+		return nil
+	end
+	return moduleValue.Create()
+end
+
+local function awardDefenseEscapeResources(record: any, duplicate: boolean)
+	if duplicate == true then
+		return
+	end
+	if type(realmOwnerUserId) ~= "number" or realmOwnerUserId <= 0 then
+		return
+	end
+
+	local resolver = getGiantRealmResourceResolver()
+	if resolver == nil or type(resolver.Resolve) ~= "function" then
+		return
+	end
+
+	pcall(resolver.Resolve, {
+		sourceKind = GiantRealmResourceState.SourceKinds.DefenseEscapeOutcome,
+		operationId = string.format("realm-resource:%s", record.operationId),
+		ownerUserId = realmOwnerUserId,
+		counterpartyUserId = record.escapedUserId,
+		at = record.escapedAt,
+		metadata = {
+			lootValue = record.lootValue,
+			difficulty = record.difficulty,
+			sourceKind = record.sourceKind,
+			sourceId = record.sourceId,
+			routeId = record.routeId,
+		},
+	})
+end
+
 local function RecordEscapeDefenseOutcome(record: any): any
 	local valid, reason = GiantRealmSaveSchema.ValidateDefenseHistoryEscapeOutcomeRecord(record)
 	if not valid then
@@ -945,6 +1032,7 @@ local function RecordEscapeDefenseOutcome(record: any): any
 
 	for _, existing in ipairs(defenseEscapeOutcomes) do
 		if existing.operationId == record.operationId then
+			awardDefenseEscapeResources(record, true)
 			return {
 				accepted = true,
 				reason = "duplicate_operation",
@@ -958,6 +1046,8 @@ local function RecordEscapeDefenseOutcome(record: any): any
 	while #defenseEscapeOutcomes > DEFENSE_HISTORY_ESCAPE_LIMIT do
 		table.remove(defenseEscapeOutcomes, 1)
 	end
+
+	awardDefenseEscapeResources(record, false)
 
 	return {
 		accepted = true,
@@ -1359,7 +1449,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		emergencyReinforcementState,
 		shrinePersistenceState,
 		rescuePersistenceState,
-		BuildDefenseHistoryState()
+		BuildDefenseHistoryState(),
+		BuildResourceLedgerState()
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1445,6 +1536,12 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		end
 	end
 
+	if GiantRealmResourceState ~= nil then
+		resourceLedgerState = GiantRealmResourceState.ReconcileLedger(root.resourceLedger)
+	else
+		resourceLedgerState = nil
+	end
+
 	local structureIds = {}
 	for structureId in pairs(placedStructureById) do
 		table.insert(structureIds, structureId)
@@ -1477,6 +1574,8 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	ResetSnareTrapRechargeForTests = ResetSnareTrapRechargeForTests,
 	IsStructurePlaced = IsStructurePlaced,
 	RecordEscapeDefenseOutcome = RecordEscapeDefenseOutcome,
+	GetResourceLedgerSnapshot = GetResourceLedgerSnapshot,
+	ApplyResourceAward = ApplyResourceAward,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,
 }
