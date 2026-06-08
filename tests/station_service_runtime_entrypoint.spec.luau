@@ -213,6 +213,12 @@ local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Conf
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Config/SpecialistConfig"
+configFolder._Children["VillageWorksiteUpgradeConfig"] =
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
+
+local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
+giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
@@ -222,6 +228,7 @@ sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")

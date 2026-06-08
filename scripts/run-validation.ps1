@@ -103,8 +103,15 @@ else {
 $seleneExit = $LASTEXITCODE
 
 Write-Host "[validate] luau-lsp $($luauLspArgs -join ' ') $($targets -join ' ')"
-luau-lsp @luauLspArgs @targets
-$luauLspExit = $LASTEXITCODE
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+	luau-lsp @luauLspArgs @targets 2>&1 | Out-Host
+	$luauLspExit = $LASTEXITCODE
+}
+finally {
+	$ErrorActionPreference = $previousErrorActionPreference
+}
 
 $hasFailure = ($styluaExit -ne 0) -or ($seleneExit -ne 0) -or ($luauLspExit -ne 0)
 
