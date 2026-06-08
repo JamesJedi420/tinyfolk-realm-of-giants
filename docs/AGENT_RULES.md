@@ -36,8 +36,22 @@
 - Validation must run the most specific test command first, then broader relevant validation. When available, include typecheck, lint, unit tests, and affected integration tests. If validation fails, fix and rerun until clean or a real blocker is identified.
 - If validation cannot be run, state the exact command, the reason it could not run, and what evidence remains unverified. Do not claim completion without that caveat.
 - An issue is ready for review only when the implementation matches the issue boundary, edge cases are addressed or explicitly deferred, changed behavior is covered by tests, required docs are updated, validation passes, no unrelated scope is added, and the final diff is clean and explainable.
-- After the post-implementation pre-commit rule passes all required tests and validation, commit all in-boundary changes, then check out `master`. Do not commit or switch branches if any validation gate is failing or blocked.
-- After checkout to `master`, use Linear as the source of truth to determine the next issue to implement, then switch to planning mode and prepare a concise implementation plan formatted for handoff to an AI agent in another session. The handoff plan must include issue id/title, durable scope and constraints, relevant source-of-truth links or notes, expected implementation boundary, key files/tests/docs to inspect, validation commands, known risks, and explicit deferred work. Do not start coding the next issue in this planning step.
+- After the post-implementation pre-commit rule passes all required tests and validation, run the mandatory PR ship loop (`.cursor/rules/pr-ship-workflow.mdc`): commit on a slice branch, push, open a PR against `master`, babysit until CI is green, merge, and update Linear. Do not commit, push, or merge if any validation gate is failing or blocked.
+- After merge, check out `master`, pull latest, then use Linear as the source of truth to determine the next issue to implement.
+
+## Post-merge planning
+
+After merge and `git pull origin master`, prepare a concise implementation handoff plan only. Do not start coding the next issue in this step.
+
+The handoff plan must include:
+
+- Issue id/title and Linear link
+- Durable scope and constraints
+- Relevant source-of-truth links or notes (`docs/TIN-*`, tests, architecture)
+- Expected implementation boundary
+- Key files/tests/docs to inspect first
+- Validation commands
+- Known risks and explicit deferred work
 
 ## World Model Direction (for consistency)
 - Shared Tinyfolk world is the long-term social/economic base.

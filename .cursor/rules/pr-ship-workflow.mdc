@@ -1,0 +1,46 @@
+---
+description: Mandatory commit, PR, CI babysit, merge, and post-merge planning workflow
+alwaysApply: true
+---
+
+# PR ship workflow (mandatory)
+
+After implementation validation is clean, complete the full ship loop in the same session. Do not stop at "ready to commit."
+
+## 1. Commit
+
+- Create a feature branch for the active slice (e.g. `tin-64-giant-realm-resource-economy`).
+- Commit all in-boundary changes with a concise message focused on why.
+- Never commit secrets. Exclude unintended generated artifacts unless the slice requires them.
+
+## 2. Open PR
+
+- Push the branch: `git push -u origin HEAD`
+- Open a PR against `master` with `gh pr create`.
+- PR body must include: summary bullets, Linear issue id/link (TIN-###), validation commands run, and a test plan checklist.
+
+## 3. Babysit PR until CI is green
+
+- Use `gh pr checks` as the source of truth for PR-attached checks.
+- Triage review comments; fix in-scope failures; push scoped fixes; repeat until required checks pass.
+- Do not merge while checks are failing or unresolved blocking review remains.
+
+## 4. Merge
+
+- Merge when CI is green and the slice acceptance criteria are met (`gh pr merge`).
+- Update Linear: move the issue to **Done** and add a closure comment stating what shipped and how it was validated.
+
+## 5. Post-merge closeout
+
+```bash
+git checkout master
+git pull origin master
+```
+
+- Use Linear as source of truth for the next backlog slice.
+- Produce a concise implementation handoff plan only — do not start coding the next slice.
+- Handoff plan format: see **Post-merge planning** in `docs/AGENT_RULES.md`.
+
+## Blockers
+
+- If remote or CI is unavailable, still commit and open the PR; report what blocked babysit/merge and resume when infrastructure exists.
