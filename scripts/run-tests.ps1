@@ -41,6 +41,7 @@ $testFiles = @(
     'tests\containment_reward_resolver.spec.luau',
     'tests\giant_realm_resource_state.spec.luau',
     'tests\giant_realm_resource_resolver.spec.luau',
+    'tests\village_worksite_upgrade_state.spec.luau',
     'tests\capture_service_runtime_entrypoint.spec.luau',
     'tests\score_state.spec.luau',
     'tests\score_service_runtime_entrypoint.spec.luau',

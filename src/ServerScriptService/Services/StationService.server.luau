@@ -7,6 +7,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
+local GiantRealm = Shared:WaitForChild("GiantRealm")
+local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
@@ -37,6 +39,7 @@ local ATTRIBUTE_LAST_TICK_AT = "LastTickAt"
 local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
 local STATION_FOLDER_PATH = { "Map", "Stations" }
+local globalEnv: any = getfenv()
 
 type StationState = {
 	stationId: string,
@@ -60,6 +63,19 @@ end
 
 local function debugWarn(message: string)
 	warn(string.format("[StationService] %s", message))
+end
+
+local function getProductionModifiersForStation(stationId: string): any
+	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if type(upgradeApi) ~= "table" or type(upgradeApi.GetProductionModifiers) ~= "function" then
+		return VillageWorksiteUpgradeState.ResolveProductionModifiers(0)
+	end
+
+	local modifiers = upgradeApi.GetProductionModifiers(stationId)
+	if type(modifiers) ~= "table" then
+		return VillageWorksiteUpgradeState.ResolveProductionModifiers(0)
+	end
+	return modifiers
 end
 
 local function ensureRemotesFolder(): Folder
@@ -723,12 +739,22 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			stationState.tickCount += 1
 			stationState.lastTickAt = os.clock()
 
+			local modifiers = getProductionModifiersForStation(stationState.stationId)
+			local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number"
+				then modifiers.perTickMultiplier
+				else 1
+			local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
+				then modifiers.maxTotalMultiplier
+				else 1
+
 			local maxTotal = StationConfig.MaxWoodTotal
 			local perTick = StationConfig.WoodPerTick
 			if stationState.materialType == "Stone" then
 				maxTotal = StationConfig.MaxStoneTotal
 				perTick = StationConfig.StonePerTick
 			end
+			maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
+			perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
 
 			local materialSnapshot = stationState.materialType == "Stone"
 					and ResourceFlowState.GetMaterialSnapshot("Stone")

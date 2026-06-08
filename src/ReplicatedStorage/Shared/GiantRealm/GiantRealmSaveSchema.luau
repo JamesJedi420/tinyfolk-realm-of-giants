@@ -126,6 +126,17 @@ export type ResourceLedgerSaveRecord = {
 	recentSpends: { ResourceSpendSaveRecord },
 }
 
+export type WorksiteUpgradeSaveRecord = {
+	worksiteId: string,
+	worksiteKind: string,
+	level: number,
+	lastUpgradedAt: number,
+}
+
+export type WorksiteUpgradePersistenceSaveRecord = {
+	upgrades: { WorksiteUpgradeSaveRecord },
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -135,6 +146,7 @@ export type GiantRealmSaveRoot = {
 	rescuePersistence: RescuePersistenceSaveRecord?,
 	defenseHistory: DefenseHistorySaveRecord?,
 	resourceLedger: ResourceLedgerSaveRecord?,
+	worksiteUpgrades: WorksiteUpgradePersistenceSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -674,6 +686,51 @@ function GiantRealmSaveSchema.ValidateResourceLedgerRecord(record: any): (boolea
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateWorksiteUpgradeSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "worksite_upgrade_record_invalid"
+	end
+	if type(record.worksiteId) ~= "string" or record.worksiteId == "" then
+		return false, "worksite_upgrade_worksite_id_invalid"
+	end
+	if type(record.worksiteKind) ~= "string" or record.worksiteKind == "" then
+		return false, "worksite_upgrade_worksite_kind_invalid"
+	end
+	if not isFiniteNumber(record.level) or record.level < 0 or record.level > 3 then
+		return false, "worksite_upgrade_level_invalid"
+	end
+	if not isFiniteNumber(record.lastUpgradedAt) or record.lastUpgradedAt < 0 then
+		return false, "worksite_upgrade_last_upgraded_at_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "worksite_upgrade_persistence_invalid"
+	end
+	if type(record.upgrades) ~= "table" then
+		return false, "worksite_upgrade_persistence_upgrades_invalid"
+	end
+
+	local seenWorksiteIds: { [string]: boolean } = {}
+	for index, upgradeRecord in ipairs(record.upgrades) do
+		local valid, reason = GiantRealmSaveSchema.ValidateWorksiteUpgradeSaveRecord(upgradeRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "worksite_upgrade_record_invalid", index)
+		end
+		if seenWorksiteIds[upgradeRecord.worksiteId] then
+			return false, string.format("worksite_upgrade_worksite_id_duplicate index=%d", index)
+		end
+		seenWorksiteIds[upgradeRecord.worksiteId] = true
+	end
+
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -719,6 +776,12 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	local resourceValid, resourceReason = GiantRealmSaveSchema.ValidateResourceLedgerRecord(root.resourceLedger)
 	if not resourceValid then
 		return false, resourceReason
+	end
+
+	local worksiteUpgradeValid, worksiteUpgradeReason =
+		GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(root.worksiteUpgrades)
+	if not worksiteUpgradeValid then
+		return false, worksiteUpgradeReason
 	end
 
 	return true, nil
@@ -1016,6 +1079,31 @@ function GiantRealmSaveSchema.SerializeResourceLedgerRecord(state: any): Resourc
 	}
 end
 
+function GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(
+	state: any
+): WorksiteUpgradePersistenceSaveRecord?
+	if state == nil then
+		return nil
+	end
+	if type(state) ~= "table" or type(state.upgrades) ~= "table" then
+		return { upgrades = {} }
+	end
+
+	local records = {}
+	for _, record in ipairs(state.upgrades) do
+		if type(record) == "table" then
+			table.insert(records, {
+				worksiteId = record.worksiteId,
+				worksiteKind = record.worksiteKind,
+				level = record.level,
+				lastUpgradedAt = record.lastUpgradedAt,
+			})
+		end
+	end
+
+	return { upgrades = records }
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
@@ -1023,7 +1111,8 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	shrinePersistenceState: any?,
 	rescuePersistenceState: any?,
 	defenseHistoryState: any?,
-	resourceLedgerState: any?
+	resourceLedgerState: any?,
+	worksiteUpgradeState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -1034,6 +1123,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		rescuePersistence = nil,
 		defenseHistory = nil,
 		resourceLedger = nil,
+		worksiteUpgrades = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -1059,6 +1149,11 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	local resourceRecord = GiantRealmSaveSchema.SerializeResourceLedgerRecord(resourceLedgerState)
 	if resourceRecord ~= nil then
 		root.resourceLedger = resourceRecord
+	end
+
+	local worksiteUpgradeRecord = GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(worksiteUpgradeState)
+	if worksiteUpgradeRecord ~= nil then
+		root.worksiteUpgrades = worksiteUpgradeRecord
 	end
 
 	return root

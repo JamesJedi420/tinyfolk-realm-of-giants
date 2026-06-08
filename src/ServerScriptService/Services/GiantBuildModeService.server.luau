@@ -1529,6 +1529,14 @@ local function getRescueContractQueryApi(): any
 	return nil
 end
 
+local function getVillageWorksiteUpgradeQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._VillageWorksiteUpgradeService_QueryAPI) == "table" then
+		return globalValue._VillageWorksiteUpgradeService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -1564,6 +1572,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		rescuePersistenceState = rescueContractQueryApi.BuildPersistenceState()
 	end
 
+	local worksiteUpgradeState = nil
+	local villageUpgradeQueryApi = getVillageWorksiteUpgradeQueryApi()
+	if villageUpgradeQueryApi ~= nil then
+		if type(villageUpgradeQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "worksite_upgrade_build_persistence_missing"
+		end
+		worksiteUpgradeState = villageUpgradeQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
@@ -1571,7 +1588,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		shrinePersistenceState,
 		rescuePersistenceState,
 		BuildDefenseHistoryState(),
-		BuildResourceLedgerState()
+		BuildResourceLedgerState(),
+		worksiteUpgradeState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1661,6 +1679,27 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		resourceLedgerState = GiantRealmResourceState.ReconcileLedger(root.resourceLedger)
 	else
 		resourceLedgerState = nil
+	end
+
+	local villageUpgradeQueryApi = getVillageWorksiteUpgradeQueryApi()
+	if root.worksiteUpgrades ~= nil then
+		if villageUpgradeQueryApi == nil then
+			return false, "worksite_upgrade_query_api_missing"
+		end
+		if type(villageUpgradeQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "worksite_upgrade_apply_persistence_missing"
+		end
+
+		local appliedWorksiteUpgrades, worksiteUpgradeReason =
+			villageUpgradeQueryApi.ApplyPersistenceState(root.worksiteUpgrades)
+		if not appliedWorksiteUpgrades then
+			return false, worksiteUpgradeReason or "worksite_upgrade_apply_persistence_failed"
+		end
+	elseif villageUpgradeQueryApi ~= nil and type(villageUpgradeQueryApi.ApplyPersistenceState) == "function" then
+		local appliedWorksiteUpgrades, worksiteUpgradeReason = villageUpgradeQueryApi.ApplyPersistenceState(nil)
+		if not appliedWorksiteUpgrades then
+			return false, worksiteUpgradeReason or "worksite_upgrade_apply_persistence_failed"
+		end
 	end
 
 	local structureIds = {}
