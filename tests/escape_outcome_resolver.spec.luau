@@ -28,6 +28,7 @@ do
 	local profileCalls = 0
 	local defenseCalls = 0
 	local returnCalls = 0
+	local reputationLogEvents = {}
 	local profileData: any = {
 		schemaVersion = 1,
 		userId = 101,
@@ -85,6 +86,17 @@ do
 			assertEqual(player.UserId, 101, "return user")
 			return true
 		end,
+		eventLogApi = {
+			RecordEvent = function(category: string, message: string, severity: string, _at: number, metadata: any)
+				table.insert(reputationLogEvents, {
+					category = category,
+					message = message,
+					severity = severity,
+					metadata = metadata,
+				})
+				return { accepted = true, reason = "accepted" }
+			end,
+		},
 	})
 
 	local player = makePlayer(101)
@@ -114,6 +126,10 @@ do
 	assertEqual(returnCalls, 1, "return called once")
 	assertEqual(#profileData.escapeHistory, 1, "profile history appended")
 	assertEqual(profileData.escapeHistory[1].operationId, "op-escape-1", "profile history operation")
+	assertTrue(first.reputationAccepted, "reputation update accepted")
+	assertEqual(#reputationLogEvents, 1, "reputation log emitted")
+	assertEqual(reputationLogEvents[1].category, "reputation_update", "reputation log category")
+	assertEqual(reputationLogEvents[1].metadata.outcomeKind, "escape_success", "reputation log outcome kind")
 
 	local duplicate = resolver.Resolve({
 		operationId = "op-escape-1",
@@ -163,6 +179,7 @@ end
 do
 	local scoreCalls = 0
 	local profileCalls = 0
+	local reputationLogEvents = {}
 	local resolver = EscapeOutcomeResolver.Create({
 		scoreApi = {
 			RequestScoreEvent = function(_userId: number, _eventId: string, _at: number, _metadata: any): any
@@ -178,6 +195,12 @@ do
 		},
 		defenseHistoryApi = {
 			RecordEscapeDefenseOutcome = function(_record: any): any
+				return { accepted = true, reason = "accepted" }
+			end,
+		},
+		eventLogApi = {
+			RecordEvent = function(category: string, _message: string, _severity: string, _at: number, metadata: any)
+				table.insert(reputationLogEvents, { category = category, metadata = metadata })
 				return { accepted = true, reason = "accepted" }
 			end,
 		},
@@ -198,6 +221,8 @@ do
 	assertEqual(result.loot.value, 0, "missing loot api zero value")
 	assertEqual(scoreCalls, 1, "score still emitted")
 	assertEqual(profileCalls, 1, "profile attempted")
+	assertEqual(#reputationLogEvents, 1, "reputation log emitted on nonfatal profile failure")
+	assertEqual(reputationLogEvents[1].metadata.reputationAccepted, false, "reputation failure logged")
 
 	local duplicate = resolver.Resolve({
 		operationId = "op-profile-failure",

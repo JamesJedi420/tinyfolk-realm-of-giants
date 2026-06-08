@@ -1,17 +1,37 @@
 --!strict
 
 local EscapeOutcomeResolver: any = {}
+local ReputationState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Reputation")
+			:WaitForChild("ReputationState")
+	)
+	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
 
 local DEFAULT_PROFILE_HISTORY_LIMIT = 25
 local DEFAULT_BASE_REWARD_POINTS = 100
 local DEFAULT_LOOT_VALUE_MULTIPLIER = 10
 
 local function isFiniteNumber(value: any): boolean
-	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
 end
 
 local function isPositiveInteger(value: any): boolean
-	return isFiniteNumber(value) and value > 0 and value % 1 == 0
+	if not isFiniteNumber(value) then
+		return false
+	end
+	if value <= 0 then
+		return false
+	end
+	return value % 1 == 0
 end
 
 local function nonEmptyString(value: any): string?
@@ -21,7 +41,8 @@ local function nonEmptyString(value: any): string?
 	return nil
 end
 
-local function cloneValue(value: any): any
+local cloneValue: (value: any) -> any
+cloneValue = function(value: any): any
 	if type(value) ~= "table" then
 		return value
 	end
@@ -99,7 +120,7 @@ local function makeOperationId(input: any, nowAt: number): string?
 end
 
 local function makeMemoryIdempotencyStore(): any
-	local recordsByOperationId: { [string]: string } = {}
+	local recordsByOperationId: { [string]: string? } = {}
 	return {
 		TryBegin = function(operationId: any): any
 			local id = nonEmptyString(operationId)
@@ -151,7 +172,7 @@ local function appendBounded(list: any, entry: any, limit: number): { any }
 end
 
 function EscapeOutcomeResolver.Create(deps: any?): any
-	local depsAny = if type(deps) == "table" then deps else {}
+	local depsAny: any = if type(deps) == "table" then deps else {}
 	local nowFn = if type(depsAny.now) == "function" then depsAny.now else defaultNow
 	local idempotencyStore = if type(depsAny.idempotencyStore) == "table"
 		then depsAny.idempotencyStore
@@ -202,7 +223,7 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 		return result
 	end
 
-	local function updateProfile(player: any, entry: any): (boolean, string?)
+	local function updateProfile(player: any, entry: any, reputationInput: any): (boolean, string?, any)
 		local gateway = if type(depsAny.profileGateway) == "table"
 			then depsAny.profileGateway
 			else getGlobalApi("_ProfilePersistenceGateway_QueryAPI")
@@ -219,23 +240,62 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 		end
 
 		if type(gateway) ~= "table" or type(gateway.UpdateLoadedPlayerProfileData) ~= "function" then
-			return false, "profile_gateway_unavailable"
+			return false,
+				"profile_gateway_unavailable",
+				{
+					accepted = false,
+					reason = "profile_gateway_unavailable",
+					trackUpdates = {},
+					unlockUpdates = {},
+				}
 		end
+
+		local reputationResult: any = {
+			accepted = false,
+			reason = "profile_update_failed",
+			trackUpdates = {},
+			unlockUpdates = {},
+		}
 
 		local ok, result = pcall(gateway.UpdateLoadedPlayerProfileData, player, function(currentData: any): any
 			if type(currentData) ~= "table" then
 				return nil, "profile_data_invalid"
 			end
 			currentData.escapeHistory = appendBounded(currentData.escapeHistory, entry, DEFAULT_PROFILE_HISTORY_LIMIT)
+			reputationResult = ReputationState.ApplyOutcome(currentData, reputationInput, depsAny.traitRegistry)
+			currentData = reputationResult.profileData
 			return currentData
 		end)
 		if not ok or type(result) ~= "table" or result.ok ~= true then
 			return false,
 				if type(result) == "table" and type(result.reason) == "string"
 					then result.reason
-					else "profile_update_failed"
+					else "profile_update_failed",
+				reputationResult
 		end
-		return true, nil
+		return true, nil, reputationResult
+	end
+
+	local function recordReputationLog(userId: number, at: number, metadata: any, reputationResult: any)
+		local eventLogApi = if type(depsAny.eventLogApi) == "table"
+			then depsAny.eventLogApi
+			else getGlobalApi("_EventLogService_QueryAPI")
+		if type(eventLogApi) ~= "table" or type(eventLogApi.RecordEvent) ~= "function" then
+			return
+		end
+		pcall(eventLogApi.RecordEvent, "reputation_update", "Escape reputation processed", "info", at, {
+			userId = userId,
+			outcomeKind = ReputationState.OutcomeKinds.EscapeSuccess,
+			operationId = metadata.operationId,
+			sourceKind = metadata.sourceKind,
+			sourceId = metadata.sourceId,
+			trackUpdates = if type(reputationResult) == "table" then reputationResult.trackUpdates else {},
+			unlockUpdates = if type(reputationResult) == "table" then reputationResult.unlockUpdates else {},
+			reputationAccepted = if type(reputationResult) == "table" then reputationResult.accepted else false,
+			reputationReason = if type(reputationResult) == "table"
+				then reputationResult.reason
+				else "reputation_result_invalid",
+		})
 	end
 
 	local function recordDefense(entry: any): (boolean, string?)
@@ -260,7 +320,10 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			return false
 		end
 		local ok, result = pcall(depsAny.returnToHub, player)
-		return ok and result == true
+		if not ok then
+			return false
+		end
+		return result == true
 	end
 
 	function resolver.Resolve(input: any): any
@@ -340,7 +403,20 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			reward = reward,
 			loot = loot,
 		}
-		local profileUpdated, profileReason = updateProfile(input.player, profileEntry)
+		local reputationInput = {
+			outcomeKind = ReputationState.OutcomeKinds.EscapeSuccess,
+			now = nowAt,
+			operationId = operationId,
+			sourceKind = sourceKind,
+			sourceId = sourceId,
+			routeId = input.routeId,
+			endpointId = input.endpointId,
+			difficulty = difficulty,
+			lootValue = loot.value,
+		}
+		local profileUpdated, profileReason, reputationResult =
+			updateProfile(input.player, profileEntry, reputationInput)
+		recordReputationLog(userId, nowAt, metadata, reputationResult)
 		local defenseUpdated, defenseReason = recordDefense({
 			operationId = operationId,
 			escapedUserId = userId,
@@ -376,6 +452,12 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			scoreReason = if type(scoreResult) == "table" then scoreResult.reason else "score_result_invalid",
 			profileUpdated = profileUpdated,
 			profileReason = profileReason,
+			reputationAccepted = type(reputationResult) == "table" and reputationResult.accepted == true,
+			reputationReason = if type(reputationResult) == "table"
+				then reputationResult.reason
+				else "reputation_result_invalid",
+			reputationTrackUpdates = if type(reputationResult) == "table" then reputationResult.trackUpdates else {},
+			reputationUnlockUpdates = if type(reputationResult) == "table" then reputationResult.unlockUpdates else {},
 			defenseUpdated = defenseUpdated,
 			defenseReason = defenseReason,
 			lootTransferred = lootAccepted,

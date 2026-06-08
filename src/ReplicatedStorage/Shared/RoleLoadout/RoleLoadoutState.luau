@@ -2,6 +2,7 @@
 
 local TraitRegistrySchema = require("../Config/TraitRegistrySchema")
 local RoleLoadoutSchema = require("../Config/RoleLoadoutSchema")
+local ReputationState = require("../Reputation/ReputationState")
 
 local RoleLoadoutState: any = {}
 
@@ -86,6 +87,10 @@ local function getGiantUnlockedTraitSet(profileData: any): { [string]: boolean }
 	return unlockedSet
 end
 
+local function getReputationUnlockedTraitSet(profileData: any): { [string]: boolean }
+	return ReputationState.GetUnlockedLoadoutTraitSet(profileData)
+end
+
 local function isTraitTierAllowed(role: string, tier: any): boolean
 	local maxTier = RoleLoadoutSchema.GetMaxSelectableTier(role)
 	if type(maxTier) ~= "string" then
@@ -102,6 +107,14 @@ end
 local function isTraitUnlocked(profileData: any, role: string, traitRecord: any, traitId: string): boolean
 	if RoleLoadoutSchema.IsStarterUnlockSource(traitRecord.unlockSource) then
 		return true
+	end
+
+	if traitRecord.unlockSource == TraitRegistrySchema.UnlockSources.Reputation then
+		local safeForLoadout, _ = ReputationState.IsLoadoutSafeReputationTraitRecord(traitRecord)
+		if not safeForLoadout then
+			return false
+		end
+		return getReputationUnlockedTraitSet(profileData)[traitId] == true
 	end
 
 	if not RoleLoadoutSchema.IsProgressionUnlockSource(traitRecord.unlockSource) then

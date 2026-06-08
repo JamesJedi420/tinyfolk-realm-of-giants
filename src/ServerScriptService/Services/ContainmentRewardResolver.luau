@@ -1,6 +1,14 @@
 --!strict
 
 local ContainmentRewardResolver: any = {}
+local ReputationState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Reputation")
+			:WaitForChild("ReputationState")
+	)
+	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
 
 local DEFAULT_PAIR_RETENTION_SECONDS = 300
 
@@ -16,11 +24,23 @@ local VALID_END_REASONS = {
 local PAIR_MULTIPLIERS = { 1, 0.5, 0.25 }
 
 local function isFiniteNumber(value: any): boolean
-	return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	if type(value) ~= "number" then
+		return false
+	end
+	if value ~= value or value == math.huge or value == -math.huge then
+		return false
+	end
+	return true
 end
 
 local function isPositiveInteger(value: any): boolean
-	return isFiniteNumber(value) and value > 0 and value % 1 == 0
+	if not isFiniteNumber(value) then
+		return false
+	end
+	if value <= 0 then
+		return false
+	end
+	return value % 1 == 0
 end
 
 local function nonEmptyString(value: any): string?
@@ -45,7 +65,7 @@ local function defaultNow(): number
 end
 
 local function makeMemoryIdempotencyStore(): any
-	local recordsByOperationId: { [string]: string } = {}
+	local recordsByOperationId: { [string]: string? } = {}
 	return {
 		TryBegin = function(operationId: any): any
 			local id = nonEmptyString(operationId)
@@ -109,7 +129,7 @@ local function makePairKey(custodianUserId: number, targetUserId: number): strin
 end
 
 function ContainmentRewardResolver.Create(deps: any?): any
-	local depsAny = if type(deps) == "table" then deps else {}
+	local depsAny: any = if type(deps) == "table" then deps else {}
 	local nowFn = if type(depsAny.now) == "function" then depsAny.now else defaultNow
 	local pairRetentionSeconds = if isFiniteNumber(depsAny.pairRetentionSeconds)
 			and depsAny.pairRetentionSeconds > 0
@@ -118,7 +138,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 	local idempotencyStore = if type(depsAny.idempotencyStore) == "table"
 		then depsAny.idempotencyStore
 		else makeMemoryIdempotencyStore()
-	local pairHistoryByKey: { [string]: { count: number, lastAt: number } } = {}
+	local pairHistoryByKey: { [string]: { count: number, lastAt: number }? } = {}
 
 	local resolver: any = {}
 
@@ -145,6 +165,84 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			return { accepted = false, reason = "score_request_failed" }
 		end
 		return result
+	end
+
+	local function updateReputation(custodianUserId: number, metadata: any): any
+		local gateway = if type(depsAny.profileGateway) == "table"
+			then depsAny.profileGateway
+			else getGlobalApi("_ProfilePersistenceGateway_QueryAPI")
+		if type(gateway) ~= "table" or type(gateway.UpdateLoadedPlayerProfileData) ~= "function" then
+			return {
+				accepted = false,
+				reason = "profile_gateway_unavailable",
+				trackUpdates = {},
+				unlockUpdates = {},
+			}
+		end
+
+		local reputationResult: any = {
+			accepted = false,
+			reason = "profile_update_failed",
+			trackUpdates = {},
+			unlockUpdates = {},
+		}
+		local ok, result = pcall(gateway.UpdateLoadedPlayerProfileData, {
+			UserId = custodianUserId,
+		}, function(currentData: any): any
+			if type(currentData) ~= "table" then
+				return nil, "profile_data_invalid"
+			end
+			reputationResult = ReputationState.ApplyOutcome(currentData, {
+				outcomeKind = ReputationState.OutcomeKinds.ContainmentCustodyEnd,
+				now = metadata.endedAt,
+				operationId = metadata.operationId,
+				custodianUserId = metadata.custodianUserId,
+				targetUserId = metadata.targetUserId,
+				endReason = metadata.endReason,
+			}, depsAny.traitRegistry)
+			return reputationResult.profileData
+		end)
+		if not ok or type(result) ~= "table" or result.ok ~= true then
+			return {
+				accepted = false,
+				reason = if type(result) == "table" and type(result.reason) == "string"
+					then result.reason
+					else "profile_update_failed",
+				trackUpdates = reputationResult.trackUpdates or {},
+				unlockUpdates = reputationResult.unlockUpdates or {},
+			}
+		end
+
+		return reputationResult
+	end
+
+	local function recordReputationLog(userId: number, metadata: any, reputationResult: any)
+		local eventLogApi = if type(depsAny.eventLogApi) == "table"
+			then depsAny.eventLogApi
+			else getGlobalApi("_EventLogService_QueryAPI")
+		if type(eventLogApi) ~= "table" or type(eventLogApi.RecordEvent) ~= "function" then
+			return
+		end
+		pcall(
+			eventLogApi.RecordEvent,
+			"reputation_update",
+			"Containment reputation processed",
+			"info",
+			metadata.endedAt,
+			{
+				userId = userId,
+				outcomeKind = ReputationState.OutcomeKinds.ContainmentCustodyEnd,
+				operationId = metadata.operationId,
+				endReason = metadata.endReason,
+				targetUserId = metadata.targetUserId,
+				trackUpdates = if type(reputationResult) == "table" then reputationResult.trackUpdates else {},
+				unlockUpdates = if type(reputationResult) == "table" then reputationResult.unlockUpdates else {},
+				reputationAccepted = if type(reputationResult) == "table" then reputationResult.accepted else false,
+				reputationReason = if type(reputationResult) == "table"
+					then reputationResult.reason
+					else "reputation_result_invalid",
+			}
+		)
 	end
 
 	local function readPairCount(pairKey: string, endedAt: number): number
@@ -255,6 +353,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		writePairCount(pairKey, endedAt, nextPairCount)
 		local metadata = {
 			operationId = operationId,
+			custodianUserId = input.custodianUserId,
 			targetUserId = input.targetUserId,
 			endReason = endReason,
 			captureStartedAt = captureStartedAt,
@@ -265,6 +364,8 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			pairRewardCount = nextPairCount,
 		}
 		local scoreResult = requestScore(input.custodianUserId, endedAt, metadata)
+		local reputationResult = updateReputation(input.custodianUserId, metadata)
+		recordReputationLog(input.custodianUserId, metadata, reputationResult)
 
 		local completedOk, completedResult = pcall(idempotencyStore.MarkCompleted, operationId)
 		if not completedOk or type(completedResult) ~= "table" or completedResult.accepted ~= true then
@@ -295,6 +396,10 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			contributionRatio = contributionRatio,
 			pairRewardCount = nextPairCount,
 			endReason = endReason,
+			reputationAccepted = reputationResult.accepted == true,
+			reputationReason = reputationResult.reason,
+			reputationTrackUpdates = reputationResult.trackUpdates,
+			reputationUnlockUpdates = reputationResult.unlockUpdates,
 		}
 	end
 

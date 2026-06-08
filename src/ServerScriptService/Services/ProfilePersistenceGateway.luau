@@ -92,6 +92,13 @@ local function makeDefaultPlayerProfileData(userId: number): any
 	return {
 		schemaVersion = 1,
 		userId = userId,
+		reputationState = {
+			schemaVersion = 1,
+			byTrackId = {},
+			recentOutcomeAtByKey = {},
+			unlockedCosmeticIds = {},
+			unlockedLoadoutTraitIds = {},
+		},
 		giantTraitState = {
 			unlockedTraitIds = {},
 		},
@@ -112,6 +119,7 @@ end
 
 local function copyDefaultPlayerProfileData(data: any): any
 	local giantTraitState: any = data.giantTraitState
+	local reputationState: any = data.reputationState
 	local roleLoadoutState: any = data.roleLoadoutState
 	local tinyfolkToolLoadoutState: any = data.tinyfolkToolLoadoutState
 	local unlockedTraitIds = {}
@@ -160,9 +168,55 @@ local function copyDefaultPlayerProfileData(data: any): any
 		return copied
 	end
 
+	local function copyStringList(value: any): { string }
+		local copied = {}
+		if type(value) ~= "table" then
+			return copied
+		end
+		local seen: { [string]: boolean } = {}
+		for _, entry in ipairs(value) do
+			if type(entry) == "string" and entry ~= "" and seen[entry] ~= true then
+				seen[entry] = true
+				table.insert(copied, entry)
+			end
+		end
+		return copied
+	end
+
+	local cloneAny: (value: any) -> any
+	cloneAny = function(value: any): any
+		if type(value) ~= "table" then
+			return value
+		end
+		local copied = {}
+		for key, child in pairs(value) do
+			copied[key] = cloneAny(child)
+		end
+		return copied
+	end
+
 	return {
 		schemaVersion = data.schemaVersion,
 		userId = data.userId,
+		reputationState = {
+			schemaVersion = if type(reputationState) == "table"
+					and type(reputationState["schemaVersion"]) == "number"
+				then reputationState["schemaVersion"]
+				else 1,
+			byTrackId = if type(reputationState) == "table" and type(reputationState["byTrackId"]) == "table"
+				then cloneAny(reputationState["byTrackId"])
+				else {},
+			recentOutcomeAtByKey = if type(reputationState) == "table"
+					and type(reputationState["recentOutcomeAtByKey"]) == "table"
+				then cloneAny(reputationState["recentOutcomeAtByKey"])
+				else {},
+			unlockedCosmeticIds = copyStringList(
+				if type(reputationState) == "table" then reputationState["unlockedCosmeticIds"] else nil
+			),
+			unlockedLoadoutTraitIds = copyStringList(
+				if type(reputationState) == "table" then reputationState["unlockedLoadoutTraitIds"] else nil
+			),
+		},
 		giantTraitState = {
 			unlockedTraitIds = unlockedTraitIds,
 		},

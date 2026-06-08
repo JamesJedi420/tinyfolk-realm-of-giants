@@ -22,6 +22,13 @@ local function makeProfile(): any
 	return {
 		schemaVersion = 1,
 		userId = 7001,
+		reputationState = {
+			schemaVersion = 1,
+			byTrackId = {},
+			recentOutcomeAtByKey = {},
+			unlockedCosmeticIds = {},
+			unlockedLoadoutTraitIds = {},
+		},
 		giantTraitState = {
 			unlockedTraitIds = { "Giant_Loadout_ControlPulse" },
 		},
@@ -118,6 +125,42 @@ local registry = {
 		role = TraitRegistrySchema.Roles.Tinyfolk,
 		slotType = TraitRegistrySchema.SlotTypes.Passive,
 		category = TraitRegistrySchema.Categories.Traversal,
+	}),
+	makeTrait({
+		traitId = "Tinyfolk_Loadout_EvasiveMarker",
+		name = "Evasive Marker",
+		role = TraitRegistrySchema.Roles.Tinyfolk,
+		slotType = TraitRegistrySchema.SlotTypes.Support,
+		unlockSource = TraitRegistrySchema.UnlockSources.Reputation,
+		unlockOwner = TraitRegistrySchema.UnlockOwners and TraitRegistrySchema.UnlockOwners.PlayerProfile
+			or "playerProfile",
+		unlockTrackId = "Escapist",
+		unlockSourceId = nil,
+		tier = TraitRegistrySchema.Tiers.Common,
+		antiAbuseTags = {
+			TraitRegistrySchema.AntiAbuseTags.DuplicateTraitGuard,
+			TraitRegistrySchema.AntiAbuseTags.RoleSafeUse,
+			TraitRegistrySchema.AntiAbuseTags.ReputationGateGuard,
+		},
+	}),
+	makeTrait({
+		traitId = "Tinyfolk_Loadout_UnsafeRenown",
+		name = "Unsafe Renown",
+		role = TraitRegistrySchema.Roles.Tinyfolk,
+		slotType = TraitRegistrySchema.SlotTypes.Support,
+		unlockSource = TraitRegistrySchema.UnlockSources.Reputation,
+		unlockOwner = TraitRegistrySchema.UnlockOwners and TraitRegistrySchema.UnlockOwners.PlayerProfile
+			or "playerProfile",
+		unlockTrackId = "Escapist",
+		unlockSourceId = nil,
+		tier = TraitRegistrySchema.Tiers.Common,
+		antiAbuseTags = {
+			TraitRegistrySchema.AntiAbuseTags.DuplicateTraitGuard,
+			TraitRegistrySchema.AntiAbuseTags.ReputationGateGuard,
+		},
+		modifiers = {
+			scoreEventMultiplier = 1.1,
+		},
 	}),
 	makeTrait({
 		traitId = "Giant_Loadout_StoneHands",
@@ -258,6 +301,28 @@ do
 	assertEqual(defaultLoadout.passive_1, "Tinyfolk_Loadout_QuietStep", "default tinyfolk passive assignment")
 	assertEqual(defaultLoadout.active, "Tinyfolk_Loadout_TunnelDash", "default tinyfolk active assignment")
 	assertEqual(defaultLoadout.support, "Tinyfolk_Loadout_RescueLink", "default tinyfolk support assignment")
+end
+
+do
+	local profile = makeProfile()
+	profile.reputationState.unlockedLoadoutTraitIds = { "Tinyfolk_Loadout_EvasiveMarker" }
+	local transition = RoleLoadoutState.ResolveSelection(profile, {
+		requesterRole = "Tinyfolk",
+		selectedTraitIds = { "Tinyfolk_Loadout_EvasiveMarker" },
+	}, registry)
+	assertTrue(transition.accepted, "reputation loadout-safe trait accepted")
+	assertEqual(transition.selectedBySlot.support, "Tinyfolk_Loadout_EvasiveMarker", "reputation support slot assigned")
+end
+
+do
+	local profile = makeProfile()
+	profile.reputationState.unlockedLoadoutTraitIds = { "Tinyfolk_Loadout_UnsafeRenown" }
+	local transition = RoleLoadoutState.ResolveSelection(profile, {
+		requesterRole = "Tinyfolk",
+		selectedTraitIds = { "Tinyfolk_Loadout_UnsafeRenown" },
+	}, registry)
+	assertFalse(transition.accepted, "unsafe reputation trait rejected")
+	assertEqual(transition.reason, "trait_not_unlocked", "unsafe reputation trait reason")
 end
 
 print("role_loadout_state: all checks passed")

@@ -14,8 +14,8 @@ local function assertTrue(condition: boolean, label: string)
 end
 
 local function makeStore(config: any?): any
-	local configAny = if type(config) == "table" then config else {}
-	local records: { [string]: string } = {}
+	local configAny: any = if type(config) == "table" then config else {}
+	local records: { [string]: string? } = {}
 	local calls = {
 		tryBegin = 0,
 		markCompleted = 0,
@@ -88,10 +88,26 @@ local function resolveInput(overrides: any?): any
 end
 
 local scoreEvents = {}
+local reputationEvents = {}
 local store = makeStore()
 local resolver = ContainmentRewardResolver.Create({
 	idempotencyStore = store,
 	scoreApi = makeScoreApi(scoreEvents),
+	eventLogApi = {
+		RecordEvent = function(category: string, _message: string, _severity: string, _at: number, metadata: any)
+			table.insert(reputationEvents, {
+				category = category,
+				metadata = metadata,
+			})
+			return { accepted = true, reason = "accepted" }
+		end,
+	},
+	profileGateway = {
+		UpdateLoadedPlayerProfileData = function(_player: any, updater: any): any
+			local data = updater({ schemaVersion = 1, userId = 101 })
+			return { ok = type(data) == "table", reason = nil, data = data }
+		end,
+	},
 	now = function()
 		return 100
 	end,
@@ -108,6 +124,10 @@ assertEqual(#scoreEvents, 1, "first terminal resolve emits one score")
 assertEqual(scoreEvents[1].eventId, "containment_reward", "score event id")
 assertEqual(scoreEvents[1].metadata.endReason, "released", "score metadata end reason")
 assertEqual(store.calls.markCompleted, 1, "first terminal resolve completes idempotency")
+assertTrue(first.reputationAccepted, "first terminal resolve reputation accepted")
+assertEqual(#reputationEvents, 1, "first terminal resolve emits reputation log")
+assertEqual(reputationEvents[1].category, "reputation_update", "reputation log category")
+assertEqual(reputationEvents[1].metadata.outcomeKind, "containment_custody_end", "reputation log outcome kind")
 
 local duplicate = resolver.Resolve(resolveInput())
 assertTrue(duplicate.accepted, "duplicate completed accepted as no-op")
