@@ -221,8 +221,13 @@ sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
 
+local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
+giantRealmFolder._Children["GiantRealmResourceState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")

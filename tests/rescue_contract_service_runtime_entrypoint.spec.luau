@@ -112,6 +112,11 @@ addChild(
 	"../../ReplicatedStorage/Shared/GiantRealm/RescueContractQueueState"
 )
 addChild(giantRealmFolder, "GiantRealmSaveSchema", "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
+addChild(
+	giantRealmFolder,
+	"GiantRealmResourceState",
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
