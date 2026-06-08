@@ -49,6 +49,8 @@ type FlowSnapshot = {
 
 local ResourceFlowState = {}
 
+local globalEnv: any = getfenv()
+
 local TEST_STARTING_WOOD_STORED = 120
 local TEST_STARTING_STONE_STORED = 120
 
@@ -308,7 +310,21 @@ local function getMaxTransitForMaterial(material: MaterialName): number
 		return math.huge
 	end
 
-	return math.max(0, configured)
+	local multiplier = 1
+	local deliveryId = getDeliveryIdForMaterial(material)
+	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if
+		type(deliveryId) == "string"
+		and type(upgradeApi) == "table"
+		and type(upgradeApi.GetInTransitCapacityMultiplier) == "function"
+	then
+		local resolvedMultiplier = upgradeApi.GetInTransitCapacityMultiplier(deliveryId)
+		if type(resolvedMultiplier) == "number" and resolvedMultiplier > 0 then
+			multiplier = resolvedMultiplier
+		end
+	end
+
+	return math.max(0, math.floor(configured * multiplier + 0.5))
 end
 
 function ResourceFlowState.TransferProducedToInTransit(material: MaterialName, maxAmount: number): MaterialFlowSnapshot

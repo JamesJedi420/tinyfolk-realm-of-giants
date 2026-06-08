@@ -17,6 +17,28 @@ do
 	assertEqual(kind, VillageWorksiteUpgradeState.WorksiteKinds.WorkStation, "workstation kind")
 	local miningKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("MiningStation_A")
 	assertEqual(miningKind, VillageWorksiteUpgradeState.WorksiteKinds.MiningStation, "mining kind")
+	local warehouseKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Warehouse_A")
+	assertEqual(warehouseKind, VillageWorksiteUpgradeState.WorksiteKinds.Warehouse, "warehouse kind")
+	local granaryKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Granary_A")
+	assertEqual(granaryKind, VillageWorksiteUpgradeState.WorksiteKinds.Granary, "granary kind")
+	local shrineKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Shrine_A")
+	assertEqual(shrineKind, VillageWorksiteUpgradeState.WorksiteKinds.Shrine, "shrine kind")
+end
+
+do
+	local capacity = VillageWorksiteUpgradeState.ResolveCapacityModifiers(2)
+	assertEqual(capacity.inTransitMultiplier, 1.5, "capacity in-transit multiplier level 2")
+	assertEqual(capacity.essenceMaxMultiplier, 1.5, "capacity essence multiplier level 2")
+end
+
+do
+	local state = VillageWorksiteUpgradeState.CreateEmptyState()
+	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
+		worksiteId = "Warehouse_A",
+		at = 15,
+	})
+	assertTrue(result.accepted, "warehouse upgrade accepted")
+	assertEqual(result.cost.wood, 14, "warehouse level 1 wood cost")
 end
 
 do

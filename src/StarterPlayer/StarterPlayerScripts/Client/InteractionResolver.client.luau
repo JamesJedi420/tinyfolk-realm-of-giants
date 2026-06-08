@@ -14,6 +14,7 @@ local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
+local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -24,6 +25,7 @@ local WAREHOUSE_DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local UPGRADE_SELECT_REMOTE_NAME = "UpgradeBoardSelectRequest"
+local WORKSITE_UPGRADE_REMOTE_NAME = "VillageWorksiteUpgradeRequest"
 local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
 
 local INTERACT_KEY = Enum.KeyCode.F
@@ -37,6 +39,7 @@ local warehouseDeliverRemote = remotesFolder:WaitForChild(WAREHOUSE_DELIVER_REMO
 local escapeAttemptRemote = remotesFolder:WaitForChild(ESCAPE_ATTEMPT_REMOTE_NAME) :: RemoteEvent
 local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_REMOTE_NAME) :: RemoteEvent
 local upgradeSelectRemote = remotesFolder:WaitForChild(UPGRADE_SELECT_REMOTE_NAME) :: RemoteEvent
+local worksiteUpgradeRemote = remotesFolder:WaitForChild(WORKSITE_UPGRADE_REMOTE_NAME) :: RemoteEvent
 local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
@@ -54,6 +57,7 @@ type CandidateAction =
 	"escape_attempt"
 	| "construction_build"
 	| "upgrade_board_progress"
+	| "worksite_upgrade"
 	| "warehouse_deliver"
 	| "station_pickup_or_assign"
 	| "shrine_assign_worshipper"
@@ -72,6 +76,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	escape_attempt = 1,
 	construction_build = 2,
 	upgrade_board_progress = 3,
+	worksite_upgrade = 3,
 	warehouse_deliver = 4,
 	station_pickup_or_assign = 5,
 	shrine_assign_worshipper = 6,
@@ -127,6 +132,25 @@ local function chooseNextUpgradeId(): string?
 		end
 	end
 
+	return nil
+end
+
+local function resolveUpgradeableWorksiteId(partName: string): string?
+	if startsWithPrefix(partName, StationConfig.StationNamePrefix) then
+		return partName
+	end
+	if startsWithPrefix(partName, StationConfig.MiningStationNamePrefix) then
+		return partName
+	end
+	if startsWithPrefix(partName, StationConfig.WarehouseNamePrefix) then
+		return partName
+	end
+	if startsWithPrefix(partName, StationConfig.GranaryNamePrefix) then
+		return partName
+	end
+	if startsWithPrefix(partName, ShrineConfig.ShrineNamePrefix) then
+		return partName
+	end
 	return nil
 end
 
@@ -218,6 +242,21 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 					boardId = targetId,
 					upgradeId = nextUpgradeId,
 				},
+			})
+		end
+
+		if
+			isGiant
+			and resolveUpgradeableWorksiteId(targetId) ~= nil
+			and distance <= VillageWorksiteUpgradeConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "worksite_upgrade",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("worksite_upgrade"),
+				mode = "upgrade",
+				payload = targetId,
 			})
 		end
 
@@ -424,6 +463,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "upgrade_board_progress" then
 		upgradeSelectRemote:FireServer(candidate.payload)
+		return
+	end
+
+	if candidate.action == "worksite_upgrade" then
+		worksiteUpgradeRemote:FireServer(candidate.payload)
 		return
 	end
 
