@@ -11,6 +11,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1
 
 Headless Luau test scripts require `lune` to be installed and available on `PATH`.
 
+## GitHub Actions CI
+
+Pull requests and pushes to `master` run `.github/workflows/ci.yml`:
+
+1. Install pinned toolchain from `rokit.toml` (Rojo, StyLua, Selene, Lune)
+2. Install `luau-lsp` (typecheck)
+3. Regenerate `sourcemap.json`
+4. `bash scripts/run-validation.sh` — StyLua, Selene, luau-lsp on `src` + `tests`
+5. `bash scripts/run-tests.sh` — full Lune spec suite
+
+Local parity on Linux/macOS:
+
+```bash
+rokit install
+rojo sourcemap default.project.json -o sourcemap.json
+bash scripts/run-validation.sh
+bash scripts/run-tests.sh
+```
+
+`gh pr checks` reports CI status for the ship loop.
+
 ## Run lint and typecheck validation
 
 From the repo root, run:

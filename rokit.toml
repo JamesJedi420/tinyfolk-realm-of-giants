@@ -1,0 +1,8 @@
+# Pinned CLI toolchain for local dev and GitHub Actions CI.
+# Install: rokit install (requires https://github.com/rojo-rbx/rokit)
+
+[tools]
+rojo = "rojo-rbx/rojo@7.6.1"
+selene = "kampfkarren/selene@0.27.1"
+stylua = "JohnnyMorganz/StyLua@2.4.1"
+lune = "lune-org/lune@0.10.4"
