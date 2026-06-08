@@ -254,6 +254,25 @@ local function makeRescuePersistenceRecord(): RescuePersistenceSaveRecord
 	}
 end
 
+local function makeWorksiteUpgradePersistenceRecord(): any
+	return {
+		upgrades = {
+			{
+				worksiteId = "MiningStation_A",
+				worksiteKind = "mining_station",
+				level = 2,
+				lastUpgradedAt = 55,
+			},
+			{
+				worksiteId = "WorkStation_A",
+				worksiteKind = "work_station",
+				level = 1,
+				lastUpgradedAt = 45,
+			},
+		},
+	}
+end
+
 local function makeResourceLedgerRecord(): ResourceLedgerSaveRecord
 	return {
 		essence = 42,
@@ -531,6 +550,29 @@ local function run()
 		assertTrue(type(root.resourceLedger) == "table", "built root includes resource ledger")
 		assertEqual(root.resourceLedger.wood, 16, "built root resource wood")
 		assertValid("built root with resource ledger validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
+		local serialized =
+			GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(makeWorksiteUpgradePersistenceRecord())
+		assertEqual(#serialized.upgrades, 2, "serialized worksite upgrade count")
+		assertEqual(serialized.upgrades[1].worksiteId, "MiningStation_A", "serialized worksite order first")
+	end
+
+	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(
+			9402,
+			{},
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			makeWorksiteUpgradePersistenceRecord()
+		)
+		assertTrue(type(root.worksiteUpgrades) == "table", "built root includes worksite upgrades")
+		assertEqual(root.worksiteUpgrades.upgrades[1].level, 2, "built root worksite upgrade level")
+		assertValid("built root with worksite upgrades validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
 	end
 
 	do
