@@ -280,9 +280,8 @@ end
 
 do
 	giant.Character = makeCharacter(makePosition(1, 0, 0), 100)
-	for _ = 1, 2 do
-		runServiceAny.Heartbeat:Fire()
-	end
+	TinyfolkStatusService.ResolveNow(tinyfolk, 210)
+	TinyfolkStatusService.ResolveNow(tinyfolk, 211)
 	assertTrue(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanic), "near giant sustains panic state")
 	assertTrue(
 		type(tinyfolk:GetAttribute(TinyfolkStatusConfig.Attributes.FearPanicUntil)) == "number",
