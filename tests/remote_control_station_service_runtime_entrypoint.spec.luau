@@ -82,6 +82,11 @@ addChild(
 	"RemoteControlStationState",
 	"../../ReplicatedStorage/Shared/GiantRealm/RemoteControlStationState"
 )
+addChild(
+	giantRealmFolder,
+	"GiantRealmResourceState",
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+)
 
 local sharedFolder = makeNode("Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -148,6 +153,16 @@ end
 game = fakeGame
 local currentTime = 100
 local recordedEvents = {}
+local ledgerAwards = {}
+_G._GiantBuildModeService_QueryAPI = {
+	GetRealmOwnerUserId = function()
+		return 9402
+	end,
+	ApplyResourceAward = function(award: any): any
+		table.insert(ledgerAwards, award)
+		return { accepted = true, duplicate = false }
+	end,
+}
 _G._EventLogService_QueryAPI = {
 	RecordEvent = function(category: any, message: any, severity: any, timestamp: any, metadata: any): any
 		table.insert(recordedEvents, {
@@ -181,7 +196,9 @@ do
 	assertTrue(pressure.accepted, "Giant pressures in-zone route")
 	assertEqual(routePart._Attributes.RemoteBarrierState, "Warning", "route exposes warning barrier")
 	assertEqual(pressure.stationSnapshot.energy, 2, "pressure spends station energy")
-	assertEqual(recordedEvents[#recordedEvents].message, "remote route pressure accepted", "pressure emits event")
+	assertEqual(recordedEvents[#recordedEvents - 1].message, "remote route pressure accepted", "pressure emits event")
+	assertEqual(#ledgerAwards, 1, "pressure awards defended raid resources")
+	assertEqual(ledgerAwards[1].sourceKind, "defended_raid_route_pressure", "defended raid source kind")
 
 	currentTime = 101
 	assertTrue(RemoteControlStationService.isRouteRemoteBarrierActive("EscapeRoute_A"), "barrier becomes active")

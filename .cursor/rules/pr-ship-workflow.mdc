@@ -19,18 +19,35 @@ After implementation validation is clean, complete the full ship loop in the sam
 - Open a PR against `master` with `gh pr create`.
 - PR body must include: summary bullets, Linear issue id/link (TIN-###), validation commands run, and a test plan checklist.
 
-## 3. Babysit PR until CI is green
+## 3. Babysit PR until CI is green (always)
+
+This step is **mandatory in every implementation session** that opens a PR. Do not hand off with "CI pending" unless remote/CI is genuinely unavailable.
 
 - Use `gh pr checks` as the source of truth for PR-attached checks.
+- Confirm the PR base branch is `master` before babysitting (`gh pr view --json baseRefName`).
+- Watch pending checks: `gh pr checks --watch --fail-fast` (or poll until checks register).
 - Triage review comments; fix in-scope failures; push scoped fixes; repeat until required checks pass.
 - Do not merge while checks are failing or unresolved blocking review remains.
 
-## 4. Merge
+## 4. Merge (always when CI is green)
 
 - Merge when CI is green and the slice acceptance criteria are met (`gh pr merge`).
-- Update Linear: move the issue to **Done** and add a closure comment stating what shipped and how it was validated.
+- Prefer squash merge when the PR is a single focused slice unless repo convention says otherwise.
 
-## 5. Post-merge closeout
+## 5. Linear closeout (always after merge)
+
+Add a Linear comment on the active issue that includes:
+
+- What shipped (concise bullet list tied to the slice boundary)
+- How it was validated (commands run, CI result)
+- PR link
+
+Then update issue status:
+
+- Move to **Done** only when the **full issue boundary** is satisfied by the merged work.
+- If the issue still has out-of-scope or deferred follow-ups documented in slice kickoff docs, leave **In Progress** (or appropriate state) and note remaining scope in the comment.
+
+## 6. Post-merge closeout
 
 ```bash
 git checkout master

@@ -70,8 +70,10 @@ If validation cannot run, state the exact command, why, and what remains unverif
 7. **Ship** — always complete the mandatory loop in `.cursor/rules/pr-ship-workflow.mdc`:
    - commit on a slice branch
    - open PR against `master`
-   - babysit PR until CI is green
-   - merge PR and update Linear
+   - **always** babysit PR until CI is green (fix failures, re-push, repeat)
+   - **always** merge when CI is green and slice criteria are met
+   - **always** add a Linear comment (what shipped + validation + PR link)
+   - move Linear issue to **Done** only when the full issue boundary is satisfied
    - checkout `master`, pull, plan next implementation (no coding)
 
 Default branch: `master`.

@@ -117,4 +117,63 @@ do
 	assertEqual(result.wood, 2, "rescue defense failure wood")
 end
 
+do
+	local pairStore = {
+		_counts = {},
+		ReadPairCount = function(_self: any, pairKey: string, _at: number): number
+			return _self._counts[pairKey] or 0
+		end,
+		WritePairCount = function(_self: any, pairKey: string, count: number, _at: number): boolean
+			_self._counts[pairKey] = count
+			return true
+		end,
+	}
+	local storeLedger = GiantRealmResourceState.CreateEmptyLedger()
+	local storeResolver = GiantRealmResourceResolver.Create({
+		now = function()
+			return 300
+		end,
+		pairHistoryStore = pairStore,
+		ledgerApi = {
+			ApplyResourceAward = function(award: any): any
+				local result = GiantRealmResourceState.ApplyAward(storeLedger, award)
+				if type(result) == "table" and type(result.ledger) == "table" then
+					storeLedger = result.ledger
+				end
+				return result
+			end,
+		},
+	})
+	local first = storeResolver.Resolve({
+		sourceKind = GiantRealmResourceState.SourceKinds.DefenseEscapeOutcome,
+		operationId = "pair-store-op-1",
+		ownerUserId = 9402,
+		counterpartyUserId = 404,
+		metadata = { lootValue = 4, difficulty = 1 },
+	})
+	assertTrue(first.awardGranted, "pair store first award granted")
+	local second = storeResolver.Resolve({
+		sourceKind = GiantRealmResourceState.SourceKinds.DefenseEscapeOutcome,
+		operationId = "pair-store-op-2",
+		ownerUserId = 9402,
+		counterpartyUserId = 404,
+		metadata = { lootValue = 4, difficulty = 1 },
+	})
+	assertEqual(second.essence, math.floor((6 + 2) * 0.5 + 0.5), "pair store second award halved")
+end
+
+do
+	local defended = resolver.Resolve({
+		sourceKind = GiantRealmResourceState.SourceKinds.DefendedRaidRoutePressure,
+		operationId = "defended-raid-op-1",
+		ownerUserId = 9402,
+		metadata = {
+			stationId = "GiantControlStation_A",
+			routeId = "EscapeRoute_A",
+		},
+	})
+	assertTrue(defended.awardGranted, "defended raid resolve granted")
+	assertEqual(defended.essence, 3, "defended raid resolve essence")
+end
+
 print("giant_realm_resource_resolver.spec.luau: all checks passed")

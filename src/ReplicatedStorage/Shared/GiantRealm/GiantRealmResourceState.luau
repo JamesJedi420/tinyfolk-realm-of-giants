@@ -13,6 +13,7 @@ GiantRealmResourceState.SourceKinds = {
 	DefenseEscapeOutcome = "defense_escape_outcome",
 	ShrineTributeTick = "shrine_tribute_tick",
 	RescueContractDefenseFailure = "rescue_contract_defense_failure",
+	DefendedRaidRoutePressure = "defended_raid_route_pressure",
 }
 
 GiantRealmResourceState.SpendKinds = {
@@ -356,6 +357,41 @@ function GiantRealmResourceState.ComputeAwardAmounts(sourceKind: string, metadat
 		local essence = math.floor(4 * multiplier + 0.5)
 		local wood = math.floor(2 * multiplier + 0.5)
 		local stone = math.floor(2 * multiplier + 0.5)
+		if essence <= 0 and wood <= 0 and stone <= 0 then
+			return {
+				accepted = false,
+				reason = "award_amount_zero",
+				essence = 0,
+				wood = 0,
+				stone = 0,
+			}
+		end
+
+		return {
+			accepted = true,
+			reason = "accepted",
+			essence = essence,
+			wood = wood,
+			stone = stone,
+		}
+	end
+
+	if sourceKind == GiantRealmResourceState.SourceKinds.DefendedRaidRoutePressure then
+		local stationId = if type(metadata) == "table" then nonEmptyString(metadata.stationId) else nil
+		local routeId = if type(metadata) == "table" then nonEmptyString(metadata.routeId) else nil
+		if stationId == nil or routeId == nil then
+			return {
+				accepted = false,
+				reason = "defended_raid_metadata_invalid",
+				essence = 0,
+				wood = 0,
+				stone = 0,
+			}
+		end
+
+		local essence = math.floor(3 * multiplier + 0.5)
+		local wood = math.floor(2 * multiplier + 0.5)
+		local stone = math.floor(1 * multiplier + 0.5)
 		if essence <= 0 and wood <= 0 and stone <= 0 then
 			return {
 				accepted = false,

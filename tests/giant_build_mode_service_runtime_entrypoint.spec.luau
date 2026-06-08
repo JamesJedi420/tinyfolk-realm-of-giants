@@ -121,11 +121,15 @@ configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared
 configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
 configFolder._Children["SnareTrapConfig"] = "../../ReplicatedStorage/Shared/Config/SnareTrapConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
+configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
+configFolder._Children["GiantRealmTreasuryConfig"] = "../../ReplicatedStorage/Shared/Config/GiantRealmTreasuryConfig"
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["GiantRealmSaveSchema"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema"
 giantRealmFolder._Children["GiantRealmResourceState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+giantRealmFolder._Children["GiantRealmTreasuryPresentation"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmTreasuryPresentation"
 giantRealmFolder._Children["SnareTrapState"] = "../../ReplicatedStorage/Shared/GiantRealm/SnareTrapState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
@@ -152,11 +156,17 @@ escapeRoute.Position = { x = 100, y = 0, z = 100 }
 addChild(escapeRoutesFolder, "EscapeRoute_A", escapeRoute)
 addChild(mapFolder, "EscapeRoutes", escapeRoutesFolder)
 
+local playerAddedConnections: { (any) -> () } = {}
 local playerRemovingConnections: { (any) -> () } = {}
 local playersService: any = {
 	Name = "Players",
 	ClassName = "Players",
 	_playerList = {},
+	PlayerAdded = {
+		Connect = function(_signal: any, callback: (any) -> ())
+			table.insert(playerAddedConnections, callback)
+		end,
+	},
 	PlayerRemoving = {
 		Connect = function(_signal: any, callback: (any) -> ())
 			table.insert(playerRemovingConnections, callback)
