@@ -394,6 +394,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 			stoneInTransit = flowSnapshot.Stone.inTransit,
 			stoneStored = flowSnapshot.Stone.stored,
 			stoneUsable = flowSnapshot.Stone.usable,
+			foodInTransit = flowSnapshot.Food.inTransit,
+			foodStored = flowSnapshot.Food.stored,
+			foodUsable = flowSnapshot.Food.usable,
 		})
 		debugLog(
 			string.format(
@@ -416,6 +419,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 			stoneInTransit = flowSnapshot.Stone.inTransit,
 			stoneStored = flowSnapshot.Stone.stored,
 			stoneUsable = flowSnapshot.Stone.usable,
+			foodInTransit = flowSnapshot.Food.inTransit,
+			foodStored = flowSnapshot.Food.stored,
+			foodUsable = flowSnapshot.Food.usable,
 		})
 	end
 

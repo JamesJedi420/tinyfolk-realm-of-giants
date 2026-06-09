@@ -587,23 +587,17 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local assigned, assignReason = ensureInteractionSpecialistAssignment(player, stationState)
-	if not assigned then
-		rejectActivate(player, assignReason :: string)
-		return
-	end
-
-	local allowed, reason = validateActivationRequest(player, stationState)
-	if not allowed then
-		rejectActivate(player, reason :: string)
-		return
-	end
-
 	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
 	local maxHaulAmount = StationConfig.HaulTransferPerStepByMaterial[materialName]
 	if type(maxHaulAmount) == "number" and maxHaulAmount > 0 then
 		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
 		if beforeSnapshot.produced > 0 then
+			local haulAllowed, haulReason = validateActivationRequest(player, stationState, true)
+			if not haulAllowed then
+				rejectActivate(player, haulReason :: string)
+				return
+			end
+
 			local afterSnapshot = ResourceFlowState.TransferProducedToInTransit(materialName, maxHaulAmount)
 			if afterSnapshot.inTransit > beforeSnapshot.inTransit then
 				stationState.resourceTotal = afterSnapshot.produced
@@ -622,6 +616,18 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 				return
 			end
 		end
+	end
+
+	local assigned, assignReason = ensureInteractionSpecialistAssignment(player, stationState)
+	if not assigned then
+		rejectActivate(player, assignReason :: string)
+		return
+	end
+
+	local allowed, reason = validateActivationRequest(player, stationState)
+	if not allowed then
+		rejectActivate(player, reason :: string)
+		return
 	end
 
 	if stationState.isActive then
@@ -661,6 +667,7 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			essenceTotal = stationState.resourceTotal,
 			woodTotal = stationState.materialType == "Wood" and stationState.resourceTotal or 0,
 			stoneTotal = stationState.materialType == "Stone" and stationState.resourceTotal or 0,
+			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
 			woodProducedTotal = flowSnapshot.Wood.produced,
@@ -671,6 +678,10 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			stoneInTransitTotal = flowSnapshot.Stone.inTransit,
 			stoneStoredTotal = flowSnapshot.Stone.stored,
 			stoneUsableTotal = flowSnapshot.Stone.usable,
+			foodProducedTotal = flowSnapshot.Food.produced,
+			foodInTransitTotal = flowSnapshot.Food.inTransit,
+			foodStoredTotal = flowSnapshot.Food.stored,
+			foodUsableTotal = flowSnapshot.Food.usable,
 			warehouseId = flowSnapshot.deliveryPoints.warehouseId,
 			granaryId = flowSnapshot.deliveryPoints.granaryId,
 		})
@@ -688,6 +699,7 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			essenceTotal = stationState.resourceTotal,
 			woodTotal = stationState.materialType == "Wood" and stationState.resourceTotal or 0,
 			stoneTotal = stationState.materialType == "Stone" and stationState.resourceTotal or 0,
+			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
 			woodProducedTotal = flowSnapshot.Wood.produced,
@@ -698,6 +710,10 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			stoneInTransitTotal = flowSnapshot.Stone.inTransit,
 			stoneStoredTotal = flowSnapshot.Stone.stored,
 			stoneUsableTotal = flowSnapshot.Stone.usable,
+			foodProducedTotal = flowSnapshot.Food.produced,
+			foodInTransitTotal = flowSnapshot.Food.inTransit,
+			foodStoredTotal = flowSnapshot.Food.stored,
+			foodUsableTotal = flowSnapshot.Food.usable,
 			warehouseId = flowSnapshot.deliveryPoints.warehouseId,
 			granaryId = flowSnapshot.deliveryPoints.granaryId,
 		})
