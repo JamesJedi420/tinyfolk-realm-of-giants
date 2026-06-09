@@ -92,6 +92,7 @@ do
 	})
 	assertTrue(result.accepted, "farm upgrade accepted")
 	assertEqual(result.cost.wood, 9, "farm level 1 wood cost")
+	assertEqual(result.cost.food, 2, "farm level 1 food cost")
 end
 
 do

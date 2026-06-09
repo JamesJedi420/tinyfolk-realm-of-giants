@@ -118,6 +118,7 @@ local function spendUpgradeCost(ownerUserId: number, operationId: string, at: nu
 		essence = cost.essence,
 		wood = cost.wood,
 		stone = cost.stone,
+		food = cost.food,
 	})
 	if type(spendResult) ~= "table" or spendResult.accepted ~= true or spendResult.duplicate == true then
 		return {
@@ -137,7 +138,15 @@ end
 local function refundUpgradeCost(spentFrom: string?, operationId: string, at: number, cost: any)
 	local buildApi = getGiantBuildModeQueryApi()
 	if type(buildApi) == "table" and type(buildApi.RollbackWorksiteUpgradeSpend) == "function" then
-		buildApi.RollbackWorksiteUpgradeSpend(spentFrom, operationId, cost.essence, cost.wood, cost.stone, at)
+		buildApi.RollbackWorksiteUpgradeSpend(
+			spentFrom,
+			operationId,
+			cost.essence,
+			cost.wood,
+			cost.stone,
+			cost.food,
+			at
+		)
 		return
 	end
 
@@ -249,13 +258,14 @@ local function requestUpgrade(player: Player, worksiteId: any, at: number?, resp
 	})
 	debugLog(
 		string.format(
-			"Accepted VillageWorksiteUpgradeRequest userId=%d worksiteId=%s level=%d wood=%d stone=%d essence=%d",
+			"Accepted VillageWorksiteUpgradeRequest userId=%d worksiteId=%s level=%d wood=%d stone=%d essence=%d food=%d",
 			player.UserId,
 			worksiteId,
 			transition.level,
 			transition.cost.wood,
 			transition.cost.stone,
-			transition.cost.essence
+			transition.cost.essence,
+			transition.cost.food
 		)
 	)
 	return transition

@@ -23,9 +23,9 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[3] = { wood = 40, stone = 28, essence = 6 },
 	},
 	granary = {
-		[1] = { wood = 12, stone = 8, essence = 0 },
-		[2] = { wood = 22, stone = 16, essence = 0 },
-		[3] = { wood = 36, stone = 26, essence = 5 },
+		[1] = { wood = 12, stone = 8, essence = 0, food = 2 },
+		[2] = { wood = 22, stone = 16, essence = 0, food = 4 },
+		[3] = { wood = 36, stone = 26, essence = 5, food = 6 },
 	},
 	shrine = {
 		[1] = { wood = 10, stone = 6, essence = 4 },
@@ -33,14 +33,14 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[3] = { wood = 30, stone = 20, essence = 12 },
 	},
 	farm = {
-		[1] = { wood = 9, stone = 3, essence = 0 },
-		[2] = { wood = 18, stone = 9, essence = 0 },
-		[3] = { wood = 30, stone = 16, essence = 6 },
+		[1] = { wood = 9, stone = 3, essence = 0, food = 2 },
+		[2] = { wood = 18, stone = 9, essence = 0, food = 4 },
+		[3] = { wood = 30, stone = 16, essence = 6, food = 6 },
 	},
 	pen = {
-		[1] = { wood = 11, stone = 5, essence = 0 },
-		[2] = { wood = 20, stone = 12, essence = 0 },
-		[3] = { wood = 32, stone = 20, essence = 5 },
+		[1] = { wood = 11, stone = 5, essence = 0, food = 2 },
+		[2] = { wood = 20, stone = 12, essence = 0, food = 4 },
+		[3] = { wood = 32, stone = 20, essence = 5, food = 6 },
 	},
 	guard_tower = {
 		[1] = { wood = 14, stone = 8, essence = 0 },

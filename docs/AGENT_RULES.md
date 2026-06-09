@@ -83,6 +83,7 @@ The handoff plan must include:
 - Workstation/farm interaction moves produced material to in-transit; warehouse/granary interaction moves in-transit to stored.
 - Essence is not hauled; Shrines produce Essence directly to Giant session pool.
 - Prototype construction spending must use stored Wood/Stone totals; construction sites may also spend stored Food when configured.
+- Farm, Granary, and Pen worksite upgrades may spend stored Food when configured in `VillageWorksiteUpgradeConfig`.
 - Produced and in-transit material totals are not spendable for construction.
 - Server-side services remain authoritative for interaction validation (role/range/cooldown/material checks).
 

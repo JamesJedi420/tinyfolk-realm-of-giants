@@ -201,6 +201,7 @@ function VillageWorksiteUpgradeState.ResolveUpgradeCost(worksiteKind: string, ta
 		wood = if isFiniteNumber(cost.wood) and cost.wood >= 0 then cost.wood else 0,
 		stone = if isFiniteNumber(cost.stone) and cost.stone >= 0 then cost.stone else 0,
 		essence = if isFiniteNumber(cost.essence) and cost.essence >= 0 then cost.essence else 0,
+		food = if isFiniteNumber(cost.food) and cost.food >= 0 then cost.food else 0,
 	}
 end
 
@@ -322,6 +323,7 @@ function VillageWorksiteUpgradeState.ResolveUpgrade(state: any, input: any): any
 			wood = costResult.wood,
 			stone = costResult.stone,
 			essence = costResult.essence,
+			food = costResult.food,
 		},
 		state = nextState,
 	}

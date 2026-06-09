@@ -28,7 +28,8 @@ function VillageWorksiteUpgradePresentation.BuildFeedbackModel(payload: any): an
 	if accepted and level ~= nil then
 		local costText = ""
 		if cost ~= nil then
-			costText = string.format(" (W%d S%d E%d)", cost.wood or 0, cost.stone or 0, cost.essence or 0)
+			costText =
+				string.format(" (W%d S%d E%d F%d)", cost.wood or 0, cost.stone or 0, cost.essence or 0, cost.food or 0)
 		end
 		return {
 			visible = true,

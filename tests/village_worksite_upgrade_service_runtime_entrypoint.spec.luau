@@ -156,4 +156,8 @@ assertEqual(#spendCalls, 1, "upgrade routes spend through build mode api")
 assertEqual(spendCalls[1].wood, 10, "workstation level 1 wood cost")
 assertEqual(responses[#responses].accepted, true, "upgrade response accepted")
 
+local farmResult = upgradeApi.RequestUpgradeForTests(giantPlayer, "Farm_A", 101, responseRemote)
+assertTrue(farmResult.accepted == true, "farm upgrade accepted")
+assertEqual(spendCalls[#spendCalls].food, 2, "farm upgrade routes food cost to spend api")
+
 print("village_worksite_upgrade_service_runtime_entrypoint: all checks passed")
