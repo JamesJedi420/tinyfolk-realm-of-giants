@@ -58,11 +58,19 @@ end
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
 addChild(configFolder, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
-addChild(configFolder, "VillageWorksiteUpgradeConfig", "../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig")
+addChild(
+	configFolder,
+	"VillageWorksiteUpgradeConfig",
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
+)
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
-addChild(giantRealmFolder, "VillageWorksiteUpgradeState", "../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState")
+addChild(
+	giantRealmFolder,
+	"VillageWorksiteUpgradeState",
+	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
