@@ -26,7 +26,7 @@ Use these markers consistently in design and implementation discussions:
 - Interaction resolution for current bounded surfaces is deterministic by priority, then distance, then target id.
 - Farm_A produces Food (Farmer-gated); Tinyfolk haul moves produced Food to in-transit; Granary_A stores in-transit Food.
 - Stored Wood/Stone totals are the current usable realm totals.
-- Prototype construction spending uses stored Wood/Stone only.
+- Prototype construction spending uses stored Wood/Stone and stored Food (Granary) where configured per site.
 - Produced and InTransit material totals are not spendable for construction.
 - Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
 - Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.

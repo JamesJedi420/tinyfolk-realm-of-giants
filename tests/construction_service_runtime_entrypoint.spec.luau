@@ -365,6 +365,14 @@ local siteStateById = _G._ConstructionService_SiteState
 assertTrue(type(siteStateById) == "table", "site state table exported")
 assertTrue(siteStateById["ConstructionSite_A"] ~= nil, "existing site-backed state still registered")
 
+local ResourceFlowState = require("../src/ServerScriptService/Services/ResourceFlowState")
+ResourceFlowState.AddStoredAtomic(
+	0,
+	0,
+	"construction_test_seed_food",
+	ConstructionConfig.CostBySiteId.ConstructionSite_A.food
+)
+
 local builder = makeAlivePlayer(9301, Vector3.new(12, 0, 12))
 buildRemote:FireServer(builder, "ConstructionSite_A")
 
@@ -372,6 +380,12 @@ local siteState = siteStateById["ConstructionSite_A"]
 assertTrue(siteState.isBuilt, "existing site-backed build mutation still works")
 assertEqual(siteState.buildCount, 1, "existing site-backed build count increments")
 assertEqual(siteState.lastBuiltByUserId, 9301, "existing site-backed build tracks builder")
+assertEqual(
+	constructionSitePart:GetAttribute("ConstructionCostFood"),
+	ConstructionConfig.CostBySiteId.ConstructionSite_A.food,
+	"construction site exposes food cost attribute"
+)
+assertEqual(ResourceFlowState.GetMaterialSnapshot("Food").stored, 0, "construction build spends stored food")
 
 -- TIN-197: district build mutation-path assertions.
 -- Use a separate player to avoid cooldown collision with the site builder above.
@@ -540,6 +554,13 @@ buildRemote:FireServer(taskBuilder, {
 assertTrue(taskBuilder:GetAttribute("ConstructionTaskActiveSiteId") == nil, "task cancel clears active site id")
 assertEqual(taskBuilder:GetAttribute("ConstructionTaskLastReason"), "canceled", "task cancel sets canceled reason")
 assertEqual(taskBuilder:GetAttribute("ConstructionTaskObjectiveState"), "idle", "task cancel sets idle objective state")
+
+ResourceFlowState.AddStoredAtomic(
+	0,
+	0,
+	"construction_test_seed_food_b",
+	ConstructionConfig.CostBySiteId.ConstructionSite_B.food
+)
 
 buildRemote:FireServer(taskBuilder, {
 	siteId = "ConstructionSite_B",

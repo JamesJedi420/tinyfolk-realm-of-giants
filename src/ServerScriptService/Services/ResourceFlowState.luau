@@ -421,22 +421,26 @@ end
 function ResourceFlowState.SpendStoredAtomic(
 	woodCost: number,
 	stoneCost: number,
-	reason: string
+	reason: string,
+	foodCost: number?
 ): (boolean, FlowSnapshot, string?)
 	if type(reason) ~= "string" or reason == "" then
 		return false, ResourceFlowState.GetSnapshot(), "invalid_reason"
 	end
 
-	if woodCost < 0 or stoneCost < 0 then
+	local resolvedFoodCost = if type(foodCost) == "number" then foodCost else 0
+
+	if woodCost < 0 or stoneCost < 0 or resolvedFoodCost < 0 then
 		return false, ResourceFlowState.GetSnapshot(), "negative_cost"
 	end
 
-	if woodCost == 0 and stoneCost == 0 then
+	if woodCost == 0 and stoneCost == 0 and resolvedFoodCost == 0 then
 		return false, ResourceFlowState.GetSnapshot(), "zero_cost"
 	end
 
 	local woodState = stateByMaterial.Wood
 	local stoneState = stateByMaterial.Stone
+	local foodState = stateByMaterial.Food
 
 	if woodState.stored < woodCost then
 		return false,
@@ -450,40 +454,58 @@ function ResourceFlowState.SpendStoredAtomic(
 			string.format("insufficient_stone required=%.0f stored=%.0f", stoneCost, stoneState.stored)
 	end
 
+	if foodState.stored < resolvedFoodCost then
+		return false,
+			ResourceFlowState.GetSnapshot(),
+			string.format("insufficient_food required=%.0f stored=%.0f", resolvedFoodCost, foodState.stored)
+	end
+
 	woodState.stored -= woodCost
 	stoneState.stored -= stoneCost
+	foodState.stored -= resolvedFoodCost
 	refreshDeliveryPointAttributes()
 
 	debugLog(
 		string.format(
-			"Spent stored reason=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+			"Spent stored reason=%s woodCost=%.0f stoneCost=%.0f foodCost=%.0f woodStored=%.0f stoneStored=%.0f foodStored=%.0f",
 			reason,
 			woodCost,
 			stoneCost,
+			resolvedFoodCost,
 			woodState.stored,
-			stoneState.stored
+			stoneState.stored,
+			foodState.stored
 		)
 	)
 
 	return true, ResourceFlowState.GetSnapshot(), nil
 end
 
-function ResourceFlowState.AddStoredAtomic(woodAmount: number, stoneAmount: number, reason: string): FlowSnapshot
+function ResourceFlowState.AddStoredAtomic(
+	woodAmount: number,
+	stoneAmount: number,
+	reason: string,
+	foodAmount: number?
+): FlowSnapshot
 	local safeWoodAmount = math.max(0, woodAmount)
 	local safeStoneAmount = math.max(0, stoneAmount)
+	local safeFoodAmount = if type(foodAmount) == "number" then math.max(0, foodAmount) else 0
 
 	stateByMaterial.Wood.stored += safeWoodAmount
 	stateByMaterial.Stone.stored += safeStoneAmount
+	stateByMaterial.Food.stored += safeFoodAmount
 	refreshDeliveryPointAttributes()
 
 	debugLog(
 		string.format(
-			"Restored stored reason=%s woodAmount=%.0f stoneAmount=%.0f woodStored=%.0f stoneStored=%.0f",
+			"Restored stored reason=%s woodAmount=%.0f stoneAmount=%.0f foodAmount=%.0f woodStored=%.0f stoneStored=%.0f foodStored=%.0f",
 			reason,
 			safeWoodAmount,
 			safeStoneAmount,
+			safeFoodAmount,
 			stateByMaterial.Wood.stored,
-			stateByMaterial.Stone.stored
+			stateByMaterial.Stone.stored,
+			stateByMaterial.Food.stored
 		)
 	)
 
