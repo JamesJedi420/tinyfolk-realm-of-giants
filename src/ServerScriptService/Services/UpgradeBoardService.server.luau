@@ -79,6 +79,8 @@ type HumanoidState = {
 	walkSpeed: number,
 }
 
+local globalEnv: any = getfenv()
+
 local boardPartById: { [string]: BasePart } = {}
 local giantUpgradeStateByUserId: { [number]: { [string]: boolean }? } = {}
 local giantResolvedEffectsByUserId: { [number]: GiantResolvedEffects? } = {}
@@ -778,5 +780,23 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	giantResolvedEffectsByUserId[player.UserId] = nil
 	GiantEssenceSession.RemoveSession(player.UserId)
 end)
+
+local function getUpgradeState(userId: number): { [string]: boolean }
+	return getOrCreateGiantUpgradeState(userId)
+end
+
+local function getProgressionStateForUser(userId: number): ProgressionState
+	return resolveProgressionState(getOrCreateGiantUpgradeState(userId))
+end
+
+local function getResolvedEffectsForUser(userId: number): GiantResolvedEffects
+	return resolveEffectValues(getOrCreateGiantUpgradeState(userId))
+end
+
+globalEnv._UpgradeBoardService_QueryAPI = {
+	GetUpgradeState = getUpgradeState,
+	GetProgressionState = getProgressionStateForUser,
+	GetResolvedEffects = getResolvedEffectsForUser,
+}
 
 debugLog("UpgradeBoardService initialized")
