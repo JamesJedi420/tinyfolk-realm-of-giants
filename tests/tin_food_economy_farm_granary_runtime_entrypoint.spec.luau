@@ -281,10 +281,7 @@ runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
 local afterProduce = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(afterProduce.produced >= StationConfig.FoodPerTick, "farm produces Food at station")
 assertEqual(afterProduce.inTransit, 0, "no Food in transit before haul")
-assertTrue(
-	farmPart:GetAttribute("FoodProducedTotal") == afterProduce.produced,
-	"farm part mirrors Food produced total"
-)
+assertTrue(farmPart:GetAttribute("FoodProducedTotal") == afterProduce.produced, "farm part mirrors Food produced total")
 
 activateRemote:FireServer(haulPlayer, "Farm_A")
 local afterHaul = ResourceFlowState.GetMaterialSnapshot("Food")
@@ -296,11 +293,7 @@ local afterDeliver = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(afterDeliver.stored > 0, "granary stores delivered Food")
 assertTrue(afterDeliver.inTransit < afterHaul.inTransit, "granary delivery clears in-transit Food")
 assertEqual(afterDeliver.lastDeliveredTo, StationConfig.DefaultGranaryId, "Food routes to Granary_A")
-assertEqual(
-	granaryPart:GetAttribute("FoodStoredTotal"),
-	afterDeliver.stored,
-	"granary part mirrors stored Food"
-)
+assertEqual(granaryPart:GetAttribute("FoodStoredTotal"), afterDeliver.stored, "granary part mirrors stored Food")
 assertEqual(afterDeliver.usable, afterDeliver.stored, "stored Food is usable total")
 
 print("tin_food_economy_farm_granary_runtime_entrypoint.spec.luau: all checks passed")
