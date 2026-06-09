@@ -270,6 +270,46 @@
                                         }
                      },
                      {
+                         "name":  "Marker_Pen_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.88,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.38,
+                                                          0.22,
+                                                          0.16
+                                                      ],
+                                            "Size":  [
+                                                         16,
+                                                         0.12,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             55,
+                                                             0.18,
+                                                             -88
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Pen_A / concurrent capture capacity",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "ScreenshotSoftened":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
                          "name":  "Marker_Farm_A",
                          "className":  "Part",
                          "properties":  {
