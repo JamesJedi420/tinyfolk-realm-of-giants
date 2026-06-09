@@ -28,6 +28,7 @@ Use these markers consistently in design and implementation discussions:
 - Stored Wood/Stone totals are the current usable realm totals.
 - Prototype construction spending uses stored Wood/Stone and stored Food (Granary) where configured per site.
 - Food-adjacent worksite upgrades (Farm, Granary, Pen) may spend stored Food from Granary alongside wood/stone/essence.
+- Pen_A rationing spends stored Food each interval while captives are held in custody (1 Food per captive per second in the prototype).
 - Produced and InTransit material totals are not spendable for construction.
 - Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
 - Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.
