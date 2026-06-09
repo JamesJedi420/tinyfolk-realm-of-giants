@@ -117,11 +117,12 @@ end
 closeButton.MouseButton1Click:Connect(hidePanel)
 
 UserInputService.InputBegan:Connect(function(input: any, gameProcessedEvent: boolean)
-	if gameProcessedEvent then
-		return
-	end
 	if input.KeyCode == Enum.KeyCode.Escape and panel.Visible then
 		hidePanel()
+		return
+	end
+	if gameProcessedEvent then
+		return
 	end
 end)
 

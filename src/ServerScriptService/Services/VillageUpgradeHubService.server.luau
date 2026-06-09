@@ -1,5 +1,6 @@
 --!strict
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -201,9 +202,16 @@ requestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	requestHub(player, payload, nil, responseRemote)
 end)
 
-globalEnv._VillageUpgradeHubService_QueryAPI = {
+local villageUpgradeHubQueryAPI = {
 	BuildHubSnapshotForPlayer = buildHubSnapshotForPlayer,
 	RequestHubForTests = requestHub,
 }
+
+globalEnv._VillageUpgradeHubService_QueryAPI = villageUpgradeHubQueryAPI
+_G._VillageUpgradeHubService_QueryAPI = villageUpgradeHubQueryAPI
+
+Players.PlayerRemoving:Connect(function(player: Player)
+	lastRequestAtByUserId[player.UserId] = nil
+end)
 
 debugLog("VillageUpgradeHubService initialized")

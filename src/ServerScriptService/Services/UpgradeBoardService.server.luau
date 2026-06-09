@@ -793,10 +793,13 @@ local function getResolvedEffectsForUser(userId: number): GiantResolvedEffects
 	return resolveEffectValues(getOrCreateGiantUpgradeState(userId))
 end
 
-globalEnv._UpgradeBoardService_QueryAPI = {
+local upgradeBoardQueryAPI = {
 	GetUpgradeState = getUpgradeState,
 	GetProgressionState = getProgressionStateForUser,
 	GetResolvedEffects = getResolvedEffectsForUser,
 }
+
+globalEnv._UpgradeBoardService_QueryAPI = upgradeBoardQueryAPI
+_G._UpgradeBoardService_QueryAPI = upgradeBoardQueryAPI
 
 debugLog("UpgradeBoardService initialized")
