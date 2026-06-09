@@ -13,8 +13,8 @@ Use these markers consistently in design and implementation discussions:
 ## Current Prototype (High Level)
 - Server-authoritative role, interaction, escape, and upgrade flows.
 - Primary interaction key is context-sensitive `F` for current bounded interaction surfaces.
-- Giant upgrade board progression is deterministic and ordered by configured sequence for the current prototype board.
-- Giant upgrade board interaction is next-step-only: `F` at a valid board advances only the next valid upgrade in sequence.
+- Giant upgrade board (`GiantUpgradeBoard_*`) opens a read-only village upgrade hub on `F`; board essence purchases are deprecated.
+- Giant vitality and locomotion effects derive from Shrine and Giant Dwelling worksite upgrade levels (`GiantEffect_*` player attributes).
 - Role selection is pre-spawn and server-authoritative.
 - First valid role selection wins for the session and locks role switching.
 - Deterministic shrine Essence generation and WorkStation_A Wood generation.

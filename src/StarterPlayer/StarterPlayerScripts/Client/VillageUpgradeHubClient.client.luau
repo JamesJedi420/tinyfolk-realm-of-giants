@@ -12,7 +12,9 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 local VillageUpgradeHubPresentation = require(GiantRealm:WaitForChild("VillageUpgradeHubPresentation"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
+local REQUEST_REMOTE_NAME = "VillageUpgradeHubRequest"
 local RESPONSE_REMOTE_NAME = "VillageUpgradeHubResponse"
+local WORKSITE_RESPONSE_REMOTE_NAME = "VillageWorksiteUpgradeResponse"
 
 local GUI_NAME = "VillageUpgradeHubGui"
 local PANEL_NAME = "Panel"
@@ -110,8 +112,22 @@ body.TextWrapped = true
 body.Text = ""
 body.Parent = panel
 
+local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
+local hubRequestRemote = remotesFolder:WaitForChild(REQUEST_REMOTE_NAME) :: RemoteEvent
+local responseRemote = remotesFolder:WaitForChild(RESPONSE_REMOTE_NAME) :: RemoteEvent
+local worksiteResponseRemote = remotesFolder:WaitForChild(WORKSITE_RESPONSE_REMOTE_NAME) :: RemoteEvent
+
+local lastBoardId: string? = nil
+
 local function hidePanel()
 	panel.Visible = false
+end
+
+local function requestHubRefresh()
+	if not panel.Visible or lastBoardId == nil then
+		return
+	end
+	hubRequestRemote:FireServer({ boardId = lastBoardId })
 end
 
 closeButton.MouseButton1Click:Connect(hidePanel)
@@ -127,6 +143,10 @@ UserInputService.InputBegan:Connect(function(input: any, gameProcessedEvent: boo
 end)
 
 local function renderSnapshot(snapshot: any)
+	if type(snapshot) == "table" and snapshot.accepted == true and type(snapshot.boardId) == "string" then
+		lastBoardId = snapshot.boardId
+	end
+
 	local model = VillageUpgradeHubPresentation.BuildPanelModel(snapshot)
 	panel.Visible = model.visible
 	title.Text = model.title
@@ -135,8 +155,13 @@ local function renderSnapshot(snapshot: any)
 	accent.BackgroundColor3 = toneColor(model.tone)
 end
 
-local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
-local responseRemote = remotesFolder:WaitForChild(RESPONSE_REMOTE_NAME) :: RemoteEvent
 responseRemote.OnClientEvent:Connect(function(payload: any)
 	renderSnapshot(payload)
+end)
+
+worksiteResponseRemote.OnClientEvent:Connect(function(payload: any)
+	if type(payload) ~= "table" or payload.accepted ~= true then
+		return
+	end
+	requestHubRefresh()
 end)
