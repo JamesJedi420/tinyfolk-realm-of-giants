@@ -14,7 +14,7 @@ local GiantHousingCapacityState = require(GiantRealm:WaitForChild("GiantHousingC
 local DWELLING_FOLDER_PATH = { "Map", "Stations" }
 local globalEnv: any = getfenv()
 
-local dwellingPartById: { [string]: BasePart } = {}
+local dwellingPartById: { [string]: BasePart? } = {}
 
 local function debugLog(message: string)
 	print(string.format("[GiantDwellingService] %s", message))
@@ -79,7 +79,7 @@ end
 
 local function registerDwellingPart(part: BasePart)
 	local dwellingId = part.Name
-	if dwellingPartById[dwellingId] ~= nil then
+	if dwellingPartById[dwellingId] then
 		return
 	end
 
@@ -94,9 +94,10 @@ local function registerDwellingsFromWorkspace()
 		return
 	end
 
-	for _, descendant in stationsRoot:GetDescendants() do
-		if descendant:IsA("BasePart") and shouldTrackDwellingPart(descendant) then
-			registerDwellingPart(descendant)
+	local stationsRootInstance = stationsRoot :: Instance
+	for _, descendant in stationsRootInstance:GetDescendants() do
+		if descendant:IsA("BasePart") and shouldTrackDwellingPart(descendant :: BasePart) then
+			registerDwellingPart(descendant :: BasePart)
 		end
 	end
 
@@ -109,7 +110,7 @@ local function GetGiantHousingCapacity(dwellingId: string): number
 	if not startsWithPrefix(dwellingId, StationConfig.GiantDwellingNamePrefix) then
 		return GiantHousingCapacityState.ResolvePublishedCapacity(GiantDwellingConfig.BaseGiantHousingCapacity, 1)
 	end
-	if dwellingPartById[dwellingId] == nil then
+	if not dwellingPartById[dwellingId] then
 		return GiantHousingCapacityState.ResolvePublishedCapacity(GiantDwellingConfig.BaseGiantHousingCapacity, 1)
 	end
 	return resolvePublishedHousingCapacity(dwellingId)
@@ -117,7 +118,7 @@ end
 
 local function GetDwellingSnapshot(dwellingId: string): any?
 	local part = dwellingPartById[dwellingId]
-	if part == nil then
+	if not part then
 		return nil
 	end
 
