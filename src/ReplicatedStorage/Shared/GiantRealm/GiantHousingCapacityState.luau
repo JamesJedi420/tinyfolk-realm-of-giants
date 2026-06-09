@@ -12,7 +12,10 @@ local function isFiniteNumber(value: any): boolean
 	return true
 end
 
-function GiantHousingCapacityState.ResolvePublishedCapacity(baseCapacity: number, housingCapacityMultiplier: number): number
+function GiantHousingCapacityState.ResolvePublishedCapacity(
+	baseCapacity: number,
+	housingCapacityMultiplier: number
+): number
 	local safeBase = if isFiniteNumber(baseCapacity) and baseCapacity > 0 then baseCapacity else 1
 	local multiplier = if isFiniteNumber(housingCapacityMultiplier) and housingCapacityMultiplier > 0
 		then housingCapacityMultiplier

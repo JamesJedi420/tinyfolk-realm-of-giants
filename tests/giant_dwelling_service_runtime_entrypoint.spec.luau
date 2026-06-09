@@ -50,10 +50,18 @@ end
 local configFolder = makeNode("Config")
 addChild(configFolder, "GiantDwellingConfig", "../../ReplicatedStorage/Shared/Config/GiantDwellingConfig")
 addChild(configFolder, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
-addChild(configFolder, "VillageWorksiteUpgradeConfig", "../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig")
+addChild(
+	configFolder,
+	"VillageWorksiteUpgradeConfig",
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
+)
 
 local giantRealmFolder = makeNode("GiantRealm")
-addChild(giantRealmFolder, "GiantHousingCapacityState", "../../ReplicatedStorage/Shared/GiantRealm/GiantHousingCapacityState")
+addChild(
+	giantRealmFolder,
+	"GiantHousingCapacityState",
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantHousingCapacityState"
+)
 addChild(
 	giantRealmFolder,
 	"VillageWorksiteUpgradeState",
