@@ -12,6 +12,7 @@ VillageWorksiteUpgradeState.WorksiteKinds = {
 	Warehouse = "warehouse",
 	Granary = "granary",
 	Shrine = "shrine",
+	Farm = "farm",
 }
 
 VillageWorksiteUpgradeState.EffectKinds = {
@@ -56,6 +57,9 @@ function VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId: string): st
 	if startsWithPrefix(worksiteId, ShrineConfig.ShrineNamePrefix) then
 		return VillageWorksiteUpgradeState.WorksiteKinds.Shrine
 	end
+	if startsWithPrefix(worksiteId, StationConfig.FarmNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.Farm
+	end
 	return nil
 end
 
@@ -63,6 +67,7 @@ function VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind: string): st
 	if
 		worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.WorkStation
 		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.MiningStation
+		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Farm
 	then
 		return VillageWorksiteUpgradeState.EffectKinds.Production
 	end

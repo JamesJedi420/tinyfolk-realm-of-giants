@@ -244,6 +244,7 @@ addChild(stationsFolder, "WorkStation_C", makeBasePart("WorkStation_C", 20, 0, 1
 addChild(stationsFolder, "MiningStation_A", makeBasePart("MiningStation_A", 14, 0, 10))
 addChild(stationsFolder, "Warehouse_A", makeBasePart("Warehouse_A", 30, 0, 10))
 addChild(stationsFolder, "Granary_A", makeBasePart("Granary_A", 35, 0, 10))
+addChild(stationsFolder, "Farm_A", makeBasePart("Farm_A", 40, 0, 10))
 addChild(mapFolder, "Stations", stationsFolder)
 addChild(workspaceService, "Map", mapFolder)
 
@@ -309,10 +310,18 @@ targetReassignPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 targetReassignPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.None)
 targetReassignPlayer:SetAttribute("SpecialistAssignedStationId", nil)
 
+local farmPlayer = makeAlivePlayer(7106, Vector3.new(40, 0, 10))
+farmPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+farmPlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Farmer)
+farmPlayer:SetAttribute("SpecialistAssignedStationId", "Farm_A")
+
 table.insert(playersList, legacyPlayer)
 table.insert(playersList, taskPlayer)
 table.insert(playersList, interactionAssignPlayer)
 table.insert(playersList, targetReassignPlayer)
+table.insert(playersList, farmPlayer)
+
+local VillageWorksiteUpgradeState = require("../src/ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState")
 
 local interactionAssignCalls: { any } = {}
 _G._SpecialistAssignmentService_QueryAPI = {
@@ -514,5 +523,21 @@ assertEqual(
 	"regressing",
 	"QTE failure applies disruption regression penalty"
 )
+
+_G._VillageWorksiteUpgradeService_QueryAPI = {
+	GetProductionModifiers = function(worksiteId: string)
+		if worksiteId == "Farm_A" then
+			return VillageWorksiteUpgradeState.ResolveProductionModifiers(2)
+		end
+		return VillageWorksiteUpgradeState.ResolveProductionModifiers(0)
+	end,
+}
+
+ResourceFlowState.ResetSession("farm_production_upgrade_test")
+activateRemote:FireServer(farmPlayer, "Farm_A")
+runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
+assertTrue(stationStateById["Farm_A"].resourceTotal >= 3, "farm upgrade level 2 scales food per tick to at least 3")
+local foodSnapshot = ResourceFlowState.GetMaterialSnapshot("Food")
+assertTrue(foodSnapshot.produced >= 3, "food flow receives scaled farm production")
 
 print("station_service_runtime_entrypoint: all checks passed")

@@ -32,6 +32,11 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[2] = { wood = 18, stone = 12, essence = 8 },
 		[3] = { wood = 30, stone = 20, essence = 12 },
 	},
+	farm = {
+		[1] = { wood = 9, stone = 3, essence = 0 },
+		[2] = { wood = 18, stone = 9, essence = 0 },
+		[3] = { wood = 30, stone = 16, essence = 6 },
+	},
 }
 
 VillageWorksiteUpgradeConfig.ProductionMultipliersByLevel = {

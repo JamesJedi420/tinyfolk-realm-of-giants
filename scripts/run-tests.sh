@@ -48,6 +48,7 @@ test_files=(
 	tests/village_worksite_upgrade_service_runtime_entrypoint.spec.luau
 	tests/village_worksite_upgrade_presentation.spec.luau
 	tests/village_worksite_upgrade_state.spec.luau
+	tests/resource_flow_food.spec.luau
 	tests/capture_service_runtime_entrypoint.spec.luau
 	tests/score_state.spec.luau
 	tests/score_service_runtime_entrypoint.spec.luau

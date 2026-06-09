@@ -50,6 +50,7 @@ local lastRequestAtByUserId: { [number]: number? } = {}
 local validSpecialistRoleSet: { [string]: boolean } = {
 	[SpecialistConfig.SpecialistRoles.Woodcutter] = true,
 	[SpecialistConfig.SpecialistRoles.Miner] = true,
+	[SpecialistConfig.SpecialistRoles.Farmer] = true,
 	[SpecialistConfig.SpecialistRoles.Worshipper] = true,
 }
 
@@ -57,6 +58,7 @@ local validPersistedSpecialistRoleSet: { [string]: boolean } = {
 	[SpecialistConfig.SpecialistRoles.None] = true,
 	[SpecialistConfig.SpecialistRoles.Woodcutter] = true,
 	[SpecialistConfig.SpecialistRoles.Miner] = true,
+	[SpecialistConfig.SpecialistRoles.Farmer] = true,
 	[SpecialistConfig.SpecialistRoles.Worshipper] = true,
 }
 
@@ -131,6 +133,7 @@ local function validateAssignedStationForRole(specialistRole: string, assignedSt
 	if
 		specialistRole == SpecialistConfig.SpecialistRoles.Woodcutter
 		or specialistRole == SpecialistConfig.SpecialistRoles.Miner
+		or specialistRole == SpecialistConfig.SpecialistRoles.Farmer
 	then
 		if type(assignedStationId) ~= "string" then
 			return false, "assigned_station_required_for_material_specialist"

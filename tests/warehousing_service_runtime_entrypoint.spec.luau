@@ -170,9 +170,11 @@ end
 
 local remotesFolder = makeNode("Remotes", "Folder", "ReplicatedStorage.Remotes")
 local deliverRemote = makeRemoteEvent("WarehouseDeliverRequest")
+local granaryDeliverRemote = makeRemoteEvent("GranaryDeliverRequest")
 local debugRequestRemote = makeRemoteEvent("WarehousingDebugStateRequest")
 local debugResponseRemote = makeRemoteEvent("WarehousingDebugStateResponse")
 addChild(remotesFolder, "WarehouseDeliverRequest", deliverRemote)
+addChild(remotesFolder, "GranaryDeliverRequest", granaryDeliverRemote)
 addChild(remotesFolder, "WarehousingDebugStateRequest", debugRequestRemote)
 addChild(remotesFolder, "WarehousingDebugStateResponse", debugResponseRemote)
 
@@ -242,6 +244,7 @@ if not loaded then
 end
 
 assertTrue(deliverRemote._Handler ~= nil, "warehousing service binds WarehouseDeliverRequest handler")
+assertTrue(granaryDeliverRemote._Handler ~= nil, "warehousing service binds GranaryDeliverRequest handler")
 
 ResourceFlowState.RefreshDeliveryPoints()
 
@@ -264,5 +267,19 @@ local debugPayload = debugResponseRemote._ClientPayload
 assertEqual(debugPayload.warehouseId, "Warehouse_A", "warehouse debug returns target id")
 assertEqual(debugPayload.woodInTransit, afterDeliver.inTransit, "warehouse debug returns Wood in transit")
 assertEqual(debugPayload.woodStored, afterDeliver.stored, "warehouse debug returns stored Wood")
+
+ResourceFlowState.ResetSession("granary_food_delivery_test")
+ResourceFlowState.AddProduced("Food", "Farm:Farm_A", 4)
+ResourceFlowState.TransferProducedToInTransit("Food", 4)
+ResourceFlowState.RefreshDeliveryPoints()
+
+local granaryPlayer = makeAlivePlayer(8102, Vector3.new(35, 0, 10))
+table.insert(playersList, granaryPlayer)
+
+local beforeFoodDeliver = ResourceFlowState.GetMaterialSnapshot("Food")
+granaryDeliverRemote:FireServer(granaryPlayer, "Granary_A")
+local afterFoodDeliver = ResourceFlowState.GetMaterialSnapshot("Food")
+assertTrue(afterFoodDeliver.inTransit < beforeFoodDeliver.inTransit, "granary delivery reduces Food in transit")
+assertTrue(afterFoodDeliver.stored > beforeFoodDeliver.stored, "granary delivery increases stored Food")
 
 print("warehousing_service_runtime_entrypoint: all checks passed")

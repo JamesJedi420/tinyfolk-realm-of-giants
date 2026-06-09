@@ -23,6 +23,23 @@ do
 	assertEqual(granaryKind, VillageWorksiteUpgradeState.WorksiteKinds.Granary, "granary kind")
 	local shrineKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Shrine_A")
 	assertEqual(shrineKind, VillageWorksiteUpgradeState.WorksiteKinds.Shrine, "shrine kind")
+	local farmKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Farm_A")
+	assertEqual(farmKind, VillageWorksiteUpgradeState.WorksiteKinds.Farm, "farm kind")
+end
+
+do
+	local effectKind = VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.Farm)
+	assertEqual(effectKind, VillageWorksiteUpgradeState.EffectKinds.Production, "farm production effect")
+end
+
+do
+	local state = VillageWorksiteUpgradeState.CreateEmptyState()
+	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
+		worksiteId = "Farm_A",
+		at = 12,
+	})
+	assertTrue(result.accepted, "farm upgrade accepted")
+	assertEqual(result.cost.wood, 9, "farm level 1 wood cost")
 end
 
 do
