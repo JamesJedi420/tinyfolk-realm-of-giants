@@ -15,12 +15,14 @@ VillageWorksiteUpgradeState.WorksiteKinds = {
 	Farm = "farm",
 	Pen = "pen",
 	GuardTower = "guard_tower",
+	GiantDwelling = "giant_dwelling",
 }
 
 VillageWorksiteUpgradeState.EffectKinds = {
 	Production = "production",
 	Capacity = "capacity",
 	Defense = "defense",
+	GiantHousingCapacity = "giant_housing_capacity",
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -69,6 +71,9 @@ function VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId: string): st
 	if startsWithPrefix(worksiteId, StationConfig.GuardTowerNamePrefix) then
 		return VillageWorksiteUpgradeState.WorksiteKinds.GuardTower
 	end
+	if startsWithPrefix(worksiteId, StationConfig.GiantDwellingNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.GiantDwelling
+	end
 	return nil
 end
 
@@ -90,6 +95,9 @@ function VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind: string): st
 	end
 	if worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.GuardTower then
 		return VillageWorksiteUpgradeState.EffectKinds.Defense
+	end
+	if worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.GiantDwelling then
+		return VillageWorksiteUpgradeState.EffectKinds.GiantHousingCapacity
 	end
 	return nil
 end
@@ -207,6 +215,19 @@ function VillageWorksiteUpgradeState.ResolveProductionModifiers(level: number): 
 		level = normalizedLevel,
 		perTickMultiplier = multipliers.perTick,
 		maxTotalMultiplier = multipliers.maxTotal,
+	}
+end
+
+function VillageWorksiteUpgradeState.ResolveGiantHousingCapacityModifiers(level: number): any
+	local normalizedLevel = if isFiniteNumber(level) and level >= 0
+		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
+		else 0
+	local multipliers = VillageWorksiteUpgradeConfig.GiantHousingCapacityMultipliersByLevel[normalizedLevel]
+		or VillageWorksiteUpgradeConfig.GiantHousingCapacityMultipliersByLevel[0]
+
+	return {
+		level = normalizedLevel,
+		housingCapacityMultiplier = multipliers.housingCapacity,
 	}
 end
 

@@ -164,6 +164,9 @@ local function resolveUpgradeableWorksiteId(partName: string): string?
 	if startsWithPrefix(partName, StationConfig.GuardTowerNamePrefix) then
 		return partName
 	end
+	if startsWithPrefix(partName, StationConfig.GiantDwellingNamePrefix) then
+		return partName
+	end
 	return nil
 end
 

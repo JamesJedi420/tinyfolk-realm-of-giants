@@ -29,6 +29,8 @@ do
 	assertEqual(penKind, VillageWorksiteUpgradeState.WorksiteKinds.Pen, "pen kind")
 	local guardTowerKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("GuardTower_A")
 	assertEqual(guardTowerKind, VillageWorksiteUpgradeState.WorksiteKinds.GuardTower, "guard tower kind")
+	local dwellingKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("GiantDwelling_A")
+	assertEqual(dwellingKind, VillageWorksiteUpgradeState.WorksiteKinds.GiantDwelling, "giant dwelling kind")
 end
 
 do
@@ -37,6 +39,13 @@ do
 	local guardEffectKind =
 		VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.GuardTower)
 	assertEqual(guardEffectKind, VillageWorksiteUpgradeState.EffectKinds.Defense, "guard tower defense effect")
+	local dwellingEffectKind =
+		VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.GiantDwelling)
+	assertEqual(
+		dwellingEffectKind,
+		VillageWorksiteUpgradeState.EffectKinds.GiantHousingCapacity,
+		"giant dwelling housing effect"
+	)
 end
 
 do
@@ -83,6 +92,21 @@ do
 	})
 	assertTrue(result.accepted, "farm upgrade accepted")
 	assertEqual(result.cost.wood, 9, "farm level 1 wood cost")
+end
+
+do
+	local housing = VillageWorksiteUpgradeState.ResolveGiantHousingCapacityModifiers(2)
+	assertEqual(housing.housingCapacityMultiplier, 3, "giant housing capacity multiplier level 2")
+end
+
+do
+	local state = VillageWorksiteUpgradeState.CreateEmptyState()
+	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
+		worksiteId = "GiantDwelling_A",
+		at = 18,
+	})
+	assertTrue(result.accepted, "giant dwelling upgrade accepted")
+	assertEqual(result.cost.wood, 16, "giant dwelling level 1 wood cost")
 end
 
 do

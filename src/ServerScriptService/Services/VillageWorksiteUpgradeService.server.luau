@@ -273,6 +273,15 @@ local function GetHeldCapacityMultiplier(penId: string): number
 	return modifiers.heldCapacityMultiplier
 end
 
+local function GetGiantHousingCapacityMultiplier(dwellingId: string): number
+	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(dwellingId)
+	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.GiantDwelling then
+		return 1
+	end
+	local modifiers = VillageWorksiteUpgradeState.ResolveGiantHousingCapacityModifiers(GetUpgradeLevel(dwellingId))
+	return modifiers.housingCapacityMultiplier
+end
+
 local function GetDefenseMultiplier(guardTowerId: string): number
 	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(guardTowerId)
 	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.GuardTower then
@@ -324,6 +333,7 @@ globalEnv._VillageWorksiteUpgradeService_QueryAPI = {
 	GetInTransitCapacityMultiplier = GetInTransitCapacityMultiplier,
 	GetHeldCapacityMultiplier = GetHeldCapacityMultiplier,
 	GetDefenseMultiplier = GetDefenseMultiplier,
+	GetGiantHousingCapacityMultiplier = GetGiantHousingCapacityMultiplier,
 	GetEssenceMaxCapacityMultiplier = GetEssenceMaxCapacityMultiplier,
 	BuildPersistenceState = BuildPersistenceState,
 	ApplyPersistenceState = ApplyPersistenceState,

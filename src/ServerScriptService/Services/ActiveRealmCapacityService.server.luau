@@ -1,5 +1,15 @@
 --!strict
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = Shared:WaitForChild("Config")
+local GiantRealm = Shared:WaitForChild("GiantRealm")
+
+local GiantDwellingConfig = require(Config:WaitForChild("GiantDwellingConfig"))
+local StationConfig = require(Config:WaitForChild("StationConfig"))
+local GiantHousingCapacityState = require(GiantRealm:WaitForChild("GiantHousingCapacityState"))
+
 local ActiveRealmCapacityStore = require(script.Parent:WaitForChild("ActiveRealmCapacityStore"))
 local ActiveRealmCapacityState = require(script.Parent:WaitForChild("ActiveRealmCapacityState"))
 local MemoryStoreStructurePolicy = require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
@@ -48,6 +58,17 @@ local store = ActiveRealmCapacityStore.Create({
 	structurePolicy = MemoryStoreStructurePolicy,
 })
 
+local function resolvePublishedGiantHousingCapacity(): number
+	local dwellingApi = getGlobalTable("_GiantDwellingService_QueryAPI")
+	if type(dwellingApi) == "table" and type(dwellingApi.GetGiantHousingCapacity) == "function" then
+		local capacity = dwellingApi.GetGiantHousingCapacity(StationConfig.DefaultGiantDwellingId)
+		if type(capacity) == "number" and capacity >= 0 then
+			return capacity
+		end
+	end
+	return GiantDwellingConfig.BaseGiantHousingCapacity
+end
+
 globalEnv._ActiveRealmCapacity_QueryAPI = {
 	GetCapacitySnapshot = function(realmId: any): any
 		return store.GetCapacitySnapshot(realmId)
@@ -63,6 +84,9 @@ globalEnv._ActiveRealmCapacity_QueryAPI = {
 	end,
 	ReleaseReservedSlots = function(realmId: any, count: number, now: number): any
 		return store.ReleaseReservedSlots(realmId, count, now)
+	end,
+	ResolveEffectiveMaxGiants = function(): number
+		return GiantHousingCapacityState.ResolveMaxGiantsFromHousing(resolvePublishedGiantHousingCapacity())
 	end,
 }
 
