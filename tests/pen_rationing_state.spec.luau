@@ -24,4 +24,17 @@ dueTicks, nextAccumulator = PenRationingState.CountDueTicks(0, 2.5, 1)
 assertEqual(dueTicks, 2, "2.5 seconds yields two ticks")
 assertEqual(nextAccumulator, 0.5, "remainder preserved after multi-tick")
 
+assertEqual(PenRationingState.ComputeFoodCostForInterval(2, 1, 0.75), 2, "pen upgrade multiplier rounds food cost")
+assertEqual(PenRationingState.ComputeFoodCostForInterval(2, 1, 0.5), 1, "high pen level reduces food cost")
+
+assertEqual(PenRationingState.ApplyMoraleDelta(100, -12, 0, 100), 88, "morale loss clamps within bounds")
+assertEqual(PenRationingState.ShouldForceStarvationRelease(3, 3), true, "threshold reached")
+assertEqual(PenRationingState.ShouldForceStarvationRelease(2, 3), false, "threshold not reached")
+
+local releaseTarget = PenRationingState.SelectStarvationReleaseTarget({
+	{ custodianUserId = 1, targetUserId = 202, startedAt = 12 },
+	{ custodianUserId = 1, targetUserId = 201, startedAt = 10 },
+})
+assertEqual(releaseTarget, 201, "oldest captive selected for starvation release")
+
 print("pen_rationing_state.spec.luau: all checks passed")

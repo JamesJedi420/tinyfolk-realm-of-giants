@@ -81,9 +81,13 @@ end
 local configFolder = makeNode("Config")
 configFolder._Children["PenRationingConfig"] = "../../ReplicatedStorage/Shared/Config/PenRationingConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
+configFolder._Children["VillageWorksiteUpgradeConfig"] =
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["PenRationingState"] = "../../ReplicatedStorage/Shared/GiantRealm/PenRationingState"
+giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 
 local sharedFolder = makeNode("Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -102,6 +106,7 @@ addChild(stationsFolder, "Granary_A", granaryPart)
 addChild(mapFolder, "Stations", stationsFolder)
 addChild(workspaceService, "Map", mapFolder)
 
+local playersList: { any } = {}
 local fakeGame: any = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "ReplicatedStorage" then
@@ -113,22 +118,40 @@ function fakeGame:GetService(serviceName: string): any
 	if serviceName == "RunService" then
 		return { Heartbeat = { Connect = function() end } }
 	end
+	if serviceName == "Players" then
+		return {
+			GetPlayers = function()
+				return playersList
+			end,
+		}
+	end
 	return nil
 end
 
 game = fakeGame
 
-local activeCaptiveCount = 0
+local activeCaptures: { any } = {}
+local starvationReleases: { any } = {}
+local penUpgradeLevel = 0
+
 _G._CaptureService_QueryAPI = {
 	GetAllCaptures = function(_at: number?): { any }
-		local captures: { any } = {}
-		for index = 1, activeCaptiveCount do
-			table.insert(captures, {
-				custodianUserId = 9000 + index,
-				targetUserId = 9100 + index,
-			})
+		return activeCaptures
+	end,
+	ResolveCustodyEnd = function(targetUserId: number, endReason: string, _at: number?, _operationId: string?): any
+		table.insert(starvationReleases, { targetUserId = targetUserId, endReason = endReason })
+		for index = #activeCaptures, 1, -1 do
+			if activeCaptures[index].targetUserId == targetUserId then
+				table.remove(activeCaptures, index)
+			end
 		end
-		return captures
+		return { accepted = true, reason = endReason }
+	end,
+}
+
+_G._VillageWorksiteUpgradeService_QueryAPI = {
+	GetUpgradeLevel = function(_penId: string): number
+		return penUpgradeLevel
 	end,
 }
 
@@ -150,13 +173,16 @@ assertTrue(type(rationApi) == "table", "pen rationing query api present")
 local penState = rationApi.GetPenState("Pen_A")
 assertTrue(penState ~= nil, "pen state registered")
 
-activeCaptiveCount = 0
+activeCaptures = {}
 rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 10)
 assertEqual(ResourceFlowState.GetMaterialSnapshot("Food").stored, 0, "no captives consume no food")
 assertEqual(penState.foodConsumedTotal, 0, "no captives increment consumed total")
 
 ResourceFlowState.AddStoredAtomic(0, 0, "pen_rationing_seed", 5)
-activeCaptiveCount = 2
+activeCaptures = {
+	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 20 },
+	{ custodianUserId = 9001, targetUserId = 9102, startedAt = 21 },
+}
 rationApi.ResetForTests()
 local beforeFood = ResourceFlowState.GetMaterialSnapshot("Food")
 rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 20)
@@ -166,24 +192,66 @@ local expectedCost = 2 * PenRationingConfig.FoodPerCaptivePerInterval
 assertEqual(afterFood.stored, beforeFood.stored - expectedCost, "two captives consume food each interval")
 assertEqual(penState.foodConsumedTotal, expectedCost, "pen tracks consumed food total")
 assertEqual(
-	penPart:GetAttribute(PenRationingConfig.StateAttributes.ActiveCaptiveCount),
-	2,
-	"pen part mirrors active captive count"
-)
-assertEqual(
 	penPart:GetAttribute(PenRationingConfig.StateAttributes.LastFoodShortfall),
 	false,
 	"successful tick clears shortfall"
 )
 
-activeCaptiveCount = 3
-rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 30)
+penUpgradeLevel = 3
+rationApi.ResetForTests()
+ResourceFlowState.AddStoredAtomic(0, 0, "pen_rationing_pen_level_seed", 2)
+activeCaptures = {
+	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 30 },
+	{ custodianUserId = 9001, targetUserId = 9102, startedAt = 31 },
+}
+local beforePenLevelFood = ResourceFlowState.GetMaterialSnapshot("Food")
 rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 40)
 assertEqual(
-	penPart:GetAttribute(PenRationingConfig.StateAttributes.LastFoodShortfall),
-	true,
-	"shortfall when granary empty"
+	ResourceFlowState.GetMaterialSnapshot("Food").stored,
+	beforePenLevelFood.stored - 1,
+	"pen level 3 reduces food cost for two captives"
 )
-assertTrue(penState.lastFoodShortfall == true, "pen state records shortfall")
+assertEqual(penPart:GetAttribute(PenRationingConfig.StateAttributes.PenUpgradeLevel), 3, "pen upgrade level exposed")
+
+local custodian = {
+	UserId = 9001,
+	_Attributes = {},
+	SetAttribute = function(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end,
+	GetAttribute = function(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
+	end,
+}
+playersList = { custodian }
+
+activeCaptures = {
+	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 50 },
+}
+rationApi.ResetForTests()
+ResourceFlowState.ResetSession("pen_rationing_morale_shortfall")
+rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 60)
+assertTrue(rationApi.GetCustodianMorale(9001) < PenRationingConfig.MoraleDefault, "shortfall reduces custodian morale")
+assertEqual(
+	penPart:GetAttribute(PenRationingConfig.StateAttributes.ConsecutiveShortfallTicks),
+	1,
+	"consecutive shortfall ticks tracked"
+)
+
+penUpgradeLevel = 0
+rationApi.ResetForTests()
+activeCaptures = {
+	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 70 },
+	{ custodianUserId = 9001, targetUserId = 9102, startedAt = 80 },
+}
+starvationReleases = {}
+for tick = 1, 3 do
+	rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 100 + tick)
+end
+assertEqual(#starvationReleases, 1, "third shortfall tick forces starvation release")
+assertEqual(starvationReleases[1].targetUserId, 9101, "oldest captive released on starvation")
+assertEqual(starvationReleases[1].endReason, "starvation", "starvation end reason")
+assertEqual(penState.starvationReleasesTotal, 1, "pen tracks starvation releases")
+assertEqual(#activeCaptures, 1, "one captive remains after starvation release")
 
 print("pen_rationing_service_runtime_entrypoint.spec.luau: all checks passed")

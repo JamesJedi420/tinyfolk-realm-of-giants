@@ -85,6 +85,12 @@ do
 end
 
 do
+	local penRationing = VillageWorksiteUpgradeState.ResolvePenRationingModifiers(2)
+	assertEqual(penRationing.foodMultiplier, 0.75, "pen level 2 food multiplier")
+	assertEqual(penRationing.starvationReleaseThreshold, 5, "pen level 2 starvation threshold")
+end
+
+do
 	local state = VillageWorksiteUpgradeState.CreateEmptyState()
 	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
 		worksiteId = "Farm_A",

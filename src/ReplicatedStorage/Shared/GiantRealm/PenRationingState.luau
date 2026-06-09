@@ -8,7 +8,8 @@ end
 
 function PenRationingState.ComputeFoodCostForInterval(
 	activeCaptiveCount: number,
-	foodPerCaptivePerInterval: number
+	foodPerCaptivePerInterval: number,
+	foodMultiplier: number?
 ): number
 	if not isFiniteNumber(activeCaptiveCount) or activeCaptiveCount <= 0 then
 		return 0
@@ -17,7 +18,13 @@ function PenRationingState.ComputeFoodCostForInterval(
 		return 0
 	end
 
-	return math.floor(activeCaptiveCount) * math.floor(foodPerCaptivePerInterval)
+	local resolvedMultiplier = 1
+	if isFiniteNumber(foodMultiplier) and (foodMultiplier :: number) > 0 then
+		resolvedMultiplier = foodMultiplier :: number
+	end
+	local rawCost = math.floor(activeCaptiveCount) * math.floor(foodPerCaptivePerInterval) * resolvedMultiplier
+	local roundedCost = math.max(1, math.floor(rawCost + 0.5))
+	return roundedCost
 end
 
 function PenRationingState.CountDueTicks(
@@ -39,6 +46,50 @@ function PenRationingState.CountDueTicks(
 	local dueTicks = math.floor(nextAccumulator / intervalSeconds)
 	nextAccumulator -= dueTicks * intervalSeconds
 	return dueTicks, nextAccumulator
+end
+
+function PenRationingState.ApplyMoraleDelta(
+	currentMorale: number,
+	delta: number,
+	minMorale: number,
+	maxMorale: number
+): number
+	local safeCurrent = if isFiniteNumber(currentMorale) then currentMorale else minMorale
+	local safeDelta = if isFiniteNumber(delta) then delta else 0
+	return math.clamp(safeCurrent + safeDelta, minMorale, maxMorale)
+end
+
+function PenRationingState.ShouldForceStarvationRelease(
+	consecutiveShortfallTicks: number,
+	starvationReleaseThreshold: number
+): boolean
+	if not isFiniteNumber(consecutiveShortfallTicks) or consecutiveShortfallTicks <= 0 then
+		return false
+	end
+	if not isFiniteNumber(starvationReleaseThreshold) or starvationReleaseThreshold <= 0 then
+		return false
+	end
+	return consecutiveShortfallTicks >= math.floor(starvationReleaseThreshold)
+end
+
+function PenRationingState.SelectStarvationReleaseTarget(captures: { any }): number?
+	if type(captures) ~= "table" or #captures == 0 then
+		return nil
+	end
+
+	local oldestRecord: any = nil
+	for _, record in ipairs(captures) do
+		if type(record) == "table" and isFiniteNumber(record.targetUserId) and isFiniteNumber(record.startedAt) then
+			if oldestRecord == nil or record.startedAt < oldestRecord.startedAt then
+				oldestRecord = record
+			end
+		end
+	end
+
+	if oldestRecord == nil then
+		return nil
+	end
+	return oldestRecord.targetUserId
 end
 
 return PenRationingState

@@ -181,6 +181,7 @@ local VALID_CUSTODY_END_REASONS = {
 	timeout = true,
 	logout = true,
 	safe_return = true,
+	starvation = true,
 }
 
 local function isValidCustodyEndReason(endReason: any): boolean

@@ -98,4 +98,19 @@ VillageWorksiteUpgradeConfig.DwellingGiantLocomotionBonusesByLevel = {
 	[3] = { walkSpeedBonus = 6, movementControlBonus = 0.25 },
 }
 
+-- Pen upgrade efficiency: lower food multiplier and higher starvation tolerance.
+VillageWorksiteUpgradeConfig.PenRationingFoodMultipliersByLevel = {
+	[0] = 1,
+	[1] = 0.9,
+	[2] = 0.75,
+	[3] = 0.5,
+}
+
+VillageWorksiteUpgradeConfig.PenStarvationReleaseThresholdByLevel = {
+	[0] = 3,
+	[1] = 4,
+	[2] = 5,
+	[3] = 6,
+}
+
 return VillageWorksiteUpgradeConfig
