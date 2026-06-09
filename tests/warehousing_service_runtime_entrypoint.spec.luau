@@ -281,5 +281,11 @@ granaryDeliverRemote:FireServer(granaryPlayer, "Granary_A")
 local afterFoodDeliver = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(afterFoodDeliver.inTransit < beforeFoodDeliver.inTransit, "granary delivery reduces Food in transit")
 assertTrue(afterFoodDeliver.stored > beforeFoodDeliver.stored, "granary delivery increases stored Food")
+assertEqual(afterFoodDeliver.lastDeliveredTo, StationConfig.DefaultGranaryId, "food delivery routes to granary")
+assertEqual(
+	stationsFolder._Children["Granary_A"]:GetAttribute("FoodStoredTotal"),
+	afterFoodDeliver.stored,
+	"granary attributes update stored Food"
+)
 
 print("warehousing_service_runtime_entrypoint: all checks passed")

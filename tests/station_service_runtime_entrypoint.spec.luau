@@ -540,4 +540,9 @@ assertTrue(stationStateById["Farm_A"].resourceTotal >= 3, "farm upgrade level 2 
 local foodSnapshot = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(foodSnapshot.produced >= 3, "food flow receives scaled farm production")
 
+activateRemote:FireServer(farmPlayer, "Farm_A")
+local foodAfterHaul = ResourceFlowState.GetMaterialSnapshot("Food")
+assertTrue(foodAfterHaul.inTransit > foodSnapshot.inTransit, "farm pickup moves produced Food to in-transit")
+assertTrue(foodAfterHaul.produced < foodSnapshot.produced, "farm pickup reduces produced Food pool")
+
 print("station_service_runtime_entrypoint: all checks passed")

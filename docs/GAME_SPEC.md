@@ -24,7 +24,7 @@ Use these markers consistently in design and implementation discussions:
 - Server-owned canonical Wood/Stone flow state tracks Produced, InTransit, and Stored totals.
 - Manual interaction flow moves Produced -> InTransit by workstation interaction, then InTransit -> Stored by Warehouse_A interaction.
 - Interaction resolution for current bounded surfaces is deterministic by priority, then distance, then target id.
-- Granary_A is reserved for future food/crop resources.
+- Farm_A produces Food (Farmer-gated); Tinyfolk haul moves produced Food to in-transit; Granary_A stores in-transit Food.
 - Stored Wood/Stone totals are the current usable realm totals.
 - Prototype construction spending uses stored Wood/Stone only.
 - Produced and InTransit material totals are not spendable for construction.

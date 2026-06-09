@@ -78,8 +78,9 @@ The handoff plan must include:
 - Canonical server-owned Wood/Stone flow state is the source of truth for produced/in-transit/stored totals.
 - Stored totals are the usable realm totals.
 - Wood and Stone delivery point: Warehouse_A.
-- Granary_A is reserved for future food/crop resources.
-- Workstation interaction moves produced material to in-transit; warehouse interaction moves in-transit to stored.
+- Food delivery point: Granary_A.
+- Farm_A production is Farmer-gated; hauling produced Food to in-transit is general Tinyfolk labor (no specialist slot).
+- Workstation/farm interaction moves produced material to in-transit; warehouse/granary interaction moves in-transit to stored.
 - Essence is not hauled; Shrines produce Essence directly to Giant session pool.
 - Prototype construction spending must use stored Wood/Stone totals only.
 - Produced and in-transit material totals are not spendable for construction.
