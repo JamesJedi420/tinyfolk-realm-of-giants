@@ -22,10 +22,13 @@ local ATTRIBUTE_BUILD_COUNT = "BuildCount"
 local ATTRIBUTE_LAST_BUILT_BY = "LastBuiltByUserId"
 local ATTRIBUTE_COST_WOOD = "ConstructionCostWood"
 local ATTRIBUTE_COST_STONE = "ConstructionCostStone"
+local ATTRIBUTE_COST_FOOD = "ConstructionCostFood"
 local ATTRIBUTE_WOOD_STORED_TOTAL = "WoodStoredTotal"
 local ATTRIBUTE_WOOD_USABLE_TOTAL = "WoodUsableTotal"
 local ATTRIBUTE_STONE_STORED_TOTAL = "StoneStoredTotal"
 local ATTRIBUTE_STONE_USABLE_TOTAL = "StoneUsableTotal"
+local ATTRIBUTE_FOOD_STORED_TOTAL = "FoodStoredTotal"
+local ATTRIBUTE_FOOD_USABLE_TOTAL = "FoodUsableTotal"
 local BUILT_COLOR = Color3.fromRGB(92, 168, 104)
 local BUILT_MATERIAL = Enum.Material.Grass
 
@@ -208,7 +211,7 @@ local function shouldTrackConstructionPart(part: BasePart): boolean
 	return string.match(part.Name, "^" .. ConstructionConfig.ConstructionSiteNamePrefix) ~= nil
 end
 
-local function getSiteCost(siteId: string): (number?, number?)
+local function getSiteCost(siteId: string): (number?, number?, number?)
 	local configured = ConstructionConfig.CostBySiteId[siteId]
 	if type(configured) ~= "table" then
 		return nil
@@ -216,19 +219,24 @@ local function getSiteCost(siteId: string): (number?, number?)
 
 	local woodCost = configured.wood
 	local stoneCost = configured.stone
+	local foodCost = configured.food
 	if type(woodCost) ~= "number" or type(stoneCost) ~= "number" then
 		return nil
 	end
 
-	if woodCost < 0 or stoneCost < 0 then
+	if type(foodCost) ~= "number" then
+		foodCost = 0
+	end
+
+	if woodCost < 0 or stoneCost < 0 or foodCost < 0 then
 		return nil
 	end
 
-	return woodCost, stoneCost
+	return woodCost, stoneCost, foodCost
 end
 
 local function applyDebugAttributes(state: ConstructionSiteState)
-	local woodCost, stoneCost = getSiteCost(state.siteId)
+	local woodCost, stoneCost, foodCost = getSiteCost(state.siteId)
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
 
 	state.part:SetAttribute(ATTRIBUTE_IS_BUILT, state.isBuilt)
@@ -236,10 +244,13 @@ local function applyDebugAttributes(state: ConstructionSiteState)
 	state.part:SetAttribute(ATTRIBUTE_LAST_BUILT_BY, state.lastBuiltByUserId)
 	state.part:SetAttribute(ATTRIBUTE_COST_WOOD, woodCost)
 	state.part:SetAttribute(ATTRIBUTE_COST_STONE, stoneCost)
+	state.part:SetAttribute(ATTRIBUTE_COST_FOOD, foodCost)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_STORED_TOTAL, flowSnapshot.Wood.stored)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_USABLE_TOTAL, flowSnapshot.Wood.usable)
 	state.part:SetAttribute(ATTRIBUTE_STONE_STORED_TOTAL, flowSnapshot.Stone.stored)
 	state.part:SetAttribute(ATTRIBUTE_STONE_USABLE_TOTAL, flowSnapshot.Stone.usable)
+	state.part:SetAttribute(ATTRIBUTE_FOOD_STORED_TOTAL, flowSnapshot.Food.stored)
+	state.part:SetAttribute(ATTRIBUTE_FOOD_USABLE_TOTAL, flowSnapshot.Food.usable)
 end
 
 local function applyBuiltVisualState(state: ConstructionSiteState)
@@ -256,8 +267,8 @@ local function registerConstructionPart(part: BasePart)
 		return
 	end
 
-	local woodCost, stoneCost = getSiteCost(siteId)
-	if not woodCost or not stoneCost then
+	local woodCost, stoneCost, foodCost = getSiteCost(siteId)
+	if woodCost == nil or stoneCost == nil or foodCost == nil then
 		debugWarn(string.format("Construction site has invalid or missing cost config id=%s", siteId))
 		return
 	end
@@ -274,7 +285,13 @@ local function registerConstructionPart(part: BasePart)
 	applyBuiltVisualState(state)
 	applyDebugAttributes(state)
 	debugLog(
-		string.format("Registered construction site id=%s woodCost=%.0f stoneCost=%.0f", siteId, woodCost, stoneCost)
+		string.format(
+			"Registered construction site id=%s woodCost=%.0f stoneCost=%.0f foodCost=%.0f",
+			siteId,
+			woodCost,
+			stoneCost,
+			foodCost
+		)
 	)
 end
 
@@ -429,13 +446,13 @@ local function attemptSiteBuild(player: Player, siteId: string, siteState: Const
 			string.format("out_of_range distance=%.2f max=%.2f", distance, ConstructionConfig.InteractionRangeStuds)
 	end
 
-	local woodCost, stoneCost = getSiteCost(siteId)
-	if not woodCost or not stoneCost then
+	local woodCost, stoneCost, foodCost = getSiteCost(siteId)
+	if woodCost == nil or stoneCost == nil or foodCost == nil then
 		return false, "invalid_site_cost_config"
 	end
 
 	local spent, flowSnapshot, spendError =
-		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId)
+		ResourceFlowState.SpendStoredAtomic(woodCost, stoneCost, "Construction:" .. siteId, foodCost)
 	if not spent then
 		applyDebugAttributes(siteState)
 		return false, spendError or "insufficient_materials"
@@ -456,7 +473,7 @@ local function attemptSiteBuild(player: Player, siteId: string, siteState: Const
 	end)
 
 	if not appliedBuiltState then
-		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "ConstructionRollback:" .. siteId)
+		ResourceFlowState.AddStoredAtomic(woodCost, stoneCost, "ConstructionRollback:" .. siteId, foodCost)
 
 		siteState.isBuilt = previousIsBuilt
 		siteState.buildCount = previousBuildCount
@@ -472,13 +489,15 @@ local function attemptSiteBuild(player: Player, siteId: string, siteState: Const
 
 	debugLog(
 		string.format(
-			"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f woodStored=%.0f stoneStored=%.0f",
+			"Accepted ConstructionBuildRequest userId=%d siteId=%s woodCost=%.0f stoneCost=%.0f foodCost=%.0f woodStored=%.0f stoneStored=%.0f foodStored=%.0f",
 			player.UserId,
 			siteId,
 			woodCost,
 			stoneCost,
+			foodCost,
 			flowSnapshot.Wood.stored,
-			flowSnapshot.Stone.stored
+			flowSnapshot.Stone.stored,
+			flowSnapshot.Food.stored
 		)
 	)
 
@@ -780,7 +799,7 @@ local function handleDebugRequest(player: Player, payload: unknown)
 			return
 		end
 
-		local woodCost, stoneCost = getSiteCost(siteState.siteId)
+		local woodCost, stoneCost, foodCost = getSiteCost(siteState.siteId)
 		local flowSnapshot = ResourceFlowState.GetSnapshot()
 		debugResponseRemote:FireClient(player, {
 			siteId = siteState.siteId,
@@ -789,6 +808,7 @@ local function handleDebugRequest(player: Player, payload: unknown)
 			lastBuiltByUserId = siteState.lastBuiltByUserId,
 			costWood = woodCost,
 			costStone = stoneCost,
+			costFood = foodCost,
 			woodProduced = flowSnapshot.Wood.produced,
 			woodInTransit = flowSnapshot.Wood.inTransit,
 			woodStored = flowSnapshot.Wood.stored,
@@ -797,6 +817,10 @@ local function handleDebugRequest(player: Player, payload: unknown)
 			stoneInTransit = flowSnapshot.Stone.inTransit,
 			stoneStored = flowSnapshot.Stone.stored,
 			stoneUsable = flowSnapshot.Stone.usable,
+			foodProduced = flowSnapshot.Food.produced,
+			foodInTransit = flowSnapshot.Food.inTransit,
+			foodStored = flowSnapshot.Food.stored,
+			foodUsable = flowSnapshot.Food.usable,
 		})
 		debugLog(string.format("Sent construction debug state userId=%d siteId=%s", player.UserId, siteState.siteId))
 		return
@@ -805,7 +829,7 @@ local function handleDebugRequest(player: Player, payload: unknown)
 	local snapshot = {}
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
 	for siteId, siteState in siteStateById do
-		local woodCost, stoneCost = getSiteCost(siteId)
+		local woodCost, stoneCost, foodCost = getSiteCost(siteId)
 		table.insert(snapshot, {
 			siteId = siteState.siteId,
 			isBuilt = siteState.isBuilt,
@@ -813,6 +837,7 @@ local function handleDebugRequest(player: Player, payload: unknown)
 			lastBuiltByUserId = siteState.lastBuiltByUserId,
 			costWood = woodCost,
 			costStone = stoneCost,
+			costFood = foodCost,
 			woodProduced = flowSnapshot.Wood.produced,
 			woodInTransit = flowSnapshot.Wood.inTransit,
 			woodStored = flowSnapshot.Wood.stored,
@@ -821,6 +846,10 @@ local function handleDebugRequest(player: Player, payload: unknown)
 			stoneInTransit = flowSnapshot.Stone.inTransit,
 			stoneStored = flowSnapshot.Stone.stored,
 			stoneUsable = flowSnapshot.Stone.usable,
+			foodProduced = flowSnapshot.Food.produced,
+			foodInTransit = flowSnapshot.Food.inTransit,
+			foodStored = flowSnapshot.Food.stored,
+			foodUsable = flowSnapshot.Food.usable,
 		})
 	end
 

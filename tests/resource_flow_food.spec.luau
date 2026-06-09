@@ -131,4 +131,12 @@ do
 	assertEqual(afterStored.lastDeliveredTo, StationConfig.DefaultGranaryId, "food delivers to granary")
 end
 
+do
+	local beforeSpend = ResourceFlowState.GetMaterialSnapshot("Food")
+	local spent, afterSpend, spendError = ResourceFlowState.SpendStoredAtomic(0, 0, "TestFoodSpend", 2)
+	assertTrue(spent, "food-only spend accepted")
+	assertEqual(spendError, nil, "food-only spend has no error")
+	assertEqual(afterSpend.Food.stored, beforeSpend.stored - 2, "food stored reduced by spend")
+end
+
 print("resource_flow_food.spec.luau: all checks passed")

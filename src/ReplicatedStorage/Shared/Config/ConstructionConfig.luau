@@ -33,10 +33,12 @@ ConstructionConfig.CostBySiteId = {
 	ConstructionSite_A = {
 		wood = 8,
 		stone = 6,
+		food = 4,
 	},
 	ConstructionSite_B = {
 		wood = 8,
 		stone = 6,
+		food = 4,
 	},
 }
 
