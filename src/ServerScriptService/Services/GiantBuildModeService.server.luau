@@ -1790,6 +1790,14 @@ local function getVillageWorksiteUpgradeQueryApi(): any
 	return nil
 end
 
+local function getTrophyQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._TrophyService_QueryAPI) == "table" then
+		return globalValue._TrophyService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -1834,6 +1842,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		worksiteUpgradeState = villageUpgradeQueryApi.BuildPersistenceState()
 	end
 
+	local trophyPersistenceState = nil
+	local trophyQueryApi = getTrophyQueryApi()
+	if trophyQueryApi ~= nil then
+		if type(trophyQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "trophy_build_persistence_missing"
+		end
+		trophyPersistenceState = trophyQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
@@ -1842,7 +1859,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		rescuePersistenceState,
 		BuildDefenseHistoryState(),
 		BuildResourceLedgerState(),
-		worksiteUpgradeState
+		worksiteUpgradeState,
+		trophyPersistenceState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1952,6 +1970,26 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedWorksiteUpgrades, worksiteUpgradeReason = villageUpgradeQueryApi.ApplyPersistenceState(nil)
 		if not appliedWorksiteUpgrades then
 			return false, worksiteUpgradeReason or "worksite_upgrade_apply_persistence_failed"
+		end
+	end
+
+	local trophyQueryApi = getTrophyQueryApi()
+	if root.trophyPersistence ~= nil then
+		if trophyQueryApi == nil then
+			return false, "trophy_query_api_missing"
+		end
+		if type(trophyQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "trophy_apply_persistence_missing"
+		end
+
+		local appliedTrophies, trophyReason = trophyQueryApi.ApplyPersistenceState(root.trophyPersistence)
+		if not appliedTrophies then
+			return false, trophyReason or "trophy_apply_persistence_failed"
+		end
+	elseif trophyQueryApi ~= nil and type(trophyQueryApi.ApplyPersistenceState) == "function" then
+		local appliedTrophies, trophyReason = trophyQueryApi.ApplyPersistenceState(nil)
+		if not appliedTrophies then
+			return false, trophyReason or "trophy_apply_persistence_failed"
 		end
 	end
 
