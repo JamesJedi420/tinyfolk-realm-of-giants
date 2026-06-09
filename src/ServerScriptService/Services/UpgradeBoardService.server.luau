@@ -260,10 +260,6 @@ local function getOrCreateGiantUpgradeState(userId: number): { [string]: boolean
 	return createdState
 end
 
-local function rebuildUpgradeCsv(state: { [string]: boolean }): string
-	return UpgradeProgressionLogic.RebuildUpgradeCsv(progressionKernel, state)
-end
-
 local function resolveProgressionState(state: { [string]: boolean }): ProgressionState
 	return UpgradeProgressionLogic.ResolveProgressionState(progressionKernel, state)
 end
@@ -298,23 +294,18 @@ local function resolveEffectValuesForUser(userId: number): GiantResolvedEffects
 	})
 end
 
-local function applyUpgradeAttributes(player: Player, state: { [string]: boolean })
+local DEPRECATED_PROGRESSION_STATUS = "Deprecated"
+
+local function clearLegacyUpgradeSessionAttributes(player: Player)
 	for upgradeId in validUpgradeIdSet do
-		player:SetAttribute(UPGRADE_ATTRIBUTE_PREFIX .. upgradeId, state[upgradeId] == true)
+		player:SetAttribute(UPGRADE_ATTRIBUTE_PREFIX .. upgradeId, nil)
 	end
 
-	player:SetAttribute(UPGRADE_SUMMARY_ATTRIBUTE, rebuildUpgradeCsv(state))
-end
-
-local function applyProgressionAttributes(player: Player, progression: ProgressionState)
-	player:SetAttribute(UPGRADE_STEP_COMPLETED_ATTRIBUTE, progression.completedSteps)
-	player:SetAttribute(UPGRADE_STEP_TOTAL_ATTRIBUTE, progression.totalSteps)
-	player:SetAttribute(UPGRADE_PROGRESSION_STATUS_ATTRIBUTE, progression.status)
-	if progression.nextUpgradeId then
-		player:SetAttribute(UPGRADE_NEXT_ID_ATTRIBUTE, progression.nextUpgradeId)
-	else
-		player:SetAttribute(UPGRADE_NEXT_ID_ATTRIBUTE, nil)
-	end
+	player:SetAttribute(UPGRADE_SUMMARY_ATTRIBUTE, nil)
+	player:SetAttribute(UPGRADE_STEP_COMPLETED_ATTRIBUTE, nil)
+	player:SetAttribute(UPGRADE_STEP_TOTAL_ATTRIBUTE, nil)
+	player:SetAttribute(UPGRADE_NEXT_ID_ATTRIBUTE, nil)
+	player:SetAttribute(UPGRADE_PROGRESSION_STATUS_ATTRIBUTE, DEPRECATED_PROGRESSION_STATUS)
 end
 
 local function applyUpgradeEffectAttributes(player: Player, effects: GiantResolvedEffects)
@@ -334,20 +325,6 @@ local function applyEssenceDebugAttributes(player: Player, snapshot)
 	player:SetAttribute(ESSENCE_SPENT_TOTAL_ATTRIBUTE, snapshot.spentTotal)
 	player:SetAttribute(ESSENCE_LAST_SPENT_REASON_ATTRIBUTE, snapshot.lastSpentReason)
 	player:SetAttribute(ESSENCE_LAST_SPENT_AMOUNT_ATTRIBUTE, snapshot.lastSpentAmount)
-end
-
-local function resetUpgradeState(player: Player, reason: string)
-	giantUpgradeStateByUserId[player.UserId] = {}
-	giantResolvedEffectsByUserId[player.UserId] = nil
-
-	local emptyState: { [string]: boolean } = {}
-	applyUpgradeAttributes(player, emptyState)
-	applyProgressionAttributes(player, resolveProgressionState(emptyState))
-
-	local baseEffects = resolveEffectValuesForUser(player.UserId)
-	applyUpgradeEffectAttributes(player, baseEffects)
-
-	debugLog(string.format("Reset upgrade state userId=%d reason=%s", player.UserId, reason))
 end
 
 local function getRoleBaselineState(player: Player): HumanoidState
@@ -444,6 +421,14 @@ local function applyGiantUpgradeEffects(player: Player, reason: string)
 			effects.walkSpeedBonus
 		)
 	)
+end
+
+local function resetUpgradeState(player: Player, reason: string)
+	giantUpgradeStateByUserId[player.UserId] = {}
+	giantResolvedEffectsByUserId[player.UserId] = nil
+	clearLegacyUpgradeSessionAttributes(player)
+	applyGiantUpgradeEffects(player, reason)
+	debugLog(string.format("Reset upgrade state userId=%d reason=%s", player.UserId, reason))
 end
 
 local function rejectSelect(player: Player, reason: string)
@@ -642,10 +627,9 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	state = UpgradeProgressionLogic.ApplySelection(state, upgradeId)
 	giantUpgradeStateByUserId[player.UserId] = state
-	applyUpgradeAttributes(player, state)
-	local newProgression = resolveProgressionState(state)
-	applyProgressionAttributes(player, newProgression)
+	clearLegacyUpgradeSessionAttributes(player)
 	applyGiantUpgradeEffects(player, "selection")
+	local newProgression = resolveProgressionState(state)
 
 	local currentSelectionCount = boardPart:GetAttribute(BOARD_SELECTION_COUNT_ATTRIBUTE)
 	if type(currentSelectionCount) ~= "number" then
@@ -682,13 +666,11 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 	end
 
 	local requestedBoardId = payload :: string?
-	local state = getOrCreateGiantUpgradeState(player.UserId)
-	local selectedCsv = rebuildUpgradeCsv(state)
-	local progression = resolveProgressionState(state)
 	local effects = giantResolvedEffectsByUserId[player.UserId] or resolveEffectValuesForUser(player.UserId)
+	local shrineLevel, dwellingLevel = resolveWorksiteEffectLevels(player.UserId)
 	local essenceSnapshot = GiantEssenceSession.GetSnapshot(player.UserId)
 	applyEssenceDebugAttributes(player, essenceSnapshot)
-	applyProgressionAttributes(player, progression)
+	clearLegacyUpgradeSessionAttributes(player)
 
 	if requestedBoardId then
 		local boardPart = boardPartById[requestedBoardId]
@@ -701,11 +683,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 			boardId = requestedBoardId,
 			isEnabled = boardPart:GetAttribute(BOARD_ENABLED_ATTRIBUTE),
 			selectionCount = boardPart:GetAttribute(BOARD_SELECTION_COUNT_ATTRIBUTE),
-			selectedUpgradesCsv = selectedCsv,
-			upgradeStepCompleted = progression.completedSteps,
-			upgradeStepTotal = progression.totalSteps,
-			nextUpgradeId = progression.nextUpgradeId,
-			upgradeProgressionStatus = progression.status,
+			boardPurchasesDeprecated = true,
+			shrineLevel = shrineLevel,
+			dwellingLevel = dwellingLevel,
 			resolvedMaxHealth = effects.maxHealth,
 			resolvedWalkSpeed = effects.walkSpeed,
 			resolvedPowerBudget = effects.powerBudget,
@@ -731,11 +711,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 
 	debugResponseRemote:FireClient(player, {
 		boards = snapshot,
-		selectedUpgradesCsv = selectedCsv,
-		upgradeStepCompleted = progression.completedSteps,
-		upgradeStepTotal = progression.totalSteps,
-		nextUpgradeId = progression.nextUpgradeId,
-		upgradeProgressionStatus = progression.status,
+		boardPurchasesDeprecated = true,
+		shrineLevel = shrineLevel,
+		dwellingLevel = dwellingLevel,
 		resolvedMaxHealth = effects.maxHealth,
 		resolvedWalkSpeed = effects.walkSpeed,
 		resolvedPowerBudget = effects.powerBudget,
@@ -763,9 +741,8 @@ debugEssenceDrainRemote.OnServerEvent:Connect(function(player: Player)
 end)
 
 local function setupPlayer(player: Player)
-	local state = getOrCreateGiantUpgradeState(player.UserId)
-	applyUpgradeAttributes(player, state)
-	applyProgressionAttributes(player, resolveProgressionState(state))
+	giantUpgradeStateByUserId[player.UserId] = {}
+	clearLegacyUpgradeSessionAttributes(player)
 	applyEssenceDebugAttributes(player, GiantEssenceSession.GetSnapshot(player.UserId))
 	applyGiantUpgradeEffects(player, "player_setup")
 	local playerAny: any = player
