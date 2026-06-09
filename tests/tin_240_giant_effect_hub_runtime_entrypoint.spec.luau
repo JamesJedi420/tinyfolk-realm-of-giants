@@ -265,12 +265,7 @@ assertTrue(type(boardApi) == "table", "board query api")
 assertTrue(type(hubApi) == "table", "hub query api")
 
 local hubResponseRemote = remotesFolder:WaitForChild("VillageUpgradeHubResponse")
-local hubSnapshot = hubApi.RequestHubForTests(
-	giantPlayer,
-	{ boardId = "GiantUpgradeBoard_A" },
-	100,
-	hubResponseRemote
-)
+local hubSnapshot = hubApi.RequestHubForTests(giantPlayer, { boardId = "GiantUpgradeBoard_A" }, 100, hubResponseRemote)
 assertEqual(hubSnapshot.accepted, true, "hub snapshot accepted")
 assertTrue(type(hubSnapshot.boardTrack) == "table", "hub board track present")
 assertTrue(type(hubSnapshot.worksiteSummaries) == "table", "hub worksite summaries present")
@@ -289,8 +284,7 @@ assertEqual(shrineResult.level, 1, "shrine level 1")
 assertEqual(giantPlayer:GetAttribute("GiantEffect_MaxHealth"), 117, "shrine L1 max health attribute")
 assertEqual(giantPlayer:GetAttribute("GiantEffect_PowerBudget"), 108, "shrine L1 power budget attribute")
 
-local dwellingResult =
-	worksiteApi.RequestUpgradeForTests(giantPlayer, "GiantDwelling_A", 102, shrineResponseRemote)
+local dwellingResult = worksiteApi.RequestUpgradeForTests(giantPlayer, "GiantDwelling_A", 102, shrineResponseRemote)
 assertEqual(dwellingResult.accepted, true, "dwelling upgrade accepted")
 assertEqual(dwellingResult.level, 1, "dwelling level 1")
 assertEqual(giantPlayer:GetAttribute("GiantEffect_WalkSpeed"), 18, "dwelling L1 walk speed attribute")
