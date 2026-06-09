@@ -27,6 +27,7 @@ local VALID_END_REASONS = {
 	timeout = true,
 	logout = true,
 	safe_return = true,
+	starvation = true,
 }
 
 local PAIR_MULTIPLIERS = { 1, 0.5, 0.25 }

@@ -84,7 +84,8 @@ The handoff plan must include:
 - Essence is not hauled; Shrines produce Essence directly to Giant session pool.
 - Prototype construction spending must use stored Wood/Stone totals; construction sites may also spend stored Food when configured.
 - Farm, Granary, and Pen worksite upgrades may spend stored Food when configured in `VillageWorksiteUpgradeConfig`.
-- Pen rationing spends stored Granary Food per captive per interval while custody captures are active; shortfall is surfaced on pen attributes without auto-releasing captives in the prototype slice.
+- Pen rationing spends stored Granary Food per captive per interval while custody captures are active; pen upgrade level reduces food cost and raises starvation tolerance.
+- Sustained pen rationing shortfall reduces custodian morale and forces `starvation` custody end on the oldest captive after the pen-level threshold is reached.
 - Produced and in-transit material totals are not spendable for construction.
 - Server-side services remain authoritative for interaction validation (role/range/cooldown/material checks).
 

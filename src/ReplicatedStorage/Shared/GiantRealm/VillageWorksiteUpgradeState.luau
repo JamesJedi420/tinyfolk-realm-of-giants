@@ -261,6 +261,22 @@ function VillageWorksiteUpgradeState.ResolveCapacityModifiers(level: number): an
 	}
 end
 
+function VillageWorksiteUpgradeState.ResolvePenRationingModifiers(level: number): any
+	local normalizedLevel = if isFiniteNumber(level) and level >= 0
+		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
+		else 0
+	local foodMultiplier = VillageWorksiteUpgradeConfig.PenRationingFoodMultipliersByLevel[normalizedLevel]
+		or VillageWorksiteUpgradeConfig.PenRationingFoodMultipliersByLevel[0]
+	local starvationReleaseThreshold = VillageWorksiteUpgradeConfig.PenStarvationReleaseThresholdByLevel[normalizedLevel]
+		or VillageWorksiteUpgradeConfig.PenStarvationReleaseThresholdByLevel[0]
+
+	return {
+		level = normalizedLevel,
+		foodMultiplier = foodMultiplier,
+		starvationReleaseThreshold = starvationReleaseThreshold,
+	}
+end
+
 function VillageWorksiteUpgradeState.ResolveUpgrade(state: any, input: any): any
 	if type(state) ~= "table" then
 		return { accepted = false, reason = "state_invalid" }

@@ -199,4 +199,19 @@ assertEqual(
 	"pen attributes track rationing spend"
 )
 
+for tickIndex = 1, 5 do
+	rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 101 + tickIndex)
+end
+assertTrue(captureApi.GetTargetCapture(9202, 106) == nil, "starvation releases oldest captive")
+assertTrue(captureApi.GetTargetCapture(9203, 106) ~= nil, "newer captive remains after starvation")
+assertEqual(
+	penPart:GetAttribute(PenRationingConfig.StateAttributes.StarvationReleasesTotal),
+	1,
+	"pen tracks starvation release"
+)
+assertTrue(
+	giant:GetAttribute(PenRationingConfig.StateAttributes.CustodianMorale) < PenRationingConfig.MoraleDefault,
+	"starvation shortfall reduces custodian morale"
+)
+
 print("tin_food_pen_rationing_runtime_entrypoint.spec.luau: all checks passed")
