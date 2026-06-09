@@ -39,17 +39,21 @@
 - After the post-implementation pre-commit rule passes all required tests and validation, run the mandatory PR ship loop (`.cursor/rules/pr-ship-workflow.mdc`): commit on a slice branch, push, open a PR against `master`, babysit until CI is green, merge, and update Linear. Do not commit, push, or merge if any validation gate is failing or blocked.
 - After merge, check out `master`, pull latest, then use Linear as the source of truth to determine the next issue to implement.
 
-## Post-merge planning
+## Post-merge planting
 
-After merge and `git pull origin master`, prepare a concise implementation handoff plan only. Do not start coding the next issue in this step.
+After merge and `git pull origin master`, **plant the next implementation** in the same session (see `.cursor/rules/pr-ship-workflow.mdc`).
 
-The handoff plan must include:
+Planting checklist:
 
-- Issue id/title and Linear link
-- Durable scope and constraints
-- Relevant source-of-truth links or notes (`docs/TIN-*`, tests, architecture)
-- Expected implementation boundary
-- Key files/tests/docs to inspect first
+- Issue id/title and Linear link; issue **In Progress** when work starts
+- New slice branch from updated `master`
+- Read active `docs/TIN-*` kickoff and slice boundary before coding
+- Begin scoped implementation (smallest correct diff for the next kind/slice)
+- If blocked, document the blocker in Linear and plant unblocked prep only (kickoff, pure-logic modules, tests)
+
+Optional session notes (when useful):
+
+- Expected implementation boundary and key files/tests
 - Validation commands
 - Known risks and explicit deferred work
 

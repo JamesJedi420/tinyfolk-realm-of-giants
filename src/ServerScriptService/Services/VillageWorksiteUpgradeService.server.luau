@@ -264,6 +264,15 @@ local function GetInTransitCapacityMultiplier(worksiteId: string): number
 	return modifiers.inTransitMultiplier
 end
 
+local function GetHeldCapacityMultiplier(penId: string): number
+	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(penId)
+	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Pen then
+		return 1
+	end
+	local modifiers = VillageWorksiteUpgradeState.ResolveCapacityModifiers(GetUpgradeLevel(penId))
+	return modifiers.heldCapacityMultiplier
+end
+
 local function GetEssenceMaxCapacityMultiplier(shrineId: string): number
 	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(shrineId)
 	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Shrine then
@@ -304,6 +313,7 @@ globalEnv._VillageWorksiteUpgradeService_QueryAPI = {
 	GetUpgradeLevel = GetUpgradeLevel,
 	GetProductionModifiers = GetProductionModifiers,
 	GetInTransitCapacityMultiplier = GetInTransitCapacityMultiplier,
+	GetHeldCapacityMultiplier = GetHeldCapacityMultiplier,
 	GetEssenceMaxCapacityMultiplier = GetEssenceMaxCapacityMultiplier,
 	BuildPersistenceState = BuildPersistenceState,
 	ApplyPersistenceState = ApplyPersistenceState,

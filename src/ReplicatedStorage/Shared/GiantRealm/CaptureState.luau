@@ -25,6 +25,7 @@ export type RequestInput = {
 	targetDowned: boolean,
 	inRange: boolean,
 	custodyWindowSeconds: number,
+	maxConcurrentCapturesPerCustodian: number?,
 }
 
 export type TransitionResult = {
@@ -205,13 +206,23 @@ function CaptureState.ResolveRequest(state: State, input: RequestInput): Transit
 		return { accepted = false, reason = "target_already_captured", state = nextState, record = nil }
 	end
 
+	local maxConcurrentCaptures = 1
+	local configuredMax = input.maxConcurrentCapturesPerCustodian
+	if validNumber(configuredMax) and (configuredMax :: number) >= 1 then
+		maxConcurrentCaptures = math.floor(configuredMax :: number)
+	end
+
+	local activeCapturesByCustodian = 0
 	for _, existingRecord in pairs(nextState.captureByTarget) do
-		if existingRecord ~= nil then
-			if existingRecord.custodianUserId == input.custodianUserId then
-				nextState.lastReason = "custodian_already_holding"
-				return { accepted = false, reason = "custodian_already_holding", state = nextState, record = nil }
-			end
+		if existingRecord ~= nil and existingRecord.custodianUserId == input.custodianUserId then
+			activeCapturesByCustodian += 1
 		end
+	end
+
+	if activeCapturesByCustodian >= maxConcurrentCaptures then
+		local reason = if maxConcurrentCaptures <= 1 then "custodian_already_holding" else "custodian_capacity_reached"
+		nextState.lastReason = reason
+		return { accepted = false, reason = reason, state = nextState, record = nil }
 	end
 
 	local custodyWindowSeconds = input.custodyWindowSeconds
