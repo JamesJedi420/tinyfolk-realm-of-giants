@@ -34,4 +34,14 @@ do
 	assertTrue(string.find(model.summary, "insufficient_resources", 1, true) ~= nil, "summary includes reason")
 end
 
+do
+	local model = VillageWorksiteUpgradePresentation.BuildFeedbackModel({
+		accepted = true,
+		worksiteId = "Farm_A",
+		level = 1,
+		cost = { wood = 9, stone = 3, essence = 0, food = 2 },
+	})
+	assertTrue(string.find(model.summary, "F2", 1, true) ~= nil, "summary includes food cost")
+end
+
 print("village_worksite_upgrade_presentation.spec.luau: all checks passed")

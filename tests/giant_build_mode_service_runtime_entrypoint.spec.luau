@@ -1639,6 +1639,51 @@ do
 		mixedBaseline.Wood.stored - 10,
 		"mixed spend debits session wood"
 	)
+
+	ResourceFlowState.AddStoredAtomic(0, 0, "SeedWorksiteUpgradeFoodTest", 4)
+	local foodBaseline = ResourceFlowState.GetSnapshot()
+	local foodSpend = buildApi.SpendWorksiteUpgradeCost({
+		operationId = "worksite-upgrade-test-food-1",
+		spentAt = 14,
+		essence = 0,
+		wood = 9,
+		stone = 3,
+		food = 2,
+	})
+	assertTrue(foodSpend.accepted == true, "worksite upgrade spends stored food from session")
+	assertEqual(foodSpend.spentFrom, "session", "food-inclusive session spend source")
+	assertEqual(
+		ResourceFlowState.GetSnapshot().Food.stored,
+		foodBaseline.Food.stored - 2,
+		"session food debited for worksite upgrade"
+	)
+
+	buildApi.ApplyResourceAward({
+		operationId = "test-seed-worksite-ledger-food-1",
+		sourceKind = "defense_escape_outcome",
+		awardedAt = 15,
+		essence = 0,
+		wood = 9,
+		stone = 3,
+		counterpartyUserId = nil,
+	})
+	ResourceFlowState.AddStoredAtomic(0, 0, "SeedWorksiteUpgradeLedgerFoodTest", 2)
+	local ledgerFoodBaseline = ResourceFlowState.GetSnapshot()
+	local ledgerFoodSpend = buildApi.SpendWorksiteUpgradeCost({
+		operationId = "worksite-upgrade-test-ledger-food-1",
+		spentAt = 16,
+		essence = 0,
+		wood = 9,
+		stone = 3,
+		food = 2,
+	})
+	assertTrue(ledgerFoodSpend.accepted == true, "worksite upgrade spends ledger wood/stone and session food")
+	assertEqual(ledgerFoodSpend.spentFrom, "ledger", "ledger path remains ledger when food debited from granary")
+	assertEqual(
+		ResourceFlowState.GetSnapshot().Food.stored,
+		ledgerFoodBaseline.Food.stored - 2,
+		"ledger upgrade debits stored food"
+	)
 end
 
 print("giant_build_mode_service_runtime_entrypoint: all checks passed")

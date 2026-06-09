@@ -1198,12 +1198,35 @@ local function SpendWorksiteUpgradeCost(spend: any): any
 	local essence = if type(spend.essence) == "number" and spend.essence >= 0 then spend.essence else 0
 	local wood = if type(spend.wood) == "number" and spend.wood >= 0 then spend.wood else 0
 	local stone = if type(spend.stone) == "number" and spend.stone >= 0 then spend.stone else 0
-	if essence <= 0 and wood <= 0 and stone <= 0 then
+	local food = if type(spend.food) == "number" and spend.food >= 0 then spend.food else 0
+	if essence <= 0 and wood <= 0 and stone <= 0 and food <= 0 then
 		return { accepted = false, reason = "spend_amount_zero" }
+	end
+
+	local spendReason = "VillageWorksiteUpgrade:" .. operationId
+
+	local function canAffordStoredFood(flowSnapshot: any): boolean
+		if food <= 0 then
+			return true
+		end
+		return flowSnapshot.Food.stored >= food
+	end
+
+	local function spendStoredFood(): (boolean, string?)
+		if food <= 0 then
+			return true, nil
+		end
+		local spent, _, spendError = ResourceFlowState.SpendStoredAtomic(0, 0, spendReason, food)
+		return spent, spendError
 	end
 
 	local ledger = ensureResourceLedgerState()
 	if GiantRealmResourceState.CanAffordSpend(ledger, essence, wood, stone) then
+		local flowSnapshot = ResourceFlowState.GetSnapshot()
+		if not canAffordStoredFood(flowSnapshot) then
+			return { accepted = false, reason = "insufficient_resources" }
+		end
+
 		local spendResult = ApplyResourceSpend({
 			operationId = operationId,
 			spendKind = GiantRealmResourceState.SpendKinds.WorksiteUpgrade,
@@ -1212,9 +1235,20 @@ local function SpendWorksiteUpgradeCost(spend: any): any
 			wood = wood,
 			stone = stone,
 		})
-		if type(spendResult) == "table" and spendResult.accepted == true and spendResult.duplicate ~= true then
-			spendResult.spentFrom = "ledger"
+		if type(spendResult) ~= "table" or spendResult.accepted ~= true or spendResult.duplicate == true then
+			return spendResult
 		end
+
+		local foodSpent, foodSpendError = spendStoredFood()
+		if not foodSpent then
+			refundWorksiteUpgradeLedgerSpend(operationId, essence, wood, stone, spentAt)
+			return {
+				accepted = false,
+				reason = foodSpendError or "insufficient_resources",
+			}
+		end
+
+		spendResult.spentFrom = "ledger"
 		return spendResult
 	end
 
@@ -1222,9 +1256,13 @@ local function SpendWorksiteUpgradeCost(spend: any): any
 		return { accepted = false, reason = "insufficient_resources" }
 	end
 
-	if wood > 0 or stone > 0 then
+	if wood > 0 or stone > 0 or food > 0 then
 		local flowSnapshot = ResourceFlowState.GetSnapshot()
-		if flowSnapshot.Wood.stored < wood or flowSnapshot.Stone.stored < stone then
+		if
+			flowSnapshot.Wood.stored < wood
+			or flowSnapshot.Stone.stored < stone
+			or not canAffordStoredFood(flowSnapshot)
+		then
 			return { accepted = false, reason = "insufficient_resources" }
 		end
 
@@ -1246,8 +1284,7 @@ local function SpendWorksiteUpgradeCost(spend: any): any
 			end
 		end
 
-		local spent, _, spendError =
-			ResourceFlowState.SpendStoredAtomic(wood, stone, "VillageWorksiteUpgrade:" .. operationId)
+		local spent, _, spendError = ResourceFlowState.SpendStoredAtomic(wood, stone, spendReason, food)
 		if not spent then
 			if essence > 0 then
 				refundWorksiteUpgradeLedgerSpend(operationId, essence, 0, 0, spentAt)
@@ -1265,6 +1302,7 @@ local function SpendWorksiteUpgradeCost(spend: any): any
 				essence = essence,
 				wood = wood,
 				stone = stone,
+				food = food,
 				accepted = true,
 				reason = "accepted",
 				spentFrom = if essence > 0 then "mixed" else "session",
@@ -1289,15 +1327,20 @@ local function RollbackWorksiteUpgradeSpend(
 	essence: number,
 	wood: number,
 	stone: number,
+	food: number,
 	spentAt: number
 )
+	local rollbackReason = "VillageWorksiteUpgradeRollback:" .. spendOperationId
 	if spentFrom == "ledger" then
 		refundWorksiteUpgradeLedgerSpend(spendOperationId, essence, wood, stone, spentAt)
+		if food > 0 then
+			ResourceFlowState.AddStoredAtomic(0, 0, rollbackReason, food)
+		end
 	elseif spentFrom == "session" then
-		ResourceFlowState.AddStoredAtomic(wood, stone, "VillageWorksiteUpgradeRollback:" .. spendOperationId)
+		ResourceFlowState.AddStoredAtomic(wood, stone, rollbackReason, food)
 	elseif spentFrom == "mixed" then
 		refundWorksiteUpgradeLedgerSpend(spendOperationId, essence, 0, 0, spentAt)
-		ResourceFlowState.AddStoredAtomic(wood, stone, "VillageWorksiteUpgradeRollback:" .. spendOperationId)
+		ResourceFlowState.AddStoredAtomic(wood, stone, rollbackReason, food)
 	end
 end
 
