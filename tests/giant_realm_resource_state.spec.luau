@@ -165,4 +165,17 @@ do
 	assertEqual(amounts.stone, 1, "defended raid stone")
 end
 
+do
+	local amounts =
+		GiantRealmResourceState.ComputeAwardAmounts(GiantRealmResourceState.SourceKinds.DefendedRaidRoutePressure, {
+			stationId = "GiantControlStation_A",
+			routeId = "EscapeRoute_A",
+			defenseMultiplier = 2,
+		}, 1)
+	assertTrue(amounts.accepted, "defended raid defense multiplier accepted")
+	assertEqual(amounts.essence, 6, "defended raid defense essence")
+	assertEqual(amounts.wood, 4, "defended raid defense wood")
+	assertEqual(amounts.stone, 2, "defended raid defense stone")
+end
+
 print("giant_realm_resource_state.spec.luau: all checks passed")

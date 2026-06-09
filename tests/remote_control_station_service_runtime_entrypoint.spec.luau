@@ -212,6 +212,42 @@ do
 end
 
 do
+	currentTime = 200
+	ledgerAwards = {}
+	_G._VillageWorksiteUpgradeService_QueryAPI = {
+		GetDefenseMultiplier = function(guardTowerId: string): number
+			if guardTowerId == "GuardTower_A" then
+				return 2
+			end
+			return 1
+		end,
+	}
+	RemoteControlStationService.ResetForTests()
+
+	local enter = RemoteControlStationService.requestEnter(giant, "GiantControlStation_A")
+	assertTrue(enter.accepted, "guard tower defense enter accepted")
+
+	local pressure = RemoteControlStationService.requestRoutePressure(giant, "GiantControlStation_A", "EscapeRoute_A")
+	assertTrue(pressure.accepted, "guard tower defense pressure accepted")
+	assertEqual(#ledgerAwards, 1, "guard tower defense awards treasury")
+	assertEqual(ledgerAwards[1].essence, 6, "guard tower defense doubles essence")
+	assertEqual(ledgerAwards[1].wood, 4, "guard tower defense doubles wood")
+	assertEqual(ledgerAwards[1].stone, 2, "guard tower defense doubles stone")
+
+	currentTime = 203
+	assertTrue(
+		RemoteControlStationService.isRouteRemoteBarrierActive("EscapeRoute_A"),
+		"guard tower defense extends barrier active window"
+	)
+
+	currentTime = 211
+	assertFalse(
+		RemoteControlStationService.isRouteRemoteBarrierActive("EscapeRoute_A"),
+		"guard tower defense barrier expires after extended duration"
+	)
+end
+
+do
 	currentTime = 110
 	RemoteControlStationService.requestEnter(giant, "GiantControlStation_A")
 	local outside =

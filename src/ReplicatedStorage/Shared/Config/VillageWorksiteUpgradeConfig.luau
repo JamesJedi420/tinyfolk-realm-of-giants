@@ -42,6 +42,11 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[2] = { wood = 20, stone = 12, essence = 0 },
 		[3] = { wood = 32, stone = 20, essence = 5 },
 	},
+	guard_tower = {
+		[1] = { wood = 14, stone = 8, essence = 0 },
+		[2] = { wood = 24, stone = 16, essence = 0 },
+		[3] = { wood = 38, stone = 26, essence = 6 },
+	},
 }
 
 VillageWorksiteUpgradeConfig.ProductionMultipliersByLevel = {
@@ -56,6 +61,13 @@ VillageWorksiteUpgradeConfig.CapacityMultipliersByLevel = {
 	[1] = { inTransit = 1.25, essenceMax = 1.25, heldCapacity = 1.25 },
 	[2] = { inTransit = 1.5, essenceMax = 1.5, heldCapacity = 1.5 },
 	[3] = { inTransit = 2, essenceMax = 2, heldCapacity = 2 },
+}
+
+VillageWorksiteUpgradeConfig.DefenseMultipliersByLevel = {
+	[0] = { treasuryAward = 1, barrierDuration = 1 },
+	[1] = { treasuryAward = 1.25, barrierDuration = 1.25 },
+	[2] = { treasuryAward = 1.5, barrierDuration = 1.5 },
+	[3] = { treasuryAward = 2, barrierDuration = 2 },
 }
 
 return VillageWorksiteUpgradeConfig

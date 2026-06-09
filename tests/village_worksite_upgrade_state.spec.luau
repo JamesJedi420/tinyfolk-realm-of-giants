@@ -27,11 +27,16 @@ do
 	assertEqual(farmKind, VillageWorksiteUpgradeState.WorksiteKinds.Farm, "farm kind")
 	local penKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Pen_A")
 	assertEqual(penKind, VillageWorksiteUpgradeState.WorksiteKinds.Pen, "pen kind")
+	local guardTowerKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("GuardTower_A")
+	assertEqual(guardTowerKind, VillageWorksiteUpgradeState.WorksiteKinds.GuardTower, "guard tower kind")
 end
 
 do
 	local effectKind = VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.Pen)
 	assertEqual(effectKind, VillageWorksiteUpgradeState.EffectKinds.Capacity, "pen capacity effect")
+	local guardEffectKind =
+		VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.GuardTower)
+	assertEqual(guardEffectKind, VillageWorksiteUpgradeState.EffectKinds.Defense, "guard tower defense effect")
 end
 
 do
@@ -47,6 +52,22 @@ do
 	})
 	assertTrue(result.accepted, "pen upgrade accepted")
 	assertEqual(result.cost.wood, 11, "pen level 1 wood cost")
+end
+
+do
+	local defense = VillageWorksiteUpgradeState.ResolveDefenseModifiers(2)
+	assertEqual(defense.treasuryAwardMultiplier, 1.5, "defense treasury multiplier level 2")
+	assertEqual(defense.barrierDurationMultiplier, 1.5, "defense barrier multiplier level 2")
+end
+
+do
+	local state = VillageWorksiteUpgradeState.CreateEmptyState()
+	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
+		worksiteId = "GuardTower_A",
+		at = 16,
+	})
+	assertTrue(result.accepted, "guard tower upgrade accepted")
+	assertEqual(result.cost.wood, 14, "guard tower level 1 wood cost")
 end
 
 do

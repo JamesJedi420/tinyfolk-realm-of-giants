@@ -84,6 +84,66 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		"GiantRealmResourceState",
 		"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 	)
+	local StationConfig = resolveDependency(Config, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
+
+	local function getVillageWorksiteUpgradeQueryApi(): any?
+		if type(globalEnv._VillageWorksiteUpgradeService_QueryAPI) == "table" then
+			return globalEnv._VillageWorksiteUpgradeService_QueryAPI
+		end
+		if type(_G) == "table" and type((_G :: any)._VillageWorksiteUpgradeService_QueryAPI) == "table" then
+			return (_G :: any)._VillageWorksiteUpgradeService_QueryAPI
+		end
+		return nil
+	end
+
+	local function resolveDefenseMultiplier(): number
+		local upgradeApi = getVillageWorksiteUpgradeQueryApi()
+		if type(upgradeApi) == "table" and type(upgradeApi.GetDefenseMultiplier) == "function" then
+			local resolvedMultiplier = upgradeApi.GetDefenseMultiplier(StationConfig.DefaultGuardTowerId)
+			if type(resolvedMultiplier) == "number" and resolvedMultiplier > 0 then
+				return resolvedMultiplier
+			end
+		end
+		return 1
+	end
+
+	local function resolveRemoteControlConfig(): any
+		local defenseMultiplier = resolveDefenseMultiplier()
+		if defenseMultiplier == 1 then
+			return RemoteControlStationConfig
+		end
+		return {
+			StationNamePrefix = RemoteControlStationConfig.StationNamePrefix,
+			ZoneNamePrefix = RemoteControlStationConfig.ZoneNamePrefix,
+			DefaultStationId = RemoteControlStationConfig.DefaultStationId,
+			DefaultZoneId = RemoteControlStationConfig.DefaultZoneId,
+			InteractionRangeStuds = RemoteControlStationConfig.InteractionRangeStuds,
+			SabotageRangeStuds = RemoteControlStationConfig.SabotageRangeStuds,
+			RequestCooldownSeconds = RemoteControlStationConfig.RequestCooldownSeconds,
+			SabotageTaskDurationSeconds = RemoteControlStationConfig.SabotageTaskDurationSeconds,
+			MaxEnergy = RemoteControlStationConfig.MaxEnergy,
+			InitialEnergy = RemoteControlStationConfig.InitialEnergy,
+			PressureEnergyCost = RemoteControlStationConfig.PressureEnergyCost,
+			EnergyRecoverySeconds = RemoteControlStationConfig.EnergyRecoverySeconds,
+			EnergyRecoveryAmount = RemoteControlStationConfig.EnergyRecoveryAmount,
+			SabotageEnergyDrain = RemoteControlStationConfig.SabotageEnergyDrain,
+			SabotageLockoutSeconds = RemoteControlStationConfig.SabotageLockoutSeconds,
+			BarrierWarningSeconds = RemoteControlStationConfig.BarrierWarningSeconds * defenseMultiplier,
+			BarrierActiveSeconds = RemoteControlStationConfig.BarrierActiveSeconds * defenseMultiplier,
+			Mode = RemoteControlStationConfig.Mode,
+			BarrierState = RemoteControlStationConfig.BarrierState,
+			StationActiveOperatorUserIdAttribute = RemoteControlStationConfig.StationActiveOperatorUserIdAttribute,
+			StationEnergyAttribute = RemoteControlStationConfig.StationEnergyAttribute,
+			StationLockoutEndsAtAttribute = RemoteControlStationConfig.StationLockoutEndsAtAttribute,
+			StationZoneIdAttribute = RemoteControlStationConfig.StationZoneIdAttribute,
+			RouteBarrierStateAttribute = RemoteControlStationConfig.RouteBarrierStateAttribute,
+			RouteBarrierWarningEndsAtAttribute = RemoteControlStationConfig.RouteBarrierWarningEndsAtAttribute,
+			RouteBarrierActiveEndsAtAttribute = RemoteControlStationConfig.RouteBarrierActiveEndsAtAttribute,
+			RouteBarrierExpiresAtAttribute = RemoteControlStationConfig.RouteBarrierExpiresAtAttribute,
+			RouteBarrierByUserIdAttribute = RemoteControlStationConfig.RouteBarrierByUserIdAttribute,
+			RouteBarrierStationIdAttribute = RemoteControlStationConfig.RouteBarrierStationIdAttribute,
+		}
+	end
 
 	local function getGiantRealmResourceResolver(): any?
 		if
@@ -145,6 +205,7 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 				stationId = stationId,
 				routeId = routeId,
 				warningStartedAt = warningStartedAt,
+				defenseMultiplier = resolveDefenseMultiplier(),
 			},
 		})
 	end
@@ -661,7 +722,7 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		if routeValidation.accepted ~= true then
 			return routeValidation
 		end
-		local result = RemoteControlStationState.CreateBarrier(RemoteControlStationConfig, validation.stationState, {
+		local result = RemoteControlStationState.CreateBarrier(resolveRemoteControlConfig(), validation.stationState, {
 			routeId = routeId,
 			createdByUserId = player.UserId,
 			now = now(),

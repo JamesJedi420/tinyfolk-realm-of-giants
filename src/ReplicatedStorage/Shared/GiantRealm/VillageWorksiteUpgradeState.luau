@@ -14,11 +14,13 @@ VillageWorksiteUpgradeState.WorksiteKinds = {
 	Shrine = "shrine",
 	Farm = "farm",
 	Pen = "pen",
+	GuardTower = "guard_tower",
 }
 
 VillageWorksiteUpgradeState.EffectKinds = {
 	Production = "production",
 	Capacity = "capacity",
+	Defense = "defense",
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -64,6 +66,9 @@ function VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId: string): st
 	if startsWithPrefix(worksiteId, StationConfig.PenNamePrefix) then
 		return VillageWorksiteUpgradeState.WorksiteKinds.Pen
 	end
+	if startsWithPrefix(worksiteId, StationConfig.GuardTowerNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.GuardTower
+	end
 	return nil
 end
 
@@ -82,6 +87,9 @@ function VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind: string): st
 		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Pen
 	then
 		return VillageWorksiteUpgradeState.EffectKinds.Capacity
+	end
+	if worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.GuardTower then
+		return VillageWorksiteUpgradeState.EffectKinds.Defense
 	end
 	return nil
 end
@@ -199,6 +207,20 @@ function VillageWorksiteUpgradeState.ResolveProductionModifiers(level: number): 
 		level = normalizedLevel,
 		perTickMultiplier = multipliers.perTick,
 		maxTotalMultiplier = multipliers.maxTotal,
+	}
+end
+
+function VillageWorksiteUpgradeState.ResolveDefenseModifiers(level: number): any
+	local normalizedLevel = if isFiniteNumber(level) and level >= 0
+		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
+		else 0
+	local multipliers = VillageWorksiteUpgradeConfig.DefenseMultipliersByLevel[normalizedLevel]
+		or VillageWorksiteUpgradeConfig.DefenseMultipliersByLevel[0]
+
+	return {
+		level = normalizedLevel,
+		treasuryAwardMultiplier = multipliers.treasuryAward,
+		barrierDurationMultiplier = multipliers.barrierDuration,
 	}
 end
 

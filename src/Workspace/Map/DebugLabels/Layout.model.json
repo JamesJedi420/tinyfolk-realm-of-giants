@@ -510,6 +510,46 @@
                                         }
                      },
                      {
+                         "name":  "Marker_GuardTower_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.88,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.42,
+                                                          0.4,
+                                                          0.38
+                                                      ],
+                                            "Size":  [
+                                                         12,
+                                                         0.12,
+                                                         12
+                                                     ],
+                                            "Position":  [
+                                                             68,
+                                                             0.18,
+                                                             -12
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "GuardTower_A / defended raid defense",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "ScreenshotSoftened":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
                          "name":  "Marker_GiantControlStation_A",
                          "className":  "Part",
                          "properties":  {

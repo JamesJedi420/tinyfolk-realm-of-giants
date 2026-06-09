@@ -8,12 +8,14 @@ StationConfig.WarehouseNamePrefix = "Warehouse_"
 StationConfig.GranaryNamePrefix = "Granary_"
 StationConfig.FarmNamePrefix = "Farm_"
 StationConfig.PenNamePrefix = "Pen_"
+StationConfig.GuardTowerNamePrefix = "GuardTower_"
 StationConfig.DefaultStationId = "WorkStation_A"
 StationConfig.DefaultMiningStationId = "MiningStation_A"
 StationConfig.DefaultWarehouseId = "Warehouse_A"
 StationConfig.DefaultGranaryId = "Granary_A"
 StationConfig.DefaultFarmId = "Farm_A"
 StationConfig.DefaultPenId = "Pen_A"
+StationConfig.DefaultGuardTowerId = "GuardTower_A"
 
 StationConfig.ActivationRangeStuds = 16
 StationConfig.RequestCooldownSeconds = 0.2
