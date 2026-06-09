@@ -6,10 +6,12 @@ StationConfig.StationNamePrefix = "WorkStation_"
 StationConfig.MiningStationNamePrefix = "MiningStation_"
 StationConfig.WarehouseNamePrefix = "Warehouse_"
 StationConfig.GranaryNamePrefix = "Granary_"
+StationConfig.FarmNamePrefix = "Farm_"
 StationConfig.DefaultStationId = "WorkStation_A"
 StationConfig.DefaultMiningStationId = "MiningStation_A"
 StationConfig.DefaultWarehouseId = "Warehouse_A"
 StationConfig.DefaultGranaryId = "Granary_A"
+StationConfig.DefaultFarmId = "Farm_A"
 
 StationConfig.ActivationRangeStuds = 16
 StationConfig.RequestCooldownSeconds = 0.2
@@ -44,26 +46,32 @@ StationConfig.MaxWoodTotal = 200
 StationConfig.StonePerTick = 2
 StationConfig.MaxStoneTotal = 200
 
+StationConfig.FoodPerTick = 2
+StationConfig.MaxFoodTotal = 200
+
 StationConfig.HaulIntervalSeconds = 1
 StationConfig.HaulTransferPerStepByMaterial = {
 	Wood = 2,
 	Stone = 2,
+	Food = 2,
 }
 StationConfig.MaxInTransitByMaterial = {
 	Wood = 200,
 	Stone = 200,
+	Food = 200,
 }
 
--- Material goods (Wood, Stone) both route to Warehouse.
--- Granary_A is reserved for future food/crop resources.
+-- Wood and Stone route to Warehouse; Food routes to Granary.
 StationConfig.DeliveryPointIdByMaterial = {
 	Wood = StationConfig.DefaultWarehouseId,
 	Stone = StationConfig.DefaultWarehouseId,
+	Food = StationConfig.DefaultGranaryId,
 }
 
 StationConfig.RequiredSpecialistRoleByStationId = {
 	WorkStation_A = "Woodcutter",
 	MiningStation_A = "Miner",
+	Farm_A = "Farmer",
 }
 
 StationConfig.DebugLogEveryTicks = 1

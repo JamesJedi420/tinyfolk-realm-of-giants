@@ -6,7 +6,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 
-type MaterialName = "Wood" | "Stone"
+type MaterialName = "Wood" | "Stone" | "Food"
 
 type MaterialFlowState = {
 	produced: number,
@@ -41,6 +41,7 @@ type MaterialFlowSnapshot = {
 type FlowSnapshot = {
 	Wood: MaterialFlowSnapshot,
 	Stone: MaterialFlowSnapshot,
+	Food: MaterialFlowSnapshot,
 	deliveryPoints: {
 		warehouseId: string?,
 		granaryId: string?,
@@ -64,6 +65,10 @@ local ATTRIBUTE_STONE_PRODUCED_TOTAL = "StoneProducedTotal"
 local ATTRIBUTE_STONE_IN_TRANSIT_TOTAL = "StoneInTransitTotal"
 local ATTRIBUTE_STONE_STORED_TOTAL = "StoneStoredTotal"
 local ATTRIBUTE_STONE_USABLE_TOTAL = "StoneUsableTotal"
+local ATTRIBUTE_FOOD_PRODUCED_TOTAL = "FoodProducedTotal"
+local ATTRIBUTE_FOOD_IN_TRANSIT_TOTAL = "FoodInTransitTotal"
+local ATTRIBUTE_FOOD_STORED_TOTAL = "FoodStoredTotal"
+local ATTRIBUTE_FOOD_USABLE_TOTAL = "FoodUsableTotal"
 
 local stateByMaterial: { [MaterialName]: MaterialFlowState } = {
 	Wood = {
@@ -86,6 +91,16 @@ local stateByMaterial: { [MaterialName]: MaterialFlowState } = {
 		lastDeliveredTo = nil,
 		lastDeliveredAmount = 0,
 	},
+	Food = {
+		produced = 0,
+		inTransit = 0,
+		stored = 0,
+		generatedTotal = 0,
+		lastProducedSource = nil,
+		lastProducedAmount = 0,
+		lastDeliveredTo = nil,
+		lastDeliveredAmount = 0,
+	},
 }
 
 local deliveryPointsState: DeliveryPointsState = {
@@ -98,6 +113,7 @@ local deliveryPointsState: DeliveryPointsState = {
 local warnedMissingDeliveryByMaterial: { [MaterialName]: boolean } = {
 	Wood = false,
 	Stone = false,
+	Food = false,
 }
 
 local function debugLog(message: string)
@@ -157,6 +173,7 @@ end
 local function applyFlowAttributes(part: BasePart)
 	local woodState = stateByMaterial.Wood
 	local stoneState = stateByMaterial.Stone
+	local foodState = stateByMaterial.Food
 
 	part:SetAttribute(ATTRIBUTE_WOOD_PRODUCED_TOTAL, woodState.produced)
 	part:SetAttribute(ATTRIBUTE_WOOD_IN_TRANSIT_TOTAL, woodState.inTransit)
@@ -166,6 +183,10 @@ local function applyFlowAttributes(part: BasePart)
 	part:SetAttribute(ATTRIBUTE_STONE_IN_TRANSIT_TOTAL, stoneState.inTransit)
 	part:SetAttribute(ATTRIBUTE_STONE_STORED_TOTAL, stoneState.stored)
 	part:SetAttribute(ATTRIBUTE_STONE_USABLE_TOTAL, stoneState.stored)
+	part:SetAttribute(ATTRIBUTE_FOOD_PRODUCED_TOTAL, foodState.produced)
+	part:SetAttribute(ATTRIBUTE_FOOD_IN_TRANSIT_TOTAL, foodState.inTransit)
+	part:SetAttribute(ATTRIBUTE_FOOD_STORED_TOTAL, foodState.stored)
+	part:SetAttribute(ATTRIBUTE_FOOD_USABLE_TOTAL, foodState.stored)
 end
 
 local function refreshDeliveryPointAttributes()
@@ -189,6 +210,7 @@ function ResourceFlowState.RefreshDeliveryPoints()
 	deliveryPointsState.granaryPart = nil
 	warnedMissingDeliveryByMaterial.Wood = false
 	warnedMissingDeliveryByMaterial.Stone = false
+	warnedMissingDeliveryByMaterial.Food = false
 
 	local stationsRoot = getStationsRoot()
 	if not stationsRoot then
@@ -227,6 +249,7 @@ function ResourceFlowState.GetSnapshot(): FlowSnapshot
 	return {
 		Wood = cloneMaterialSnapshot(stateByMaterial.Wood),
 		Stone = cloneMaterialSnapshot(stateByMaterial.Stone),
+		Food = cloneMaterialSnapshot(stateByMaterial.Food),
 		deliveryPoints = {
 			warehouseId = deliveryPointsState.warehouseId,
 			granaryId = deliveryPointsState.granaryId,
@@ -281,7 +304,7 @@ local function getDeliveryIdForMaterial(material: MaterialName): string?
 		return deliveryPointsState.warehouseId
 	end
 
-	if material == "Wood" then
+	if material == "Food" then
 		return deliveryPointsState.granaryId
 	end
 
@@ -297,7 +320,7 @@ local function getDeliveryPartForMaterial(material: MaterialName): BasePart?
 		return deliveryPointsState.warehousePart
 	end
 
-	if material == "Wood" then
+	if material == "Food" then
 		return deliveryPointsState.granaryPart
 	end
 

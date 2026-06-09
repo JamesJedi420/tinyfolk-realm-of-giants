@@ -46,7 +46,7 @@ type StationState = {
 	part: BasePart,
 	isActive: boolean,
 	resourceTotal: number,
-	materialType: "Wood" | "Stone",
+	materialType: "Wood" | "Stone" | "Food",
 	tickCount: number,
 	lastTickAt: number,
 	activatedByUserId: number?,
@@ -67,6 +67,9 @@ end
 
 local function getProductionModifiersForStation(stationId: string): any
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if type(upgradeApi) ~= "table" and type(_G) == "table" then
+		upgradeApi = (_G :: any)._VillageWorksiteUpgradeService_QueryAPI
+	end
 	if type(upgradeApi) ~= "table" or type(upgradeApi.GetProductionModifiers) ~= "function" then
 		return VillageWorksiteUpgradeState.ResolveProductionModifiers(0)
 	end
@@ -160,20 +163,28 @@ local function isPlayerAlive(player: Player): boolean
 	return (humanoid :: Humanoid).Health > 0
 end
 
+local ATTRIBUTE_FOOD_PRODUCED_TOTAL = "FoodProducedTotal"
+local ATTRIBUTE_FOOD_TOTAL = "FoodTotal"
+
 local function applyDebugAttributes(state: StationState)
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
 	local woodTotal = 0
 	local stoneTotal = 0
+	local foodTotal = 0
 	if state.materialType == "Wood" then
 		woodTotal = state.resourceTotal
 	elseif state.materialType == "Stone" then
 		stoneTotal = state.resourceTotal
+	elseif state.materialType == "Food" then
+		foodTotal = state.resourceTotal
 	end
 
 	state.part:SetAttribute(ATTRIBUTE_IS_ACTIVE, state.isActive)
 	state.part:SetAttribute(ATTRIBUTE_ESSENCE_TOTAL, state.resourceTotal)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_TOTAL, woodTotal)
 	state.part:SetAttribute(ATTRIBUTE_STONE_TOTAL, stoneTotal)
+	state.part:SetAttribute(ATTRIBUTE_FOOD_TOTAL, foodTotal)
+	state.part:SetAttribute(ATTRIBUTE_FOOD_PRODUCED_TOTAL, flowSnapshot.Food.produced)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_PRODUCED_TOTAL, flowSnapshot.Wood.produced)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_IN_TRANSIT_TOTAL, flowSnapshot.Wood.inTransit)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_STORED_TOTAL, flowSnapshot.Wood.stored)
@@ -188,9 +199,12 @@ local function applyDebugAttributes(state: StationState)
 	ResourceFlowState.ApplyAttributesToPart(state.part)
 end
 
-local function getMaterialTypeForStation(stationId: string): "Wood" | "Stone"
+local function getMaterialTypeForStation(stationId: string): "Wood" | "Stone" | "Food"
 	if string.match(stationId, "^" .. StationConfig.MiningStationNamePrefix) ~= nil then
 		return "Stone"
+	end
+	if string.match(stationId, "^" .. StationConfig.FarmNamePrefix) ~= nil then
+		return "Food"
 	end
 
 	return "Wood"
@@ -246,6 +260,10 @@ local function shouldTrackStationPart(part: BasePart): boolean
 	end
 
 	if string.match(part.Name, "^" .. StationConfig.MiningStationNamePrefix) ~= nil then
+		return true
+	end
+
+	if string.match(part.Name, "^" .. StationConfig.FarmNamePrefix) ~= nil then
 		return true
 	end
 
@@ -581,7 +599,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local materialName: "Wood" | "Stone" = stationState.materialType
+	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
 	local maxHaulAmount = StationConfig.HaulTransferPerStepByMaterial[materialName]
 	if type(maxHaulAmount) == "number" and maxHaulAmount > 0 then
 		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
@@ -752,34 +770,34 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			if stationState.materialType == "Stone" then
 				maxTotal = StationConfig.MaxStoneTotal
 				perTick = StationConfig.StonePerTick
+			elseif stationState.materialType == "Food" then
+				maxTotal = StationConfig.MaxFoodTotal
+				perTick = StationConfig.FoodPerTick
 			end
 			maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
 			perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
 
-			local materialSnapshot = stationState.materialType == "Stone"
-					and ResourceFlowState.GetMaterialSnapshot("Stone")
-				or ResourceFlowState.GetMaterialSnapshot("Wood")
+			local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
+			local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
 			local remainingCapacity = maxTotal - materialSnapshot.produced
 			local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
+			local maxReachedReason = if materialName == "Stone"
+				then "max_stone_produced_reached"
+				elseif materialName == "Food" then "max_food_produced_reached"
+				else "max_wood_produced_reached"
 			if generatedAmount <= 0 then
 				applyDebugAttributes(stationState)
-				deactivateStation(
-					stationState,
-					stationState.materialType == "Stone" and "max_stone_produced_reached" or "max_wood_produced_reached"
-				)
+				deactivateStation(stationState, maxReachedReason)
 				break
 			end
 
-			local flowSnapshot
-			if stationState.materialType == "Stone" then
-				flowSnapshot =
-					ResourceFlowState.AddProduced("Stone", "MiningStation:" .. stationState.stationId, generatedAmount)
-				stationState.resourceTotal = flowSnapshot.produced
-			else
-				flowSnapshot =
-					ResourceFlowState.AddProduced("Wood", "WorkStation:" .. stationState.stationId, generatedAmount)
-				stationState.resourceTotal = flowSnapshot.produced
-			end
+			local sourcePrefix = if materialName == "Stone"
+				then "MiningStation:"
+				elseif materialName == "Food" then "Farm:"
+				else "WorkStation:"
+			local flowSnapshot =
+				ResourceFlowState.AddProduced(materialName, sourcePrefix .. stationState.stationId, generatedAmount)
+			stationState.resourceTotal = flowSnapshot.produced
 
 			if flowSnapshot.produced >= maxTotal then
 				stationState.resourceTotal = maxTotal
@@ -798,6 +816,20 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 						)
 					)
 					deactivateStation(stationState, "max_stone_produced_reached")
+				elseif stationState.materialType == "Food" then
+					debugLog(
+						string.format(
+							"Food tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+							stationState.stationId,
+							stationState.tickCount,
+							generatedAmount,
+							stationState.resourceTotal,
+							flowSnapshot.inTransit,
+							flowSnapshot.stored,
+							flowSnapshot.usable
+						)
+					)
+					deactivateStation(stationState, "max_food_produced_reached")
 				else
 					debugLog(
 						string.format(
@@ -818,33 +850,23 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 
 			applyDebugAttributes(stationState)
 			if stationState.tickCount % StationConfig.DebugLogEveryTicks == 0 then
-				if stationState.materialType == "Stone" then
-					debugLog(
-						string.format(
-							"Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-							stationState.stationId,
-							stationState.tickCount,
-							generatedAmount,
-							stationState.resourceTotal,
-							flowSnapshot.inTransit,
-							flowSnapshot.stored,
-							flowSnapshot.usable
-						)
+				local tickLabel = if stationState.materialType == "Stone"
+					then "Stone"
+					elseif stationState.materialType == "Food" then "Food"
+					else "Wood"
+				debugLog(
+					string.format(
+						"%s tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
+						tickLabel,
+						stationState.stationId,
+						stationState.tickCount,
+						generatedAmount,
+						stationState.resourceTotal,
+						flowSnapshot.inTransit,
+						flowSnapshot.stored,
+						flowSnapshot.usable
 					)
-				else
-					debugLog(
-						string.format(
-							"Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-							stationState.stationId,
-							stationState.tickCount,
-							generatedAmount,
-							stationState.resourceTotal,
-							flowSnapshot.inTransit,
-							flowSnapshot.stored,
-							flowSnapshot.usable
-						)
-					)
-				end
+				)
 			end
 		end
 	end

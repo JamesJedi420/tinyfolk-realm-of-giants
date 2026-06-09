@@ -10,6 +10,7 @@ local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
+local GRANARY_DELIVER_REMOTE_NAME = "GranaryDeliverRequest"
 local DEBUG_REQUEST_REMOTE_NAME = "WarehousingDebugStateRequest"
 local DEBUG_RESPONSE_REMOTE_NAME = "WarehousingDebugStateResponse"
 
@@ -20,7 +21,13 @@ type WarehouseState = {
 	part: BasePart,
 }
 
+type GranaryState = {
+	granaryId: string,
+	part: BasePart,
+}
+
 local warehouseStateById: { [string]: WarehouseState } = {}
+local granaryStateById: { [string]: GranaryState } = {}
 local lastRequestAtByUserId: { [number]: number } = {}
 
 local function debugLog(message: string)
@@ -107,6 +114,22 @@ local function applyDebugAttributes(state: WarehouseState)
 	state.part:SetAttribute("StoneInTransitTotal", flowSnapshot.Stone.inTransit)
 	state.part:SetAttribute("StoneStoredTotal", flowSnapshot.Stone.stored)
 	state.part:SetAttribute("StoneUsableTotal", flowSnapshot.Stone.usable)
+	state.part:SetAttribute("FoodInTransitTotal", flowSnapshot.Food.inTransit)
+	state.part:SetAttribute("FoodStoredTotal", flowSnapshot.Food.stored)
+	state.part:SetAttribute("FoodUsableTotal", flowSnapshot.Food.usable)
+end
+
+local function applyGranaryDebugAttributes(state: GranaryState)
+	local flowSnapshot = ResourceFlowState.GetSnapshot()
+	state.part:SetAttribute("WoodInTransitTotal", flowSnapshot.Wood.inTransit)
+	state.part:SetAttribute("WoodStoredTotal", flowSnapshot.Wood.stored)
+	state.part:SetAttribute("WoodUsableTotal", flowSnapshot.Wood.usable)
+	state.part:SetAttribute("StoneInTransitTotal", flowSnapshot.Stone.inTransit)
+	state.part:SetAttribute("StoneStoredTotal", flowSnapshot.Stone.stored)
+	state.part:SetAttribute("StoneUsableTotal", flowSnapshot.Stone.usable)
+	state.part:SetAttribute("FoodInTransitTotal", flowSnapshot.Food.inTransit)
+	state.part:SetAttribute("FoodStoredTotal", flowSnapshot.Food.stored)
+	state.part:SetAttribute("FoodUsableTotal", flowSnapshot.Food.usable)
 end
 
 local function findWarehousesRoot(): Instance?
@@ -124,6 +147,10 @@ end
 
 local function shouldTrackWarehousePart(part: BasePart): boolean
 	return string.match(part.Name, "^" .. StationConfig.WarehouseNamePrefix) ~= nil
+end
+
+local function shouldTrackGranaryPart(part: BasePart): boolean
+	return string.match(part.Name, "^" .. StationConfig.GranaryNamePrefix) ~= nil
 end
 
 local function registerWarehousePart(part: BasePart)
@@ -144,6 +171,24 @@ local function registerWarehousePart(part: BasePart)
 	debugLog(string.format("Registered warehouse id=%s", warehouseId))
 end
 
+local function registerGranaryPart(part: BasePart)
+	local granaryId = part.Name
+	if granaryStateById[granaryId] then
+		debugWarn(string.format("Duplicate granary id ignored: %s", granaryId))
+		return
+	end
+
+	local state: GranaryState = {
+		granaryId = granaryId,
+		part = part,
+	}
+
+	granaryStateById[granaryId] = state
+	applyGranaryDebugAttributes(state)
+
+	debugLog(string.format("Registered granary id=%s", granaryId))
+end
+
 local function registerWarehousesFromWorkspace()
 	local warehousesRoot = findWarehousesRoot()
 	if not warehousesRoot then
@@ -152,18 +197,30 @@ local function registerWarehousesFromWorkspace()
 	end
 
 	for _, descendant in warehousesRoot:GetDescendants() do
-		if descendant:IsA("BasePart") and shouldTrackWarehousePart(descendant) then
-			registerWarehousePart(descendant)
+		if descendant:IsA("BasePart") then
+			if shouldTrackWarehousePart(descendant) then
+				registerWarehousePart(descendant)
+			elseif shouldTrackGranaryPart(descendant) then
+				registerGranaryPart(descendant)
+			end
 		end
 	end
 
 	if next(warehouseStateById) == nil then
 		debugWarn("No warehouse parts registered under Workspace.Map.Stations")
 	end
+
+	if next(granaryStateById) == nil then
+		debugWarn("No granary parts registered under Workspace.Map.Stations")
+	end
 end
 
 local function rejectDeliver(player: Player, reason: string)
 	debugWarn(string.format("Rejected WarehouseDeliverRequest userId=%d reason=%s", player.UserId, reason))
+end
+
+local function rejectGranaryDeliver(player: Player, reason: string)
+	debugWarn(string.format("Rejected GranaryDeliverRequest userId=%d reason=%s", player.UserId, reason))
 end
 
 local function rejectDebug(player: Player, reason: string)
@@ -172,6 +229,7 @@ end
 
 local remotesFolder = ensureRemotesFolder()
 local deliverRemote = ensureRemoteEvent(remotesFolder, DELIVER_REMOTE_NAME)
+local granaryDeliverRemote = ensureRemoteEvent(remotesFolder, GRANARY_DELIVER_REMOTE_NAME)
 local debugRequestRemote = ensureRemoteEvent(remotesFolder, DEBUG_REQUEST_REMOTE_NAME)
 local debugResponseRemote = ensureRemoteEvent(remotesFolder, DEBUG_RESPONSE_REMOTE_NAME)
 
@@ -245,6 +303,69 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 			player.UserId,
 			warehouseId,
 			deliveredMaterial,
+			movedAmount
+		)
+	)
+end)
+
+granaryDeliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
+	if isCoolingDown(player.UserId) then
+		rejectGranaryDeliver(player, "request_cooldown")
+		return
+	end
+
+	markRequest(player.UserId)
+
+	if type(payload) ~= "string" then
+		rejectGranaryDeliver(player, "malformed_payload")
+		return
+	end
+
+	local granaryId = payload
+	local granaryState = granaryStateById[granaryId]
+	if not granaryState then
+		rejectGranaryDeliver(player, "granary_not_found")
+		return
+	end
+
+	if not isPlayerAlive(player) then
+		rejectGranaryDeliver(player, "player_not_alive")
+		return
+	end
+
+	local root = getHumanoidRootPart(player)
+	if not root then
+		rejectGranaryDeliver(player, "humanoid_root_missing")
+		return
+	end
+
+	local distance = (granaryState.part.Position - root.Position).Magnitude
+	if distance > StationConfig.ActivationRangeStuds then
+		rejectGranaryDeliver(
+			player,
+			string.format("out_of_range distance=%.2f max=%.2f", distance, StationConfig.ActivationRangeStuds)
+		)
+		return
+	end
+
+	local flowSnapshot = ResourceFlowState.GetSnapshot()
+	if flowSnapshot.Food.inTransit <= 0 then
+		rejectGranaryDeliver(player, "nothing_in_transit")
+		return
+	end
+
+	local deliverAmount = math.min(2, flowSnapshot.Food.inTransit)
+	local beforeInTransit = flowSnapshot.Food.inTransit
+	local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Food", deliverAmount)
+	local movedAmount = beforeInTransit - afterSnapshot.inTransit
+
+	applyGranaryDebugAttributes(granaryState)
+
+	debugLog(
+		string.format(
+			"Accepted GranaryDeliverRequest userId=%d granaryId=%s material=Food moved=%.0f",
+			player.UserId,
+			granaryId,
 			movedAmount
 		)
 	)

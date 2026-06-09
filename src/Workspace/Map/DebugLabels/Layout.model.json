@@ -270,6 +270,46 @@
                                         }
                      },
                      {
+                         "name":  "Marker_Farm_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.88,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.35,
+                                                          0.55,
+                                                          0.28
+                                                      ],
+                                            "Size":  [
+                                                         18,
+                                                         0.12,
+                                                         18
+                                                     ],
+                                            "Position":  [
+                                                             -95,
+                                                             0.18,
+                                                             70
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "Farm_A / Food -> Granary_A",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "ScreenshotSoftened":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
                          "name":  "Marker_MiningStation_A",
                          "className":  "Part",
                          "properties":  {

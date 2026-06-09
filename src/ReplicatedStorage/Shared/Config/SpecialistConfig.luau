@@ -8,6 +8,7 @@ SpecialistConfig.SpecialistRoles = {
 	None = "None",
 	Woodcutter = "Woodcutter",
 	Miner = "Miner",
+	Farmer = "Farmer",
 	Worshipper = "Worshipper",
 }
 

@@ -104,6 +104,7 @@ function Fixture.GetPrototypeAssemblyInput(): any
 			},
 			stations = {
 				{ name = "WorkStation_A", position = { x = 25, y = 0, z = 0 } },
+				{ name = "Farm_A", position = { x = -95, y = 0, z = 70 } },
 			},
 			constructionSites = {
 				{ name = "ConstructionSite_A", position = { x = 15, y = 0, z = 10 } },

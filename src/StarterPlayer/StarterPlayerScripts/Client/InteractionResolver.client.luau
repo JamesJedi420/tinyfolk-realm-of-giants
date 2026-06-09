@@ -22,6 +22,7 @@ local REMOTES_FOLDER_NAME = "Remotes"
 local STATION_ACTIVATE_REMOTE_NAME = "StationActivateRequest"
 local SHRINE_ACTIVATE_REMOTE_NAME = "ShrineActivateRequest"
 local WAREHOUSE_DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
+local GRANARY_DELIVER_REMOTE_NAME = "GranaryDeliverRequest"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local UPGRADE_SELECT_REMOTE_NAME = "UpgradeBoardSelectRequest"
@@ -36,6 +37,7 @@ local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
 local stationActivateRemote = remotesFolder:WaitForChild(STATION_ACTIVATE_REMOTE_NAME) :: RemoteEvent
 local shrineActivateRemote = remotesFolder:WaitForChild(SHRINE_ACTIVATE_REMOTE_NAME) :: RemoteEvent
 local warehouseDeliverRemote = remotesFolder:WaitForChild(WAREHOUSE_DELIVER_REMOTE_NAME) :: RemoteEvent
+local granaryDeliverRemote = remotesFolder:WaitForChild(GRANARY_DELIVER_REMOTE_NAME) :: RemoteEvent
 local escapeAttemptRemote = remotesFolder:WaitForChild(ESCAPE_ATTEMPT_REMOTE_NAME) :: RemoteEvent
 local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_REMOTE_NAME) :: RemoteEvent
 local upgradeSelectRemote = remotesFolder:WaitForChild(UPGRADE_SELECT_REMOTE_NAME) :: RemoteEvent
@@ -59,6 +61,7 @@ type CandidateAction =
 	| "upgrade_board_progress"
 	| "worksite_upgrade"
 	| "warehouse_deliver"
+	| "granary_deliver"
 	| "station_pickup_or_assign"
 	| "shrine_assign_worshipper"
 	| "remote_control_station"
@@ -78,6 +81,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	upgrade_board_progress = 3,
 	worksite_upgrade = 3,
 	warehouse_deliver = 4,
+	granary_deliver = 4,
 	station_pickup_or_assign = 5,
 	shrine_assign_worshipper = 6,
 	remote_control_station = 7,
@@ -151,6 +155,9 @@ local function resolveUpgradeableWorksiteId(partName: string): string?
 	if startsWithPrefix(partName, ShrineConfig.ShrineNamePrefix) then
 		return partName
 	end
+	if startsWithPrefix(partName, StationConfig.FarmNamePrefix) then
+		return partName
+	end
 	return nil
 end
 
@@ -159,6 +166,14 @@ local function getProducedForMaterialStation(stationPart: BasePart): number
 		local stoneProduced = stationPart:GetAttribute("StoneProducedTotal")
 		if type(stoneProduced) == "number" then
 			return stoneProduced
+		end
+		return 0
+	end
+
+	if startsWithPrefix(stationPart.Name, StationConfig.FarmNamePrefix) then
+		local foodProduced = stationPart:GetAttribute("FoodProducedTotal")
+		if type(foodProduced) == "number" then
+			return foodProduced
 		end
 		return 0
 	end
@@ -275,8 +290,23 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 		end
 
 		if
+			startsWithPrefix(targetId, StationConfig.GranaryNamePrefix)
+			and distance <= StationConfig.ActivationRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "granary_deliver",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("granary_deliver"),
+				mode = "deliver",
+				payload = targetId,
+			})
+		end
+
+		if
 			startsWithPrefix(targetId, StationConfig.StationNamePrefix)
 			or startsWithPrefix(targetId, StationConfig.MiningStationNamePrefix)
+			or startsWithPrefix(targetId, StationConfig.FarmNamePrefix)
 		then
 			if distance <= StationConfig.ActivationRangeStuds then
 				local requiredSpecialistRole = StationConfig.RequiredSpecialistRoleByStationId[targetId]
@@ -473,6 +503,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "warehouse_deliver" then
 		warehouseDeliverRemote:FireServer(candidate.payload)
+		return
+	end
+
+	if candidate.action == "granary_deliver" then
+		granaryDeliverRemote:FireServer(candidate.payload)
 		return
 	end
 
