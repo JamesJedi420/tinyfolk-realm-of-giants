@@ -25,7 +25,7 @@ local WAREHOUSE_DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
 local GRANARY_DELIVER_REMOTE_NAME = "GranaryDeliverRequest"
 local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
-local UPGRADE_SELECT_REMOTE_NAME = "UpgradeBoardSelectRequest"
+local UPGRADE_HUB_REMOTE_NAME = "VillageUpgradeHubRequest"
 local WORKSITE_UPGRADE_REMOTE_NAME = "VillageWorksiteUpgradeRequest"
 local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
 
@@ -40,7 +40,7 @@ local warehouseDeliverRemote = remotesFolder:WaitForChild(WAREHOUSE_DELIVER_REMO
 local granaryDeliverRemote = remotesFolder:WaitForChild(GRANARY_DELIVER_REMOTE_NAME) :: RemoteEvent
 local escapeAttemptRemote = remotesFolder:WaitForChild(ESCAPE_ATTEMPT_REMOTE_NAME) :: RemoteEvent
 local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_REMOTE_NAME) :: RemoteEvent
-local upgradeSelectRemote = remotesFolder:WaitForChild(UPGRADE_SELECT_REMOTE_NAME) :: RemoteEvent
+local upgradeHubRemote = remotesFolder:WaitForChild(UPGRADE_HUB_REMOTE_NAME) :: RemoteEvent
 local worksiteUpgradeRemote = remotesFolder:WaitForChild(WORKSITE_UPGRADE_REMOTE_NAME) :: RemoteEvent
 local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
 
@@ -58,7 +58,7 @@ local activeRemoteControlTaskToken = 0
 type CandidateAction =
 	"escape_attempt"
 	| "construction_build"
-	| "upgrade_board_progress"
+	| "upgrade_board_hub"
 	| "worksite_upgrade"
 	| "warehouse_deliver"
 	| "granary_deliver"
@@ -78,7 +78,7 @@ type Candidate = {
 local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	escape_attempt = 1,
 	construction_build = 2,
-	upgrade_board_progress = 3,
+	upgrade_board_hub = 3,
 	worksite_upgrade = 3,
 	warehouse_deliver = 4,
 	granary_deliver = 4,
@@ -125,18 +125,6 @@ end
 
 local function getPriority(action: CandidateAction): number
 	return (PRIORITY_BY_ACTION :: any)[action]
-end
-
-local function chooseNextUpgradeId(): string?
-	for _, option in UpgradeBoardConfig.UpgradeOptions do
-		local upgradeId = option.id
-		local alreadySelected = localPlayer:GetAttribute("GiantUpgrade_" .. upgradeId) == true
-		if not alreadySelected then
-			return upgradeId
-		end
-	end
-
-	return nil
 end
 
 local function resolveUpgradeableWorksiteId(partName: string): string?
@@ -209,7 +197,6 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 
 	local isTinyfolk = role == RoleConfig.Roles.Tinyfolk
 	local isGiant = role == RoleConfig.Roles.Giant
-	local nextUpgradeId = if isGiant then chooseNextUpgradeId() else nil
 
 	local candidates: { Candidate } = {}
 
@@ -252,19 +239,18 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 		end
 
 		if
-			nextUpgradeId
+			isGiant
 			and startsWithPrefix(targetId, UpgradeBoardConfig.BoardNamePrefix)
 			and distance <= UpgradeBoardConfig.InteractionRangeStuds
 		then
 			pushCandidate(candidates, {
-				action = "upgrade_board_progress",
+				action = "upgrade_board_hub",
 				targetId = targetId,
 				distance = distance,
-				priority = getPriority("upgrade_board_progress"),
-				mode = "progress_next",
+				priority = getPriority("upgrade_board_hub"),
+				mode = "open",
 				payload = {
 					boardId = targetId,
-					upgradeId = nextUpgradeId,
 				},
 			})
 		end
@@ -459,20 +445,6 @@ local function pickWinningCandidate(candidates: { Candidate }): Candidate?
 end
 
 local function getCandidateSignature(candidate: Candidate): string
-	if
-		candidate.action == "upgrade_board_progress"
-		and type(candidate.payload) == "table"
-		and type(candidate.payload.upgradeId) == "string"
-	then
-		return string.format(
-			"%s|%s|%s|%s",
-			candidate.action,
-			candidate.targetId,
-			candidate.mode,
-			candidate.payload.upgradeId
-		)
-	end
-
 	return string.format("%s|%s|%s", candidate.action, candidate.targetId, candidate.mode)
 end
 
@@ -500,8 +472,8 @@ local function fireCandidate(candidate: Candidate)
 		return
 	end
 
-	if candidate.action == "upgrade_board_progress" then
-		upgradeSelectRemote:FireServer(candidate.payload)
+	if candidate.action == "upgrade_board_hub" then
+		upgradeHubRemote:FireServer(candidate.payload)
 		return
 	end
 
