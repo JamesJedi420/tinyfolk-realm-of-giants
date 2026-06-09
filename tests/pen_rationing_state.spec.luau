@@ -37,4 +37,27 @@ local releaseTarget = PenRationingState.SelectStarvationReleaseTarget({
 })
 assertEqual(releaseTarget, 201, "oldest captive selected for starvation release")
 
+assertEqual(PenRationingState.ComputeCaptureReadinessPercent(100, 50), 100, "full morale readiness")
+assertEqual(PenRationingState.ComputeCaptureReadinessPercent(25, 50), 50, "half morale readiness")
+assertEqual(PenRationingState.ComputeCaptureReadinessPercent(0, 50), 0, "zero morale readiness")
+
+local depleted = PenRationingState.ResolveCaptureMoraleCheck(0, 9001, 9101, 60, 50)
+assertEqual(depleted.allowed, false, "zero morale blocks capture")
+assertEqual(depleted.reason, "custodian_morale_depleted", "zero morale reason")
+
+local sure = PenRationingState.ResolveCaptureMoraleCheck(50, 9001, 9101, 60, 50)
+assertEqual(sure.allowed, true, "sure threshold morale always captures")
+
+local shaken = PenRationingState.ResolveCaptureMoraleCheck(48, 9001, 9101, 60, 50)
+assertEqual(shaken.allowed, false, "low morale deterministic fail")
+assertEqual(shaken.reason, "custodian_morale_shaken", "shaken morale reason")
+
+local recovered = PenRationingState.ResolveCaptureMoraleCheck(49, 9001, 9101, 60, 50)
+assertEqual(recovered.allowed, true, "low morale deterministic pass")
+
+assertEqual(PenRationingState.ApplyCaptiveShortfallStreak(0, true), 1, "captive shortfall increments")
+assertEqual(PenRationingState.ApplyCaptiveShortfallStreak(2, false), 0, "captive shortfall resets")
+assertEqual(PenRationingState.IsCaptiveStarving(1, 2), false, "one shortfall not starving")
+assertEqual(PenRationingState.IsCaptiveStarving(2, 2), true, "two shortfalls starving")
+
 print("pen_rationing_state.spec.luau: all checks passed")

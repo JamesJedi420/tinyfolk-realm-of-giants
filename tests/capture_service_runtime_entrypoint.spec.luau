@@ -57,6 +57,7 @@ end
 
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
+addChild(configFolder, "PenRationingConfig", "../../ReplicatedStorage/Shared/Config/PenRationingConfig")
 addChild(configFolder, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
 addChild(
 	configFolder,
@@ -66,6 +67,7 @@ addChild(
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
+addChild(giantRealmFolder, "PenRationingState", "../../ReplicatedStorage/Shared/GiantRealm/PenRationingState")
 addChild(
 	giantRealmFolder,
 	"VillageWorksiteUpgradeState",
@@ -391,5 +393,30 @@ assertEqual(scoreEvents[6].metadata.contributionRatio, 0.25, "pair third termina
 assertEqual(pairFourthRelease.reward.reason, "pair_reward_cap_reached", "pair fourth terminal reward capped")
 assertEqual(#scoreEvents, 7, "pair fourth terminal reward does not emit containment score")
 assertTrue(captureApi.GetTargetCapture(2102, 48.1) == nil, "pair fourth capped reward still clears capture")
+
+local moraleByCustodian: { [number]: number } = {}
+_G._PenRationingService_QueryAPI = {
+	GetCustodianMorale = function(custodianUserId: number): number
+		return moraleByCustodian[custodianUserId] or 100
+	end,
+}
+
+resetState()
+moraleByCustodian[2101] = 0
+local depletedMorale = captureApi.RequestCapture(2101, 2102, 60.0)
+assertFalse(depletedMorale.accepted, "depleted morale blocks capture")
+assertEqual(depletedMorale.reason, "custodian_morale_depleted", "depleted morale reason")
+
+resetState()
+moraleByCustodian[2101] = 48
+local shakenMorale = captureApi.RequestCapture(2101, 2102, 60.0)
+assertFalse(shakenMorale.accepted, "shaken morale blocks capture roll")
+assertEqual(shakenMorale.reason, "custodian_morale_shaken", "shaken morale reason")
+
+resetState()
+moraleByCustodian[2101] = 50
+local sureMorale = captureApi.RequestCapture(2101, 2102, 60.0)
+assertTrue(sureMorale.accepted == true, "sure threshold morale captures")
+assertEqual(sureMorale.reason, "accepted", "sure threshold morale accepted reason")
 
 print("capture_service_runtime_entrypoint: all checks passed")

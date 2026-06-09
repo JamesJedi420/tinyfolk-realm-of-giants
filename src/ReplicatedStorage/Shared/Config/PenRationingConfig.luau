@@ -11,6 +11,9 @@ PenRationingConfig.MoraleMin = 0
 PenRationingConfig.MoraleMax = 100
 PenRationingConfig.MoraleLossPerShortfallTick = 12
 PenRationingConfig.MoraleRecoveryPerSuccessfulTick = 3
+PenRationingConfig.MoraleCaptureSureThreshold = 50
+
+PenRationingConfig.CaptiveStarvingStreakThreshold = 2
 
 PenRationingConfig.StateAttributes = {
 	ActiveCaptiveCount = "PenRationingActiveCaptiveCount",
@@ -22,6 +25,8 @@ PenRationingConfig.StateAttributes = {
 	PenUpgradeLevel = "PenRationingPenUpgradeLevel",
 	FoodCostMultiplier = "PenRationingFoodCostMultiplier",
 	CustodianMorale = "PenRationingCustodianMorale",
+	CaptiveShortfallStreak = "PenRationingCaptiveShortfallStreak",
+	CaptiveStarving = "PenRationingCaptiveStarving",
 }
 
 return PenRationingConfig
