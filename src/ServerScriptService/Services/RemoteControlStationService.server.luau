@@ -84,7 +84,8 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		"GiantRealmResourceState",
 		"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 	)
-	local StationConfig = resolveDependency(Config, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
+	local StationConfig =
+		resolveDependency(Config, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
 
 	local function getVillageWorksiteUpgradeQueryApi(): any?
 		if type(globalEnv._VillageWorksiteUpgradeService_QueryAPI) == "table" then
