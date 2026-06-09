@@ -48,6 +48,66 @@ function PenRationingState.CountDueTicks(
 	return dueTicks, nextAccumulator
 end
 
+function PenRationingState.ComputeCaptureReadinessPercent(morale: number, sureThreshold: number): number
+	if not isFiniteNumber(morale) or morale <= 0 then
+		return 0
+	end
+	if not isFiniteNumber(sureThreshold) or sureThreshold <= 0 then
+		return 100
+	end
+	if morale >= sureThreshold then
+		return 100
+	end
+	return math.clamp(math.floor((morale / sureThreshold) * 100 + 0.5), 0, 100)
+end
+
+function PenRationingState.ResolveCaptureMoraleCheck(
+	morale: number,
+	custodianUserId: number,
+	targetUserId: number,
+	at: number,
+	sureThreshold: number
+): { allowed: boolean, reason: string }
+	if not isFiniteNumber(morale) or morale <= 0 then
+		return { allowed = false, reason = "custodian_morale_depleted" }
+	end
+
+	local resolvedThreshold = if isFiniteNumber(sureThreshold) and sureThreshold > 0 then sureThreshold else 50
+	if morale >= resolvedThreshold then
+		return { allowed = true, reason = "accepted" }
+	end
+
+	if not isFiniteNumber(custodianUserId) or not isFiniteNumber(targetUserId) or not isFiniteNumber(at) then
+		return { allowed = false, reason = "custodian_morale_shaken" }
+	end
+
+	local rollSeed = math.floor(custodianUserId) * 31 + math.floor(targetUserId) * 17 + math.floor(at * 1000)
+	local roll = rollSeed % 100
+	if roll < math.floor(morale) then
+		return { allowed = true, reason = "accepted" }
+	end
+
+	return { allowed = false, reason = "custodian_morale_shaken" }
+end
+
+function PenRationingState.ApplyCaptiveShortfallStreak(currentStreak: number, increment: boolean): number
+	local safeCurrent = if isFiniteNumber(currentStreak) and currentStreak >= 0 then math.floor(currentStreak) else 0
+	if increment then
+		return safeCurrent + 1
+	end
+	return 0
+end
+
+function PenRationingState.IsCaptiveStarving(shortfallStreak: number, starvingThreshold: number): boolean
+	if not isFiniteNumber(shortfallStreak) or shortfallStreak <= 0 then
+		return false
+	end
+	local resolvedThreshold = if isFiniteNumber(starvingThreshold) and starvingThreshold > 0
+		then math.floor(starvingThreshold)
+		else 2
+	return math.floor(shortfallStreak) >= resolvedThreshold
+end
+
 function PenRationingState.ApplyMoraleDelta(
 	currentMorale: number,
 	delta: number,

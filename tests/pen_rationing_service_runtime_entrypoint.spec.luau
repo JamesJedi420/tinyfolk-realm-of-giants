@@ -213,17 +213,23 @@ assertEqual(
 )
 assertEqual(penPart:GetAttribute(PenRationingConfig.StateAttributes.PenUpgradeLevel), 3, "pen upgrade level exposed")
 
-local custodian = {
-	UserId = 9001,
-	_Attributes = {},
-	SetAttribute = function(self: any, attributeName: string, value: any)
-		self._Attributes[attributeName] = value
-	end,
-	GetAttribute = function(self: any, attributeName: string): any
-		return self._Attributes[attributeName]
-	end,
-}
-playersList = { custodian }
+local function makeMockPlayer(userId: number)
+	return {
+		UserId = userId,
+		_Attributes = {},
+		SetAttribute = function(self: any, attributeName: string, value: any)
+			self._Attributes[attributeName] = value
+		end,
+		GetAttribute = function(self: any, attributeName: string): any
+			return self._Attributes[attributeName]
+		end,
+	}
+end
+
+local custodian = makeMockPlayer(9001)
+local captiveA = makeMockPlayer(9101)
+local captiveB = makeMockPlayer(9102)
+playersList = { custodian, captiveA, captiveB }
 
 activeCaptures = {
 	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 50 },
@@ -253,5 +259,47 @@ assertEqual(starvationReleases[1].targetUserId, 9101, "oldest captive released o
 assertEqual(starvationReleases[1].endReason, "starvation", "starvation end reason")
 assertEqual(penState.starvationReleasesTotal, 1, "pen tracks starvation releases")
 assertEqual(#activeCaptures, 1, "one captive remains after starvation release")
+
+rationApi.ResetForTests()
+activeCaptures = {
+	{ custodianUserId = 9001, targetUserId = 9101, startedAt = 120 },
+}
+ResourceFlowState.ResetSession("pen_rationing_captive_shortfall")
+rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 130)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveShortfallStreak),
+	1,
+	"shortfall increments captive streak"
+)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveStarving),
+	false,
+	"one shortfall not starving"
+)
+
+rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 131)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveShortfallStreak),
+	2,
+	"second shortfall increments captive streak"
+)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveStarving),
+	true,
+	"two shortfalls mark captive starving"
+)
+
+ResourceFlowState.AddStoredAtomic(0, 0, "pen_rationing_captive_recovery", 5)
+rationApi.AdvanceRationingForTests(PenRationingConfig.IntervalSeconds, 132)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveShortfallStreak),
+	0,
+	"successful ration resets captive streak"
+)
+assertEqual(
+	captiveA:GetAttribute(PenRationingConfig.StateAttributes.CaptiveStarving),
+	false,
+	"successful ration clears starving"
+)
 
 print("pen_rationing_service_runtime_entrypoint.spec.luau: all checks passed")

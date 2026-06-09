@@ -29,6 +29,7 @@ type PenState = {
 
 local penStateById: { [string]: PenState } = {}
 local moraleByCustodianUserId: { [number]: number } = {}
+local captiveShortfallStreakByTargetUserId: { [number]: number } = {}
 local globalEnv: any = getfenv()
 
 local function debugLog(message: string)
@@ -111,6 +112,59 @@ local function setCustodianMorale(custodianUserId: number, morale: number)
 	local player = getPlayerByUserId(custodianUserId)
 	if player ~= nil then
 		player:SetAttribute(PenRationingConfig.StateAttributes.CustodianMorale, morale)
+	end
+end
+
+local function projectCaptiveStarvationAttributes(targetUserId: number, shortfallStreak: number)
+	local attrs = PenRationingConfig.StateAttributes
+	local player = getPlayerByUserId(targetUserId)
+	if player == nil then
+		return
+	end
+
+	player:SetAttribute(attrs.CaptiveShortfallStreak, shortfallStreak)
+	player:SetAttribute(
+		attrs.CaptiveStarving,
+		PenRationingState.IsCaptiveStarving(shortfallStreak, PenRationingConfig.CaptiveStarvingStreakThreshold)
+	)
+end
+
+local function clearCaptiveStarvationAttributes(targetUserId: number)
+	projectCaptiveStarvationAttributes(targetUserId, 0)
+	captiveShortfallStreakByTargetUserId[targetUserId] = nil
+end
+
+local function syncCaptiveStarvationAttributes(captures: { any })
+	local activeTargets: { [number]: boolean } = {}
+	for _, record in ipairs(captures) do
+		if type(record) == "table" and type(record.targetUserId) == "number" then
+			activeTargets[record.targetUserId] = true
+		end
+	end
+
+	for targetUserId, _ in pairs(captiveShortfallStreakByTargetUserId) do
+		if not activeTargets[targetUserId] then
+			clearCaptiveStarvationAttributes(targetUserId)
+		end
+	end
+
+	for targetUserId in pairs(activeTargets) do
+		local streak = captiveShortfallStreakByTargetUserId[targetUserId] or 0
+		projectCaptiveStarvationAttributes(targetUserId, streak)
+	end
+end
+
+local function applyCaptiveShortfallEffects(captures: { any }, increment: boolean)
+	for _, record in ipairs(captures) do
+		if type(record) == "table" and type(record.targetUserId) == "number" then
+			local targetUserId = record.targetUserId
+			local nextStreak = PenRationingState.ApplyCaptiveShortfallStreak(
+				captiveShortfallStreakByTargetUserId[targetUserId] or 0,
+				increment
+			)
+			captiveShortfallStreakByTargetUserId[targetUserId] = nextStreak
+			projectCaptiveStarvationAttributes(targetUserId, nextStreak)
+		end
 	end
 end
 
@@ -234,6 +288,7 @@ local function processRationingTick(penState: PenState, captures: { any }, at: n
 		penState.lastFoodShortfall = false
 		penState.consecutiveShortfallTicks = 0
 		refreshPenAttributes(penState, activeCaptiveCount, penModifiers)
+		syncCaptiveStarvationAttributes(captures)
 		return
 	end
 
@@ -243,6 +298,7 @@ local function processRationingTick(penState: PenState, captures: { any }, at: n
 		penState.lastFoodShortfall = true
 		penState.consecutiveShortfallTicks += 1
 		applyMoraleDeltaToCustodians(captures, -PenRationingConfig.MoraleLossPerShortfallTick)
+		applyCaptiveShortfallEffects(captures, true)
 		debugWarn(
 			string.format(
 				"Food shortfall penId=%s captives=%d requiredFood=%d shortfallTicks=%d reason=%s",
@@ -262,6 +318,7 @@ local function processRationingTick(penState: PenState, captures: { any }, at: n
 			forceStarvationRelease(penState, getActiveCaptures(at), at)
 		end
 		refreshPenAttributes(penState, #getActiveCaptures(at), penModifiers)
+		syncCaptiveStarvationAttributes(getActiveCaptures(at))
 		return
 	end
 
@@ -270,6 +327,7 @@ local function processRationingTick(penState: PenState, captures: { any }, at: n
 	penState.foodConsumedTotal += foodCost
 	penState.lastTickAt = at
 	applyMoraleDeltaToCustodians(captures, PenRationingConfig.MoraleRecoveryPerSuccessfulTick)
+	applyCaptiveShortfallEffects(captures, false)
 	debugLog(
 		string.format(
 			"Ration tick penId=%s captives=%d foodCost=%d foodConsumedTotal=%d penLevel=%d",
@@ -281,6 +339,7 @@ local function processRationingTick(penState: PenState, captures: { any }, at: n
 		)
 	)
 	refreshPenAttributes(penState, activeCaptiveCount, penModifiers)
+	syncCaptiveStarvationAttributes(captures)
 end
 
 local function advanceRationing(deltaSeconds: number, at: number)
@@ -318,8 +377,12 @@ _G._PenRationingService_QueryAPI = {
 	AdvanceRationingForTests = function(deltaSeconds: number, at: number?)
 		advanceRationing(deltaSeconds, if type(at) == "number" then at else os.clock())
 	end,
+	SetCustodianMoraleForTests = function(custodianUserId: number, morale: number)
+		setCustodianMorale(custodianUserId, morale)
+	end,
 	ResetForTests = function()
 		moraleByCustodianUserId = {}
+		captiveShortfallStreakByTargetUserId = {}
 		for _, penState in pairs(penStateById) do
 			penState.accumulatorSeconds = 0
 			penState.foodConsumedTotal = 0

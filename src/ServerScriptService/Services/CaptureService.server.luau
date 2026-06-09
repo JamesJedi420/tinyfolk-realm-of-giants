@@ -7,8 +7,10 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
+local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
+local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local ContainmentRewardResolver = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ContainmentRewardResolver"))
@@ -391,6 +393,33 @@ applyCaptureAttributesFromState = function()
 	end
 end
 
+local function getPenRationingServiceQueryApi(): any?
+	local queryApi = globalEnv._PenRationingService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._PenRationingService_QueryAPI) == "table" then
+		return (_G :: any)._PenRationingService_QueryAPI
+	end
+	return nil
+end
+
+local function resolveMoraleCaptureGate(custodianUserId: number, targetUserId: number, at: number): any
+	local rationingApi = getPenRationingServiceQueryApi()
+	if type(rationingApi) ~= "table" or type(rationingApi.GetCustodianMorale) ~= "function" then
+		return { allowed = true, reason = "accepted" }
+	end
+
+	local morale = rationingApi.GetCustodianMorale(custodianUserId)
+	return PenRationingState.ResolveCaptureMoraleCheck(
+		morale,
+		custodianUserId,
+		targetUserId,
+		at,
+		PenRationingConfig.MoraleCaptureSureThreshold
+	)
+end
+
 local function resolveMaxConcurrentCapturesPerCustodian(): number
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
 	if type(upgradeApi) ~= "table" and type(_G) == "table" then
@@ -459,6 +488,14 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 				return { accepted = false, reason = "anti_guarding_repeat_target_cooldown" }
 			end
 		end
+	end
+
+	local moraleGate = resolveMoraleCaptureGate(custodian.UserId, targetUserId, resolvedNow)
+	if moraleGate.allowed ~= true then
+		markRejectedRequest(custodian.UserId, resolvedNow)
+		setCaptureLastReason(custodian, moraleGate.reason)
+		setCaptureLastReason(target, moraleGate.reason)
+		return { accepted = false, reason = moraleGate.reason }
 	end
 
 	local transition = CaptureState.ResolveRequest(state, {

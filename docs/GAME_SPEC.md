@@ -29,7 +29,7 @@ Use these markers consistently in design and implementation discussions:
 - Prototype construction spending uses stored Wood/Stone and stored Food (Granary) where configured per site.
 - Food-adjacent worksite upgrades (Farm, Granary, Pen) may spend stored Food from Granary alongside wood/stone/essence.
 - Pen_A rationing spends stored Food each interval while captives are held in custody (1 Food per captive per second in the prototype, scaled by pen upgrade level).
-- Sustained pen food shortfall reduces custodian morale and eventually forces starvation release of the oldest held captive.
+- Sustained pen food shortfall reduces custodian morale (low morale can block or shake capture attempts), marks captives with ration stress/starvation exposure, and eventually forces starvation release of the oldest held captive.
 - Produced and InTransit material totals are not spendable for construction.
 - Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
 - Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.
