@@ -137,6 +137,21 @@ export type WorksiteUpgradePersistenceSaveRecord = {
 	upgrades: { WorksiteUpgradeSaveRecord },
 }
 
+export type TrophySaveRecord = {
+	operationId: string,
+	trophyKind: string,
+	awardedAt: number,
+	custodianUserId: number,
+	targetDisplayToken: string,
+	endReason: string?,
+	heldSeconds: number?,
+	summary: string,
+}
+
+export type TrophyPersistenceSaveRecord = {
+	trophies: { TrophySaveRecord },
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -147,6 +162,7 @@ export type GiantRealmSaveRoot = {
 	defenseHistory: DefenseHistorySaveRecord?,
 	resourceLedger: ResourceLedgerSaveRecord?,
 	worksiteUpgrades: WorksiteUpgradePersistenceSaveRecord?,
+	trophyPersistence: TrophyPersistenceSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -731,6 +747,70 @@ function GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(record: a
 	return true, nil
 end
 
+local VALID_TROPHY_KINDS = {
+	capture_success = true,
+	containment_held = true,
+	containment_starvation = true,
+	containment_escape_failure = true,
+}
+
+function GiantRealmSaveSchema.ValidateTrophySaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "trophy_record_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "trophy_operation_id_invalid"
+	end
+	if VALID_TROPHY_KINDS[record.trophyKind] ~= true then
+		return false, "trophy_kind_invalid"
+	end
+	if not isFiniteNumber(record.awardedAt) or record.awardedAt < 0 then
+		return false, "trophy_awarded_at_invalid"
+	end
+	if not isPositiveNumber(record.custodianUserId) then
+		return false, "trophy_custodian_user_id_invalid"
+	end
+	if type(record.targetDisplayToken) ~= "string" or record.targetDisplayToken == "" then
+		return false, "trophy_target_display_token_invalid"
+	end
+	if type(record.summary) ~= "string" or record.summary == "" then
+		return false, "trophy_summary_invalid"
+	end
+	if record.endReason ~= nil and (type(record.endReason) ~= "string" or record.endReason == "") then
+		return false, "trophy_end_reason_invalid"
+	end
+	if record.heldSeconds ~= nil and (not isFiniteNumber(record.heldSeconds) or record.heldSeconds < 0) then
+		return false, "trophy_held_seconds_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateTrophyPersistenceRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "trophy_persistence_invalid"
+	end
+	if type(record.trophies) ~= "table" then
+		return false, "trophy_persistence_trophies_invalid"
+	end
+
+	local seenOperationIds: { [string]: boolean } = {}
+	for index, trophyRecord in ipairs(record.trophies) do
+		local valid, reason = GiantRealmSaveSchema.ValidateTrophySaveRecord(trophyRecord)
+		if not valid then
+			return false, string.format("%s index=%d", reason or "trophy_record_invalid", index)
+		end
+		if seenOperationIds[trophyRecord.operationId] then
+			return false, string.format("trophy_operation_id_duplicate index=%d", index)
+		end
+		seenOperationIds[trophyRecord.operationId] = true
+	end
+
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -782,6 +862,11 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 		GiantRealmSaveSchema.ValidateWorksiteUpgradePersistenceRecord(root.worksiteUpgrades)
 	if not worksiteUpgradeValid then
 		return false, worksiteUpgradeReason
+	end
+
+	local trophyValid, trophyReason = GiantRealmSaveSchema.ValidateTrophyPersistenceRecord(root.trophyPersistence)
+	if not trophyValid then
+		return false, trophyReason
 	end
 
 	return true, nil
@@ -1104,6 +1189,33 @@ function GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(
 	return { upgrades = records }
 end
 
+function GiantRealmSaveSchema.SerializeTrophyPersistenceRecord(state: any): TrophyPersistenceSaveRecord?
+	if state == nil then
+		return nil
+	end
+	if type(state) ~= "table" or type(state.trophies) ~= "table" then
+		return { trophies = {} }
+	end
+
+	local records = {}
+	for _, record in ipairs(state.trophies) do
+		if type(record) == "table" then
+			table.insert(records, {
+				operationId = record.operationId,
+				trophyKind = record.trophyKind,
+				awardedAt = record.awardedAt,
+				custodianUserId = record.custodianUserId,
+				targetDisplayToken = record.targetDisplayToken,
+				endReason = record.endReason,
+				heldSeconds = record.heldSeconds,
+				summary = record.summary,
+			})
+		end
+	end
+
+	return { trophies = records }
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
@@ -1112,7 +1224,8 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	rescuePersistenceState: any?,
 	defenseHistoryState: any?,
 	resourceLedgerState: any?,
-	worksiteUpgradeState: any?
+	worksiteUpgradeState: any?,
+	trophyPersistenceState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -1124,6 +1237,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		defenseHistory = nil,
 		resourceLedger = nil,
 		worksiteUpgrades = nil,
+		trophyPersistence = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -1154,6 +1268,11 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	local worksiteUpgradeRecord = GiantRealmSaveSchema.SerializeWorksiteUpgradePersistenceRecord(worksiteUpgradeState)
 	if worksiteUpgradeRecord ~= nil then
 		root.worksiteUpgrades = worksiteUpgradeRecord
+	end
+
+	local trophyRecord = GiantRealmSaveSchema.SerializeTrophyPersistenceRecord(trophyPersistenceState)
+	if trophyRecord ~= nil then
+		root.trophyPersistence = trophyRecord
 	end
 
 	return root

@@ -176,6 +176,20 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		return result
 	end
 
+	local function recordTrophy(metadata: any): any
+		local trophyApi = if type(depsAny.trophyApi) == "table"
+			then depsAny.trophyApi
+			else getGlobalApi("_TrophyService_QueryAPI")
+		if type(trophyApi) ~= "table" or type(trophyApi.RecordContainmentEnd) ~= "function" then
+			return { accepted = false, reason = "trophy_api_unavailable" }
+		end
+		local ok, result = pcall(trophyApi.RecordContainmentEnd, metadata)
+		if not ok or type(result) ~= "table" then
+			return { accepted = false, reason = "trophy_request_failed" }
+		end
+		return result
+	end
+
 	local function updateReputation(custodianUserId: number, metadata: any): any
 		local gateway = if type(depsAny.profileGateway) == "table"
 			then depsAny.profileGateway
@@ -405,6 +419,15 @@ function ContainmentRewardResolver.Create(deps: any?): any
 					endReason = endReason,
 				}
 			end
+			local capMetadata = {
+				operationId = operationId,
+				custodianUserId = input.custodianUserId,
+				targetUserId = input.targetUserId,
+				endedAt = endedAt,
+				endReason = endReason,
+				heldSeconds = heldSeconds,
+			}
+			local trophyResult = recordTrophy(capMetadata)
 			return {
 				accepted = true,
 				reason = "pair_reward_cap_reached",
@@ -415,6 +438,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 				contributionRatio = 0,
 				pairRewardCount = nextPairCount,
 				endReason = endReason,
+				trophyAccepted = type(trophyResult) == "table" and trophyResult.accepted == true,
 			}
 		end
 
@@ -435,6 +459,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		local scoreResult = requestScore(input.custodianUserId, endedAt, metadata)
 		local reputationResult = updateReputation(input.custodianUserId, metadata)
 		recordReputationLog(input.custodianUserId, metadata, reputationResult)
+		local trophyResult = recordTrophy(metadata)
 		local rewardGranted = type(scoreResult) == "table" and scoreResult.accepted == true
 		awardRealmResources({
 			operationId = operationId,
@@ -480,6 +505,8 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			reputationReason = reputationResult.reason,
 			reputationTrackUpdates = reputationResult.trackUpdates,
 			reputationUnlockUpdates = reputationResult.unlockUpdates,
+			trophyAccepted = type(trophyResult) == "table" and trophyResult.accepted == true,
+			trophyReason = if type(trophyResult) == "table" then trophyResult.reason else "trophy_result_invalid",
 		}
 	end
 

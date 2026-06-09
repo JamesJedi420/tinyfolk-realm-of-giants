@@ -103,19 +103,6 @@ local function getRoleServiceQueryApi(): any?
 
 	return queryApi
 end
-local function getScoreServiceQueryApi(): any?
-	local globalValue: any = _G
-	if type(globalValue) ~= "table" then
-		return nil
-	end
-
-	local queryApi = globalValue._ScoreService_QueryAPI
-	if type(queryApi) ~= "table" then
-		return nil
-	end
-
-	return queryApi
-end
 
 local function makeLocalIdempotencyAdapter(): any
 	local mapsByName: { [string]: { [string]: any } } = {}
@@ -393,6 +380,28 @@ applyCaptureAttributesFromState = function()
 	end
 end
 
+local function getScoreServiceQueryApi(): any?
+	local globalValue = globalEnv
+	if type(globalValue._ScoreService_QueryAPI) == "table" then
+		return globalValue._ScoreService_QueryAPI
+	end
+	if type(_G) == "table" and type((_G :: any)._ScoreService_QueryAPI) == "table" then
+		return (_G :: any)._ScoreService_QueryAPI
+	end
+	return nil
+end
+
+local function getTrophyServiceQueryApi(): any?
+	local globalValue = globalEnv
+	if type(globalValue._TrophyService_QueryAPI) == "table" then
+		return globalValue._TrophyService_QueryAPI
+	end
+	if type(_G) == "table" and type((_G :: any)._TrophyService_QueryAPI) == "table" then
+		return (_G :: any)._TrophyService_QueryAPI
+	end
+	return nil
+end
+
 local function getPenRationingServiceQueryApi(): any?
 	local queryApi = globalEnv._PenRationingService_QueryAPI
 	if type(queryApi) == "table" then
@@ -526,6 +535,10 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 				resolvedNow,
 				{ targetUserId = target.UserId }
 			)
+		end
+		local trophyApi = getTrophyServiceQueryApi()
+		if trophyApi ~= nil and type(trophyApi.RecordCaptureSuccess) == "function" then
+			trophyApi.RecordCaptureSuccess(custodian.UserId, target.UserId, resolvedNow)
 		end
 	else
 		markRejectedRequest(custodian.UserId, resolvedNow)

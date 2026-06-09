@@ -89,10 +89,17 @@ end
 
 local scoreEvents = {}
 local reputationEvents = {}
+local trophyEvents = {}
 local store = makeStore()
 local resolver = ContainmentRewardResolver.Create({
 	idempotencyStore = store,
 	scoreApi = makeScoreApi(scoreEvents),
+	trophyApi = {
+		RecordContainmentEnd = function(metadata: any): any
+			table.insert(trophyEvents, metadata)
+			return { accepted = true, reason = "accepted" }
+		end,
+	},
 	eventLogApi = {
 		RecordEvent = function(category: string, _message: string, _severity: string, _at: number, metadata: any)
 			table.insert(reputationEvents, {
@@ -128,12 +135,16 @@ assertTrue(first.reputationAccepted, "first terminal resolve reputation accepted
 assertEqual(#reputationEvents, 1, "first terminal resolve emits reputation log")
 assertEqual(reputationEvents[1].category, "reputation_update", "reputation log category")
 assertEqual(reputationEvents[1].metadata.outcomeKind, "containment_custody_end", "reputation log outcome kind")
+assertEqual(#trophyEvents, 1, "first terminal resolve records trophy")
+assertEqual(trophyEvents[1].endReason, "released", "trophy metadata end reason")
+assertTrue(first.trophyAccepted, "first terminal resolve trophy accepted")
 
 local duplicate = resolver.Resolve(resolveInput())
 assertTrue(duplicate.accepted, "duplicate completed accepted as no-op")
 assertTrue(duplicate.duplicate, "duplicate completed marked duplicate")
 assertEqual(duplicate.rewardGranted, false, "duplicate completed does not grant reward")
 assertEqual(#scoreEvents, 1, "duplicate completed does not emit score")
+assertEqual(#trophyEvents, 1, "duplicate completed does not record trophy again")
 
 local processingStore = makeStore()
 processingStore.records["containment-released-101-202-1000"] = "processing"

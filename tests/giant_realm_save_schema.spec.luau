@@ -576,6 +576,26 @@ local function run()
 	end
 
 	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, {}, nil, nil, nil, nil, nil, nil, {
+			trophies = {
+				{
+					operationId = "trophy-capture-9402-9403-1000",
+					trophyKind = "capture_success",
+					awardedAt = 10,
+					custodianUserId = 9402,
+					targetDisplayToken = "ref-00001234",
+					endReason = nil,
+					heldSeconds = nil,
+					summary = "Capture Secured (ref-00001234)",
+				},
+			},
+		})
+		assertTrue(type(root.trophyPersistence) == "table", "built root includes trophy persistence")
+		assertEqual(root.trophyPersistence.trophies[1].trophyKind, "capture_success", "built root trophy kind")
+		assertValid("built root with trophy persistence validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
+	end
+
+	do
 		local root = makeSaveRoot()
 		root.resourceLedger = makeResourceLedgerRecord()
 		root.resourceLedger.recentAwards[2].operationId = root.resourceLedger.recentAwards[1].operationId
