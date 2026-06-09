@@ -222,6 +222,55 @@ test("ResolveRequest rejects custodian_already_holding", function()
 	assert(secondResult.reason == "custodian_already_holding", "reason should be custodian_already_holding")
 end)
 
+test("ResolveRequest allows second capture when pen capacity multiplier permits", function()
+	local state = resetState()
+
+	local firstResult = CaptureState.ResolveRequest(state, {
+		now = 1,
+		custodianUserId = 1,
+		targetUserId = 2,
+		custodianRole = "Giant",
+		targetRole = "Tinyfolk",
+		custodianAlive = true,
+		targetDowned = true,
+		inRange = true,
+		custodyWindowSeconds = 8,
+		maxConcurrentCapturesPerCustodian = 2,
+	})
+
+	local secondResult = CaptureState.ResolveRequest(firstResult.state, {
+		now = 2,
+		custodianUserId = 1,
+		targetUserId = 3,
+		custodianRole = "Giant",
+		targetRole = "Tinyfolk",
+		custodianAlive = true,
+		targetDowned = true,
+		inRange = true,
+		custodyWindowSeconds = 8,
+		maxConcurrentCapturesPerCustodian = 2,
+	})
+
+	assert(secondResult.accepted == true, "should accept second capture within pen capacity")
+	assert(secondResult.reason == "accepted", "reason should be accepted")
+
+	local thirdResult = CaptureState.ResolveRequest(secondResult.state, {
+		now = 3,
+		custodianUserId = 1,
+		targetUserId = 4,
+		custodianRole = "Giant",
+		targetRole = "Tinyfolk",
+		custodianAlive = true,
+		targetDowned = true,
+		inRange = true,
+		custodyWindowSeconds = 8,
+		maxConcurrentCapturesPerCustodian = 2,
+	})
+
+	assert(thirdResult.accepted == false, "should reject capture above pen capacity")
+	assert(thirdResult.reason == "custodian_capacity_reached", "reason should be custodian_capacity_reached")
+end)
+
 test("PruneExpired removes expired captures", function()
 	local state = resetState()
 

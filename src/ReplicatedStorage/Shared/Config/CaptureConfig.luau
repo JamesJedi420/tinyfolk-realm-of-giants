@@ -7,6 +7,9 @@ CaptureConfig.RequestCooldownSeconds = 0.2
 CaptureConfig.RejectRequestCooldownSeconds = 0.05
 CaptureConfig.TriggerRadiusStuds = 14
 
+-- Base concurrent custody slots per Giant custodian; pen upgrades scale via held-capacity multipliers.
+CaptureConfig.BaseMaxConcurrentCapturesPerCustodian = 1
+
 -- Custody window: how long target remains in captured state before auto-release
 CaptureConfig.CustodyWindowSeconds = 8
 

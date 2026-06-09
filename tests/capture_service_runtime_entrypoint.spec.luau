@@ -57,9 +57,20 @@ end
 
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
+addChild(configFolder, "StationConfig", "../../ReplicatedStorage/Shared/Config/StationConfig")
+addChild(
+	configFolder,
+	"VillageWorksiteUpgradeConfig",
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
+)
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
+addChild(
+	giantRealmFolder,
+	"VillageWorksiteUpgradeState",
+	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -244,6 +255,25 @@ assertTrue(holdingFirst.accepted == true, "first accepted before holding check")
 local holdingSecond = captureApi.RequestCapture(2101, 2103, 2.0)
 assertFalse(holdingSecond.accepted, "custodian already holding rejected")
 assertEqual(holdingSecond.reason, "custodian_already_holding", "custodian already holding reason")
+
+_G._VillageWorksiteUpgradeService_QueryAPI = {
+	GetHeldCapacityMultiplier = function(penId: string): number
+		if penId == "Pen_A" then
+			return 2
+		end
+		return 1
+	end,
+}
+
+resetState()
+setDowned(tinyfolk, true)
+local penFirst = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(penFirst.accepted == true, "pen capacity first capture accepted")
+local penSecond = captureApi.RequestCapture(2101, 2103, 2.0)
+assertTrue(penSecond.accepted == true, "pen upgrade allows second concurrent capture")
+local penThird = captureApi.RequestCapture(2101, 2104, 3.0)
+assertFalse(penThird.accepted, "pen capacity rejects third concurrent capture")
+assertEqual(penThird.reason, "custodian_capacity_reached", "pen capacity reached reason")
 
 resetState()
 local cooldownFirst = captureApi.RequestCapture(2101, 2102, 1.0)

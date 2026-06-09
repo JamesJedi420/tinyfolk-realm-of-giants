@@ -7,7 +7,9 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
+local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
+local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local ContainmentRewardResolver = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ContainmentRewardResolver"))
 	else (require :: any)("./ContainmentRewardResolver")
@@ -25,6 +27,7 @@ local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
 local POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE = "PostRescueProtectionExpiresAt"
 local ANTI_GUARDING_REPEAT_TARGET_COOLDOWN_SECONDS = 12
+local globalEnv: any = getfenv()
 
 local state = CaptureState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
@@ -387,6 +390,26 @@ applyCaptureAttributesFromState = function()
 	end
 end
 
+local function resolveMaxConcurrentCapturesPerCustodian(): number
+	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if type(upgradeApi) ~= "table" and type(_G) == "table" then
+		upgradeApi = (_G :: any)._VillageWorksiteUpgradeService_QueryAPI
+	end
+
+	local heldCapacityMultiplier = 1
+	if type(upgradeApi) == "table" and type(upgradeApi.GetHeldCapacityMultiplier) == "function" then
+		local resolvedMultiplier = upgradeApi.GetHeldCapacityMultiplier(StationConfig.DefaultPenId)
+		if type(resolvedMultiplier) == "number" and resolvedMultiplier > 0 then
+			heldCapacityMultiplier = resolvedMultiplier
+		end
+	end
+
+	return VillageWorksiteUpgradeState.ResolveMaxConcurrentCaptures(
+		CaptureConfig.BaseMaxConcurrentCapturesPerCustodian,
+		heldCapacityMultiplier
+	)
+end
+
 local function requestCapture(custodian: Player, targetUserId: any, at: number?): any
 	local resolvedNow = now()
 	if type(at) == "number" then
@@ -447,6 +470,7 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		targetDowned = getDownedState(target),
 		inRange = isInRange(custodian, target),
 		custodyWindowSeconds = CaptureConfig.CustodyWindowSeconds,
+		maxConcurrentCapturesPerCustodian = resolveMaxConcurrentCapturesPerCustodian(),
 	})
 
 	state = transition.state

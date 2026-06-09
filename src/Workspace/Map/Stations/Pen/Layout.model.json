@@ -1,0 +1,53 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "Pen_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [
+          0.38,
+          0.22,
+          0.16
+        ],
+        "Size": [
+          12,
+          4,
+          10
+        ],
+        "Position": [
+          55,
+          2,
+          -88
+        ]
+      }
+    },
+    {
+      "name": "Pen_EnclosurePad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Wood",
+        "Color": [
+          0.32,
+          0.18,
+          0.12
+        ],
+        "Size": [
+          16,
+          0.4,
+          12
+        ],
+        "Position": [
+          55,
+          0.2,
+          -88
+        ]
+      }
+    }
+  ]
+}

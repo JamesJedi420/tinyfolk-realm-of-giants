@@ -37,6 +37,11 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[2] = { wood = 18, stone = 9, essence = 0 },
 		[3] = { wood = 30, stone = 16, essence = 6 },
 	},
+	pen = {
+		[1] = { wood = 11, stone = 5, essence = 0 },
+		[2] = { wood = 20, stone = 12, essence = 0 },
+		[3] = { wood = 32, stone = 20, essence = 5 },
+	},
 }
 
 VillageWorksiteUpgradeConfig.ProductionMultipliersByLevel = {
@@ -47,10 +52,10 @@ VillageWorksiteUpgradeConfig.ProductionMultipliersByLevel = {
 }
 
 VillageWorksiteUpgradeConfig.CapacityMultipliersByLevel = {
-	[0] = { inTransit = 1, essenceMax = 1 },
-	[1] = { inTransit = 1.25, essenceMax = 1.25 },
-	[2] = { inTransit = 1.5, essenceMax = 1.5 },
-	[3] = { inTransit = 2, essenceMax = 2 },
+	[0] = { inTransit = 1, essenceMax = 1, heldCapacity = 1 },
+	[1] = { inTransit = 1.25, essenceMax = 1.25, heldCapacity = 1.25 },
+	[2] = { inTransit = 1.5, essenceMax = 1.5, heldCapacity = 1.5 },
+	[3] = { inTransit = 2, essenceMax = 2, heldCapacity = 2 },
 }
 
 return VillageWorksiteUpgradeConfig

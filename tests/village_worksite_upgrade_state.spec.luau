@@ -25,6 +25,28 @@ do
 	assertEqual(shrineKind, VillageWorksiteUpgradeState.WorksiteKinds.Shrine, "shrine kind")
 	local farmKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Farm_A")
 	assertEqual(farmKind, VillageWorksiteUpgradeState.WorksiteKinds.Farm, "farm kind")
+	local penKind = VillageWorksiteUpgradeState.ResolveWorksiteKind("Pen_A")
+	assertEqual(penKind, VillageWorksiteUpgradeState.WorksiteKinds.Pen, "pen kind")
+end
+
+do
+	local effectKind = VillageWorksiteUpgradeState.ResolveEffectKind(VillageWorksiteUpgradeState.WorksiteKinds.Pen)
+	assertEqual(effectKind, VillageWorksiteUpgradeState.EffectKinds.Capacity, "pen capacity effect")
+end
+
+do
+	local maxCaptures = VillageWorksiteUpgradeState.ResolveMaxConcurrentCaptures(1, 2)
+	assertEqual(maxCaptures, 2, "pen held capacity multiplier scales concurrent captures")
+end
+
+do
+	local state = VillageWorksiteUpgradeState.CreateEmptyState()
+	local result = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
+		worksiteId = "Pen_A",
+		at = 14,
+	})
+	assertTrue(result.accepted, "pen upgrade accepted")
+	assertEqual(result.cost.wood, 11, "pen level 1 wood cost")
 end
 
 do
@@ -46,6 +68,7 @@ do
 	local capacity = VillageWorksiteUpgradeState.ResolveCapacityModifiers(2)
 	assertEqual(capacity.inTransitMultiplier, 1.5, "capacity in-transit multiplier level 2")
 	assertEqual(capacity.essenceMaxMultiplier, 1.5, "capacity essence multiplier level 2")
+	assertEqual(capacity.heldCapacityMultiplier, 1.5, "capacity held multiplier level 2")
 end
 
 do

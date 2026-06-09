@@ -13,6 +13,7 @@ VillageWorksiteUpgradeState.WorksiteKinds = {
 	Granary = "granary",
 	Shrine = "shrine",
 	Farm = "farm",
+	Pen = "pen",
 }
 
 VillageWorksiteUpgradeState.EffectKinds = {
@@ -60,6 +61,9 @@ function VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId: string): st
 	if startsWithPrefix(worksiteId, StationConfig.FarmNamePrefix) then
 		return VillageWorksiteUpgradeState.WorksiteKinds.Farm
 	end
+	if startsWithPrefix(worksiteId, StationConfig.PenNamePrefix) then
+		return VillageWorksiteUpgradeState.WorksiteKinds.Pen
+	end
 	return nil
 end
 
@@ -75,10 +79,22 @@ function VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind: string): st
 		worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Warehouse
 		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Granary
 		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Shrine
+		or worksiteKind == VillageWorksiteUpgradeState.WorksiteKinds.Pen
 	then
 		return VillageWorksiteUpgradeState.EffectKinds.Capacity
 	end
 	return nil
+end
+
+function VillageWorksiteUpgradeState.ResolveMaxConcurrentCaptures(
+	baseMax: number,
+	heldCapacityMultiplier: number
+): number
+	local safeBase = if isFiniteNumber(baseMax) and baseMax > 0 then math.floor(baseMax) else 1
+	local multiplier = if isFiniteNumber(heldCapacityMultiplier) and heldCapacityMultiplier > 0
+		then heldCapacityMultiplier
+		else 1
+	return math.max(1, math.floor(safeBase * multiplier + 0.5))
 end
 
 function VillageWorksiteUpgradeState.CreateEmptyState(): any
@@ -197,6 +213,7 @@ function VillageWorksiteUpgradeState.ResolveCapacityModifiers(level: number): an
 		level = normalizedLevel,
 		inTransitMultiplier = multipliers.inTransit,
 		essenceMaxMultiplier = multipliers.essenceMax,
+		heldCapacityMultiplier = multipliers.heldCapacity,
 	}
 end
 
