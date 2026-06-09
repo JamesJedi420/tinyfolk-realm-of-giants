@@ -29,14 +29,14 @@ function VillageUpgradeHubPresentation.BuildPanelModel(snapshot: any): any
 	local boardTrack = snapshot.boardTrack
 	local boardLines: { string } = {}
 	if type(boardTrack) == "table" then
+		local progression = if type(boardTrack.progression) == "table" then boardTrack.progression else {}
 		table.insert(
 			boardLines,
 			string.format(
-				"%s — %d/%d (%s)",
+				"%s — Shrine L%d, Giant Dwelling L%d",
 				boardTrack.trackSubtitle or VillageUpgradeHubConfig.BoardTrackSubtitle,
-				boardTrack.progression.completedSteps or 0,
-				boardTrack.progression.totalSteps or 0,
-				boardTrack.progression.status or "Unknown"
+				progression.shrineLevel or 0,
+				progression.dwellingLevel or 0
 			)
 		)
 		if type(boardTrack.activeEffectSummary) == "string" and boardTrack.activeEffectSummary ~= "" then

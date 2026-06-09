@@ -86,6 +86,8 @@ Instance = {
 
 local configFolder = makeNode("Config")
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
+configFolder._Children["ShrineConfig"] = "../../ReplicatedStorage/Shared/Config/ShrineConfig"
+configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 

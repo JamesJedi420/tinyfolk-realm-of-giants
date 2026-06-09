@@ -6,8 +6,9 @@ local ShrineConfig = require("./ShrineConfig")
 local VillageUpgradeHubConfig: any = {}
 
 VillageUpgradeHubConfig.RequestCooldownSeconds = 0.25
-VillageUpgradeHubConfig.BoardTrackTitle = "Session Board Track"
-VillageUpgradeHubConfig.BoardTrackSubtitle = "Legacy session board effects (migration planned)"
+VillageUpgradeHubConfig.BoardTrackTitle = "Giant Effect Sources"
+VillageUpgradeHubConfig.BoardTrackSubtitle =
+	"Board purchases deprecated — effects from Shrine & Giant Dwelling levels"
 VillageUpgradeHubConfig.WorksiteSectionTitle = "Realm Worksite Upgrades"
 
 VillageUpgradeHubConfig.LegacyMigrationTargetByUpgradeId = {

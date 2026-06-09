@@ -8,6 +8,8 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local StationConfig = require(Config:WaitForChild("StationConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local VillageUpgradeHubConfig = require(Config:WaitForChild("VillageUpgradeHubConfig"))
 local VillageUpgradeHubState = require(GiantRealm:WaitForChild("VillageUpgradeHubState"))
@@ -135,22 +137,17 @@ local function buildHubSnapshotForPlayer(player: Player, boardId: string): any
 		return { accepted = false, reason = "upgrade_board_query_unavailable" }
 	end
 
-	local selectedByUpgradeId = if type(boardApi.GetUpgradeState) == "function"
-		then boardApi.GetUpgradeState(player.UserId)
-		else {}
-	local progression = if type(boardApi.GetProgressionState) == "function"
-		then boardApi.GetProgressionState(player.UserId)
-		else {}
 	local resolvedEffects = if type(boardApi.GetResolvedEffects) == "function"
 		then boardApi.GetResolvedEffects(player.UserId)
 		else {}
+	local levelByWorksiteId = buildLevelByWorksiteId()
 
 	return VillageUpgradeHubState.BuildHubSnapshot({
 		boardId = boardId,
-		selectedByUpgradeId = selectedByUpgradeId,
-		progression = progression,
+		shrineLevel = levelByWorksiteId[ShrineConfig.DefaultShrineId] or 0,
+		dwellingLevel = levelByWorksiteId[StationConfig.DefaultGiantDwellingId] or 0,
 		resolvedEffects = resolvedEffects,
-		levelByWorksiteId = buildLevelByWorksiteId(),
+		levelByWorksiteId = levelByWorksiteId,
 	})
 end
 
