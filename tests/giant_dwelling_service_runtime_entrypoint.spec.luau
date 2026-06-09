@@ -25,6 +25,9 @@ local function makeNode(name: string, className: string?)
 	function node:FindFirstChild(childName: string): any
 		return self._Children[childName]
 	end
+	function node:WaitForChild(childName: string): any
+		return self._Children[childName]
+	end
 	function node:GetDescendants(): { any }
 		local descendants = {}
 		for _, child in pairs(self._Children) do
