@@ -510,6 +510,46 @@
                                         }
                      },
                      {
+                         "name":  "Marker_GiantDwelling_A",
+                         "className":  "Part",
+                         "properties":  {
+                                            "Anchored":  true,
+                                            "CanCollide":  false,
+                                            "CanTouch":  false,
+                                            "CanQuery":  false,
+                                            "Transparency":  0.88,
+                                            "Material":  "SmoothPlastic",
+                                            "Color":  [
+                                                          0.52,
+                                                          0.38,
+                                                          0.3
+                                                      ],
+                                            "Size":  [
+                                                         16,
+                                                         0.12,
+                                                         14
+                                                     ],
+                                            "Position":  [
+                                                             32,
+                                                             0.18,
+                                                             -18
+                                                         ],
+                                            "Locked":  true,
+                                            "CastShadow":  false
+                                        },
+                         "attributes":  {
+                                            "DebugLabel":  "GiantDwelling_A / Giant housing capacity",
+                                            "DoNotShip":  true,
+                                            "GeneratedBlockout":  true,
+                                            "StationPlacementMarker":  true,
+                                            "VisualOnly":  true,
+                                            "PresentationCleanup":  true,
+                                            "ScreenshotSoftened":  true,
+                                            "DebugMarkerSoftened":  true,
+                                            "GroundLevelPolish":  "2026-06-03"
+                                        }
+                     },
+                     {
                          "name":  "Marker_GuardTower_A",
                          "className":  "Part",
                          "properties":  {

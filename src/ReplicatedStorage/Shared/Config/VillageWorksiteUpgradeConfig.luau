@@ -47,6 +47,11 @@ VillageWorksiteUpgradeConfig.UpgradeCostsByKindAndLevel = {
 		[2] = { wood = 24, stone = 16, essence = 0 },
 		[3] = { wood = 38, stone = 26, essence = 6 },
 	},
+	giant_dwelling = {
+		[1] = { wood = 16, stone = 10, essence = 0 },
+		[2] = { wood = 28, stone = 18, essence = 0 },
+		[3] = { wood = 44, stone = 30, essence = 8 },
+	},
 }
 
 VillageWorksiteUpgradeConfig.ProductionMultipliersByLevel = {
@@ -68,6 +73,13 @@ VillageWorksiteUpgradeConfig.DefenseMultipliersByLevel = {
 	[1] = { treasuryAward = 1.25, barrierDuration = 1.25 },
 	[2] = { treasuryAward = 1.5, barrierDuration = 1.5 },
 	[3] = { treasuryAward = 2, barrierDuration = 2 },
+}
+
+VillageWorksiteUpgradeConfig.GiantHousingCapacityMultipliersByLevel = {
+	[0] = { housingCapacity = 1 },
+	[1] = { housingCapacity = 2 },
+	[2] = { housingCapacity = 3 },
+	[3] = { housingCapacity = 4 },
 }
 
 return VillageWorksiteUpgradeConfig
