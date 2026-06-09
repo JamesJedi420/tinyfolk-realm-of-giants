@@ -1,8 +1,11 @@
 --!strict
 
+local ShrineConfig = require("../Config/ShrineConfig")
+local StationConfig = require("../Config/StationConfig")
 local UpgradeBoardConfig = require("../Config/UpgradeBoardConfig")
 local VillageUpgradeHubConfig = require("../Config/VillageUpgradeHubConfig")
 local VillageWorksiteUpgradeConfig = require("../Config/VillageWorksiteUpgradeConfig")
+local GiantWorksiteEffectResolution = require("./GiantWorksiteEffectResolution")
 local VillageWorksiteUpgradeState = require("./VillageWorksiteUpgradeState")
 
 local VillageUpgradeHubState: any = {}
@@ -13,9 +16,7 @@ VillageUpgradeHubState.OwnershipKinds = {
 }
 
 VillageUpgradeHubState.EntryStatuses = {
-	Locked = "locked",
-	Available = "available",
-	Purchased = "purchased",
+	Deprecated = "deprecated",
 	Maxed = "maxed",
 	Upgradeable = "upgradeable",
 }
@@ -27,23 +28,23 @@ local function formatCost(cost: any): string
 	return string.format("W%d S%d E%d", cost.wood or 0, cost.stone or 0, cost.essence or 0)
 end
 
-local function summarizeBoardEffect(effect: any): string
-	if type(effect) ~= "table" then
-		return "No effect data"
+local function summarizeBonuses(bonuses: any): string
+	if type(bonuses) ~= "table" then
+		return "No active bonuses"
 	end
 
 	local parts: { string } = {}
-	if type(effect.maxHealthBonus) == "number" and effect.maxHealthBonus > 0 then
-		table.insert(parts, string.format("+%d health", effect.maxHealthBonus))
+	if type(bonuses.maxHealthBonus) == "number" and bonuses.maxHealthBonus > 0 then
+		table.insert(parts, string.format("+%d health", bonuses.maxHealthBonus))
 	end
-	if type(effect.powerBudgetBonus) == "number" and effect.powerBudgetBonus > 0 then
-		table.insert(parts, string.format("+%d power budget", effect.powerBudgetBonus))
+	if type(bonuses.powerBudgetBonus) == "number" and bonuses.powerBudgetBonus > 0 then
+		table.insert(parts, string.format("+%d power budget", bonuses.powerBudgetBonus))
 	end
-	if type(effect.walkSpeedBonus) == "number" and effect.walkSpeedBonus > 0 then
-		table.insert(parts, string.format("+%d walk speed", effect.walkSpeedBonus))
+	if type(bonuses.walkSpeedBonus) == "number" and bonuses.walkSpeedBonus > 0 then
+		table.insert(parts, string.format("+%d walk speed", bonuses.walkSpeedBonus))
 	end
-	if type(effect.movementControlBonus) == "number" and effect.movementControlBonus > 0 then
-		table.insert(parts, string.format("+%.2f movement control", effect.movementControlBonus))
+	if type(bonuses.movementControlBonus) == "number" and bonuses.movementControlBonus > 0 then
+		table.insert(parts, string.format("+%.2f movement control", bonuses.movementControlBonus))
 	end
 
 	if #parts == 0 then
@@ -63,47 +64,51 @@ local function resolveEffectLabel(effectKind: string?): string
 		return "Defense / raid mitigation"
 	end
 	if effectKind == VillageWorksiteUpgradeState.EffectKinds.GiantHousingCapacity then
-		return "Giant housing capacity"
+		return "Giant housing capacity (slots only)"
 	end
 	return "Worksite effect"
 end
 
-local function resolveBoardEntryStatus(upgradeId: string, selected: boolean, nextUpgradeId: string?): string
-	if selected then
-		return VillageUpgradeHubState.EntryStatuses.Purchased
+local function normalizeLevel(level: any): number
+	if type(level) ~= "number" or level < 0 then
+		return 0
 	end
-	if nextUpgradeId == upgradeId then
-		return VillageUpgradeHubState.EntryStatuses.Available
-	end
-	return VillageUpgradeHubState.EntryStatuses.Locked
+	return math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
 end
 
 function VillageUpgradeHubState.BuildBoardTrackSnapshot(input: any): any
 	local boardId = if type(input) == "table" and type(input.boardId) == "string"
 		then input.boardId
 		else "GiantUpgradeBoard_A"
-	local selectedByUpgradeId = if type(input) == "table" and type(input.selectedByUpgradeId) == "table"
-		then input.selectedByUpgradeId
-		else {}
-	local progression = if type(input) == "table" and type(input.progression) == "table" then input.progression else {}
+	local shrineLevel = if type(input) == "table" then normalizeLevel(input.shrineLevel) else 0
+	local dwellingLevel = if type(input) == "table" then normalizeLevel(input.dwellingLevel) else 0
 	local resolvedEffects = if type(input) == "table" and type(input.resolvedEffects) == "table"
 		then input.resolvedEffects
-		else {}
+		else GiantWorksiteEffectResolution.ResolveEffects({
+			shrineLevel = shrineLevel,
+			dwellingLevel = dwellingLevel,
+		})
+
+	local shrineBonuses = GiantWorksiteEffectResolution.ResolveShrineBonuses(shrineLevel)
+	local dwellingBonuses = GiantWorksiteEffectResolution.ResolveDwellingBonuses(dwellingLevel)
 
 	local entries: { any } = {}
 	for _, option in UpgradeBoardConfig.UpgradeOptions do
 		local upgradeId = option.id
-		local selected = selectedByUpgradeId[upgradeId] == true
-		local effect = UpgradeBoardConfig.EffectByUpgradeId[upgradeId]
+		local migrationTarget = VillageUpgradeHubConfig.LegacyMigrationTargetByUpgradeId[upgradeId]
+		local sourceLabel = if upgradeId == "PowerCore" then "Shrine" else "Giant Dwelling"
+		local sourceLevel = if upgradeId == "PowerCore" then shrineLevel else dwellingLevel
+		local contribution = if upgradeId == "PowerCore" then shrineBonuses else dwellingBonuses
+
 		table.insert(entries, {
 			upgradeId = upgradeId,
 			label = option.label or upgradeId,
 			ownership = VillageUpgradeHubState.OwnershipKinds.LegacySessionBoard,
-			migrationTarget = VillageUpgradeHubConfig.LegacyMigrationTargetByUpgradeId[upgradeId],
-			status = resolveBoardEntryStatus(upgradeId, selected, progression.nextUpgradeId),
-			costEssence = if type(option.costEssence) == "number" then option.costEssence else nil,
-			effectSummary = summarizeBoardEffect(effect),
-			isActive = selected,
+			migrationTarget = migrationTarget,
+			status = VillageUpgradeHubState.EntryStatuses.Deprecated,
+			sourceLabel = sourceLabel,
+			sourceLevel = sourceLevel,
+			effectSummary = summarizeBonuses(contribution),
 		})
 	end
 
@@ -112,13 +117,12 @@ function VillageUpgradeHubState.BuildBoardTrackSnapshot(input: any): any
 		trackTitle = VillageUpgradeHubConfig.BoardTrackTitle,
 		trackSubtitle = VillageUpgradeHubConfig.BoardTrackSubtitle,
 		progression = {
-			completedSteps = progression.completedSteps or 0,
-			totalSteps = progression.totalSteps or #entries,
-			status = progression.status or "Unavailable",
-			nextUpgradeId = progression.nextUpgradeId,
+			status = "Deprecated",
+			shrineLevel = shrineLevel,
+			dwellingLevel = dwellingLevel,
 		},
 		entries = entries,
-		activeEffectSummary = summarizeBoardEffect({
+		activeEffectSummary = summarizeBonuses({
 			maxHealthBonus = resolvedEffects.maxHealthBonus,
 			powerBudgetBonus = resolvedEffects.powerBudgetBonus,
 			walkSpeedBonus = resolvedEffects.walkSpeedBonus,
@@ -130,9 +134,7 @@ end
 function VillageUpgradeHubState.BuildWorksiteSummaryEntry(worksiteId: string, displayLabel: string, level: number): any
 	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(worksiteId)
 	local effectKind = if worksiteKind ~= nil then VillageWorksiteUpgradeState.ResolveEffectKind(worksiteKind) else nil
-	local normalizedLevel = if type(level) == "number" and level >= 0
-		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
-		else 0
+	local normalizedLevel = normalizeLevel(level)
 	local maxLevel = VillageWorksiteUpgradeConfig.MaxLevel
 
 	local nextCost = nil
@@ -149,6 +151,13 @@ function VillageUpgradeHubState.BuildWorksiteSummaryEntry(worksiteId: string, di
 		end
 	end
 
+	local giantEffectNote = nil
+	if worksiteId == ShrineConfig.DefaultShrineId then
+		giantEffectNote = "Giant vitality / power budget"
+	elseif worksiteId == StationConfig.DefaultGiantDwellingId then
+		giantEffectNote = "Giant locomotion (not housing slots)"
+	end
+
 	return {
 		worksiteId = worksiteId,
 		displayLabel = displayLabel,
@@ -156,6 +165,7 @@ function VillageUpgradeHubState.BuildWorksiteSummaryEntry(worksiteId: string, di
 		worksiteKind = worksiteKind,
 		effectKind = effectKind,
 		effectLabel = resolveEffectLabel(effectKind),
+		giantEffectNote = giantEffectNote,
 		level = normalizedLevel,
 		maxLevel = maxLevel,
 		status = status,
@@ -165,7 +175,7 @@ end
 
 function VillageUpgradeHubState.BuildWorksiteSummaries(levelByWorksiteId: { [string]: number }?): { any }
 	local summaries: { any } = {}
-	local levels = levelByWorksiteId or {}
+	local levels = if type(levelByWorksiteId) == "table" then levelByWorksiteId else {}
 
 	for _, catalogEntry in VillageUpgradeHubConfig.HubWorksiteCatalog do
 		local worksiteId = catalogEntry.worksiteId
@@ -187,53 +197,57 @@ function VillageUpgradeHubState.BuildHubSnapshot(input: any): any
 		}
 	end
 
+	local levelByWorksiteId = if type(input.levelByWorksiteId) == "table" then input.levelByWorksiteId else {}
+	local shrineLevel = if type(input.shrineLevel) == "number"
+		then input.shrineLevel
+		else levelByWorksiteId[ShrineConfig.DefaultShrineId] or 0
+	local dwellingLevel = if type(input.dwellingLevel) == "number"
+		then input.dwellingLevel
+		else levelByWorksiteId[StationConfig.DefaultGiantDwellingId] or 0
+
 	return {
 		accepted = true,
 		reason = "accepted",
 		boardId = input.boardId,
-		boardTrack = VillageUpgradeHubState.BuildBoardTrackSnapshot(input),
-		worksiteSummaries = VillageUpgradeHubState.BuildWorksiteSummaries(input.levelByWorksiteId),
+		boardTrack = VillageUpgradeHubState.BuildBoardTrackSnapshot({
+			boardId = input.boardId,
+			shrineLevel = shrineLevel,
+			dwellingLevel = dwellingLevel,
+			resolvedEffects = input.resolvedEffects,
+		}),
+		worksiteSummaries = VillageUpgradeHubState.BuildWorksiteSummaries(levelByWorksiteId),
 	}
 end
 
 function VillageUpgradeHubState.FormatBoardEntryLine(entry: any): string
-	local status = entry.status or "unknown"
 	local migrationHint = ""
 	if type(entry.migrationTarget) == "string" then
 		migrationHint = string.format(" → %s", entry.migrationTarget)
 	end
 
-	if status == VillageUpgradeHubState.EntryStatuses.Purchased then
-		return string.format("• %s [legacy active]%s — %s", entry.label, migrationHint, entry.effectSummary)
-	end
-
-	if status == VillageUpgradeHubState.EntryStatuses.Available then
-		return string.format(
-			"• %s [legacy available, E%d]%s — %s",
-			entry.label,
-			entry.costEssence or 0,
-			migrationHint,
-			entry.effectSummary
-		)
-	end
-
-	return string.format("• %s [legacy locked]%s — %s", entry.label, migrationHint, entry.effectSummary)
+	return string.format(
+		"• %s [deprecated]%s — %s L%d: %s",
+		entry.label,
+		migrationHint,
+		entry.sourceLabel or "Worksite",
+		entry.sourceLevel or 0,
+		entry.effectSummary or "No active bonuses"
+	)
 end
 
 function VillageUpgradeHubState.FormatWorksiteEntryLine(entry: any): string
 	local levelText = string.format("L%d/%d", entry.level or 0, entry.maxLevel or 0)
+	local effectText = entry.effectLabel or "Worksite effect"
+	if type(entry.giantEffectNote) == "string" and entry.giantEffectNote ~= "" then
+		effectText = string.format("%s; %s", effectText, entry.giantEffectNote)
+	end
+
 	if entry.status == VillageUpgradeHubState.EntryStatuses.Maxed then
-		return string.format("• %s %s — %s (maxed)", entry.displayLabel, levelText, entry.effectLabel)
+		return string.format("• %s %s — %s (maxed)", entry.displayLabel, levelText, effectText)
 	end
 
 	local costText = formatCost(entry.nextCost)
-	return string.format(
-		"• %s %s — %s (next %s at anchor)",
-		entry.displayLabel,
-		levelText,
-		entry.effectLabel,
-		costText
-	)
+	return string.format("• %s %s — %s (next %s at anchor)", entry.displayLabel, levelText, effectText, costText)
 end
 
 return VillageUpgradeHubState

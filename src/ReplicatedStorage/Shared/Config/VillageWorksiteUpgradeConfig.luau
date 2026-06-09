@@ -82,4 +82,20 @@ VillageWorksiteUpgradeConfig.GiantHousingCapacityMultipliersByLevel = {
 	[3] = { housingCapacity = 4 },
 }
 
+-- Separate from essence-capacity multipliers: Giant vitality from Shrine levels (C2b).
+VillageWorksiteUpgradeConfig.ShrineGiantVitalityBonusesByLevel = {
+	[0] = { maxHealthBonus = 0, powerBudgetBonus = 0 },
+	[1] = { maxHealthBonus = 17, powerBudgetBonus = 8 },
+	[2] = { maxHealthBonus = 33, powerBudgetBonus = 17 },
+	[3] = { maxHealthBonus = 50, powerBudgetBonus = 25 },
+}
+
+-- Separate from housing slot math: Giant locomotion from dwelling levels (C2b).
+VillageWorksiteUpgradeConfig.DwellingGiantLocomotionBonusesByLevel = {
+	[0] = { walkSpeedBonus = 0, movementControlBonus = 0 },
+	[1] = { walkSpeedBonus = 2, movementControlBonus = 0.08 },
+	[2] = { walkSpeedBonus = 4, movementControlBonus = 0.17 },
+	[3] = { walkSpeedBonus = 6, movementControlBonus = 0.25 },
+}
+
 return VillageWorksiteUpgradeConfig

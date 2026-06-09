@@ -6,9 +6,13 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
+local GiantRealm = Shared:WaitForChild("GiantRealm")
 local UpgradeBoardShared = Shared:WaitForChild("UpgradeBoard")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local StationConfig = require(Config:WaitForChild("StationConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
+local GiantWorksiteEffectResolution = require(GiantRealm:WaitForChild("GiantWorksiteEffectResolution"))
 local UpgradeProgressionLogic = require(UpgradeBoardShared:WaitForChild("UpgradeProgressionLogic"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 
@@ -264,34 +268,34 @@ local function resolveProgressionState(state: { [string]: boolean }): Progressio
 	return UpgradeProgressionLogic.ResolveProgressionState(progressionKernel, state)
 end
 
-local function resolveEffectValues(state: { [string]: boolean }): GiantResolvedEffects
-	local maxHealthBonus = 0
-	local walkSpeedBonus = 0
-	local powerBudgetBonus = 0
-	local movementControlBonus = 0
-
-	for upgradeId, enabled in state do
-		if enabled then
-			local effect = UpgradeBoardConfig.EffectByUpgradeId[upgradeId]
-			if effect then
-				maxHealthBonus += effect.maxHealthBonus
-				walkSpeedBonus += effect.walkSpeedBonus
-				powerBudgetBonus += effect.powerBudgetBonus
-				movementControlBonus += effect.movementControlBonus
-			end
-		end
+local function getWorksiteUpgradeQueryApi(): any?
+	local queryApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
 	end
+	if type(_G) == "table" and type((_G :: any)._VillageWorksiteUpgradeService_QueryAPI) == "table" then
+		return (_G :: any)._VillageWorksiteUpgradeService_QueryAPI
+	end
+	return nil
+end
 
-	return {
-		maxHealth = UpgradeBoardConfig.BaseHumanoidMaxHealth + maxHealthBonus,
-		walkSpeed = UpgradeBoardConfig.BaseHumanoidWalkSpeed + walkSpeedBonus,
-		maxHealthBonus = maxHealthBonus,
-		walkSpeedBonus = walkSpeedBonus,
-		powerBudget = UpgradeBoardConfig.BasePowerBudget + powerBudgetBonus,
-		movementControl = UpgradeBoardConfig.BaseMovementControl + movementControlBonus,
-		powerBudgetBonus = powerBudgetBonus,
-		movementControlBonus = movementControlBonus,
-	}
+local function resolveWorksiteEffectLevels(_userId: number): (number, number)
+	local shrineLevel = 0
+	local dwellingLevel = 0
+	local worksiteApi = getWorksiteUpgradeQueryApi()
+	if type(worksiteApi) == "table" and type(worksiteApi.GetUpgradeLevel) == "function" then
+		shrineLevel = worksiteApi.GetUpgradeLevel(ShrineConfig.DefaultShrineId)
+		dwellingLevel = worksiteApi.GetUpgradeLevel(StationConfig.DefaultGiantDwellingId)
+	end
+	return shrineLevel, dwellingLevel
+end
+
+local function resolveEffectValuesForUser(userId: number): GiantResolvedEffects
+	local shrineLevel, dwellingLevel = resolveWorksiteEffectLevels(userId)
+	return GiantWorksiteEffectResolution.ResolveEffects({
+		shrineLevel = shrineLevel,
+		dwellingLevel = dwellingLevel,
+	})
 end
 
 local function applyUpgradeAttributes(player: Player, state: { [string]: boolean })
@@ -340,7 +344,7 @@ local function resetUpgradeState(player: Player, reason: string)
 	applyUpgradeAttributes(player, emptyState)
 	applyProgressionAttributes(player, resolveProgressionState(emptyState))
 
-	local baseEffects = resolveEffectValues(emptyState)
+	local baseEffects = resolveEffectValuesForUser(player.UserId)
 	applyUpgradeEffectAttributes(player, baseEffects)
 
 	debugLog(string.format("Reset upgrade state userId=%d reason=%s", player.UserId, reason))
@@ -388,8 +392,7 @@ local function applyResolvedHumanoidState(player: Player, state: HumanoidState):
 end
 
 local function applyGiantUpgradeEffects(player: Player, reason: string)
-	local state = getOrCreateGiantUpgradeState(player.UserId)
-	local effects = resolveEffectValues(state)
+	local effects = resolveEffectValuesForUser(player.UserId)
 	giantResolvedEffectsByUserId[player.UserId] = effects
 	applyUpgradeEffectAttributes(player, effects)
 
@@ -518,6 +521,15 @@ selectRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		selectResultRemote:FireClient(
 			player,
 			{ accepted = false, upgradeId = upgradeId, reason = "player_not_alive" } :: SelectResultPayload
+		)
+		return
+	end
+
+	if UpgradeBoardConfig.BoardPurchasesDeprecated == true then
+		rejectSelect(player, "board_purchase_deprecated")
+		selectResultRemote:FireClient(
+			player,
+			{ accepted = false, upgradeId = upgradeId, reason = "board_purchase_deprecated" } :: SelectResultPayload
 		)
 		return
 	end
@@ -673,7 +685,7 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 	local state = getOrCreateGiantUpgradeState(player.UserId)
 	local selectedCsv = rebuildUpgradeCsv(state)
 	local progression = resolveProgressionState(state)
-	local effects = giantResolvedEffectsByUserId[player.UserId] or resolveEffectValues(state)
+	local effects = giantResolvedEffectsByUserId[player.UserId] or resolveEffectValuesForUser(player.UserId)
 	local essenceSnapshot = GiantEssenceSession.GetSnapshot(player.UserId)
 	applyEssenceDebugAttributes(player, essenceSnapshot)
 	applyProgressionAttributes(player, progression)
@@ -790,13 +802,23 @@ local function getProgressionStateForUser(userId: number): ProgressionState
 end
 
 local function getResolvedEffectsForUser(userId: number): GiantResolvedEffects
-	return resolveEffectValues(getOrCreateGiantUpgradeState(userId))
+	return resolveEffectValuesForUser(userId)
+end
+
+local function refreshGiantEffectsForUser(userId: number, reason: string)
+	local player = Players:GetPlayerByUserId(userId)
+	if player == nil then
+		return
+	end
+	applyGiantUpgradeEffects(player, reason)
 end
 
 local upgradeBoardQueryAPI = {
 	GetUpgradeState = getUpgradeState,
 	GetProgressionState = getProgressionStateForUser,
 	GetResolvedEffects = getResolvedEffectsForUser,
+	GetWorksiteEffectLevels = resolveWorksiteEffectLevels,
+	RefreshGiantEffectsForUser = refreshGiantEffectsForUser,
 }
 
 globalEnv._UpgradeBoardService_QueryAPI = upgradeBoardQueryAPI

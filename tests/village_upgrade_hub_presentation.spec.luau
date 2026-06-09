@@ -13,21 +13,21 @@ end
 do
 	local snapshot = VillageUpgradeHubState.BuildHubSnapshot({
 		boardId = "GiantUpgradeBoard_A",
-		selectedByUpgradeId = {},
-		progression = {
-			completedSteps = 0,
-			totalSteps = 2,
-			status = "InProgress",
-			nextUpgradeId = "PowerCore",
+		shrineLevel = 1,
+		dwellingLevel = 0,
+		resolvedEffects = {
+			maxHealthBonus = 17,
+			powerBudgetBonus = 8,
+			walkSpeedBonus = 0,
+			movementControlBonus = 0,
 		},
-		resolvedEffects = {},
 		levelByWorksiteId = {},
 	})
 	local model = VillageUpgradeHubPresentation.BuildPanelModel(snapshot)
 	assertTrue(model.visible, "panel visible")
-	assertTrue(string.find(model.bodyText, "Legacy session board effects", 1, true) ~= nil, "legacy board copy")
+	assertTrue(string.find(model.bodyText, "Board purchases deprecated", 1, true) ~= nil, "deprecated board copy")
 	assertTrue(string.find(model.bodyText, "Realm Worksite Upgrades", 1, true) ~= nil, "worksite section")
-	assertTrue(string.find(model.bodyText, "legacy available", 1, true) ~= nil, "legacy available copy")
+	assertTrue(string.find(model.bodyText, "deprecated", 1, true) ~= nil, "deprecated entry copy")
 end
 
 do

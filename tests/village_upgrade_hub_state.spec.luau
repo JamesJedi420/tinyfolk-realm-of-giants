@@ -17,31 +17,26 @@ end
 do
 	local snapshot = VillageUpgradeHubState.BuildHubSnapshot({
 		boardId = "GiantUpgradeBoard_A",
-		selectedByUpgradeId = { PowerCore = true },
-		progression = {
-			completedSteps = 1,
-			totalSteps = 2,
-			status = "InProgress",
-			nextUpgradeId = "IronStride",
-		},
+		shrineLevel = 2,
+		dwellingLevel = 1,
 		resolvedEffects = {
-			maxHealthBonus = 50,
-			powerBudgetBonus = 25,
-			walkSpeedBonus = 0,
-			movementControlBonus = 0,
+			maxHealthBonus = 33,
+			powerBudgetBonus = 17,
+			walkSpeedBonus = 2,
+			movementControlBonus = 0.08,
 		},
 		levelByWorksiteId = {
 			Farm_A = 2,
+			Shrine_A = 2,
 			GiantDwelling_A = 1,
 		},
 	})
 
 	assertEqual(snapshot.accepted, true, "hub snapshot accepted")
-	assertEqual(snapshot.boardTrack.progression.nextUpgradeId, "IronStride", "next board upgrade")
-	assertEqual(snapshot.boardTrack.entries[1].status, "purchased", "power core purchased")
-	assertEqual(snapshot.boardTrack.entries[2].status, "available", "iron stride available")
-	assertEqual(snapshot.boardTrack.entries[1].migrationTarget, "shrine_levels", "power core migration target")
-	assertEqual(snapshot.boardTrack.entries[2].migrationTarget, "giant_dwelling_levels", "iron stride migration target")
+	assertEqual(snapshot.boardTrack.progression.status, "Deprecated", "board track deprecated")
+	assertEqual(snapshot.boardTrack.entries[1].status, "deprecated", "power core deprecated")
+	assertEqual(snapshot.boardTrack.entries[1].sourceLevel, 2, "power core source shrine level")
+	assertEqual(snapshot.boardTrack.entries[2].sourceLevel, 1, "iron stride source dwelling level")
 
 	local farmEntry = nil
 	for _, entry in snapshot.worksiteSummaries do
@@ -58,12 +53,14 @@ end
 do
 	local line = VillageUpgradeHubState.FormatBoardEntryLine({
 		label = "Power Core",
-		status = "purchased",
+		status = "deprecated",
 		migrationTarget = "shrine_levels",
+		sourceLabel = "Shrine",
+		sourceLevel = 3,
 		effectSummary = "+50 health, +25 power budget",
 	})
-	assertTrue(string.find(line, "legacy active", 1, true) ~= nil, "legacy active copy")
-	assertTrue(string.find(line, "shrine_levels", 1, true) ~= nil, "migration hint in line")
+	assertTrue(string.find(line, "deprecated", 1, true) ~= nil, "deprecated copy")
+	assertTrue(string.find(line, "Shrine L3", 1, true) ~= nil, "source level in line")
 end
 
 print("village_upgrade_hub_state.spec.luau: all checks passed")

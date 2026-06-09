@@ -7,6 +7,8 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local StationConfig = require(Config:WaitForChild("StationConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 
@@ -62,6 +64,27 @@ local function isCoolingDown(userId: number, at: number): boolean
 		return false
 	end
 	return (at - last) < VillageWorksiteUpgradeConfig.RequestCooldownSeconds
+end
+
+local function getUpgradeBoardQueryApi(): any?
+	local queryApi = globalEnv._UpgradeBoardService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._UpgradeBoardService_QueryAPI) == "table" then
+		return (_G :: any)._UpgradeBoardService_QueryAPI
+	end
+	return nil
+end
+
+local function refreshGiantEffectsForRealmOwner(ownerUserId: number?, reason: string)
+	if type(ownerUserId) ~= "number" then
+		return
+	end
+	local boardApi = getUpgradeBoardQueryApi()
+	if type(boardApi) == "table" and type(boardApi.RefreshGiantEffectsForUser) == "function" then
+		boardApi.RefreshGiantEffectsForUser(ownerUserId, reason)
+	end
 end
 
 local function getGiantBuildModeQueryApi(): any?
@@ -214,6 +237,9 @@ local function requestUpgrade(player: Player, worksiteId: any, at: number?, resp
 	end
 
 	upgradeState = transition.state
+	if worksiteId == ShrineConfig.DefaultShrineId or worksiteId == StationConfig.DefaultGiantDwellingId then
+		refreshGiantEffectsForRealmOwner(ownerUserId, "worksite_upgrade")
+	end
 	responseRemote:FireClient(player, {
 		accepted = true,
 		reason = "accepted",
@@ -310,6 +336,7 @@ local function ApplyPersistenceState(raw: any): (boolean, string?)
 		return false, applied.reason or "worksite_upgrade_apply_failed"
 	end
 	upgradeState = applied.state
+	refreshGiantEffectsForRealmOwner(getRealmOwnerUserId(), "worksite_persistence_apply")
 	return true, nil
 end
 

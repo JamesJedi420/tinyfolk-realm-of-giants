@@ -7,6 +7,7 @@ UpgradeBoardConfig.DefaultBoardId = "GiantUpgradeBoard_A"
 
 UpgradeBoardConfig.InteractionRangeStuds = 16
 UpgradeBoardConfig.RequestCooldownSeconds = 0.2
+UpgradeBoardConfig.BoardPurchasesDeprecated = true
 
 UpgradeBoardConfig.BaseHumanoidMaxHealth = 100
 UpgradeBoardConfig.BaseHumanoidWalkSpeed = 16
