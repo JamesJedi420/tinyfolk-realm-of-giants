@@ -94,8 +94,8 @@ local function registerDwellingsFromWorkspace()
 		return
 	end
 
-	local stationsRootInstance = stationsRoot :: Instance
-	for _, descendant in stationsRootInstance:GetDescendants() do
+	local stationsRootAny = stationsRoot :: any
+	for _, descendant in stationsRootAny:GetDescendants() do
 		if descendant:IsA("BasePart") and shouldTrackDwellingPart(descendant :: BasePart) then
 			registerDwellingPart(descendant :: BasePart)
 		end
