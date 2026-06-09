@@ -1,0 +1,77 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "GuardTower_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Concrete",
+        "Color": [
+          0.42,
+          0.4,
+          0.38
+        ],
+        "Size": [
+          6,
+          12,
+          6
+        ],
+        "Position": [
+          68,
+          6,
+          -12
+        ]
+      }
+    },
+    {
+      "name": "GuardTower_BasePad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Concrete",
+        "Color": [
+          0.34,
+          0.32,
+          0.3
+        ],
+        "Size": [
+          10,
+          0.4,
+          10
+        ],
+        "Position": [
+          68,
+          0.2,
+          -12
+        ]
+      }
+    },
+    {
+      "name": "GuardTower_Lookout",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.48,
+          0.46,
+          0.42
+        ],
+        "Size": [
+          4.5,
+          1.2,
+          4.5
+        ],
+        "Position": [
+          68,
+          12.6,
+          -12
+        ]
+      }
+    }
+  ]
+}

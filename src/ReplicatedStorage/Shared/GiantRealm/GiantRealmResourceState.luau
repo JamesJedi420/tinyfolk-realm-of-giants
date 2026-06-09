@@ -389,9 +389,16 @@ function GiantRealmResourceState.ComputeAwardAmounts(sourceKind: string, metadat
 			}
 		end
 
-		local essence = math.floor(3 * multiplier + 0.5)
-		local wood = math.floor(2 * multiplier + 0.5)
-		local stone = math.floor(1 * multiplier + 0.5)
+		local defenseMultiplier = if type(metadata) == "table"
+				and isFiniteNumber(metadata.defenseMultiplier)
+				and metadata.defenseMultiplier > 0
+			then metadata.defenseMultiplier
+			else 1
+		local effectiveMultiplier = multiplier * defenseMultiplier
+
+		local essence = math.floor(3 * effectiveMultiplier + 0.5)
+		local wood = math.floor(2 * effectiveMultiplier + 0.5)
+		local stone = math.floor(1 * effectiveMultiplier + 0.5)
 		if essence <= 0 and wood <= 0 and stone <= 0 then
 			return {
 				accepted = false,
