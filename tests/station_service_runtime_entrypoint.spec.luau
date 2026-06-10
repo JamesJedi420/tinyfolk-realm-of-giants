@@ -545,4 +545,26 @@ local foodAfterHaul = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(foodAfterHaul.inTransit > foodSnapshot.inTransit, "farm pickup moves produced Food to in-transit")
 assertTrue(foodAfterHaul.produced < foodSnapshot.produced, "farm pickup reduces produced Food pool")
 
+StationConfig.HaulIntervalSeconds = 0.5
+ResourceFlowState.ResetSession("haul_cooldown_test")
+_G._StationService_LastHaulRequestAt[interactionAssignPlayer.UserId] = nil
+ResourceFlowState.AddProduced("Wood", "WorkStation:WorkStation_C", 6)
+interactionAssignPlayer:SetAttribute(StationConfig.HaulInteractionActiveAttribute, nil)
+local haulCooldownWarnsBefore = #warns
+activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
+assertEqual(
+	interactionAssignPlayer:GetAttribute(StationConfig.HaulInteractionActiveAttribute),
+	true,
+	"successful haul sets haul interaction active debug attribute"
+)
+activateRemote:FireServer(interactionAssignPlayer, "WorkStation_C")
+local sawHaulCooldown = false
+for i = haulCooldownWarnsBefore + 1, #warns do
+	if string.find(warns[i], "haul_cooldown", 1, true) ~= nil then
+		sawHaulCooldown = true
+		break
+	end
+end
+assertTrue(sawHaulCooldown, "immediate repeat haul rejects with haul_cooldown")
+
 print("station_service_runtime_entrypoint: all checks passed")

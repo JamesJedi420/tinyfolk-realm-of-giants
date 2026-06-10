@@ -55,12 +55,16 @@ StationConfig.MaxStoneTotal = 200
 StationConfig.FoodPerTick = 2
 StationConfig.MaxFoodTotal = 200
 
-StationConfig.HaulIntervalSeconds = 1
+StationConfig.HaulIntervalSeconds = 0.25
 StationConfig.HaulTransferPerStepByMaterial = {
 	Wood = 2,
 	Stone = 2,
 	Food = 2,
 }
+StationConfig.HaulInteractionActiveAttribute = "HaulInteractionActive"
+StationConfig.HaulInteractionActionAttribute = "HaulInteractionAction"
+StationConfig.HaulInteractionTargetIdAttribute = "HaulInteractionTargetId"
+StationConfig.HaulInteractionModeAttribute = "HaulInteractionMode"
 StationConfig.MaxInTransitByMaterial = {
 	Wood = 200,
 	Stone = 200,
