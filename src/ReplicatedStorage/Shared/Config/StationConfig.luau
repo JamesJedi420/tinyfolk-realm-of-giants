@@ -86,4 +86,8 @@ StationConfig.RequiredSpecialistRoleByStationId = {
 
 StationConfig.DebugLogEveryTicks = 1
 
+StationConfig.WorksiteUpgradeLevelAttribute = "WorksiteUpgradeLevel"
+StationConfig.WorksiteUpgradeEffectivePerTickAttribute = "WorksiteUpgradeEffectivePerTick"
+StationConfig.WorksiteUpgradeEffectiveMaxTotalAttribute = "WorksiteUpgradeEffectiveMaxTotal"
+
 return StationConfig

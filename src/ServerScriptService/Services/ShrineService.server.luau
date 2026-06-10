@@ -18,6 +18,7 @@ local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSess
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 local LaborActionState = require(GiantRealm:WaitForChild("LaborActionState"))
+local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ACTIVATE_REMOTE_NAME = "ShrineActivateRequest"
@@ -33,16 +34,44 @@ local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 local SHRINE_FOLDER_PATH = { "Map", "Stations" }
 local globalEnv: any = getfenv()
 
-local function resolveMaxEssenceTotal(shrineId: string): number
-	local multiplier = 1
+local function getShrineProductionModifiers(shrineId: string): any
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
-	if type(upgradeApi) == "table" and type(upgradeApi.GetEssenceMaxCapacityMultiplier) == "function" then
-		local resolvedMultiplier = upgradeApi.GetEssenceMaxCapacityMultiplier(shrineId)
-		if type(resolvedMultiplier) == "number" and resolvedMultiplier > 0 then
-			multiplier = resolvedMultiplier
+	if type(upgradeApi) ~= "table" and type(_G) == "table" then
+		upgradeApi = (_G :: any)._VillageWorksiteUpgradeService_QueryAPI
+	end
+	if type(upgradeApi) == "table" and type(upgradeApi.GetShrineProductionModifiers) == "function" then
+		local modifiers = upgradeApi.GetShrineProductionModifiers(shrineId)
+		if type(modifiers) == "table" then
+			return modifiers
 		end
 	end
-	return math.max(1, math.floor(ShrineConfig.MaxEssenceTotal * multiplier + 0.5))
+	if type(upgradeApi) == "table" and type(upgradeApi.GetEssenceMaxCapacityMultiplier) == "function" then
+		local maxTotalMultiplier = upgradeApi.GetEssenceMaxCapacityMultiplier(shrineId)
+		if type(maxTotalMultiplier) == "number" and maxTotalMultiplier > 0 then
+			return {
+				level = 0,
+				perTickMultiplier = maxTotalMultiplier,
+				maxTotalMultiplier = maxTotalMultiplier,
+			}
+		end
+	end
+	return VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(0)
+end
+
+local function resolveShrineGenerationLimits(shrineId: string): (number, number, any)
+	local modifiers = getShrineProductionModifiers(shrineId)
+	local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number" then modifiers.perTickMultiplier else 1
+	local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
+		then modifiers.maxTotalMultiplier
+		else 1
+	local perTick = math.max(1, math.floor(ShrineConfig.EssencePerTick * perTickMultiplier + 0.5))
+	local maxTotal = math.max(1, math.floor(ShrineConfig.MaxEssenceTotal * maxTotalMultiplier + 0.5))
+	return perTick, maxTotal, modifiers
+end
+
+local function resolveMaxEssenceTotal(shrineId: string): number
+	local _, maxTotal = resolveShrineGenerationLimits(shrineId)
+	return maxTotal
 end
 
 type ShrineState = {
@@ -205,11 +234,16 @@ local function getSpecialistAssignmentQueryApi(): any?
 end
 
 local function applyDebugAttributes(state: ShrineState)
+	local perTick, maxTotal, modifiers = resolveShrineGenerationLimits(state.shrineId)
+
 	state.part:SetAttribute(ATTRIBUTE_IS_ACTIVE, state.isActive)
 	state.part:SetAttribute(ATTRIBUTE_ESSENCE_TOTAL, state.essenceTotal)
 	state.part:SetAttribute(ATTRIBUTE_TICK_COUNT, state.tickCount)
 	state.part:SetAttribute(ATTRIBUTE_LAST_TICK_AT, state.lastTickAt)
 	state.part:SetAttribute(ATTRIBUTE_ACTIVATED_BY, state.activatedByUserId)
+	state.part:SetAttribute(ShrineConfig.WorksiteUpgradeLevelAttribute, modifiers.level)
+	state.part:SetAttribute(ShrineConfig.WorksiteUpgradeEffectivePerTickAttribute, perTick)
+	state.part:SetAttribute(ShrineConfig.WorksiteUpgradeEffectiveMaxTotalAttribute, maxTotal)
 end
 
 local function findShrinesRoot(): Instance?
@@ -603,9 +637,9 @@ local function performShrineProductionTick(
 	shrineState.lastTickAt = os.clock()
 	shrineState.activatedByUserId = activatingPlayer.UserId
 
-	local maxEssenceTotal = resolveMaxEssenceTotal(shrineState.shrineId)
+	local perTick, maxEssenceTotal = resolveShrineGenerationLimits(shrineState.shrineId)
 	local remainingCapacity = maxEssenceTotal - shrineState.essenceTotal
-	local generatedAmount = math.min(ShrineConfig.EssencePerTick, math.max(0, remainingCapacity))
+	local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
 	if generatedAmount <= 0 then
 		applyDebugAttributes(shrineState)
 		return {
@@ -898,12 +932,16 @@ shrineDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pay
 			return
 		end
 
+		local effectivePerTick, effectiveMaxTotal, modifiers = resolveShrineGenerationLimits(shrineState.shrineId)
 		shrineDebugStateResponseRemote:FireClient(player, {
 			shrineId = shrineState.shrineId,
 			isActive = shrineState.isActive,
 			essenceTotal = shrineState.essenceTotal,
 			tickCount = shrineState.tickCount,
 			activatedByUserId = shrineState.activatedByUserId,
+			upgradeLevel = modifiers.level,
+			effectivePerTick = effectivePerTick,
+			effectiveMaxTotal = effectiveMaxTotal,
 		})
 		debugLog(string.format("Sent shrine debug state userId=%d shrineId=%s", player.UserId, shrineState.shrineId))
 		return
@@ -911,12 +949,16 @@ shrineDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pay
 
 	local snapshot = {}
 	for shrineId, shrineState in shrineStateById do
+		local effectivePerTick, effectiveMaxTotal, modifiers = resolveShrineGenerationLimits(shrineId)
 		table.insert(snapshot, {
 			shrineId = shrineId,
 			isActive = shrineState.isActive,
 			essenceTotal = shrineState.essenceTotal,
 			tickCount = shrineState.tickCount,
 			activatedByUserId = shrineState.activatedByUserId,
+			upgradeLevel = modifiers.level,
+			effectivePerTick = effectivePerTick,
+			effectiveMaxTotal = effectiveMaxTotal,
 		})
 	end
 

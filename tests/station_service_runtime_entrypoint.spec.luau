@@ -583,6 +583,21 @@ assertTrue(
 	"farm upgrade level 2 scales food per work action to at least 3"
 )
 assertEqual(
+	stationStateById["Farm_A"].part:GetAttribute(StationConfig.WorksiteUpgradeLevelAttribute),
+	2,
+	"station upgrade level exposed on part debug attributes"
+)
+assertEqual(
+	stationStateById["Farm_A"].part:GetAttribute(StationConfig.WorksiteUpgradeEffectivePerTickAttribute),
+	3,
+	"station effective per-tick exposed on part debug attributes"
+)
+assertEqual(
+	stationStateById["Farm_A"].part:GetAttribute(StationConfig.WorksiteUpgradeEffectiveMaxTotalAttribute),
+	300,
+	"station effective max total exposed on part debug attributes"
+)
+assertEqual(
 	farmPlayer:GetAttribute(LaborActionConfig.LaborActionAttribute),
 	LaborActionConfig.Actions.Farm,
 	"farm labor action exposed on player debug attributes"

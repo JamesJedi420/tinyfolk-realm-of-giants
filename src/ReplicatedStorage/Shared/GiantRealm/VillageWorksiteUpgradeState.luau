@@ -261,6 +261,16 @@ function VillageWorksiteUpgradeState.ResolveCapacityModifiers(level: number): an
 	}
 end
 
+function VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(level: number): any
+	local capacity = VillageWorksiteUpgradeState.ResolveCapacityModifiers(level)
+
+	return {
+		level = capacity.level,
+		perTickMultiplier = capacity.essenceMaxMultiplier,
+		maxTotalMultiplier = capacity.essenceMaxMultiplier,
+	}
+end
+
 function VillageWorksiteUpgradeState.ResolvePenRationingModifiers(level: number): any
 	local normalizedLevel = if isFiniteNumber(level) and level >= 0
 		then math.min(math.floor(level), VillageWorksiteUpgradeConfig.MaxLevel)
