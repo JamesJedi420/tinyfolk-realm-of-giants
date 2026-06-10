@@ -1806,6 +1806,14 @@ local function getGiantLevelQueryApi(): any
 	return nil
 end
 
+local function getGiantReputationQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._GiantReputationService_QueryAPI) == "table" then
+		return globalValue._GiantReputationService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -1868,6 +1876,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		giantLevelPersistenceState = giantLevelQueryApi.BuildPersistenceState()
 	end
 
+	local giantReputationPersistenceState = nil
+	local giantReputationQueryApi = getGiantReputationQueryApi()
+	if giantReputationQueryApi ~= nil then
+		if type(giantReputationQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "giant_reputation_build_persistence_missing"
+		end
+		giantReputationPersistenceState = giantReputationQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
@@ -1878,7 +1895,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		BuildResourceLedgerState(),
 		worksiteUpgradeState,
 		trophyPersistenceState,
-		giantLevelPersistenceState
+		giantLevelPersistenceState,
+		giantReputationPersistenceState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -2028,6 +2046,27 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedGiantLevel, giantLevelReason = giantLevelQueryApi.ApplyPersistenceState(nil)
 		if not appliedGiantLevel then
 			return false, giantLevelReason or "giant_level_apply_persistence_failed"
+		end
+	end
+
+	local giantReputationQueryApi = getGiantReputationQueryApi()
+	if root.giantReputationPersistence ~= nil then
+		if giantReputationQueryApi == nil then
+			return false, "giant_reputation_query_api_missing"
+		end
+		if type(giantReputationQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "giant_reputation_apply_persistence_missing"
+		end
+
+		local appliedGiantReputation, giantReputationReason =
+			giantReputationQueryApi.ApplyPersistenceState(root.giantReputationPersistence)
+		if not appliedGiantReputation then
+			return false, giantReputationReason or "giant_reputation_apply_persistence_failed"
+		end
+	elseif giantReputationQueryApi ~= nil and type(giantReputationQueryApi.ApplyPersistenceState) == "function" then
+		local appliedGiantReputation, giantReputationReason = giantReputationQueryApi.ApplyPersistenceState(nil)
+		if not appliedGiantReputation then
+			return false, giantReputationReason or "giant_reputation_apply_persistence_failed"
 		end
 	end
 

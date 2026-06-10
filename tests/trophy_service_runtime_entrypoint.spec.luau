@@ -29,9 +29,11 @@ end
 
 local configFolder = makeNode("Config")
 configFolder._Children["TrophyConfig"] = "../../ReplicatedStorage/Shared/Config/TrophyConfig"
+configFolder._Children["GiantReputationConfig"] = "../../ReplicatedStorage/Shared/Config/GiantReputationConfig"
 
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["TrophyState"] = "../../ReplicatedStorage/Shared/GiantRealm/TrophyState"
+giantRealmFolder._Children["GiantReputationState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantReputationState"
 
 local sharedFolder = makeNode("Shared")
 sharedFolder._Children["Config"] = configFolder
@@ -77,7 +79,9 @@ _G._GiantBuildModeService_QueryAPI = {
 }
 
 local TrophyConfig = require("../src/ReplicatedStorage/Shared/Config/TrophyConfig")
+local GiantReputationConfig = require("../src/ReplicatedStorage/Shared/Config/GiantReputationConfig")
 
+require("../src/ServerScriptService/Services/GiantReputationService.server")
 require("../src/ServerScriptService/Services/TrophyService.server")
 
 local trophyApi = _G._TrophyService_QueryAPI
@@ -105,8 +109,24 @@ local containmentResult = trophyApi.RecordContainmentEnd({
 assertTrue(containmentResult.accepted, "containment trophy recorded")
 assertEqual(trophyApi.GetTrophyCount(), 2, "containment increments trophy count")
 
+local escapeResult = trophyApi.RecordContainmentEnd({
+	operationId = "containment-escaped-5001-5101-3000",
+	custodianUserId = 5001,
+	targetUserId = 5101,
+	endedAt = 30,
+	endReason = "escaped",
+	heldSeconds = 8,
+})
+assertTrue(escapeResult.accepted, "escape failure trophy recorded")
+assertEqual(escapeResult.record.trophyKind, TrophyConfig.Kinds.ContainmentEscapeFailure, "escape failure trophy kind")
+assertEqual(trophyApi.GetTrophyCount(), 3, "escape failure increments trophy count")
+
+local reputationApi = _G._GiantReputationService_QueryAPI
+assertEqual(reputationApi.GetScore(), 60, "trophies grant reputation score")
+assertEqual(ownerPlayer:GetAttribute(GiantReputationConfig.StateAttributes.Score), 60, "reputation score attribute")
+
 local persistence = trophyApi.BuildPersistenceState()
-assertEqual(#persistence.trophies, 2, "persistence includes trophies")
+assertEqual(#persistence.trophies, 3, "persistence includes trophies")
 assertTrue(
 	persistence.trophies[1].targetDisplayToken:find("^ref%-") ~= nil,
 	"persisted trophy uses display token not raw target id"
@@ -117,6 +137,6 @@ trophyApi.ResetForTests()
 local applied, applyReason = trophyApi.ApplyPersistenceState(persistence)
 assertTrue(applied, "apply persistence accepted")
 assertEqual(applyReason, nil, "apply persistence reason")
-assertEqual(trophyApi.GetTrophyCount(), 2, "apply persistence restores trophies")
+assertEqual(trophyApi.GetTrophyCount(), 3, "apply persistence restores trophies")
 
 print("trophy_service_runtime_entrypoint.spec.luau: all checks passed")

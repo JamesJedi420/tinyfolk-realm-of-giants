@@ -614,6 +614,27 @@ local function run()
 	end
 
 	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, {}, nil, nil, nil, nil, nil, nil, nil, nil, {
+			score = 60,
+			rank = 2,
+			recentEvents = {
+				{
+					operationId = "containment-escaped-9402-9403-5000",
+					trophyKind = "containment_escape_failure",
+					scoreAwarded = 25,
+					awardedAt = 20,
+				},
+			},
+		})
+		assertTrue(type(root.giantReputationPersistence) == "table", "built root includes giant reputation persistence")
+		assertEqual(root.giantReputationPersistence.rank, 2, "built root giant reputation rank")
+		assertValid(
+			"built root with giant reputation persistence validates",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
 		local root = makeSaveRoot()
 		root.resourceLedger = makeResourceLedgerRecord()
 		root.resourceLedger.recentAwards[2].operationId = root.resourceLedger.recentAwards[1].operationId

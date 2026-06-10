@@ -139,6 +139,27 @@ assertEqual(#trophyEvents, 1, "first terminal resolve records trophy")
 assertEqual(trophyEvents[1].endReason, "released", "trophy metadata end reason")
 assertTrue(first.trophyAccepted, "first terminal resolve trophy accepted")
 
+local escapedTrophyEvents = {}
+local escapedResolver = ContainmentRewardResolver.Create({
+	idempotencyStore = makeStore(),
+	scoreApi = makeScoreApi({}),
+	trophyApi = {
+		RecordContainmentEnd = function(metadata: any): any
+			table.insert(escapedTrophyEvents, metadata)
+			return { accepted = true, reason = "accepted" }
+		end,
+	},
+})
+local escaped = escapedResolver.Resolve(resolveInput({
+	operationId = "containment-escaped-101-202-8000",
+	endReason = "escaped",
+	endedAt = 12,
+}))
+assertTrue(escaped.accepted, "escaped terminal resolve accepted")
+assertTrue(escaped.trophyAccepted, "escaped terminal resolve records trophy")
+assertEqual(#escapedTrophyEvents, 1, "escaped terminal resolve emits one trophy")
+assertEqual(escapedTrophyEvents[1].endReason, "escaped", "escaped trophy metadata end reason")
+
 local duplicate = resolver.Resolve(resolveInput())
 assertTrue(duplicate.accepted, "duplicate completed accepted as no-op")
 assertTrue(duplicate.duplicate, "duplicate completed marked duplicate")
