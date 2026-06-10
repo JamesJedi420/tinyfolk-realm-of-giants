@@ -230,14 +230,20 @@ playerAdded:Fire(giant)
 
 do
 	local snapshot = api.GetSnapshot(tinyfolk)
-	assertEqual(snapshot.itemCounts.raw_fiber, 3, "tinyfolk bootstrap raw_fiber")
-	assertEqual(snapshot.itemCounts.wood_scrap, 2, "tinyfolk bootstrap wood_scrap")
-	assertEqual(snapshot.itemCounts.stone_shard, 2, "tinyfolk bootstrap stone_shard")
+	assertEqual(snapshot.itemCounts.raw_fiber, 4, "tinyfolk bootstrap raw_fiber")
+	assertEqual(snapshot.itemCounts.wood_scrap, 3, "tinyfolk bootstrap wood_scrap")
+	assertEqual(snapshot.itemCounts.stone_shard, 3, "tinyfolk bootstrap stone_shard")
+	assertEqual(snapshot.itemCounts.plant_resin, 2, "tinyfolk bootstrap plant_resin")
 	assertEqual(
 		tinyfolk:GetAttribute(InventoryCraftConfig.Attributes.ItemCount),
-		3,
+		6,
 		"tinyfolk debug item count attribute"
 	)
+	assertTrue(
+		tinyfolk:GetAttribute(InventoryCraftConfig.Attributes.CraftableRecipeCount) >= 3,
+		"tinyfolk craftable recipe count attribute"
+	)
+	assertTrue(type(snapshot.craftableRecipeIds) == "table", "snapshot craftable recipe ids")
 end
 
 do
@@ -305,6 +311,28 @@ do
 	local rejected = api.Craft(tinyfolk, "craft_twine_satchel")
 	assertFalse(rejected.accepted, "insufficient inputs rejected at runtime")
 	assertEqual(rejected.reason, "insufficient_inputs", "insufficient inputs runtime reason")
+end
+
+do
+	local listed = api.ListCraftableRecipes(tinyfolk)
+	assertTrue(listed.accepted, "list craftable recipes accepted")
+	assertTrue(type(listed.recipes) == "table", "list craftable recipes table")
+	assertTrue(#listed.recipes >= 1, "list craftable recipes non-empty")
+end
+
+do
+	InventoryCraftService.TestHarness.ResetSessionForTests(tinyfolk.UserId, {
+		smoke_pouch = 1,
+	})
+	local consumed = api.ConsumeItems(tinyfolk, { smoke_pouch = 1 })
+	assertTrue(consumed.accepted, "consume crafted item accepted")
+	assertEqual(consumed.snapshot.itemCounts.smoke_pouch, nil, "consume crafted item cleared")
+end
+
+do
+	local rejectedConsume = api.ConsumeItems(giant, { smoke_pouch = 1 })
+	assertFalse(rejectedConsume.accepted, "giant consume rejected")
+	assertEqual(rejectedConsume.reason, "tinyfolk_role_required", "giant consume reason")
 end
 
 print("inventory_craft_service_runtime_entrypoint: all checks passed")

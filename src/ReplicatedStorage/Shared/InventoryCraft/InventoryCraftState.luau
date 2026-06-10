@@ -20,10 +20,18 @@ export type InventoryEntry = {
 	maxStack: number,
 }
 
+export type CraftableRecipeEntry = {
+	recipeId: string,
+	displayName: string,
+	inputs: { [string]: number },
+	outputs: { [string]: number },
+}
+
 export type Snapshot = {
 	itemCounts: { [string]: number },
 	items: { InventoryEntry },
 	craftedTotal: number,
+	craftableRecipeIds: { string },
 	lastCraftRecipeId: string?,
 	lastCraftAt: number?,
 	lastReason: string?,
@@ -95,6 +103,44 @@ local function sortedItemIds(itemCounts: { [string]: number }): { string }
 	return itemIds
 end
 
+local function sortedRecipeIds(recipeIds: { string }): { string }
+	local copied: { string } = {}
+	for _, recipeId in ipairs(recipeIds) do
+		table.insert(copied, recipeId)
+	end
+	table.sort(copied)
+	return copied
+end
+
+local function hasSufficientInputs(state: State, inputs: { [string]: number }): boolean
+	for itemId, requiredCount in pairs(inputs) do
+		if getItemCount(state, itemId) < requiredCount then
+			return false
+		end
+	end
+	return true
+end
+
+local function canFitRecipeOutputs(
+	state: State,
+	outputs: { [string]: number },
+	itemCatalogOverride: any?
+): (boolean, string?)
+	for itemId, outputCount in pairs(outputs) do
+		local itemRecord = InventoryCraftConfig.GetItemRecord(itemId, itemCatalogOverride)
+		if itemRecord == nil then
+			return false, "output_item_missing"
+		end
+
+		local nextCount = getItemCount(state, itemId) + outputCount
+		if nextCount > itemRecord.maxStack then
+			return false, "output_stack_capacity_exceeded"
+		end
+	end
+
+	return true, nil
+end
+
 function InventoryCraftState.NewState(bootstrapItems: any?): State
 	local state: State = {
 		itemCounts = {},
@@ -133,14 +179,79 @@ function InventoryCraftState.GetSnapshot(state: State, catalogOverride: any?): S
 		})
 	end
 
+	local craftableRecipeIds =
+		InventoryCraftState.ListCraftableRecipeIds(state, InventoryCraftConfig.Roles.Tinyfolk, catalogOverride, nil)
+
 	return {
 		itemCounts = cloneCountMap(state.itemCounts),
 		items = items,
 		craftedTotal = state.craftedTotal,
+		craftableRecipeIds = craftableRecipeIds,
 		lastCraftRecipeId = state.lastCraftRecipeId,
 		lastCraftAt = state.lastCraftAt,
 		lastReason = state.lastReason,
 	}
+end
+
+function InventoryCraftState.ListCraftableRecipeIds(
+	state: State,
+	requesterRole: any,
+	itemCatalogOverride: any?,
+	recipeCatalogOverride: any?
+): { string }
+	if requesterRole ~= InventoryCraftConfig.Roles.Tinyfolk then
+		return {}
+	end
+
+	local craftableRecipeIds: { string } = {}
+	local recipeCatalog = InventoryCraftConfig.GetAllRecipeRecords(recipeCatalogOverride)
+	for _, recipeRecord in ipairs(recipeCatalog) do
+		if recipeRecord.requiredRole ~= requesterRole then
+			continue
+		end
+		if not hasSufficientInputs(state, recipeRecord.inputs) then
+			continue
+		end
+
+		local canFitOutputs, _reason = canFitRecipeOutputs(state, recipeRecord.outputs, itemCatalogOverride)
+		if not canFitOutputs then
+			continue
+		end
+
+		table.insert(craftableRecipeIds, recipeRecord.recipeId)
+	end
+
+	return sortedRecipeIds(craftableRecipeIds)
+end
+
+function InventoryCraftState.ListCraftableRecipes(
+	state: State,
+	requesterRole: any,
+	itemCatalogOverride: any?,
+	recipeCatalogOverride: any?
+): { CraftableRecipeEntry }
+	local craftableRecipeIds =
+		InventoryCraftState.ListCraftableRecipeIds(state, requesterRole, itemCatalogOverride, recipeCatalogOverride)
+	local recipeCatalog = InventoryCraftConfig.GetAllRecipeRecords(recipeCatalogOverride)
+	local recipeIndex: { [string]: any } = {}
+	for _, recipeRecord in ipairs(recipeCatalog) do
+		recipeIndex[recipeRecord.recipeId] = recipeRecord
+	end
+
+	local entries: { CraftableRecipeEntry } = {}
+	for _, recipeId in ipairs(craftableRecipeIds) do
+		local recipeRecord = recipeIndex[recipeId]
+		if recipeRecord ~= nil then
+			table.insert(entries, {
+				recipeId = recipeRecord.recipeId,
+				displayName = recipeRecord.displayName,
+				inputs = cloneCountMap(recipeRecord.inputs),
+				outputs = cloneCountMap(recipeRecord.outputs),
+			})
+		end
+	end
+
+	return entries
 end
 
 function InventoryCraftState.AddItems(state: State, additions: any, catalogOverride: any?): TransitionResult
@@ -184,6 +295,68 @@ function InventoryCraftState.AddItems(state: State, additions: any, catalogOverr
 	end
 
 	nextState.lastReason = "items_added"
+	return {
+		accepted = true,
+		reason = "accepted",
+		state = nextState,
+	}
+end
+
+function InventoryCraftState.ConsumeItems(state: State, consumptions: any, catalogOverride: any?): TransitionResult
+	local nextState = cloneState(state)
+	if type(consumptions) ~= "table" then
+		return {
+			accepted = false,
+			reason = "consumptions_invalid",
+			state = nextState,
+		}
+	end
+
+	for itemId, amount in pairs(consumptions) do
+		if type(itemId) ~= "string" or itemId == "" or not isPositiveInteger(amount) then
+			return {
+				accepted = false,
+				reason = "consumption_amount_invalid",
+				state = nextState,
+			}
+		end
+
+		local itemRecord, lookupReason = InventoryCraftConfig.GetItemRecord(itemId, catalogOverride)
+		if itemRecord == nil then
+			return {
+				accepted = false,
+				reason = lookupReason or "item_missing",
+				state = nextState,
+			}
+		end
+
+		if itemRecord.kind ~= InventoryCraftConfig.ItemKinds.Crafted then
+			return {
+				accepted = false,
+				reason = "crafted_item_required",
+				state = nextState,
+			}
+		end
+
+		if getItemCount(nextState, itemId) < amount then
+			return {
+				accepted = false,
+				reason = "insufficient_items",
+				state = nextState,
+			}
+		end
+	end
+
+	for itemId, amount in pairs(consumptions) do
+		local remaining = getItemCount(nextState, itemId) - amount
+		if remaining <= 0 then
+			nextState.itemCounts[itemId] = nil
+		else
+			nextState.itemCounts[itemId] = remaining
+		end
+	end
+
+	nextState.lastReason = "items_consumed"
 	return {
 		accepted = true,
 		reason = "accepted",
@@ -239,37 +412,21 @@ function InventoryCraftState.ResolveCraft(
 		}
 	end
 
-	for itemId, requiredCount in pairs(recipeRecord.inputs) do
-		local ownedCount = getItemCount(nextState, itemId)
-		if ownedCount < requiredCount then
-			return {
-				accepted = false,
-				reason = "insufficient_inputs",
-				state = nextState,
-			}
-		end
+	if not hasSufficientInputs(nextState, recipeRecord.inputs) then
+		return {
+			accepted = false,
+			reason = "insufficient_inputs",
+			state = nextState,
+		}
 	end
 
-	local projectedOutputs = cloneCountMap(nextState.itemCounts)
-	for itemId, outputCount in pairs(recipeRecord.outputs) do
-		local itemRecord = InventoryCraftConfig.GetItemRecord(itemId, itemCatalogOverride)
-		if itemRecord == nil then
-			return {
-				accepted = false,
-				reason = "output_item_missing",
-				state = nextState,
-			}
-		end
-
-		local nextCount = getItemCount(nextState, itemId) + outputCount
-		if nextCount > itemRecord.maxStack then
-			return {
-				accepted = false,
-				reason = "output_stack_capacity_exceeded",
-				state = nextState,
-			}
-		end
-		projectedOutputs[itemId] = nextCount
+	local canFitOutputs, outputReason = canFitRecipeOutputs(nextState, recipeRecord.outputs, itemCatalogOverride)
+	if not canFitOutputs then
+		return {
+			accepted = false,
+			reason = outputReason or "output_stack_capacity_exceeded",
+			state = nextState,
+		}
 	end
 
 	for itemId, requiredCount in pairs(recipeRecord.inputs) do
