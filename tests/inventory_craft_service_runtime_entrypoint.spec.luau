@@ -1,0 +1,310 @@
+--!nocheck
+--!nolint BuiltinGlobalWrite
+-- selene: allow(global_usage)
+
+local InventoryCraftConfig = require("../src/ReplicatedStorage/Shared/Config/InventoryCraftConfig")
+
+local function assertEqual(actual: any, expected: any, label: string)
+	if actual ~= expected then
+		error(string.format("FAIL [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
+	end
+	print(string.format("PASS [%s]", label))
+end
+
+local function assertTrue(value: boolean, label: string)
+	assertEqual(value, true, label)
+end
+
+local function assertFalse(value: boolean, label: string)
+	assertEqual(value, false, label)
+end
+
+local function makeSignal()
+	local callbacks: { (...any) -> () } = {}
+	return {
+		Connect = function(_self: any, callback: (...any) -> ())
+			table.insert(callbacks, callback)
+			return {}
+		end,
+		Fire = function(_self: any, ...: any)
+			for _, callback in ipairs(callbacks) do
+				callback(...)
+			end
+		end,
+	}
+end
+
+local function setNodeParent(node: any, parent: any)
+	if node._Parent ~= nil then
+		node._Parent._Children[node.Name] = nil
+	end
+	node._Parent = parent
+	if parent ~= nil then
+		parent._Children[node.Name] = node
+	end
+end
+
+local function makeNode(name: string, className: string?)
+	local node: any = {
+		Name = name,
+		ClassName = className or "Folder",
+		_Children = {},
+		_Parent = nil,
+	}
+
+	function node:IsA(expectedClass: string): boolean
+		return self.ClassName == expectedClass
+	end
+
+	function node:FindFirstChild(childName: string): any
+		return self._Children[childName]
+	end
+
+	function node:WaitForChild(childName: string, _timeout: number?): any
+		return self._Children[childName]
+	end
+
+	setmetatable(node, {
+		__index = function(self, key: string)
+			if key == "Parent" then
+				return self._Parent
+			end
+			return rawget(self, key)
+		end,
+		__newindex = function(self, key: string, value: any)
+			if key == "Parent" then
+				setNodeParent(self, value)
+				return
+			end
+			rawset(self, key, value)
+		end,
+	})
+
+	return node
+end
+
+local function addChild(parent: any, childName: string, child: any)
+	child.Name = childName
+	setNodeParent(child, parent)
+end
+
+local function makeRemoteEvent(remoteName: string)
+	local remote: any = makeNode(remoteName, "RemoteEvent")
+	remote._Handler = nil
+	remote._ClientPayload = nil
+
+	function remote:IsA(expectedClass: string): boolean
+		return self.ClassName == expectedClass
+	end
+
+	remote.OnServerEvent = {
+		Connect = function(_signal: any, handler: (any, any) -> ())
+			remote._Handler = handler
+		end,
+	}
+
+	function remote:FireServer(player: any, payload: any)
+		if remote._Handler == nil then
+			error(string.format("remote %s handler not connected", remote.Name))
+		end
+		remote._Handler(player, payload)
+	end
+
+	function remote:FireClient(_player: any, payload: any)
+		remote._ClientPayload = payload
+	end
+
+	return remote
+end
+
+Instance = {
+	new = function(className: string): any
+		if className == "Folder" then
+			return makeNode("Folder", "Folder")
+		end
+		if className == "RemoteEvent" then
+			return makeRemoteEvent("GeneratedRemote")
+		end
+		error(string.format("unsupported Instance.new(%q)", className))
+	end,
+} :: any
+
+local configFolder = makeNode("Config")
+configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
+configFolder._Children["InventoryCraftConfig"] = "../../ReplicatedStorage/Shared/Config/InventoryCraftConfig"
+
+local inventoryCraftFolder = makeNode("InventoryCraft")
+inventoryCraftFolder._Children["InventoryCraftState"] =
+	"../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftState"
+
+local sharedFolder = makeNode("Shared")
+addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "InventoryCraft", inventoryCraftFolder)
+
+local remotesFolder = makeNode("Remotes")
+local replicatedStorage = makeNode("ReplicatedStorage")
+addChild(replicatedStorage, "Shared", sharedFolder)
+addChild(replicatedStorage, "Remotes", remotesFolder)
+
+local playerAdded = makeSignal()
+local playerRemoving = makeSignal()
+local playersService: any = {
+	Name = "Players",
+	ClassName = "Players",
+	PlayerAdded = playerAdded,
+	PlayerRemoving = playerRemoving,
+	_Players = {},
+}
+
+function playersService:GetPlayers(): { any }
+	return self._Players
+end
+
+local fakeGame: any = {}
+function fakeGame:GetService(serviceName: string): any
+	if serviceName == "ReplicatedStorage" then
+		return replicatedStorage
+	end
+	if serviceName == "Players" then
+		return playersService
+	end
+	error(string.format("unsupported service: %s", serviceName))
+	return nil
+end
+
+game = fakeGame
+
+local function makePlayer(userId: number, role: string): any
+	local attributes: { [string]: any } = {
+		Role = role,
+	}
+	local attributeChangedSignals: { [string]: any } = {}
+	local player: any = {
+		UserId = userId,
+		Name = "Player" .. tostring(userId),
+	}
+
+	function player.SetAttribute(_self: any, attributeName: string, value: any)
+		attributes[attributeName] = value
+		local signal = attributeChangedSignals[attributeName]
+		if signal ~= nil then
+			signal:Fire()
+		end
+	end
+
+	function player.GetAttribute(_self: any, attributeName: string): any
+		return attributes[attributeName]
+	end
+
+	function player.GetAttributeChangedSignal(_self: any, attributeName: string): any
+		local signal = attributeChangedSignals[attributeName]
+		if signal == nil then
+			signal = makeSignal()
+			attributeChangedSignals[attributeName] = signal
+		end
+		return signal
+	end
+
+	return player
+end
+
+local InventoryCraftService = require("../src/ServerScriptService/Services/InventoryCraftService.server")
+
+local api: any = _G._InventoryCraftService_QueryAPI
+assertTrue(type(api) == "table", "query api exposed")
+assertEqual(type(api.CraftWithCatalogOverride), "nil", "test craft seam hidden from runtime api")
+
+local craftRequestRemote = remotesFolder:WaitForChild("InventoryCraftRequest")
+local debugRequestRemote = remotesFolder:WaitForChild("InventoryCraftDebugStateRequest")
+local debugResponseRemote = remotesFolder:WaitForChild("InventoryCraftDebugStateResponse")
+assertTrue(craftRequestRemote ~= nil, "craft request remote created")
+assertTrue(debugRequestRemote ~= nil, "debug request remote created")
+assertTrue(debugResponseRemote ~= nil, "debug response remote created")
+
+local tinyfolk = makePlayer(9201, "Tinyfolk")
+local giant = makePlayer(9202, "Giant")
+table.insert(playersService._Players, tinyfolk)
+table.insert(playersService._Players, giant)
+playerAdded:Fire(tinyfolk)
+playerAdded:Fire(giant)
+
+do
+	local snapshot = api.GetSnapshot(tinyfolk)
+	assertEqual(snapshot.itemCounts.raw_fiber, 3, "tinyfolk bootstrap raw_fiber")
+	assertEqual(snapshot.itemCounts.wood_scrap, 2, "tinyfolk bootstrap wood_scrap")
+	assertEqual(snapshot.itemCounts.stone_shard, 2, "tinyfolk bootstrap stone_shard")
+	assertEqual(
+		tinyfolk:GetAttribute(InventoryCraftConfig.Attributes.ItemCount),
+		3,
+		"tinyfolk debug item count attribute"
+	)
+end
+
+do
+	local crafted = api.Craft(tinyfolk, "craft_twine_satchel")
+	assertTrue(crafted.accepted, "tinyfolk craft accepted")
+	assertEqual(crafted.snapshot.itemCounts.twine_satchel, 1, "tinyfolk crafted twine_satchel")
+	assertEqual(crafted.snapshot.craftedTotal, 1, "tinyfolk crafted total")
+	assertEqual(
+		tinyfolk:GetAttribute(InventoryCraftConfig.Attributes.LastCraftRecipeId),
+		"craft_twine_satchel",
+		"tinyfolk last craft recipe attribute"
+	)
+end
+
+do
+	local rejected = api.Craft(giant, "craft_twine_satchel")
+	assertFalse(rejected.accepted, "giant craft rejected")
+	assertEqual(rejected.reason, "tinyfolk_role_required", "giant craft reason")
+end
+
+do
+	debugRequestRemote:FireServer(tinyfolk, nil)
+	local debugPayload = debugResponseRemote._ClientPayload
+	assertTrue(type(debugPayload) == "table", "debug payload returned")
+	assertEqual(debugPayload.userId, 9201, "debug payload user id")
+	assertEqual(debugPayload.craftedTotal, 1, "debug payload crafted total")
+	assertTrue(type(debugPayload.items) == "table", "debug payload items table")
+end
+
+do
+	local spoofRecipeCatalog = {
+		{
+			recipeId = "craft_spoof_item",
+			displayName = "Spoof Item",
+			requiredRole = "Tinyfolk",
+			inputs = {
+				raw_fiber = 1,
+			},
+			outputs = {
+				twine_satchel = 1,
+			},
+			sourceId = "tin22_spoof_recipe",
+		},
+	}
+
+	local rejected =
+		api.Craft(tinyfolk, "craft_spoof_item", InventoryCraftConfig.DEFAULT_ITEM_CATALOG, spoofRecipeCatalog)
+	assertFalse(rejected.accepted, "public craft rejects spoof recipe catalog")
+	assertEqual(rejected.reason, "recipe_missing", "public craft uses canonical recipe catalog")
+
+	local acceptedViaTestSeam = InventoryCraftService.TestHarness.CraftWithCatalogOverride(
+		tinyfolk,
+		"craft_spoof_item",
+		InventoryCraftConfig.DEFAULT_ITEM_CATALOG,
+		spoofRecipeCatalog
+	)
+	assertTrue(acceptedViaTestSeam.accepted, "test seam accepts spoof recipe")
+	assertEqual(acceptedViaTestSeam.snapshot.itemCounts.twine_satchel, 2, "test seam spoof craft output")
+end
+
+do
+	InventoryCraftService.TestHarness.ResetSessionForTests(tinyfolk.UserId, {
+		wood_scrap = 1,
+	})
+	local rejected = api.Craft(tinyfolk, "craft_twine_satchel")
+	assertFalse(rejected.accepted, "insufficient inputs rejected at runtime")
+	assertEqual(rejected.reason, "insufficient_inputs", "insufficient inputs runtime reason")
+end
+
+print("inventory_craft_service_runtime_entrypoint: all checks passed")
