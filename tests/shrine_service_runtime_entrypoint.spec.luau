@@ -226,6 +226,10 @@ local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Sha
 giantRealmFolder._Children["GiantRealmResourceState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
+giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+configFolder._Children["VillageWorksiteUpgradeConfig"] =
+	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -298,6 +302,7 @@ local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 local ShrineConfig = require("../src/ReplicatedStorage/Shared/Config/ShrineConfig")
 local LaborActionConfig = require("../src/ReplicatedStorage/Shared/Config/LaborActionConfig")
+local VillageWorksiteUpgradeState = require("../src/ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState")
 
 local legacyPlayer = makeAlivePlayer(7201, Vector3.new(-8, 0, 10))
 legacyPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
@@ -384,6 +389,50 @@ assertEqual(
 	interactionAssignPlayer:GetAttribute(LaborActionConfig.LaborActionAttribute),
 	LaborActionConfig.Actions.Sermon,
 	"sermon labor action exposed on player debug attributes"
+)
+
+_G._VillageWorksiteUpgradeService_QueryAPI = {
+	GetShrineProductionModifiers = function(shrineId: string)
+		if shrineId == "Shrine_B" then
+			return VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(2)
+		end
+		return VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(0)
+	end,
+}
+
+local upgradePlayer = makeAlivePlayer(7206, Vector3.new(-6, 0, 10))
+upgradePlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+upgradePlayer:SetAttribute("SpecialistRole", SpecialistConfig.SpecialistRoles.Worshipper)
+table.insert(playersList, upgradePlayer)
+
+activateRemote:FireServer(upgradePlayer, {
+	shrineId = "Shrine_B",
+	mode = "begin",
+	now = 170,
+})
+activateRemote:FireServer(upgradePlayer, {
+	shrineId = "Shrine_B",
+	mode = "complete",
+	now = 172,
+})
+assertTrue(
+	shrineStateById["Shrine_B"].essenceTotal >= 5,
+	"shrine upgrade level 2 scales essence per work action to at least 5"
+)
+assertEqual(
+	shrineStateById["Shrine_B"].part:GetAttribute(ShrineConfig.WorksiteUpgradeLevelAttribute),
+	2,
+	"shrine upgrade level exposed on part debug attributes"
+)
+assertEqual(
+	shrineStateById["Shrine_B"].part:GetAttribute(ShrineConfig.WorksiteUpgradeEffectivePerTickAttribute),
+	5,
+	"shrine effective per-tick exposed on part debug attributes"
+)
+assertEqual(
+	shrineStateById["Shrine_B"].part:GetAttribute(ShrineConfig.WorksiteUpgradeEffectiveMaxTotalAttribute),
+	270,
+	"shrine effective max total exposed on part debug attributes"
 )
 
 activateRemote:FireServer(targetReassignPlayer, "Shrine_A")

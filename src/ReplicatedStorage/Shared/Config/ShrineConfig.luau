@@ -35,4 +35,8 @@ ShrineConfig.MaxEssenceTotal = 180
 
 ShrineConfig.DebugLogEveryTicks = 1
 
+ShrineConfig.WorksiteUpgradeLevelAttribute = "WorksiteUpgradeLevel"
+ShrineConfig.WorksiteUpgradeEffectivePerTickAttribute = "WorksiteUpgradeEffectivePerTick"
+ShrineConfig.WorksiteUpgradeEffectiveMaxTotalAttribute = "WorksiteUpgradeEffectiveMaxTotal"
+
 return ShrineConfig

@@ -183,6 +183,13 @@ do
 end
 
 do
+	local modifiers = VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(2)
+	assertEqual(modifiers.level, 2, "shrine level 2 upgrade level")
+	assertEqual(modifiers.perTickMultiplier, 1.5, "shrine level 2 per tick multiplier")
+	assertEqual(modifiers.maxTotalMultiplier, 1.5, "shrine level 2 max total multiplier")
+end
+
+do
 	local state = VillageWorksiteUpgradeState.CreateEmptyState()
 	local upgraded = VillageWorksiteUpgradeState.ResolveUpgrade(state, {
 		worksiteId = "WorkStation_A",

@@ -331,13 +331,20 @@ local function GetDefenseMultiplier(guardTowerId: string): number
 	return modifiers.treasuryAwardMultiplier
 end
 
-local function GetEssenceMaxCapacityMultiplier(shrineId: string): number
+local function GetShrineProductionModifiers(shrineId: string): any
 	local worksiteKind = VillageWorksiteUpgradeState.ResolveWorksiteKind(shrineId)
 	if worksiteKind ~= VillageWorksiteUpgradeState.WorksiteKinds.Shrine then
-		return 1
+		return VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(0)
 	end
-	local modifiers = VillageWorksiteUpgradeState.ResolveCapacityModifiers(GetUpgradeLevel(shrineId))
-	return modifiers.essenceMaxMultiplier
+	return VillageWorksiteUpgradeState.ResolveShrineProductionModifiers(GetUpgradeLevel(shrineId))
+end
+
+local function GetEssenceMaxCapacityMultiplier(shrineId: string): number
+	local modifiers = GetShrineProductionModifiers(shrineId)
+	if type(modifiers.maxTotalMultiplier) == "number" and modifiers.maxTotalMultiplier > 0 then
+		return modifiers.maxTotalMultiplier
+	end
+	return 1
 end
 
 local function BuildPersistenceState(): any
@@ -375,6 +382,7 @@ globalEnv._VillageWorksiteUpgradeService_QueryAPI = {
 	GetHeldCapacityMultiplier = GetHeldCapacityMultiplier,
 	GetDefenseMultiplier = GetDefenseMultiplier,
 	GetGiantHousingCapacityMultiplier = GetGiantHousingCapacityMultiplier,
+	GetShrineProductionModifiers = GetShrineProductionModifiers,
 	GetEssenceMaxCapacityMultiplier = GetEssenceMaxCapacityMultiplier,
 	BuildPersistenceState = BuildPersistenceState,
 	ApplyPersistenceState = ApplyPersistenceState,

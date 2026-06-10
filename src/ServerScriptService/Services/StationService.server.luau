@@ -84,6 +84,30 @@ local function getProductionModifiersForStation(stationId: string): any
 	return modifiers
 end
 
+local function resolveStationGenerationLimits(
+	stationId: string,
+	materialType: "Wood" | "Stone" | "Food"
+): (number, number, any)
+	local modifiers = getProductionModifiersForStation(stationId)
+	local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number" then modifiers.perTickMultiplier else 1
+	local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
+		then modifiers.maxTotalMultiplier
+		else 1
+
+	local maxTotal = StationConfig.MaxWoodTotal
+	local perTick = StationConfig.WoodPerTick
+	if materialType == "Stone" then
+		maxTotal = StationConfig.MaxStoneTotal
+		perTick = StationConfig.StonePerTick
+	elseif materialType == "Food" then
+		maxTotal = StationConfig.MaxFoodTotal
+		perTick = StationConfig.FoodPerTick
+	end
+	maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
+	perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
+	return perTick, maxTotal, modifiers
+end
+
 local function ensureRemotesFolder(): Folder
 	local existing = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
 	if existing and existing:IsA("Folder") then
@@ -235,6 +259,12 @@ local function applyDebugAttributes(state: StationState)
 	state.part:SetAttribute(ATTRIBUTE_TICK_COUNT, state.tickCount)
 	state.part:SetAttribute(ATTRIBUTE_LAST_TICK_AT, state.lastTickAt)
 	state.part:SetAttribute(ATTRIBUTE_ACTIVATED_BY, state.activatedByUserId)
+
+	local perTick, maxTotal, modifiers = resolveStationGenerationLimits(state.stationId, state.materialType)
+	state.part:SetAttribute(StationConfig.WorksiteUpgradeLevelAttribute, modifiers.level)
+	state.part:SetAttribute(StationConfig.WorksiteUpgradeEffectivePerTickAttribute, perTick)
+	state.part:SetAttribute(StationConfig.WorksiteUpgradeEffectiveMaxTotalAttribute, maxTotal)
+
 	ResourceFlowState.ApplyAttributesToPart(state.part)
 end
 
@@ -538,23 +568,7 @@ local function performProductionTick(stationState: StationState, activatingPlaye
 	stationState.lastTickAt = os.clock()
 	stationState.activatedByUserId = activatingPlayer.UserId
 
-	local modifiers = getProductionModifiersForStation(stationState.stationId)
-	local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number" then modifiers.perTickMultiplier else 1
-	local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
-		then modifiers.maxTotalMultiplier
-		else 1
-
-	local maxTotal = StationConfig.MaxWoodTotal
-	local perTick = StationConfig.WoodPerTick
-	if stationState.materialType == "Stone" then
-		maxTotal = StationConfig.MaxStoneTotal
-		perTick = StationConfig.StonePerTick
-	elseif stationState.materialType == "Food" then
-		maxTotal = StationConfig.MaxFoodTotal
-		perTick = StationConfig.FoodPerTick
-	end
-	maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
-	perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
+	local perTick, maxTotal = resolveStationGenerationLimits(stationState.stationId, stationState.materialType)
 
 	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
 	local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
@@ -910,6 +924,8 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 		end
 
 		local flowSnapshot = ResourceFlowState.GetSnapshot()
+		local effectivePerTick, effectiveMaxTotal, modifiers =
+			resolveStationGenerationLimits(stationState.stationId, stationState.materialType)
 
 		stationDebugStateResponseRemote:FireClient(player, {
 			stationId = stationState.stationId,
@@ -921,6 +937,9 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
+			upgradeLevel = modifiers.level,
+			effectivePerTick = effectivePerTick,
+			effectiveMaxTotal = effectiveMaxTotal,
 			woodProducedTotal = flowSnapshot.Wood.produced,
 			woodInTransitTotal = flowSnapshot.Wood.inTransit,
 			woodStoredTotal = flowSnapshot.Wood.stored,
@@ -943,6 +962,8 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 	local snapshot = {}
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
 	for stationId, stationState in stationStateById do
+		local effectivePerTick, effectiveMaxTotal, modifiers =
+			resolveStationGenerationLimits(stationId, stationState.materialType)
 		table.insert(snapshot, {
 			stationId = stationId,
 			materialType = stationState.materialType,
@@ -953,6 +974,9 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
+			upgradeLevel = modifiers.level,
+			effectivePerTick = effectivePerTick,
+			effectiveMaxTotal = effectiveMaxTotal,
 			woodProducedTotal = flowSnapshot.Wood.produced,
 			woodInTransitTotal = flowSnapshot.Wood.inTransit,
 			woodStoredTotal = flowSnapshot.Wood.stored,
