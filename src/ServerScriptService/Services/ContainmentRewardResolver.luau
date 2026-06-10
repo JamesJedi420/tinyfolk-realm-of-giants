@@ -190,6 +190,20 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		return result
 	end
 
+	local function recordGiantLevel(metadata: any): any
+		local giantLevelApi = if type(depsAny.giantLevelApi) == "table"
+			then depsAny.giantLevelApi
+			else getGlobalApi("_GiantLevelService_QueryAPI")
+		if type(giantLevelApi) ~= "table" or type(giantLevelApi.RecordContainmentEnd) ~= "function" then
+			return { accepted = false, reason = "giant_level_api_unavailable" }
+		end
+		local ok, result = pcall(giantLevelApi.RecordContainmentEnd, metadata)
+		if not ok or type(result) ~= "table" then
+			return { accepted = false, reason = "giant_level_request_failed" }
+		end
+		return result
+	end
+
 	local function updateReputation(custodianUserId: number, metadata: any): any
 		local gateway = if type(depsAny.profileGateway) == "table"
 			then depsAny.profileGateway
@@ -428,6 +442,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 				heldSeconds = heldSeconds,
 			}
 			local trophyResult = recordTrophy(capMetadata)
+			local giantLevelResult = recordGiantLevel(capMetadata)
 			return {
 				accepted = true,
 				reason = "pair_reward_cap_reached",
@@ -439,6 +454,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 				pairRewardCount = nextPairCount,
 				endReason = endReason,
 				trophyAccepted = type(trophyResult) == "table" and trophyResult.accepted == true,
+				giantLevelAccepted = type(giantLevelResult) == "table" and giantLevelResult.accepted == true,
 			}
 		end
 
@@ -460,6 +476,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		local reputationResult = updateReputation(input.custodianUserId, metadata)
 		recordReputationLog(input.custodianUserId, metadata, reputationResult)
 		local trophyResult = recordTrophy(metadata)
+		local giantLevelResult = recordGiantLevel(metadata)
 		local rewardGranted = type(scoreResult) == "table" and scoreResult.accepted == true
 		awardRealmResources({
 			operationId = operationId,
@@ -507,6 +524,10 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			reputationUnlockUpdates = reputationResult.unlockUpdates,
 			trophyAccepted = type(trophyResult) == "table" and trophyResult.accepted == true,
 			trophyReason = if type(trophyResult) == "table" then trophyResult.reason else "trophy_result_invalid",
+			giantLevelAccepted = type(giantLevelResult) == "table" and giantLevelResult.accepted == true,
+			giantLevelReason = if type(giantLevelResult) == "table"
+				then giantLevelResult.reason
+				else "giant_level_result_invalid",
 		}
 	end
 

@@ -31,6 +31,7 @@ Use these markers consistently in design and implementation discussions:
 - Pen_A rationing spends stored Food each interval while captives are held in custody (1 Food per captive per second in the prototype, scaled by pen upgrade level).
 - Sustained pen food shortfall reduces custodian morale (low morale can block or shake capture attempts), marks captives with ration stress/starvation exposure, and eventually forces starvation release of the oldest held captive.
 - Giant realm trophies record display-safe capture and containment event metadata on the persisted save root; realm owner debug attributes expose latest trophy summary/count.
+- Giant realm level and XP persist on the save root (`giantLevelPersistence`); realm owner debug attributes expose `GiantXp`, `GiantLevel`, and `GiantXpToNextLevel`. Session score (`ScoreService`) and persisted Giant level are separate systems — score resets per session; level survives realm saves.
 - Produced and InTransit material totals are not spendable for construction.
 - Server-owned realm objective sites track unresolved/completed state, required completion thresholds, and escape readiness.
 - Realm objective progress can be progressing, contested, regressing, blocked, rule-locked, or completed, with bounded disruption/regression rules.

@@ -152,6 +152,19 @@ export type TrophyPersistenceSaveRecord = {
 	trophies: { TrophySaveRecord },
 }
 
+export type GiantLevelEventSaveRecord = {
+	operationId: string,
+	eventKind: string,
+	xpAwarded: number,
+	awardedAt: number,
+}
+
+export type GiantLevelPersistenceSaveRecord = {
+	xp: number,
+	level: number,
+	recentEvents: { GiantLevelEventSaveRecord }?,
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -163,6 +176,7 @@ export type GiantRealmSaveRoot = {
 	resourceLedger: ResourceLedgerSaveRecord?,
 	worksiteUpgrades: WorksiteUpgradePersistenceSaveRecord?,
 	trophyPersistence: TrophyPersistenceSaveRecord?,
+	giantLevelPersistence: GiantLevelPersistenceSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -811,6 +825,63 @@ function GiantRealmSaveSchema.ValidateTrophyPersistenceRecord(record: any): (boo
 	return true, nil
 end
 
+local VALID_GIANT_LEVEL_EVENT_KINDS = {
+	capture_success = true,
+	containment_held = true,
+	worksite_upgrade = true,
+}
+
+function GiantRealmSaveSchema.ValidateGiantLevelEventSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "giant_level_event_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "giant_level_operation_id_invalid"
+	end
+	if VALID_GIANT_LEVEL_EVENT_KINDS[record.eventKind] ~= true then
+		return false, "giant_level_event_kind_invalid"
+	end
+	if not isFiniteNumber(record.xpAwarded) or record.xpAwarded <= 0 then
+		return false, "giant_level_xp_awarded_invalid"
+	end
+	if not isFiniteNumber(record.awardedAt) or record.awardedAt < 0 then
+		return false, "giant_level_awarded_at_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateGiantLevelPersistenceRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "giant_level_persistence_invalid"
+	end
+	if not isFiniteNumber(record.xp) or record.xp < 0 then
+		return false, "giant_level_xp_invalid"
+	end
+	if not isFiniteNumber(record.level) or record.level < 1 then
+		return false, "giant_level_level_invalid"
+	end
+	if record.recentEvents ~= nil then
+		if type(record.recentEvents) ~= "table" then
+			return false, "giant_level_recent_events_invalid"
+		end
+		local seenOperationIds: { [string]: boolean } = {}
+		for index, eventRecord in ipairs(record.recentEvents) do
+			local valid, reason = GiantRealmSaveSchema.ValidateGiantLevelEventSaveRecord(eventRecord)
+			if not valid then
+				return false, string.format("%s index=%d", reason or "giant_level_event_invalid", index)
+			end
+			if seenOperationIds[eventRecord.operationId] then
+				return false, string.format("giant_level_operation_id_duplicate index=%d", index)
+			end
+			seenOperationIds[eventRecord.operationId] = true
+		end
+	end
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -867,6 +938,12 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	local trophyValid, trophyReason = GiantRealmSaveSchema.ValidateTrophyPersistenceRecord(root.trophyPersistence)
 	if not trophyValid then
 		return false, trophyReason
+	end
+
+	local giantLevelValid, giantLevelReason =
+		GiantRealmSaveSchema.ValidateGiantLevelPersistenceRecord(root.giantLevelPersistence)
+	if not giantLevelValid then
+		return false, giantLevelReason
 	end
 
 	return true, nil
@@ -1216,6 +1293,35 @@ function GiantRealmSaveSchema.SerializeTrophyPersistenceRecord(state: any): Trop
 	return { trophies = records }
 end
 
+function GiantRealmSaveSchema.SerializeGiantLevelPersistenceRecord(state: any): GiantLevelPersistenceSaveRecord?
+	if state == nil then
+		return nil
+	end
+	if type(state) ~= "table" then
+		return { xp = 0, level = 1, recentEvents = {} }
+	end
+
+	local events = {}
+	if type(state.recentEvents) == "table" then
+		for _, record in ipairs(state.recentEvents) do
+			if type(record) == "table" then
+				table.insert(events, {
+					operationId = record.operationId,
+					eventKind = record.eventKind,
+					xpAwarded = record.xpAwarded,
+					awardedAt = record.awardedAt,
+				})
+			end
+		end
+	end
+
+	return {
+		xp = if isFiniteNumber(state.xp) then state.xp else 0,
+		level = if isFiniteNumber(state.level) then state.level else 1,
+		recentEvents = events,
+	}
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
@@ -1225,7 +1331,8 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	defenseHistoryState: any?,
 	resourceLedgerState: any?,
 	worksiteUpgradeState: any?,
-	trophyPersistenceState: any?
+	trophyPersistenceState: any?,
+	giantLevelPersistenceState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -1238,6 +1345,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		resourceLedger = nil,
 		worksiteUpgrades = nil,
 		trophyPersistence = nil,
+		giantLevelPersistence = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -1273,6 +1381,11 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	local trophyRecord = GiantRealmSaveSchema.SerializeTrophyPersistenceRecord(trophyPersistenceState)
 	if trophyRecord ~= nil then
 		root.trophyPersistence = trophyRecord
+	end
+
+	local giantLevelRecord = GiantRealmSaveSchema.SerializeGiantLevelPersistenceRecord(giantLevelPersistenceState)
+	if giantLevelRecord ~= nil then
+		root.giantLevelPersistence = giantLevelRecord
 	end
 
 	return root

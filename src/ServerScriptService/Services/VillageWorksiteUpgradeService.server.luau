@@ -246,6 +246,10 @@ local function requestUpgrade(player: Player, worksiteId: any, at: number?, resp
 	end
 
 	upgradeState = transition.state
+	local giantLevelApi = globalEnv._GiantLevelService_QueryAPI
+	if type(giantLevelApi) == "table" and type(giantLevelApi.RecordWorksiteUpgrade) == "function" then
+		giantLevelApi.RecordWorksiteUpgrade(operationId, resolvedAt)
+	end
 	if worksiteId == ShrineConfig.DefaultShrineId or worksiteId == StationConfig.DefaultGiantDwellingId then
 		refreshGiantEffectsForRealmOwner(ownerUserId, "worksite_upgrade")
 	end
