@@ -72,6 +72,34 @@
           -18
         ]
       }
+    },
+    {
+      "name": "GiantDwelling_TrophyCasePlaque",
+      "className": "Part",
+      "attributes": {
+        "TrophyCaseSurface": true,
+        "TrophyCaseId": "GiantDwelling_A"
+      },
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Marble",
+        "Color": [
+          0.62,
+          0.58,
+          0.52
+        ],
+        "Size": [
+          6,
+          4,
+          0.4
+        ],
+        "Position": [
+          26,
+          5,
+          -12
+        ]
+      }
     }
   ]
 }

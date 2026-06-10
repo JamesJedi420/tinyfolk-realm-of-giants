@@ -1,11 +1,13 @@
 --!nocheck
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local TrophyConfig = require(Config:WaitForChild("TrophyConfig"))
+local TrophyCasePresentation = require(GiantRealm:WaitForChild("TrophyCasePresentation"))
 local TrophyState = require(GiantRealm:WaitForChild("TrophyState"))
 
 local globalEnv: any = getfenv()
@@ -66,8 +68,59 @@ local function getPlayerByUserId(userId: number): Player?
 	return nil
 end
 
+local function buildReputationSnapshot(): any
+	local reputationApi = getGiantReputationQueryApi()
+	if type(reputationApi) ~= "table" then
+		return {
+			score = 0,
+			rank = 1,
+			rankTitle = "Unknown Giant",
+			scoreToNextRank = 0,
+		}
+	end
+
+	return {
+		score = if type(reputationApi.GetScore) == "function" then reputationApi.GetScore() else 0,
+		rank = if type(reputationApi.GetRank) == "function" then reputationApi.GetRank() else 1,
+		rankTitle = if type(reputationApi.GetRankTitle) == "function"
+			then reputationApi.GetRankTitle()
+			else "Unknown Giant",
+		scoreToNextRank = if type(reputationApi.GetScoreToNextRank) == "function"
+			then reputationApi.GetScoreToNextRank()
+			else 0,
+	}
+end
+
+local function buildCaseModel(): any
+	return TrophyCasePresentation.BuildCaseModel(
+		trophyState.trophies,
+		buildReputationSnapshot(),
+		TrophyConfig.CaseDisplayMaxEntries
+	)
+end
+
+local function projectMapSurfaces(caseModel: any, updatedAt: number)
+	if type(caseModel) ~= "table" then
+		return
+	end
+
+	local surfaceAttrs = TrophyConfig.MapSurfaceAttributes
+	for _, descendant in Workspace:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant:GetAttribute(TrophyConfig.TrophyCaseSurfaceAttribute) == true then
+			descendant:SetAttribute(surfaceAttrs.Header, caseModel.header)
+			descendant:SetAttribute(surfaceAttrs.Summary, caseModel.body)
+			descendant:SetAttribute(surfaceAttrs.Count, caseModel.count)
+			descendant:SetAttribute(surfaceAttrs.UpdatedAt, updatedAt)
+		end
+	end
+end
+
 local function projectRealmOwnerAttributes()
 	local ownerUserId = getRealmOwnerUserId()
+	local caseModel = buildCaseModel()
+	local updatedAt = os.clock()
+	projectMapSurfaces(caseModel, updatedAt)
+
 	if ownerUserId == nil then
 		return
 	end
@@ -78,7 +131,11 @@ local function projectRealmOwnerAttributes()
 	end
 
 	local attrs = TrophyConfig.StateAttributes
-	owner:SetAttribute(attrs.Count, #trophyState.trophies)
+	owner:SetAttribute(attrs.Count, caseModel.count)
+	owner:SetAttribute(attrs.CaseHeader, caseModel.header)
+	owner:SetAttribute(attrs.CaseSummary, caseModel.body)
+	owner:SetAttribute(attrs.CaseUpdatedAt, updatedAt)
+
 	local latest = TrophyState.GetLatestRecord(trophyState)
 	if latest == nil then
 		owner:SetAttribute(attrs.LatestSummary, nil)
@@ -88,6 +145,10 @@ local function projectRealmOwnerAttributes()
 
 	owner:SetAttribute(attrs.LatestSummary, latest.summary)
 	owner:SetAttribute(attrs.LatestKind, latest.trophyKind)
+end
+
+local function refreshCaseDisplay()
+	projectRealmOwnerAttributes()
 end
 
 local function recordEvent(input: any): any
@@ -192,6 +253,10 @@ _G._TrophyService_QueryAPI = {
 	GetLatestRecord = function(): any
 		return TrophyState.GetLatestRecord(trophyState)
 	end,
+	GetCaseModel = function(): any
+		return buildCaseModel()
+	end,
+	RefreshCaseDisplay = refreshCaseDisplay,
 	ResetForTests = function()
 		trophyState = TrophyState.CreateEmptyState()
 		projectRealmOwnerAttributes()

@@ -48,6 +48,13 @@ local function getPlayerByUserId(userId: number): Player?
 	return nil
 end
 
+local function refreshTrophyCaseDisplay()
+	local trophyApi = globalEnv._TrophyService_QueryAPI
+	if type(trophyApi) == "table" and type(trophyApi.RefreshCaseDisplay) == "function" then
+		pcall(trophyApi.RefreshCaseDisplay)
+	end
+end
+
 local function projectRealmOwnerAttributes(rankUpPayload: any?)
 	local ownerUserId = getRealmOwnerUserId()
 	if ownerUserId == nil then
@@ -72,6 +79,8 @@ local function projectRealmOwnerAttributes(rankUpPayload: any?)
 		rankUpSignalCounter += 1
 		owner:SetAttribute(attrs.RankUpSignal, rankUpSignalCounter)
 	end
+
+	refreshTrophyCaseDisplay()
 end
 
 local function grantScoreEvent(input: any): any
