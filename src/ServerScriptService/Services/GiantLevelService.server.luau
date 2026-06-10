@@ -11,6 +11,7 @@ local GiantLevelState = require(GiantRealm:WaitForChild("GiantLevelState"))
 local globalEnv: any = getfenv()
 
 local levelState = GiantLevelState.CreateEmptyState()
+local levelUpSignalCounter = 0
 
 local function debugLog(message: string)
 	print(string.format("[GiantLevelService] %s", message))
@@ -47,7 +48,11 @@ local function getPlayerByUserId(userId: number): Player?
 	return nil
 end
 
-local function projectRealmOwnerAttributes()
+local function getModifierSnapshot(): any
+	return GiantLevelState.ResolveModifierSnapshot(levelState)
+end
+
+local function projectRealmOwnerAttributes(levelUpPayload: any?)
 	local ownerUserId = getRealmOwnerUserId()
 	if ownerUserId == nil then
 		return
@@ -59,9 +64,28 @@ local function projectRealmOwnerAttributes()
 	end
 
 	local attrs = GiantLevelConfig.StateAttributes
+	local modifierSnapshot = getModifierSnapshot()
 	owner:SetAttribute(attrs.Xp, levelState.xp)
 	owner:SetAttribute(attrs.Level, levelState.level)
 	owner:SetAttribute(attrs.XpToNextLevel, GiantLevelState.ResolveXpToNextLevel(levelState.xp, levelState.level))
+	owner:SetAttribute(attrs.ResolvedUnlockCount, #modifierSnapshot.resolvedUnlockIds)
+	owner:SetAttribute(attrs.XpAwardMultiplier, modifierSnapshot.xpAwardMultiplier)
+	owner:SetAttribute(attrs.ContainmentRewardMultiplier, modifierSnapshot.containmentRewardMultiplier)
+
+	if type(levelUpPayload) == "table" and type(levelUpPayload.newLevel) == "number" then
+		levelUpSignalCounter += 1
+		owner:SetAttribute(attrs.LevelUpSignal, levelUpSignalCounter)
+		owner:SetAttribute(attrs.LastLevelUpLevel, math.floor(levelUpPayload.newLevel))
+	end
+end
+
+local function resolveUnlocksForLevelRange(fromLevel: number, toLevel: number): any
+	local unlockResult = GiantLevelState.ResolveLevelUnlocks(levelState, fromLevel, toLevel)
+	if type(unlockResult) ~= "table" or type(unlockResult.state) ~= "table" then
+		return { accepted = false, reason = "unlock_resolution_invalid", newlyResolved = {} }
+	end
+	levelState = unlockResult.state
+	return unlockResult
 end
 
 local function grantXpEvent(input: any): any
@@ -71,7 +95,29 @@ local function grantXpEvent(input: any): any
 	end
 	if result.accepted == true and type(result.state) == "table" then
 		levelState = result.state
-		projectRealmOwnerAttributes()
+		local levelUpPayload = nil
+		if
+			result.leveledUp == true
+			and type(result.previousLevel) == "number"
+			and type(result.newLevel) == "number"
+		then
+			local unlockResult = resolveUnlocksForLevelRange(result.previousLevel + 1, result.newLevel)
+			levelUpPayload = {
+				newLevel = result.newLevel,
+				newlyResolved = if type(unlockResult) == "table" then unlockResult.newlyResolved else {},
+			}
+			debugLog(
+				string.format(
+					"Level up previous=%d new=%d unlocks=%d",
+					result.previousLevel,
+					result.newLevel,
+					if type(unlockResult) == "table" and type(unlockResult.newlyResolved) == "table"
+						then #unlockResult.newlyResolved
+						else 0
+				)
+			)
+		end
+		projectRealmOwnerAttributes(levelUpPayload)
 		debugLog(
 			string.format(
 				"Granted XP kind=%s operationId=%s xp=%d level=%d",
@@ -138,6 +184,12 @@ local function ApplyPersistenceState(raw: any): (boolean, string?)
 		return false, applied.reason or "giant_level_apply_failed"
 	end
 	levelState = applied.state
+	if applied.needsEntitlementReconcile == true then
+		local reconcileResult = GiantLevelState.ReconcileEntitledUnlocks(levelState)
+		if type(reconcileResult) == "table" and type(reconcileResult.state) == "table" then
+			levelState = reconcileResult.state
+		end
+	end
 	projectRealmOwnerAttributes()
 	return true, nil
 end
@@ -158,9 +210,23 @@ _G._GiantLevelService_QueryAPI = {
 	GetXpToNextLevel = function(): number
 		return GiantLevelState.ResolveXpToNextLevel(levelState.xp, levelState.level)
 	end,
+	GetModifierSnapshot = getModifierSnapshot,
+	GetResolvedUnlockIds = function(): { string }
+		return getModifierSnapshot().resolvedUnlockIds
+	end,
 	ResetForTests = function()
 		levelState = GiantLevelState.CreateEmptyState()
+		levelUpSignalCounter = 0
 		projectRealmOwnerAttributes()
+		local ownerUserId = getRealmOwnerUserId()
+		if ownerUserId ~= nil then
+			local owner = getPlayerByUserId(ownerUserId)
+			if owner ~= nil then
+				local attrs = GiantLevelConfig.StateAttributes
+				owner:SetAttribute(attrs.LevelUpSignal, nil)
+				owner:SetAttribute(attrs.LastLevelUpLevel, nil)
+			end
+		end
 	end,
 }
 

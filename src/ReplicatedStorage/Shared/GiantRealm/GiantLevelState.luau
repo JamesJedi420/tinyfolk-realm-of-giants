@@ -11,11 +11,24 @@ export type XpEventRecord = {
 	awardedAt: number,
 }
 
+export type ResolvedUnlockRecord = {
+	unlockId: string,
+	level: number,
+	displayName: string?,
+}
+
+export type ModifierSnapshot = {
+	xpAwardMultiplier: number,
+	containmentRewardMultiplier: number,
+	resolvedUnlockIds: { string },
+}
+
 export type State = {
 	xp: number,
 	level: number,
 	operationIds: { [string]: boolean },
 	recentEvents: { XpEventRecord },
+	resolvedUnlockIds: { [string]: boolean },
 }
 
 local VALID_EVENT_KINDS = {
@@ -42,6 +55,42 @@ local function cloneEventRecord(record: XpEventRecord): XpEventRecord
 		xpAwarded = record.xpAwarded,
 		awardedAt = record.awardedAt,
 	}
+end
+
+local function cloneResolvedUnlockSet(resolvedUnlockIds: { [string]: boolean }): { [string]: boolean }
+	local cloned: { [string]: boolean } = {}
+	for unlockId in pairs(resolvedUnlockIds) do
+		cloned[unlockId] = true
+	end
+	return cloned
+end
+
+local function sortedResolvedUnlockIds(resolvedUnlockIds: { [string]: boolean }): { string }
+	local ids = {}
+	for unlockId in pairs(resolvedUnlockIds) do
+		table.insert(ids, unlockId)
+	end
+	table.sort(ids)
+	return ids
+end
+
+local function getCatalogEntriesForLevel(level: number): { any }
+	local catalog = GiantLevelConfig.LevelUnlockCatalog
+	if type(catalog) ~= "table" then
+		return {}
+	end
+	local entries = catalog[level]
+	if type(entries) ~= "table" then
+		return {}
+	end
+	return entries
+end
+
+local function applyPositiveMultiplier(current: number, nextValue: any): number
+	if isFiniteNumber(nextValue) and nextValue > 1 then
+		return current * nextValue
+	end
+	return current
 end
 
 function GiantLevelState.GetMaxLevel(): number
@@ -81,12 +130,115 @@ function GiantLevelState.ResolveXpAward(eventKind: string): number?
 	return nil
 end
 
+function GiantLevelState.ResolveModifierSnapshot(state: State): ModifierSnapshot
+	local xpAwardMultiplier = 1
+	local containmentRewardMultiplier = 1
+
+	for _, unlockId in ipairs(sortedResolvedUnlockIds(state.resolvedUnlockIds)) do
+		local catalog = GiantLevelConfig.LevelUnlockCatalog
+		if type(catalog) ~= "table" then
+			continue
+		end
+
+		for level = 2, GiantLevelState.GetMaxLevel() do
+			local entries = getCatalogEntriesForLevel(level)
+			for _, entry in ipairs(entries) do
+				if type(entry) == "table" and entry.unlockId == unlockId and type(entry.modifiers) == "table" then
+					xpAwardMultiplier = applyPositiveMultiplier(xpAwardMultiplier, entry.modifiers.xpAwardMultiplier)
+					containmentRewardMultiplier = applyPositiveMultiplier(
+						containmentRewardMultiplier,
+						entry.modifiers.containmentRewardMultiplier
+					)
+				end
+			end
+		end
+	end
+
+	return {
+		xpAwardMultiplier = xpAwardMultiplier,
+		containmentRewardMultiplier = containmentRewardMultiplier,
+		resolvedUnlockIds = sortedResolvedUnlockIds(state.resolvedUnlockIds),
+	}
+end
+
+function GiantLevelState.ResolveLevelUnlocks(state: State, fromLevel: number, toLevel: number): any
+	if type(state) ~= "table" then
+		state = GiantLevelState.CreateEmptyState()
+	end
+	if not isFiniteNumber(fromLevel) or not isFiniteNumber(toLevel) then
+		return {
+			accepted = false,
+			reason = "level_range_invalid",
+			state = state,
+			newlyResolved = {},
+		}
+	end
+
+	local startLevel = math.max(2, math.floor(fromLevel))
+	local endLevel = math.min(math.floor(toLevel), GiantLevelState.GetMaxLevel())
+	if endLevel < startLevel then
+		return {
+			accepted = true,
+			reason = "no_unlock_range",
+			state = state,
+			newlyResolved = {},
+		}
+	end
+
+	local nextState: State = {
+		xp = state.xp,
+		level = state.level,
+		operationIds = state.operationIds,
+		recentEvents = state.recentEvents,
+		resolvedUnlockIds = cloneResolvedUnlockSet(state.resolvedUnlockIds),
+	}
+	local newlyResolved: { ResolvedUnlockRecord } = {}
+
+	for level = startLevel, endLevel do
+		local entries = getCatalogEntriesForLevel(level)
+		for _, entry in ipairs(entries) do
+			if type(entry) ~= "table" then
+				continue
+			end
+			local unlockId = nonEmptyString(entry.unlockId)
+			if unlockId == nil then
+				continue
+			end
+			if nextState.resolvedUnlockIds[unlockId] == true then
+				continue
+			end
+
+			nextState.resolvedUnlockIds[unlockId] = true
+			table.insert(newlyResolved, {
+				unlockId = unlockId,
+				level = level,
+				displayName = if type(entry.displayName) == "string" then entry.displayName else nil,
+			})
+		end
+	end
+
+	return {
+		accepted = true,
+		reason = if #newlyResolved > 0 then "accepted" else "no_new_unlocks",
+		state = nextState,
+		newlyResolved = newlyResolved,
+	}
+end
+
+function GiantLevelState.ReconcileEntitledUnlocks(state: State): any
+	if type(state) ~= "table" then
+		state = GiantLevelState.CreateEmptyState()
+	end
+	return GiantLevelState.ResolveLevelUnlocks(state, 2, state.level)
+end
+
 function GiantLevelState.CreateEmptyState(): State
 	return {
 		xp = 0,
 		level = 1,
 		operationIds = {},
 		recentEvents = {},
+		resolvedUnlockIds = {},
 	}
 end
 
@@ -152,8 +304,8 @@ function GiantLevelState.ApplyXpEvent(state: State, input: any): any
 		}
 	end
 
-	local xpAward = GiantLevelState.ResolveXpAward(eventKind)
-	if xpAward == nil then
+	local baseXpAward = GiantLevelState.ResolveXpAward(eventKind)
+	if baseXpAward == nil then
 		return {
 			accepted = false,
 			reason = "xp_award_invalid",
@@ -177,6 +329,9 @@ function GiantLevelState.ApplyXpEvent(state: State, input: any): any
 		}
 	end
 
+	local modifierSnapshot = GiantLevelState.ResolveModifierSnapshot(state)
+	local xpAward = math.max(1, math.floor(baseXpAward * modifierSnapshot.xpAwardMultiplier + 0.5))
+
 	local previousLevel = state.level
 	local nextXp = state.xp + xpAward
 	local nextLevel = GiantLevelState.ResolveLevelFromXp(nextXp)
@@ -193,6 +348,7 @@ function GiantLevelState.ApplyXpEvent(state: State, input: any): any
 		level = nextLevel,
 		operationIds = {},
 		recentEvents = {},
+		resolvedUnlockIds = cloneResolvedUnlockSet(state.resolvedUnlockIds),
 	}
 	for existingOperationId in pairs(state.operationIds) do
 		nextState.operationIds[existingOperationId] = true
@@ -221,7 +377,7 @@ end
 
 function GiantLevelState.SerializePersistenceState(state: State): any
 	if type(state) ~= "table" then
-		return { xp = 0, level = 1, recentEvents = {} }
+		return { xp = 0, level = 1, recentEvents = {}, resolvedUnlockIds = {} }
 	end
 
 	local events = {}
@@ -240,6 +396,7 @@ function GiantLevelState.SerializePersistenceState(state: State): any
 		xp = state.xp,
 		level = state.level,
 		recentEvents = events,
+		resolvedUnlockIds = sortedResolvedUnlockIds(state.resolvedUnlockIds),
 	}
 end
 
@@ -249,6 +406,7 @@ function GiantLevelState.ApplyPersistenceState(raw: any): any
 			accepted = true,
 			reason = "cleared",
 			state = GiantLevelState.CreateEmptyState(),
+			needsEntitlementReconcile = false,
 		}
 	end
 
@@ -292,14 +450,44 @@ function GiantLevelState.ApplyPersistenceState(raw: any): any
 		end
 	end
 
+	local resolvedUnlockIds: { [string]: boolean } = {}
+	local needsEntitlementReconcile = false
+	if raw.resolvedUnlockIds ~= nil then
+		if type(raw.resolvedUnlockIds) ~= "table" then
+			return { accepted = false, reason = "giant_level_resolved_unlock_ids_invalid" }
+		end
+		local seenUnlockIds: { [string]: boolean } = {}
+		for index, unlockId in ipairs(raw.resolvedUnlockIds) do
+			local normalizedUnlockId = nonEmptyString(unlockId)
+			if normalizedUnlockId == nil then
+				return {
+					accepted = false,
+					reason = string.format("giant_level_resolved_unlock_id_invalid index=%d", index),
+				}
+			end
+			if seenUnlockIds[normalizedUnlockId] == true then
+				return {
+					accepted = false,
+					reason = string.format("giant_level_resolved_unlock_id_duplicate index=%d", index),
+				}
+			end
+			seenUnlockIds[normalizedUnlockId] = true
+			resolvedUnlockIds[normalizedUnlockId] = true
+		end
+	else
+		needsEntitlementReconcile = resolvedLevel >= 2
+	end
+
 	return {
 		accepted = true,
 		reason = "accepted",
+		needsEntitlementReconcile = needsEntitlementReconcile,
 		state = {
 			xp = math.floor(raw.xp),
 			level = resolvedLevel,
 			operationIds = operationIds,
 			recentEvents = recentEvents,
+			resolvedUnlockIds = resolvedUnlockIds,
 		},
 	}
 end
