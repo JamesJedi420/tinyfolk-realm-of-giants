@@ -402,6 +402,17 @@ local function getTrophyServiceQueryApi(): any?
 	return nil
 end
 
+local function getGiantLevelServiceQueryApi(): any?
+	local globalValue = globalEnv
+	if type(globalValue._GiantLevelService_QueryAPI) == "table" then
+		return globalValue._GiantLevelService_QueryAPI
+	end
+	if type(_G) == "table" and type((_G :: any)._GiantLevelService_QueryAPI) == "table" then
+		return (_G :: any)._GiantLevelService_QueryAPI
+	end
+	return nil
+end
+
 local function getPenRationingServiceQueryApi(): any?
 	local queryApi = globalEnv._PenRationingService_QueryAPI
 	if type(queryApi) == "table" then
@@ -539,6 +550,10 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		local trophyApi = getTrophyServiceQueryApi()
 		if trophyApi ~= nil and type(trophyApi.RecordCaptureSuccess) == "function" then
 			trophyApi.RecordCaptureSuccess(custodian.UserId, target.UserId, resolvedNow)
+		end
+		local giantLevelApi = getGiantLevelServiceQueryApi()
+		if giantLevelApi ~= nil and type(giantLevelApi.RecordCaptureSuccess) == "function" then
+			giantLevelApi.RecordCaptureSuccess(custodian.UserId, target.UserId, resolvedNow)
 		end
 	else
 		markRejectedRequest(custodian.UserId, resolvedNow)

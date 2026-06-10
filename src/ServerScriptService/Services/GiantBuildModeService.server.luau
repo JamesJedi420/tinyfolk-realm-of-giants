@@ -1798,6 +1798,14 @@ local function getTrophyQueryApi(): any
 	return nil
 end
 
+local function getGiantLevelQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._GiantLevelService_QueryAPI) == "table" then
+		return globalValue._GiantLevelService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -1851,6 +1859,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		trophyPersistenceState = trophyQueryApi.BuildPersistenceState()
 	end
 
+	local giantLevelPersistenceState = nil
+	local giantLevelQueryApi = getGiantLevelQueryApi()
+	if giantLevelQueryApi ~= nil then
+		if type(giantLevelQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "giant_level_build_persistence_missing"
+		end
+		giantLevelPersistenceState = giantLevelQueryApi.BuildPersistenceState()
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
@@ -1860,7 +1877,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		BuildDefenseHistoryState(),
 		BuildResourceLedgerState(),
 		worksiteUpgradeState,
-		trophyPersistenceState
+		trophyPersistenceState,
+		giantLevelPersistenceState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -1990,6 +2008,26 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedTrophies, trophyReason = trophyQueryApi.ApplyPersistenceState(nil)
 		if not appliedTrophies then
 			return false, trophyReason or "trophy_apply_persistence_failed"
+		end
+	end
+
+	local giantLevelQueryApi = getGiantLevelQueryApi()
+	if root.giantLevelPersistence ~= nil then
+		if giantLevelQueryApi == nil then
+			return false, "giant_level_query_api_missing"
+		end
+		if type(giantLevelQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "giant_level_apply_persistence_missing"
+		end
+
+		local appliedGiantLevel, giantLevelReason = giantLevelQueryApi.ApplyPersistenceState(root.giantLevelPersistence)
+		if not appliedGiantLevel then
+			return false, giantLevelReason or "giant_level_apply_persistence_failed"
+		end
+	elseif giantLevelQueryApi ~= nil and type(giantLevelQueryApi.ApplyPersistenceState) == "function" then
+		local appliedGiantLevel, giantLevelReason = giantLevelQueryApi.ApplyPersistenceState(nil)
+		if not appliedGiantLevel then
+			return false, giantLevelReason or "giant_level_apply_persistence_failed"
 		end
 	end
 
