@@ -87,6 +87,10 @@ local function applyDebugAttributes(player: Player, snapshot: any)
 	local attributes = InventoryCraftConfig.Attributes
 	player:SetAttribute(attributes.ItemCount, #snapshot.items)
 	player:SetAttribute(attributes.CraftedTotal, snapshot.craftedTotal)
+	player:SetAttribute(
+		attributes.CraftableRecipeCount,
+		if type(snapshot.craftableRecipeIds) == "table" then #snapshot.craftableRecipeIds else 0
+	)
 	player:SetAttribute(attributes.LastCraftRecipeId, snapshot.lastCraftRecipeId)
 	player:SetAttribute(attributes.LastCraftAt, snapshot.lastCraftAt)
 	player:SetAttribute(attributes.LastReason, snapshot.lastReason)
@@ -102,9 +106,103 @@ local function snapshotForPlayer(player: Player): any
 		itemCounts = snapshot.itemCounts,
 		items = snapshot.items,
 		craftedTotal = snapshot.craftedTotal,
+		craftableRecipeIds = snapshot.craftableRecipeIds,
 		lastCraftRecipeId = snapshot.lastCraftRecipeId,
 		lastCraftAt = snapshot.lastCraftAt,
 		lastReason = snapshot.lastReason,
+	}
+end
+
+local function listCraftableRecipesForPlayer(player: Player): any
+	if not isTinyfolk(player) then
+		return {
+			accepted = false,
+			reason = "tinyfolk_role_required",
+			recipes = {},
+		}
+	end
+
+	local state = getOrCreateSession(player.UserId)
+	local recipes = InventoryCraftState.ListCraftableRecipes(
+		state,
+		RoleConfig.Roles.Tinyfolk,
+		CANONICAL_ITEM_CATALOG,
+		CANONICAL_RECIPE_CATALOG
+	)
+	return {
+		accepted = true,
+		reason = "accepted",
+		recipes = recipes,
+	}
+end
+
+local function consumeItemsForPlayer(player: Player, consumptions: any): any
+	if not isTinyfolk(player) then
+		return {
+			accepted = false,
+			reason = "tinyfolk_role_required",
+			snapshot = snapshotForPlayer(player),
+		}
+	end
+
+	if type(consumptions) ~= "table" then
+		return {
+			accepted = false,
+			reason = "consumptions_invalid",
+			snapshot = snapshotForPlayer(player),
+		}
+	end
+
+	local currentState = getOrCreateSession(player.UserId)
+	local transition = InventoryCraftState.ConsumeItems(currentState, consumptions, CANONICAL_ITEM_CATALOG)
+	if not transition.accepted then
+		local rejectedState = transition.state
+		rejectedState.lastReason = transition.reason
+		setSession(player.UserId, rejectedState)
+		local snapshot = InventoryCraftState.GetSnapshot(rejectedState, CANONICAL_ITEM_CATALOG)
+		applyDebugAttributes(player, snapshot)
+		return {
+			accepted = false,
+			reason = transition.reason,
+			snapshot = {
+				userId = player.UserId,
+				role = player:GetAttribute("Role"),
+				itemCounts = snapshot.itemCounts,
+				items = snapshot.items,
+				craftedTotal = snapshot.craftedTotal,
+				craftableRecipeIds = snapshot.craftableRecipeIds,
+				lastCraftRecipeId = snapshot.lastCraftRecipeId,
+				lastCraftAt = snapshot.lastCraftAt,
+				lastReason = snapshot.lastReason,
+			},
+		}
+	end
+
+	setSession(player.UserId, transition.state)
+	local snapshot = InventoryCraftState.GetSnapshot(transition.state, CANONICAL_ITEM_CATALOG)
+	applyDebugAttributes(player, snapshot)
+	debugLog(
+		string.format(
+			"Consume accepted userId=%d itemCount=%d craftedTotal=%d",
+			player.UserId,
+			#snapshot.items,
+			snapshot.craftedTotal
+		)
+	)
+	return {
+		accepted = true,
+		reason = "accepted",
+		snapshot = {
+			userId = player.UserId,
+			role = player:GetAttribute("Role"),
+			itemCounts = snapshot.itemCounts,
+			items = snapshot.items,
+			craftedTotal = snapshot.craftedTotal,
+			craftableRecipeIds = snapshot.craftableRecipeIds,
+			lastCraftRecipeId = snapshot.lastCraftRecipeId,
+			lastCraftAt = snapshot.lastCraftAt,
+			lastReason = snapshot.lastReason,
+		},
 	}
 end
 
@@ -142,6 +240,7 @@ local function craftForPlayer(player: Player, recipeId: any, catalogOverride: an
 				itemCounts = snapshot.itemCounts,
 				items = snapshot.items,
 				craftedTotal = snapshot.craftedTotal,
+				craftableRecipeIds = snapshot.craftableRecipeIds,
 				lastCraftRecipeId = snapshot.lastCraftRecipeId,
 				lastCraftAt = snapshot.lastCraftAt,
 				lastReason = snapshot.lastReason,
@@ -170,6 +269,7 @@ local function craftForPlayer(player: Player, recipeId: any, catalogOverride: an
 			itemCounts = snapshot.itemCounts,
 			items = snapshot.items,
 			craftedTotal = snapshot.craftedTotal,
+			craftableRecipeIds = snapshot.craftableRecipeIds,
 			lastCraftRecipeId = snapshot.lastCraftRecipeId,
 			lastCraftAt = snapshot.lastCraftAt,
 			lastReason = snapshot.lastReason,
@@ -241,6 +341,7 @@ local function setupPlayer(player: Player)
 		applyDebugAttributes(player, {
 			items = {},
 			craftedTotal = 0,
+			craftableRecipeIds = {},
 			lastCraftRecipeId = nil,
 			lastCraftAt = nil,
 			lastReason = "cleared_role_change",
@@ -265,8 +366,14 @@ _G._InventoryCraftService_QueryAPI = {
 	Craft = function(player: Player, recipeId: any, _itemCatalog: any?, _recipeCatalog: any?): any
 		return craftForPlayer(player, recipeId, CANONICAL_ITEM_CATALOG, CANONICAL_RECIPE_CATALOG)
 	end,
+	ConsumeItems = function(player: Player, consumptions: any): any
+		return consumeItemsForPlayer(player, consumptions)
+	end,
 	GetSnapshot = function(player: Player): any
 		return snapshotForPlayer(player)
+	end,
+	ListCraftableRecipes = function(player: Player): any
+		return listCraftableRecipesForPlayer(player)
 	end,
 }
 
