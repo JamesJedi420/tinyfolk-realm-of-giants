@@ -1504,6 +1504,23 @@ local function recordSnareTrapEvent(message: string, severity: string, snapshot:
 	)
 end
 
+local function recordRaidDefenseTrophy(snapshot: any, at: number)
+	if type(snapshot) ~= "table" then
+		return
+	end
+	local trophyApi = rawget(globalEnv, "_TrophyService_QueryAPI")
+	if type(trophyApi) ~= "table" or type(trophyApi.RecordRaidDefenseWin) ~= "function" then
+		return
+	end
+	if type(snapshot.placedByUserId) ~= "number" or type(snapshot.triggeredByUserId) ~= "number" then
+		return
+	end
+	if type(snapshot.trapId) ~= "string" or snapshot.trapId == "" then
+		return
+	end
+	pcall(trophyApi.RecordRaidDefenseWin, snapshot.placedByUserId, snapshot.triggeredByUserId, snapshot.trapId, at)
+end
+
 local function getPlayerByUserId(userId: number): any?
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player.UserId == userId then
@@ -1585,6 +1602,7 @@ local function ResolveSnareTrapContact(userId: number, position: any, at: number
 			updateSnareTrapArtifact(nextRecord, resolvedAt)
 			local snapshot = SnareTrapState.BuildSnapshot(nextRecord, resolvedAt)
 			recordSnareTrapEvent("snare_trap_triggered", "warn", snapshot)
+			recordRaidDefenseTrophy(snapshot, resolvedAt)
 			return {
 				accepted = true,
 				reason = reason,

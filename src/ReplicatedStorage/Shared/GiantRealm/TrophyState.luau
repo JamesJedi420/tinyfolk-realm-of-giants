@@ -25,6 +25,8 @@ local VALID_KINDS = {
 	[TrophyConfig.Kinds.ContainmentHeld] = true,
 	[TrophyConfig.Kinds.ContainmentStarvation] = true,
 	[TrophyConfig.Kinds.ContainmentEscapeFailure] = true,
+	[TrophyConfig.Kinds.RaidDefenseWin] = true,
+	[TrophyConfig.Kinds.NegotiatedRelease] = true,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -70,7 +72,10 @@ function TrophyState.ResolveKindFromContainmentEnd(endReason: string): string?
 	if endReason == "escaped" then
 		return TrophyConfig.Kinds.ContainmentEscapeFailure
 	end
-	if endReason == "released" or endReason == "timeout" then
+	if endReason == "released" then
+		return TrophyConfig.Kinds.NegotiatedRelease
+	end
+	if endReason == "timeout" then
 		return TrophyConfig.Kinds.ContainmentHeld
 	end
 	return nil

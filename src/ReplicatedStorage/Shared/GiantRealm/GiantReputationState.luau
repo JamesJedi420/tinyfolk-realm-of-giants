@@ -24,6 +24,8 @@ local VALID_TROPHY_KINDS = {
 	[TrophyConfig.Kinds.ContainmentHeld] = true,
 	[TrophyConfig.Kinds.ContainmentStarvation] = true,
 	[TrophyConfig.Kinds.ContainmentEscapeFailure] = true,
+	[TrophyConfig.Kinds.RaidDefenseWin] = true,
+	[TrophyConfig.Kinds.NegotiatedRelease] = true,
 }
 
 local function isFiniteNumber(value: any): boolean

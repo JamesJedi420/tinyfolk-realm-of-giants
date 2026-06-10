@@ -121,6 +121,19 @@ local function recordCaptureSuccess(custodianUserId: number, targetUserId: numbe
 	})
 end
 
+local function recordRaidDefenseWin(custodianUserId: number, targetUserId: number, trapId: string, at: number): any
+	if type(trapId) ~= "string" or trapId == "" then
+		return { accepted = false, reason = "trap_id_invalid" }
+	end
+	return recordEvent({
+		operationId = string.format("trophy-raid-defense-%s-%d-%d", trapId, targetUserId, math.floor(at * 1000)),
+		trophyKind = TrophyConfig.Kinds.RaidDefenseWin,
+		awardedAt = at,
+		custodianUserId = custodianUserId,
+		targetUserId = targetUserId,
+	})
+end
+
 local function recordContainmentEnd(metadata: any): any
 	if type(metadata) ~= "table" then
 		return { accepted = false, reason = "metadata_invalid" }
@@ -169,6 +182,7 @@ end
 _G._TrophyService_QueryAPI = {
 	RecordEvent = recordEvent,
 	RecordCaptureSuccess = recordCaptureSuccess,
+	RecordRaidDefenseWin = recordRaidDefenseWin,
 	RecordContainmentEnd = recordContainmentEnd,
 	BuildPersistenceState = BuildPersistenceState,
 	ApplyPersistenceState = ApplyPersistenceState,

@@ -781,6 +781,8 @@ local VALID_TROPHY_KINDS = {
 	containment_held = true,
 	containment_starvation = true,
 	containment_escape_failure = true,
+	raid_defense_win = true,
+	negotiated_release = true,
 }
 
 function GiantRealmSaveSchema.ValidateTrophySaveRecord(record: any): (boolean, string?)
