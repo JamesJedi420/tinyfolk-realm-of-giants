@@ -31,20 +31,24 @@ function Get-ChangedLuauFiles {
         }
     }
 
-    return $paths | Sort-Object -Unique
+    # Force array return: a single changed file must not unwrap to a string or
+    # PowerShell splats @targets character-by-character into stylua/selene/luau-lsp.
+    return @($paths | Sort-Object -Unique)
 }
 
 $targets = @('src', 'tests')
 if ($ChangedOnly) {
-    $changed = Get-ChangedLuauFiles
+    $changed = @(Get-ChangedLuauFiles)
     if ($changed.Count -eq 0) {
         Write-Host '[validate] no changed .luau files under src/tests'
         exit 0
     }
 
-    $targets = $changed
+    $targets = @($changed)
     Write-Host "[validate] changed file mode with $($targets.Count) target(s)"
 }
+
+$targets = @($targets)
 
 $styluaExit = 0
 $seleneExit = 0
