@@ -85,5 +85,37 @@ assertTrue(restored.accepted, "persistence round trip accepted")
 assertEqual(restored.state.xp, 120, "persistence xp")
 assertEqual(restored.state.level, 2, "persistence level")
 assertEqual(#restored.state.recentEvents, 4, "persistence recent events")
+assertEqual(restored.needsEntitlementReconcile, false, "resolved unlock ids persisted")
+
+local unlockResult = GiantLevelState.ResolveLevelUnlocks(levelUp.state, 2, 2)
+assertTrue(unlockResult.accepted, "level 2 unlock accepted")
+assertEqual(#unlockResult.newlyResolved, 1, "level 2 unlock count")
+assertEqual(unlockResult.newlyResolved[1].unlockId, "giant_level_2_steward", "level 2 unlock id")
+
+local duplicateUnlock = GiantLevelState.ResolveLevelUnlocks(unlockResult.state, 2, 2)
+assertEqual(duplicateUnlock.reason, "no_new_unlocks", "duplicate unlock resolution skipped")
+assertEqual(#duplicateUnlock.newlyResolved, 0, "duplicate unlock resolution empty")
+
+local modifiers = GiantLevelState.ResolveModifierSnapshot(unlockResult.state)
+assertEqual(modifiers.xpAwardMultiplier, 1.05, "level 2 xp award multiplier")
+assertEqual(modifiers.containmentRewardMultiplier, 1, "level 2 containment multiplier baseline")
+
+local boostedCapture = GiantLevelState.ApplyXpEvent(unlockResult.state, {
+	operationId = "trophy-capture-101-303-7000",
+	eventKind = GiantLevelConfig.EventKinds.CaptureSuccess,
+	awardedAt = 50,
+})
+assertTrue(boostedCapture.accepted, "boosted capture accepted")
+assertEqual(boostedCapture.state.xp, 146, "boosted capture xp award")
+
+local legacyRestore = GiantLevelState.ApplyPersistenceState({
+	xp = 120,
+	level = 2,
+	recentEvents = serialized.recentEvents,
+})
+assertTrue(legacyRestore.accepted, "legacy persistence accepted")
+assertTrue(legacyRestore.needsEntitlementReconcile, "legacy persistence needs reconcile")
+local reconciled = GiantLevelState.ReconcileEntitledUnlocks(legacyRestore.state)
+assertEqual(#reconciled.newlyResolved, 1, "legacy reconcile grants level 2 unlock")
 
 print("giant_level_state.spec.luau: all checks passed")

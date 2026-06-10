@@ -163,6 +163,7 @@ export type GiantLevelPersistenceSaveRecord = {
 	xp: number,
 	level: number,
 	recentEvents: { GiantLevelEventSaveRecord }?,
+	resolvedUnlockIds: { string }?,
 }
 
 export type GiantRealmSaveRoot = {
@@ -879,6 +880,21 @@ function GiantRealmSaveSchema.ValidateGiantLevelPersistenceRecord(record: any): 
 			seenOperationIds[eventRecord.operationId] = true
 		end
 	end
+	if record.resolvedUnlockIds ~= nil then
+		if type(record.resolvedUnlockIds) ~= "table" then
+			return false, "giant_level_resolved_unlock_ids_invalid"
+		end
+		local seenUnlockIds: { [string]: boolean } = {}
+		for index, unlockId in ipairs(record.resolvedUnlockIds) do
+			if type(unlockId) ~= "string" or unlockId == "" then
+				return false, string.format("giant_level_resolved_unlock_id_invalid index=%d", index)
+			end
+			if seenUnlockIds[unlockId] then
+				return false, string.format("giant_level_resolved_unlock_id_duplicate index=%d", index)
+			end
+			seenUnlockIds[unlockId] = true
+		end
+	end
 	return true, nil
 end
 
@@ -1315,10 +1331,20 @@ function GiantRealmSaveSchema.SerializeGiantLevelPersistenceRecord(state: any): 
 		end
 	end
 
+	local resolvedUnlockIds = {}
+	if type(state.resolvedUnlockIds) == "table" then
+		for _, unlockId in ipairs(state.resolvedUnlockIds) do
+			if type(unlockId) == "string" and unlockId ~= "" then
+				table.insert(resolvedUnlockIds, unlockId)
+			end
+		end
+	end
+
 	return {
 		xp = if isFiniteNumber(state.xp) then state.xp else 0,
 		level = if isFiniteNumber(state.level) then state.level else 1,
 		recentEvents = events,
+		resolvedUnlockIds = resolvedUnlockIds,
 	}
 end
 

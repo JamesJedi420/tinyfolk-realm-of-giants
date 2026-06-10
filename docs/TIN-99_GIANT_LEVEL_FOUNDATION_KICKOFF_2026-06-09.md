@@ -14,11 +14,16 @@
 
 ## Deferred (remaining TIN-99 scope)
 
-- Configurable level unlock catalog and gameplay modifiers.
-- Level-up VFX / Studio polish.
 - Cross-realm XP sync.
 - Trades XP source.
 - Board essence purchases (deprecated path).
+
+## Completed in unlock/modifier slice
+
+- Configurable level unlock catalog (`GiantLevelConfig.LevelUnlockCatalog`) with gameplay modifiers.
+- Explicit unlock resolution on level-up and legacy-save entitlement reconcile (no retroactive modifier inflation from raw level alone).
+- Realm-owner modifier attributes and `GetModifierSnapshot` query seam.
+- Optional Giant level-up feedback client overlay (`GiantLevelUpFeedbackClient`).
 
 ## Validation
 

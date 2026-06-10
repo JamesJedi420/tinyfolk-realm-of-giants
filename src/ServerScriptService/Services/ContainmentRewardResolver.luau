@@ -290,6 +290,24 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		return created
 	end
 
+	local function getGiantLevelContainmentRewardMultiplier(): number
+		local giantLevelApi = if type(depsAny.giantLevelApi) == "table"
+			then depsAny.giantLevelApi
+			else getGlobalApi("_GiantLevelService_QueryAPI")
+		if type(giantLevelApi) ~= "table" or type(giantLevelApi.GetModifierSnapshot) ~= "function" then
+			return 1
+		end
+		local ok, snapshot = pcall(giantLevelApi.GetModifierSnapshot)
+		if not ok or type(snapshot) ~= "table" then
+			return 1
+		end
+		local multiplier = snapshot.containmentRewardMultiplier
+		if type(multiplier) ~= "number" or multiplier ~= multiplier or multiplier <= 0 then
+			return 1
+		end
+		return multiplier
+	end
+
 	local function awardRealmResources(metadata: any)
 		if metadata.rewardGranted ~= true and metadata.scoreAccepted ~= true then
 			return
@@ -309,6 +327,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			metadata = {
 				endReason = metadata.endReason,
 				contributionRatio = metadata.contributionRatio,
+				levelRewardMultiplier = getGiantLevelContainmentRewardMultiplier(),
 			},
 		})
 	end

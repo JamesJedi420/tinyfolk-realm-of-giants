@@ -117,15 +117,38 @@ local upgradeResult = levelApi.RecordWorksiteUpgrade("worksite-upgrade:MiningSta
 assertTrue(upgradeResult.accepted, "worksite upgrade xp recorded")
 assertEqual(levelApi.GetXp(), 80, "worksite upgrade increments xp")
 
+local levelUpResult = levelApi.GrantXpEvent({
+	operationId = "containment-timeout-5001-5103-9000",
+	eventKind = GiantLevelConfig.EventKinds.ContainmentHeld,
+	awardedAt = 40,
+})
+assertTrue(levelUpResult.accepted, "level up xp accepted")
+assertTrue(levelUpResult.leveledUp, "level up flag set")
+assertEqual(levelApi.GetLevel(), 2, "level up to 2")
+assertEqual(ownerPlayer:GetAttribute(GiantLevelConfig.StateAttributes.ResolvedUnlockCount), 1, "level 2 unlock count")
+assertEqual(ownerPlayer:GetAttribute(GiantLevelConfig.StateAttributes.XpAwardMultiplier), 1.05, "level 2 xp multiplier")
+assertEqual(ownerPlayer:GetAttribute(GiantLevelConfig.StateAttributes.LevelUpSignal), 1, "level up signal emitted")
+
+local modifierSnapshot = levelApi.GetModifierSnapshot()
+assertEqual(modifierSnapshot.xpAwardMultiplier, 1.05, "modifier snapshot xp multiplier")
+assertEqual(modifierSnapshot.resolvedUnlockIds[1], "giant_level_2_steward", "modifier snapshot unlock id")
+
 local persistence = levelApi.BuildPersistenceState()
-assertEqual(persistence.xp, 80, "persistence includes xp")
-assertEqual(#persistence.recentEvents, 3, "persistence includes recent events")
+assertEqual(persistence.xp, 120, "persistence includes xp")
+assertEqual(#persistence.recentEvents, 4, "persistence includes recent events")
+assertEqual(persistence.resolvedUnlockIds[1], "giant_level_2_steward", "persistence includes resolved unlock ids")
 
 levelApi.ResetForTests()
 local applied, applyReason = levelApi.ApplyPersistenceState(persistence)
 assertTrue(applied, "apply persistence accepted")
 assertEqual(applyReason, nil, "apply persistence reason")
-assertEqual(levelApi.GetXp(), 80, "apply persistence restores xp")
-assertEqual(levelApi.GetLevel(), 1, "apply persistence restores level")
+assertEqual(levelApi.GetXp(), 120, "apply persistence restores xp")
+assertEqual(levelApi.GetLevel(), 2, "apply persistence restores level")
+assertEqual(levelApi.GetModifierSnapshot().xpAwardMultiplier, 1.05, "apply persistence restores modifiers")
+assertEqual(
+	ownerPlayer:GetAttribute(GiantLevelConfig.StateAttributes.LevelUpSignal),
+	nil,
+	"persistence restore skips level up signal"
+)
 
 print("giant_level_service_runtime_entrypoint.spec.luau: all checks passed")
