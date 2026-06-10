@@ -11,6 +11,7 @@ local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local LaborActionConfig = require(Config:WaitForChild("LaborActionConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
@@ -658,10 +659,12 @@ local function beginStationTask(candidate: Candidate)
 		now = os.clock(),
 	})
 
+	local laborAction = (LaborActionConfig.ActionBySpecialistRole :: any)[localPlayer:GetAttribute("SpecialistRole") or ""]
 	debugLog(
 		string.format(
-			"Sent station task begin stationId=%s duration=%.2f",
+			"Sent station task begin stationId=%s action=%s duration=%.2f",
 			candidate.targetId,
+			tostring(laborAction),
 			StationConfig.TaskDurationSeconds
 		)
 	)
@@ -704,8 +707,9 @@ local function beginShrineTask(candidate: Candidate)
 
 	debugLog(
 		string.format(
-			"Sent shrine task begin shrineId=%s duration=%.2f",
+			"Sent shrine task begin shrineId=%s action=%s duration=%.2f",
 			candidate.targetId,
+			LaborActionConfig.Actions.Sermon,
 			ShrineConfig.TaskDurationSeconds
 		)
 	)

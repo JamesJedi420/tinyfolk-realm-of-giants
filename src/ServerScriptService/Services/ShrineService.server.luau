@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local LaborActionConfig = require(Config:WaitForChild("LaborActionConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local ConstructionFolder = Shared:WaitForChild("Construction")
@@ -16,6 +17,7 @@ local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimin
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
+local LaborActionState = require(GiantRealm:WaitForChild("LaborActionState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ACTIVATE_REMOTE_NAME = "ShrineActivateRequest"
@@ -411,6 +413,23 @@ local function applyPersistenceState(persistedState: any): (boolean, string?)
 	return true, nil
 end
 
+local function applyLaborDebugAttributes(
+	player: Player,
+	laborAction: string?,
+	objectiveState: string?,
+	targetId: string?,
+	lastReason: string?
+)
+	player:SetAttribute(LaborActionConfig.LaborActionAttribute, laborAction)
+	player:SetAttribute(LaborActionConfig.LaborActionStateAttribute, objectiveState)
+	player:SetAttribute(LaborActionConfig.LaborActionTargetIdAttribute, targetId)
+	player:SetAttribute(LaborActionConfig.LaborActionLastReasonAttribute, lastReason)
+end
+
+local function clearLaborDebugAttributes(player: Player)
+	applyLaborDebugAttributes(player, nil, nil, nil, nil)
+end
+
 local function applyTaskAttributes(player: Player, taskSnapshot: any)
 	player:SetAttribute(ShrineConfig.TaskActiveShrineIdAttribute, taskSnapshot.activeTaskId)
 	player:SetAttribute(ShrineConfig.TaskProgressRatioAttribute, taskSnapshot.progressRatio)
@@ -557,6 +576,126 @@ local function awardShrineTributeTick(shrineState: ShrineState, generatedAmount:
 	})
 end
 
+type ShrineProductionTickResult = {
+	generatedAmount: number,
+	deactivateReason: string?,
+}
+
+local function performShrineProductionTick(
+	shrineState: ShrineState,
+	activatingPlayer: Player
+): ShrineProductionTickResult
+	if not isPlayerTinyfolkWorshipper(activatingPlayer) then
+		return {
+			generatedAmount = 0,
+			deactivateReason = "worshipper_role_lost",
+		}
+	end
+
+	if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= shrineState.shrineId then
+		return {
+			generatedAmount = 0,
+			deactivateReason = "worshipper_assignment_target_lost",
+		}
+	end
+
+	shrineState.tickCount += 1
+	shrineState.lastTickAt = os.clock()
+	shrineState.activatedByUserId = activatingPlayer.UserId
+
+	local maxEssenceTotal = resolveMaxEssenceTotal(shrineState.shrineId)
+	local remainingCapacity = maxEssenceTotal - shrineState.essenceTotal
+	local generatedAmount = math.min(ShrineConfig.EssencePerTick, math.max(0, remainingCapacity))
+	if generatedAmount <= 0 then
+		applyDebugAttributes(shrineState)
+		return {
+			generatedAmount = 0,
+			deactivateReason = "max_essence_reached",
+		}
+	end
+
+	shrineState.essenceTotal += generatedAmount
+	local sessionSnapshot =
+		GiantEssenceSession.AddGenerated(activatingPlayer.UserId, "Shrine:" .. shrineState.shrineId, generatedAmount)
+	awardShrineTributeTick(shrineState, generatedAmount, shrineState.lastTickAt)
+	applyDebugAttributes(shrineState)
+
+	debugLog(
+		string.format(
+			"Labor sermon action tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f userId=%d",
+			shrineState.shrineId,
+			shrineState.tickCount,
+			generatedAmount,
+			shrineState.essenceTotal,
+			sessionSnapshot.total,
+			activatingPlayer.UserId
+		)
+	)
+
+	if shrineState.essenceTotal >= maxEssenceTotal then
+		shrineState.essenceTotal = maxEssenceTotal
+		applyDebugAttributes(shrineState)
+		return {
+			generatedAmount = generatedAmount,
+			deactivateReason = "max_essence_reached",
+		}
+	end
+
+	return {
+		generatedAmount = generatedAmount,
+		deactivateReason = nil,
+	}
+end
+
+local function completeShrineWorkAction(
+	player: Player,
+	shrineState: ShrineState,
+	laborAction: string
+): (boolean, string?)
+	local assigned, assignReason = ensureInteractionWorshipperAssignment(player, shrineState)
+	if not assigned then
+		return false, assignReason
+	end
+
+	local allowed, reason = validateActivationRequest(player, shrineState)
+	if not allowed then
+		return false, reason
+	end
+
+	local specialistRole = player:GetAttribute("SpecialistRole")
+	local workValidation =
+		LaborActionState.ValidateWorkAction(specialistRole, SpecialistConfig.SpecialistRoles.Worshipper)
+	if not workValidation.accepted then
+		return false, workValidation.reason or "labor_action_rejected"
+	end
+
+	if workValidation.laborAction ~= laborAction then
+		return false,
+			string.format(
+				"labor_action_mismatch expected=%s actual=%s",
+				laborAction,
+				tostring(workValidation.laborAction)
+			)
+	end
+
+	local tickResult = performShrineProductionTick(shrineState, player)
+	if tickResult.generatedAmount <= 0 then
+		return false, tickResult.deactivateReason or "production_blocked"
+	end
+
+	applyLaborDebugAttributes(player, laborAction, "completed", shrineState.shrineId, "work_action_completed")
+	debugLog(
+		string.format(
+			"Accepted shrine work action userId=%d shrineId=%s action=%s generated=%.0f",
+			player.UserId,
+			shrineState.shrineId,
+			laborAction,
+			tickResult.generatedAmount
+		)
+	)
+	return true, nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 local shrineActivateRequestRemote = ensureRemoteEvent(remotesFolder, ACTIVATE_REMOTE_NAME)
 local shrineDebugStateRequestRemote = ensureRemoteEvent(remotesFolder, DEBUG_REQUEST_REMOTE_NAME)
@@ -597,12 +736,12 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 	end
 
 	local bypassCooldown = requestMode == "cancel"
-	if not bypassCooldown and isCoolingDown(player.UserId, requestNow) then
+	if not bypassCooldown and requestMode ~= "legacy" and isCoolingDown(player.UserId, requestNow) then
 		rejectActivate(player, "request_cooldown")
 		return
 	end
 
-	if not bypassCooldown then
+	if not bypassCooldown and requestMode ~= "legacy" then
 		markRequest(player.UserId, requestNow)
 	end
 
@@ -688,9 +827,42 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 			return
 		end
 
-		if requestMode ~= "complete" then
+		local specialistRole = player:GetAttribute("SpecialistRole")
+		local workValidation =
+			LaborActionState.ValidateWorkAction(specialistRole, SpecialistConfig.SpecialistRoles.Worshipper)
+		local resolvedLaborAction = workValidation.laborAction
+
+		if requestMode == "begin" then
+			applyLaborDebugAttributes(
+				player,
+				resolvedLaborAction,
+				taskResult.snapshot.objectiveState,
+				shrineIdValue,
+				taskResult.reason
+			)
 			return
 		end
+
+		if requestMode == "cancel" then
+			clearLaborDebugAttributes(player)
+			return
+		end
+
+		if requestMode == "complete" then
+			if resolvedLaborAction == nil then
+				rejectActivate(player, workValidation.reason or "labor_action_unmapped")
+				return
+			end
+
+			local completed, completeReason = completeShrineWorkAction(player, shrineState, resolvedLaborAction)
+			if not completed then
+				rejectActivate(player, completeReason :: string)
+				return
+			end
+			return
+		end
+
+		return
 	elseif requestMode ~= "legacy" then
 		rejectActivate(player, "invalid_mode")
 		return
@@ -702,24 +874,14 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 		return
 	end
 
-	local allowed, reason = validateActivationRequest(player, shrineState)
-	if not allowed then
-		rejectActivate(player, reason :: string)
-		return
-	end
-
-	if shrineState.isActive then
-		rejectActivate(player, "already_active")
-		return
-	end
-
-	shrineState.isActive = true
-	shrineState.activatedByUserId = player.UserId
-	shrineState.lastTickAt = os.clock()
-	shrineState.accumulatorSeconds = 0
-	applyDebugAttributes(shrineState)
-
-	debugLog(string.format("Accepted ShrineActivateRequest userId=%d shrineId=%s", player.UserId, shrineIdValue))
+	debugLog(
+		string.format(
+			"Accepted ShrineAssignRequest userId=%d shrineId=%s reason=%s (production requires completed work action)",
+			player.UserId,
+			shrineIdValue,
+			tostring(assignReason)
+		)
+	)
 end)
 
 shrineDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -772,83 +934,12 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	end
 end)
 
-RunService.Heartbeat:Connect(function(deltaTime: number)
+RunService.Heartbeat:Connect(function(_deltaTime: number)
 	for _, shrineState in shrineStateById do
-		if not shrineState.isActive then
-			continue
+		if shrineState.isActive then
+			deactivateShrine(shrineState, "passive_generation_disabled")
 		end
-
-		shrineState.accumulatorSeconds += deltaTime
-
-		while shrineState.accumulatorSeconds >= ShrineConfig.GenerationIntervalSeconds and shrineState.isActive do
-			local activatingPlayer: Player? = nil
-			if shrineState.activatedByUserId ~= nil then
-				activatingPlayer = Players:GetPlayerByUserId(shrineState.activatedByUserId)
-			end
-			if not activatingPlayer or not isPlayerTinyfolkWorshipper(activatingPlayer) then
-				applyDebugAttributes(shrineState)
-				deactivateShrine(shrineState, "worshipper_role_lost")
-				break
-			end
-			if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= shrineState.shrineId then
-				applyDebugAttributes(shrineState)
-				deactivateShrine(shrineState, "worshipper_assignment_target_lost")
-				break
-			end
-			local activePlayer = activatingPlayer :: Player
-
-			shrineState.accumulatorSeconds -= ShrineConfig.GenerationIntervalSeconds
-			shrineState.tickCount += 1
-			shrineState.lastTickAt = os.clock()
-
-			local maxEssenceTotal = resolveMaxEssenceTotal(shrineState.shrineId)
-			local remainingCapacity = maxEssenceTotal - shrineState.essenceTotal
-			local generatedAmount = math.min(ShrineConfig.EssencePerTick, math.max(0, remainingCapacity))
-			if generatedAmount <= 0 then
-				applyDebugAttributes(shrineState)
-				deactivateShrine(shrineState, "max_essence_reached")
-				break
-			end
-
-			shrineState.essenceTotal += generatedAmount
-			local sessionSnapshot = GiantEssenceSession.AddGenerated(
-				activePlayer.UserId,
-				"Shrine:" .. shrineState.shrineId,
-				generatedAmount
-			)
-			awardShrineTributeTick(shrineState, generatedAmount, shrineState.lastTickAt)
-
-			if shrineState.essenceTotal >= maxEssenceTotal then
-				shrineState.essenceTotal = maxEssenceTotal
-				applyDebugAttributes(shrineState)
-				debugLog(
-					string.format(
-						"Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f",
-						shrineState.shrineId,
-						shrineState.tickCount,
-						generatedAmount,
-						shrineState.essenceTotal,
-						sessionSnapshot.total
-					)
-				)
-				deactivateShrine(shrineState, "max_essence_reached")
-				break
-			end
-
-			applyDebugAttributes(shrineState)
-			if shrineState.tickCount % ShrineConfig.DebugLogEveryTicks == 0 then
-				debugLog(
-					string.format(
-						"Shrine Essence tick id=%s tick=%d generated=%.0f total=%d giantSessionTotal=%.0f",
-						shrineState.shrineId,
-						shrineState.tickCount,
-						generatedAmount,
-						shrineState.essenceTotal,
-						sessionSnapshot.total
-					)
-				)
-			end
-		end
+		applyDebugAttributes(shrineState)
 	end
 end)
 

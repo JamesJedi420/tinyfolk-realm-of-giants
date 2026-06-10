@@ -213,12 +213,14 @@ local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Conf
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Config/SpecialistConfig"
+configFolder._Children["LaborActionConfig"] = "../../ReplicatedStorage/Shared/Config/LaborActionConfig"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
@@ -291,6 +293,7 @@ script = {
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 local StationConfig = require("../src/ReplicatedStorage/Shared/Config/StationConfig")
+local LaborActionConfig = require("../src/ReplicatedStorage/Shared/Config/LaborActionConfig")
 
 local legacyPlayer = makeAlivePlayer(7101, Vector3.new(10, 0, 10))
 legacyPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
@@ -364,11 +367,25 @@ assertEqual(
 	"station activation assigns station id"
 )
 assertEqual(#interactionAssignCalls, 1, "station activation called interaction assignment API")
-assertEqual(stationStateById["WorkStation_C"].isActive, true, "station activation starts after assignment")
+assertEqual(stationStateById["WorkStation_C"].isActive, false, "assignment alone does not start passive production")
 
-runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
-assertTrue(stationStateById["WorkStation_C"].resourceTotal > 0, "assigned station generates material on tick")
-assertEqual(stationStateById["WorkStation_C"].isActive, true, "assigned station remains active after valid tick")
+activateRemote:FireServer(interactionAssignPlayer, {
+	stationId = "WorkStation_C",
+	mode = "begin",
+	now = 90,
+})
+activateRemote:FireServer(interactionAssignPlayer, {
+	stationId = "WorkStation_C",
+	mode = "complete",
+	now = 92,
+})
+assertTrue(stationStateById["WorkStation_C"].resourceTotal > 0, "completed chop work action generates wood")
+assertEqual(stationStateById["WorkStation_C"].isActive, false, "work action production does not leave station active")
+assertEqual(
+	interactionAssignPlayer:GetAttribute(LaborActionConfig.LaborActionAttribute),
+	LaborActionConfig.Actions.Chop,
+	"chop labor action exposed on player debug attributes"
+)
 
 local ResourceFlowState = require("../src/ServerScriptService/Services/ResourceFlowState")
 local flowBeforeHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
@@ -377,7 +394,16 @@ local flowAfterHaul = ResourceFlowState.GetMaterialSnapshot("Wood")
 assertTrue(flowAfterHaul.inTransit > flowBeforeHaul.inTransit, "assigned specialist moves produced Wood to transit")
 
 activateRemote:FireServer(targetReassignPlayer, "WorkStation_A")
-runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
+activateRemote:FireServer(targetReassignPlayer, {
+	stationId = "WorkStation_A",
+	mode = "begin",
+	now = 80,
+})
+activateRemote:FireServer(targetReassignPlayer, {
+	stationId = "WorkStation_A",
+	mode = "complete",
+	now = 82,
+})
 local workstationATickCountBeforeReassign = stationStateById["WorkStation_A"].tickCount
 assertTrue(workstationATickCountBeforeReassign > 0, "WorkStation_A generates before target reassignment")
 
@@ -396,8 +422,14 @@ assertEqual(
 ResourceFlowState.TransferProducedToInTransit("Wood", 999)
 
 activateRemote:FireServer(legacyPlayer, "WorkStation_B")
-assertEqual(stationStateById["WorkStation_B"].isActive, true, "legacy string payload still activates station")
+assertEqual(
+	stationStateById["WorkStation_B"].isActive,
+	false,
+	"legacy string payload assigns only without passive activation"
+)
 
+_G._StationService_TaskState["WorkStation_A"] =
+	require("../src/ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic").New()
 activateRemote:FireServer(taskPlayer, {
 	stationId = "WorkStation_A",
 	mode = "begin",
@@ -442,7 +474,8 @@ activateRemote:FireServer(taskPlayer, {
 	mode = "complete",
 	now = 104,
 })
-assertEqual(stationStateById["WorkStation_A"].isActive, true, "task complete activates station")
+assertEqual(stationStateById["WorkStation_A"].isActive, false, "task complete generates without passive activation")
+assertTrue(stationStateById["WorkStation_A"].resourceTotal > 0, "task complete generates bounded wood output")
 assertEqual(taskPlayer:GetAttribute("StationTaskLastReason"), "completed", "task complete sets completed reason")
 assertEqual(taskPlayer:GetAttribute("StationTaskObjectiveState"), "completed", "task complete sets completed state")
 
@@ -533,10 +566,27 @@ _G._VillageWorksiteUpgradeService_QueryAPI = {
 	end,
 }
 
+StationConfig.TaskQteEnabled = false
 ResourceFlowState.ResetSession("farm_production_upgrade_test")
-activateRemote:FireServer(farmPlayer, "Farm_A")
-runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
-assertTrue(stationStateById["Farm_A"].resourceTotal >= 3, "farm upgrade level 2 scales food per tick to at least 3")
+activateRemote:FireServer(farmPlayer, {
+	stationId = "Farm_A",
+	mode = "begin",
+	now = 200,
+})
+activateRemote:FireServer(farmPlayer, {
+	stationId = "Farm_A",
+	mode = "complete",
+	now = 202,
+})
+assertTrue(
+	stationStateById["Farm_A"].resourceTotal >= 3,
+	"farm upgrade level 2 scales food per work action to at least 3"
+)
+assertEqual(
+	farmPlayer:GetAttribute(LaborActionConfig.LaborActionAttribute),
+	LaborActionConfig.Actions.Farm,
+	"farm labor action exposed on player debug attributes"
+)
 local foodSnapshot = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(foodSnapshot.produced >= 3, "food flow receives scaled farm production")
 

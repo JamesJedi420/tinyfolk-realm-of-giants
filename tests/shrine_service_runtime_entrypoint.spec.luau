@@ -214,6 +214,7 @@ local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Conf
 configFolder._Children["ShrineConfig"] = "../../ReplicatedStorage/Shared/Config/ShrineConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Config/SpecialistConfig"
+configFolder._Children["LaborActionConfig"] = "../../ReplicatedStorage/Shared/Config/LaborActionConfig"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
@@ -224,6 +225,7 @@ sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["GiantRealmResourceState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
+giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -295,6 +297,7 @@ script = {
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 local ShrineConfig = require("../src/ReplicatedStorage/Shared/Config/ShrineConfig")
+local LaborActionConfig = require("../src/ReplicatedStorage/Shared/Config/LaborActionConfig")
 
 local legacyPlayer = makeAlivePlayer(7201, Vector3.new(-8, 0, 10))
 legacyPlayer:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
@@ -363,14 +366,37 @@ assertEqual(
 	"shrine activation assigns shrine id"
 )
 assertEqual(#interactionAssignCalls, 1, "shrine activation called interaction assignment API")
-assertEqual(shrineStateById["Shrine_D"].isActive, true, "shrine activation starts after assignment")
+assertEqual(shrineStateById["Shrine_D"].isActive, false, "assignment alone does not start passive production")
 
-runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
-assertTrue(shrineStateById["Shrine_D"].essenceTotal > 0, "assigned worshipper shrine generates Essence")
-assertEqual(shrineStateById["Shrine_D"].isActive, true, "assigned worshipper shrine remains active after valid tick")
+activateRemote:FireServer(interactionAssignPlayer, {
+	shrineId = "Shrine_D",
+	mode = "begin",
+	now = 190,
+})
+activateRemote:FireServer(interactionAssignPlayer, {
+	shrineId = "Shrine_D",
+	mode = "complete",
+	now = 192,
+})
+assertTrue(shrineStateById["Shrine_D"].essenceTotal > 0, "completed sermon work action generates essence")
+assertEqual(shrineStateById["Shrine_D"].isActive, false, "work action production does not leave shrine active")
+assertEqual(
+	interactionAssignPlayer:GetAttribute(LaborActionConfig.LaborActionAttribute),
+	LaborActionConfig.Actions.Sermon,
+	"sermon labor action exposed on player debug attributes"
+)
 
 activateRemote:FireServer(targetReassignPlayer, "Shrine_A")
-runServiceHeartbeat:Fire(ShrineConfig.GenerationIntervalSeconds)
+activateRemote:FireServer(targetReassignPlayer, {
+	shrineId = "Shrine_A",
+	mode = "begin",
+	now = 180,
+})
+activateRemote:FireServer(targetReassignPlayer, {
+	shrineId = "Shrine_A",
+	mode = "complete",
+	now = 182,
+})
 local shrineATickCountBeforeReassign = shrineStateById["Shrine_A"].tickCount
 assertTrue(shrineATickCountBeforeReassign > 0, "Shrine_A generates before target reassignment")
 
@@ -388,8 +414,14 @@ assertEqual(
 )
 
 activateRemote:FireServer(legacyPlayer, "Shrine_B")
-assertEqual(shrineStateById["Shrine_B"].isActive, true, "legacy string payload still activates shrine")
+assertEqual(
+	shrineStateById["Shrine_B"].isActive,
+	false,
+	"legacy string payload assigns only without passive activation"
+)
 
+globalEnv._ShrineService_TaskState["Shrine_A"] =
+	require("../src/ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic").New()
 activateRemote:FireServer(taskPlayer, {
 	shrineId = "Shrine_A",
 	mode = "begin",
@@ -434,7 +466,8 @@ activateRemote:FireServer(taskPlayer, {
 	mode = "complete",
 	now = 204,
 })
-assertEqual(shrineStateById["Shrine_A"].isActive, true, "task complete activates shrine")
+assertEqual(shrineStateById["Shrine_A"].isActive, false, "task complete generates without passive activation")
+assertTrue(shrineStateById["Shrine_A"].essenceTotal > 0, "task complete generates bounded essence output")
 assertEqual(taskPlayer:GetAttribute("ShrineTaskLastReason"), "completed", "task complete sets completed reason")
 assertEqual(taskPlayer:GetAttribute("ShrineTaskObjectiveState"), "completed", "task complete sets completed state")
 
