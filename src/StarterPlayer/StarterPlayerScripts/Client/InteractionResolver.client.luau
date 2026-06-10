@@ -54,6 +54,13 @@ local activeShrineTaskShrineId: string? = nil
 local activeShrineTaskToken = 0
 local activeRemoteControlStationId: string? = nil
 local activeRemoteControlTaskToken = 0
+local activeHaulHoldToken = 0
+local activeHaulHold: {
+	action: CandidateAction,
+	targetId: string,
+	mode: string,
+	token: number,
+}? = nil
 
 type CandidateAction =
 	"escape_attempt"
@@ -756,6 +763,127 @@ local function beginRemoteControlSabotageTask(candidate: Candidate)
 	end)
 end
 
+local function isHaulHoldCandidate(candidate: Candidate): boolean
+	if candidate.action == "warehouse_deliver" or candidate.action == "granary_deliver" then
+		return true
+	end
+
+	if candidate.action == "station_pickup_or_assign" and candidate.mode == "pickup" then
+		return true
+	end
+
+	return false
+end
+
+local function setHaulHoldDebugAttributes(candidate: Candidate?, active: boolean)
+	localPlayer:SetAttribute(StationConfig.HaulInteractionActiveAttribute, active)
+	if not active or candidate == nil then
+		localPlayer:SetAttribute(StationConfig.HaulInteractionActionAttribute, nil)
+		localPlayer:SetAttribute(StationConfig.HaulInteractionTargetIdAttribute, nil)
+		localPlayer:SetAttribute(StationConfig.HaulInteractionModeAttribute, nil)
+		return
+	end
+
+	localPlayer:SetAttribute(StationConfig.HaulInteractionActionAttribute, candidate.action)
+	localPlayer:SetAttribute(StationConfig.HaulInteractionTargetIdAttribute, candidate.targetId)
+	localPlayer:SetAttribute(StationConfig.HaulInteractionModeAttribute, candidate.mode)
+end
+
+local function haulHoldMatchesCandidate(holdState: any, candidate: Candidate): boolean
+	if holdState.action ~= candidate.action then
+		return false
+	end
+	if holdState.targetId ~= candidate.targetId then
+		return false
+	end
+	if holdState.mode ~= candidate.mode then
+		return false
+	end
+
+	return true
+end
+
+local function cancelActiveHaulHold(reason: string)
+	if activeHaulHold == nil then
+		return
+	end
+
+	local holdState = activeHaulHold
+	activeHaulHold = nil
+	activeHaulHoldToken += 1
+	setHaulHoldDebugAttributes(nil, false)
+	debugLog(
+		string.format(
+			"Cancelled haul hold action=%s target=%s mode=%s reason=%s",
+			holdState.action,
+			holdState.targetId,
+			holdState.mode,
+			reason
+		)
+	)
+end
+
+local function beginHaulHold(candidate: Candidate)
+	cancelActiveConstructionTask("haul_hold_begin")
+	cancelActiveStationTask("haul_hold_begin")
+	cancelActiveShrineTask("haul_hold_begin")
+	cancelActiveRemoteControlTask("haul_hold_begin")
+	cancelActiveHaulHold("new_begin")
+
+	activeHaulHoldToken += 1
+	local tokenAtBegin = activeHaulHoldToken
+	activeHaulHold = {
+		action = candidate.action,
+		targetId = candidate.targetId,
+		mode = candidate.mode,
+		token = tokenAtBegin,
+	}
+	setHaulHoldDebugAttributes(candidate, true)
+
+	fireCandidate(candidate)
+	debugLog(
+		string.format(
+			"Started haul hold action=%s target=%s mode=%s interval=%.2f",
+			candidate.action,
+			candidate.targetId,
+			candidate.mode,
+			StationConfig.HaulIntervalSeconds
+		)
+	)
+
+	task.spawn(function()
+		while activeHaulHold ~= nil and activeHaulHold.token == tokenAtBegin do
+			task.wait(StationConfig.HaulIntervalSeconds)
+			if activeHaulHold == nil or activeHaulHold.token ~= tokenAtBegin then
+				break
+			end
+
+			local root = getHumanoidRootPart(localPlayer.Character)
+			if not root then
+				cancelActiveHaulHold("humanoid_root_missing")
+				break
+			end
+
+			local candidates = collectCandidates(root)
+			local winner = pickWinningCandidate(candidates)
+			if not winner or not haulHoldMatchesCandidate(activeHaulHold, winner) then
+				cancelActiveHaulHold("target_lost")
+				break
+			end
+
+			fireCandidate(winner)
+			debugLog(
+				string.format(
+					"Haul hold repeat action=%s target=%s mode=%s",
+					winner.action,
+					winner.targetId,
+					winner.mode
+				)
+			)
+		end
+	end)
+end
+
 local function requestContextInteraction()
 	local root = getHumanoidRootPart(localPlayer.Character)
 	if not root then
@@ -806,6 +934,11 @@ local function requestContextInteraction()
 		return
 	end
 
+	if isHaulHoldCandidate(resolvedWinner) then
+		beginHaulHold(resolvedWinner)
+		return
+	end
+
 	fireCandidate(resolvedWinner)
 end
 
@@ -832,6 +965,7 @@ UserInputService.InputEnded:Connect(function(input: any, _gameProcessedEvent: bo
 	cancelActiveStationTask("input_ended")
 	cancelActiveShrineTask("input_ended")
 	cancelActiveRemoteControlTask("input_ended")
+	cancelActiveHaulHold("input_ended")
 end)
 
 debugLog("Input hook active (F=Context Interaction Resolver)")

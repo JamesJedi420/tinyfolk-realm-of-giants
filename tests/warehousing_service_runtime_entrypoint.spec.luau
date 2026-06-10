@@ -165,6 +165,13 @@ local function makeAlivePlayer(userId: number, position: any)
 	return {
 		UserId = userId,
 		Character = character,
+		_Attributes = {},
+		SetAttribute = function(self: any, attributeName: string, value: any)
+			self._Attributes[attributeName] = value
+		end,
+		GetAttribute = function(self: any, attributeName: string): any
+			return self._Attributes[attributeName]
+		end,
 	}
 end
 
@@ -257,6 +264,11 @@ local afterDeliver = ResourceFlowState.GetMaterialSnapshot("Wood")
 assertTrue(afterDeliver.inTransit < beforeDeliver.inTransit, "warehouse delivery reduces Wood in transit")
 assertTrue(afterDeliver.stored > beforeDeliver.stored, "warehouse delivery increases stored Wood")
 assertEqual(
+	beforeDeliver.inTransit - afterDeliver.inTransit,
+	StationConfig.HaulTransferPerStepByMaterial.Wood,
+	"warehouse delivery moves configured haul step amount"
+)
+assertEqual(
 	stationsFolder._Children["Warehouse_A"]:GetAttribute("WoodStoredTotal"),
 	afterDeliver.stored,
 	"warehouse attributes update stored Wood"
@@ -281,6 +293,11 @@ granaryDeliverRemote:FireServer(granaryPlayer, "Granary_A")
 local afterFoodDeliver = ResourceFlowState.GetMaterialSnapshot("Food")
 assertTrue(afterFoodDeliver.inTransit < beforeFoodDeliver.inTransit, "granary delivery reduces Food in transit")
 assertTrue(afterFoodDeliver.stored > beforeFoodDeliver.stored, "granary delivery increases stored Food")
+assertEqual(
+	beforeFoodDeliver.inTransit - afterFoodDeliver.inTransit,
+	StationConfig.HaulTransferPerStepByMaterial.Food,
+	"granary delivery moves configured haul step amount"
+)
 assertEqual(afterFoodDeliver.lastDeliveredTo, StationConfig.DefaultGranaryId, "food delivery routes to granary")
 assertEqual(
 	stationsFolder._Children["Granary_A"]:GetAttribute("FoodStoredTotal"),

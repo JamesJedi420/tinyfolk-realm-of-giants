@@ -55,6 +55,7 @@ type StationState = {
 
 local stationStateById: { [string]: StationState } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
+local lastHaulRequestAtByUserId: { [number]: number? } = {}
 local taskStateByStationId: { [string]: any } = {}
 
 local function debugLog(message: string)
@@ -123,6 +124,42 @@ end
 
 local function markRequest(userId: number, at: number?)
 	lastRequestAtByUserId[userId] = if type(at) == "number" then at else os.clock()
+end
+
+local function isHaulCoolingDown(userId: number, at: number?): boolean
+	local last = lastHaulRequestAtByUserId[userId]
+	if not last then
+		return false
+	end
+	local lastAt = last :: number
+
+	if type(at) == "number" then
+		return (at - lastAt) < StationConfig.HaulIntervalSeconds
+	end
+
+	return (os.clock() - lastAt) < StationConfig.HaulIntervalSeconds
+end
+
+local function markHaulRequest(userId: number, at: number?)
+	lastHaulRequestAtByUserId[userId] = if type(at) == "number" then at else os.clock()
+end
+
+local function willAttemptHaulOnly(stationState: StationState, requestMode: string): boolean
+	if requestMode ~= "legacy" then
+		return false
+	end
+
+	local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(stationState.materialType)
+	return materialSnapshot.produced > 0
+end
+
+local function applyHaulDebugAttributes(player: Player, stationState: StationState, movedAmount: number)
+	player:SetAttribute(StationConfig.HaulInteractionActiveAttribute, true)
+	player:SetAttribute(StationConfig.HaulInteractionActionAttribute, "station_pickup")
+	player:SetAttribute(StationConfig.HaulInteractionTargetIdAttribute, stationState.stationId)
+	player:SetAttribute(StationConfig.HaulInteractionModeAttribute, "pickup")
+	player:SetAttribute("HaulLastMovedAmount", movedAmount)
+	player:SetAttribute("HaulLastMaterial", stationState.materialType)
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -487,21 +524,30 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local bypassCooldown = requestMode == "cancel"
-	if not bypassCooldown and isCoolingDown(player.UserId, requestNow) then
-		rejectActivate(player, "request_cooldown")
-		return
-	end
-
-	if not bypassCooldown then
-		markRequest(player.UserId, requestNow)
-	end
-
 	local stationIdValue = stationId :: string
 	local stationState = stationStateById[stationIdValue]
 	if not stationState then
 		rejectActivate(player, "station_not_found")
 		return
+	end
+
+	local bypassCooldown = requestMode == "cancel"
+	local attemptHaulOnly = willAttemptHaulOnly(stationState, requestMode)
+
+	if not bypassCooldown then
+		if attemptHaulOnly then
+			if isHaulCoolingDown(player.UserId, requestNow) then
+				rejectActivate(player, "haul_cooldown")
+				return
+			end
+			markHaulRequest(player.UserId, requestNow)
+		else
+			if isCoolingDown(player.UserId, requestNow) then
+				rejectActivate(player, "request_cooldown")
+				return
+			end
+			markRequest(player.UserId, requestNow)
+		end
 	end
 
 	if
@@ -600,15 +646,17 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 
 			local afterSnapshot = ResourceFlowState.TransferProducedToInTransit(materialName, maxHaulAmount)
 			if afterSnapshot.inTransit > beforeSnapshot.inTransit then
+				local movedAmount = afterSnapshot.inTransit - beforeSnapshot.inTransit
 				stationState.resourceTotal = afterSnapshot.produced
 				applyDebugAttributes(stationState)
+				applyHaulDebugAttributes(player, stationState, movedAmount)
 				debugLog(
 					string.format(
 						"Accepted StationHaul userId=%d stationId=%s material=%s moved=%.0f produced=%.0f inTransit=%.0f",
 						player.UserId,
 						stationState.stationId,
 						materialName,
-						afterSnapshot.inTransit - beforeSnapshot.inTransit,
+						movedAmount,
 						afterSnapshot.produced,
 						afterSnapshot.inTransit
 					)
@@ -725,6 +773,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
+	lastHaulRequestAtByUserId[player.UserId] = nil
 
 	for _, stationState in stationStateById do
 		if stationState.activatedByUserId == player.UserId and stationState.isActive then
@@ -899,3 +948,5 @@ debugLog("StationService initialized")
 _G._StationService_StationState = stationStateById
 -- selene: allow(global_usage)
 _G._StationService_TaskState = taskStateByStationId
+-- selene: allow(global_usage)
+_G._StationService_LastHaulRequestAt = lastHaulRequestAtByUserId

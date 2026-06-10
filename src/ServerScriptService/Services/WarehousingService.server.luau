@@ -28,7 +28,7 @@ type GranaryState = {
 
 local warehouseStateById: { [string]: WarehouseState } = {}
 local granaryStateById: { [string]: GranaryState } = {}
-local lastRequestAtByUserId: { [number]: number } = {}
+local lastHaulRequestAtByUserId: { [number]: number } = {}
 
 local function debugLog(message: string)
 	print(string.format("[WarehousingService] %s", message))
@@ -64,17 +64,41 @@ local function ensureRemoteEvent(parentFolder: Folder, remoteName: string): Remo
 	return remote
 end
 
-local function isCoolingDown(userId: number): boolean
-	local last = lastRequestAtByUserId[userId]
+local function isHaulCoolingDown(userId: number): boolean
+	local last = lastHaulRequestAtByUserId[userId]
 	if not last then
 		return false
 	end
 
-	return (os.clock() - last) < StationConfig.RequestCooldownSeconds
+	return (os.clock() - last) < StationConfig.HaulIntervalSeconds
 end
 
-local function markRequest(userId: number)
-	lastRequestAtByUserId[userId] = os.clock()
+local function markHaulRequest(userId: number)
+	lastHaulRequestAtByUserId[userId] = os.clock()
+end
+
+local function getDeliveryTransferAmount(material: "Wood" | "Stone" | "Food", inTransitAmount: number): number
+	local configured = StationConfig.HaulTransferPerStepByMaterial[material]
+	if type(configured) ~= "number" or configured <= 0 then
+		return math.min(2, inTransitAmount)
+	end
+
+	return math.min(configured, inTransitAmount)
+end
+
+local function applyHaulDebugAttributes(
+	player: Player,
+	action: string,
+	targetId: string,
+	material: string,
+	movedAmount: number
+)
+	player:SetAttribute(StationConfig.HaulInteractionActiveAttribute, true)
+	player:SetAttribute(StationConfig.HaulInteractionActionAttribute, action)
+	player:SetAttribute(StationConfig.HaulInteractionTargetIdAttribute, targetId)
+	player:SetAttribute(StationConfig.HaulInteractionModeAttribute, "deliver")
+	player:SetAttribute("HaulLastMovedAmount", movedAmount)
+	player:SetAttribute("HaulLastMaterial", material)
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -236,12 +260,12 @@ local debugResponseRemote = ensureRemoteEvent(remotesFolder, DEBUG_RESPONSE_REMO
 registerWarehousesFromWorkspace()
 
 deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	if isCoolingDown(player.UserId) then
-		rejectDeliver(player, "request_cooldown")
+	if isHaulCoolingDown(player.UserId) then
+		rejectDeliver(player, "haul_cooldown")
 		return
 	end
 
-	markRequest(player.UserId)
+	markHaulRequest(player.UserId)
 
 	if type(payload) ~= "string" then
 		rejectDeliver(player, "malformed_payload")
@@ -282,20 +306,22 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		return
 	end
 
-	local deliverAmount = math.min(2, inTransitTotal)
 	local deliveredMaterial = "None"
 	local movedAmount = 0
 	if flowSnapshot.Wood.inTransit > 0 then
-		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Wood", deliverAmount)
+		local woodDeliverAmount = getDeliveryTransferAmount("Wood", flowSnapshot.Wood.inTransit)
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Wood", woodDeliverAmount)
 		deliveredMaterial = "Wood"
 		movedAmount = flowSnapshot.Wood.inTransit - afterSnapshot.inTransit
 	elseif flowSnapshot.Stone.inTransit > 0 then
-		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Stone", deliverAmount)
+		local stoneDeliverAmount = getDeliveryTransferAmount("Stone", flowSnapshot.Stone.inTransit)
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Stone", stoneDeliverAmount)
 		deliveredMaterial = "Stone"
 		movedAmount = flowSnapshot.Stone.inTransit - afterSnapshot.inTransit
 	end
 
 	applyDebugAttributes(warehouseState)
+	applyHaulDebugAttributes(player, "warehouse_deliver", warehouseId, deliveredMaterial, movedAmount)
 
 	debugLog(
 		string.format(
@@ -309,12 +335,12 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 end)
 
 granaryDeliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
-	if isCoolingDown(player.UserId) then
-		rejectGranaryDeliver(player, "request_cooldown")
+	if isHaulCoolingDown(player.UserId) then
+		rejectGranaryDeliver(player, "haul_cooldown")
 		return
 	end
 
-	markRequest(player.UserId)
+	markHaulRequest(player.UserId)
 
 	if type(payload) ~= "string" then
 		rejectGranaryDeliver(player, "malformed_payload")
@@ -354,12 +380,13 @@ granaryDeliverRemote.OnServerEvent:Connect(function(player: Player, payload: unk
 		return
 	end
 
-	local deliverAmount = math.min(2, flowSnapshot.Food.inTransit)
+	local deliverAmount = getDeliveryTransferAmount("Food", flowSnapshot.Food.inTransit)
 	local beforeInTransit = flowSnapshot.Food.inTransit
 	local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Food", deliverAmount)
 	local movedAmount = beforeInTransit - afterSnapshot.inTransit
 
 	applyGranaryDebugAttributes(granaryState)
+	applyHaulDebugAttributes(player, "granary_deliver", granaryId, "Food", movedAmount)
 
 	debugLog(
 		string.format(
@@ -430,7 +457,7 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
-	lastRequestAtByUserId[player.UserId] = nil
+	lastHaulRequestAtByUserId[player.UserId] = nil
 end)
 
 debugLog("WarehousingService initialized")
