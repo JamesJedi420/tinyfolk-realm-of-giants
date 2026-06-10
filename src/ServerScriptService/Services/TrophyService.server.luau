@@ -27,6 +27,25 @@ local function getGiantBuildModeQueryApi(): any?
 	return nil
 end
 
+local function getGiantReputationQueryApi(): any?
+	local queryApi = globalEnv._GiantReputationService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._GiantReputationService_QueryAPI) == "table" then
+		return (_G :: any)._GiantReputationService_QueryAPI
+	end
+	return nil
+end
+
+local function recordReputationScore(input: any, trophyKind: string)
+	local reputationApi = getGiantReputationQueryApi()
+	if type(reputationApi) ~= "table" or type(reputationApi.RecordTrophyScore) ~= "function" then
+		return
+	end
+	pcall(reputationApi.RecordTrophyScore, trophyKind, input.operationId, input.awardedAt)
+end
+
 local function getRealmOwnerUserId(): number?
 	local buildModeApi = getGiantBuildModeQueryApi()
 	if type(buildModeApi) == "table" and type(buildModeApi.GetActiveGiantRealmOwnerUserId) == "function" then
@@ -79,6 +98,7 @@ local function recordEvent(input: any): any
 	if result.accepted == true and type(result.state) == "table" then
 		trophyState = result.state
 		projectRealmOwnerAttributes()
+		recordReputationScore(input, tostring(input.trophyKind))
 		debugLog(
 			string.format(
 				"Recorded trophy kind=%s operationId=%s total=%d",

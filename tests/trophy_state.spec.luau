@@ -48,9 +48,25 @@ assertEqual(
 assertEqual(TrophyState.ResolveKindFromContainmentEnd("released"), TrophyConfig.Kinds.ContainmentHeld, "released kind")
 assertEqual(TrophyState.ResolveKindFromContainmentEnd("rescued"), nil, "rescued not trophy eligible")
 
-local serialized = TrophyState.SerializePersistenceState(capture.state)
+local escapeFailure = TrophyState.ApplyEvent(capture.state, {
+	operationId = "containment-escaped-101-202-5000",
+	trophyKind = TrophyConfig.Kinds.ContainmentEscapeFailure,
+	awardedAt = 20,
+	custodianUserId = 101,
+	targetUserId = 202,
+	endReason = "escaped",
+	heldSeconds = 6,
+})
+assertTrue(escapeFailure.accepted, "escape failure trophy accepted")
+assertEqual(escapeFailure.record.trophyKind, TrophyConfig.Kinds.ContainmentEscapeFailure, "escape failure kind")
+assertTrue(
+	string.find(escapeFailure.record.summary, "Escape Denied") ~= nil,
+	"escape failure summary includes display title"
+)
+
+local serialized = TrophyState.SerializePersistenceState(escapeFailure.state)
 local restored = TrophyState.ApplyPersistenceState(serialized)
 assertTrue(restored.accepted, "persistence round trip accepted")
-assertEqual(#restored.state.trophies, 1, "persistence round trip count")
+assertEqual(#restored.state.trophies, 2, "persistence round trip count")
 
 print("trophy_state.spec.luau: all checks passed")
