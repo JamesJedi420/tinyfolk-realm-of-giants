@@ -206,6 +206,80 @@ local function consumeItemsForPlayer(player: Player, consumptions: any): any
 	}
 end
 
+local function grantItemsForPlayer(player: Player, additions: any, reason: string?): any
+	if not isTinyfolk(player) then
+		return {
+			accepted = false,
+			reason = "tinyfolk_role_required",
+			snapshot = snapshotForPlayer(player),
+		}
+	end
+
+	if type(additions) ~= "table" or next(additions) == nil then
+		return {
+			accepted = false,
+			reason = "additions_invalid",
+			snapshot = snapshotForPlayer(player),
+		}
+	end
+
+	local currentState = getOrCreateSession(player.UserId)
+	local transition = InventoryCraftState.AddItems(currentState, additions, CANONICAL_ITEM_CATALOG)
+	if not transition.accepted then
+		local rejectedState = transition.state
+		rejectedState.lastReason = transition.reason
+		setSession(player.UserId, rejectedState)
+		local snapshot = InventoryCraftState.GetSnapshot(rejectedState, CANONICAL_ITEM_CATALOG)
+		applyDebugAttributes(player, snapshot)
+		return {
+			accepted = false,
+			reason = transition.reason,
+			snapshot = {
+				userId = player.UserId,
+				role = player:GetAttribute("Role"),
+				itemCounts = snapshot.itemCounts,
+				items = snapshot.items,
+				craftedTotal = snapshot.craftedTotal,
+				craftableRecipeIds = snapshot.craftableRecipeIds,
+				lastCraftRecipeId = snapshot.lastCraftRecipeId,
+				lastCraftAt = snapshot.lastCraftAt,
+				lastReason = snapshot.lastReason,
+			},
+		}
+	end
+
+	local nextState = transition.state
+	if type(reason) == "string" and reason ~= "" then
+		nextState.lastReason = reason
+	end
+	setSession(player.UserId, nextState)
+	local snapshot = InventoryCraftState.GetSnapshot(nextState, CANONICAL_ITEM_CATALOG)
+	applyDebugAttributes(player, snapshot)
+	debugLog(
+		string.format(
+			"Grant accepted userId=%d itemCount=%d reason=%s",
+			player.UserId,
+			#snapshot.items,
+			tostring(reason)
+		)
+	)
+	return {
+		accepted = true,
+		reason = "accepted",
+		snapshot = {
+			userId = player.UserId,
+			role = player:GetAttribute("Role"),
+			itemCounts = snapshot.itemCounts,
+			items = snapshot.items,
+			craftedTotal = snapshot.craftedTotal,
+			craftableRecipeIds = snapshot.craftableRecipeIds,
+			lastCraftRecipeId = snapshot.lastCraftRecipeId,
+			lastCraftAt = snapshot.lastCraftAt,
+			lastReason = snapshot.lastReason,
+		},
+	}
+end
+
 local function craftForPlayer(player: Player, recipeId: any, catalogOverride: any?, recipeCatalogOverride: any?): any
 	if not isTinyfolk(player) then
 		return {
@@ -374,6 +448,9 @@ _G._InventoryCraftService_QueryAPI = {
 	end,
 	ListCraftableRecipes = function(player: Player): any
 		return listCraftableRecipesForPlayer(player)
+	end,
+	GrantItems = function(player: Player, additions: any, reason: string?): any
+		return grantItemsForPlayer(player, additions, reason)
 	end,
 }
 

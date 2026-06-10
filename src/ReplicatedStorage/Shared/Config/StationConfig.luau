@@ -4,6 +4,7 @@ local StationConfig: any = {}
 
 StationConfig.StationNamePrefix = "WorkStation_"
 StationConfig.MiningStationNamePrefix = "MiningStation_"
+StationConfig.ForgeNamePrefix = "Forge_"
 StationConfig.WarehouseNamePrefix = "Warehouse_"
 StationConfig.GranaryNamePrefix = "Granary_"
 StationConfig.FarmNamePrefix = "Farm_"
@@ -12,6 +13,7 @@ StationConfig.GuardTowerNamePrefix = "GuardTower_"
 StationConfig.GiantDwellingNamePrefix = "GiantDwelling_"
 StationConfig.DefaultStationId = "WorkStation_A"
 StationConfig.DefaultMiningStationId = "MiningStation_A"
+StationConfig.DefaultForgeId = "Forge_A"
 StationConfig.DefaultWarehouseId = "Warehouse_A"
 StationConfig.DefaultGranaryId = "Granary_A"
 StationConfig.DefaultFarmId = "Farm_A"
@@ -55,11 +57,16 @@ StationConfig.MaxStoneTotal = 200
 StationConfig.FoodPerTick = 2
 StationConfig.MaxFoodTotal = 200
 
+StationConfig.MetalPerTick = 1
+StationConfig.MaxMetalTotal = 200
+StationConfig.StoneStoredCostPerRefineTick = 2
+
 StationConfig.HaulIntervalSeconds = 0.25
 StationConfig.HaulTransferPerStepByMaterial = {
 	Wood = 2,
 	Stone = 2,
 	Food = 2,
+	Metal = 2,
 }
 StationConfig.HaulInteractionActiveAttribute = "HaulInteractionActive"
 StationConfig.HaulInteractionActionAttribute = "HaulInteractionAction"
@@ -69,6 +76,7 @@ StationConfig.MaxInTransitByMaterial = {
 	Wood = 200,
 	Stone = 200,
 	Food = 200,
+	Metal = 200,
 }
 
 -- Wood and Stone route to Warehouse; Food routes to Granary.
@@ -76,12 +84,18 @@ StationConfig.DeliveryPointIdByMaterial = {
 	Wood = StationConfig.DefaultWarehouseId,
 	Stone = StationConfig.DefaultWarehouseId,
 	Food = StationConfig.DefaultGranaryId,
+	Metal = StationConfig.DefaultWarehouseId,
 }
 
 StationConfig.RequiredSpecialistRoleByStationId = {
 	WorkStation_A = "Woodcutter",
 	MiningStation_A = "Miner",
 	Farm_A = "Farmer",
+	Forge_A = "Miner",
+}
+
+StationConfig.LaborActionByStationId = {
+	Forge_A = "refine",
 }
 
 StationConfig.DebugLogEveryTicks = 1

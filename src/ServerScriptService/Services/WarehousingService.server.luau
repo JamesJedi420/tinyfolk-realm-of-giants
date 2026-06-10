@@ -5,8 +5,13 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
+local GiantRealm = Shared:WaitForChild("GiantRealm")
 local StationConfig = require(Config:WaitForChild("StationConfig"))
+local AdvancedMaterialFlowConfig = require(Config:WaitForChild("AdvancedMaterialFlowConfig"))
+local AdvancedMaterialFlowState = require(GiantRealm:WaitForChild("AdvancedMaterialFlowState"))
 local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"))
+
+local globalEnv: any = getfenv()
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local DELIVER_REMOTE_NAME = "WarehouseDeliverRequest"
@@ -77,13 +82,63 @@ local function markHaulRequest(userId: number)
 	lastHaulRequestAtByUserId[userId] = os.clock()
 end
 
-local function getDeliveryTransferAmount(material: "Wood" | "Stone" | "Food", inTransitAmount: number): number
+local function getDeliveryTransferAmount(material: "Wood" | "Stone" | "Food" | "Metal", inTransitAmount: number): number
 	local configured = StationConfig.HaulTransferPerStepByMaterial[material]
 	if type(configured) ~= "number" or configured <= 0 then
 		return math.min(2, inTransitAmount)
 	end
 
 	return math.min(configured, inTransitAmount)
+end
+
+local function applyInventoryGrantsForDelivery(player: Player, material: string, movedAmount: number)
+	if movedAmount <= 0 then
+		return
+	end
+
+	local grants, grantReason =
+		AdvancedMaterialFlowState.ResolveInventoryGrants(material :: any, movedAmount, AdvancedMaterialFlowConfig)
+	if grantReason ~= nil or next(grants) == nil then
+		return
+	end
+
+	local craftApi = globalEnv._InventoryCraftService_QueryAPI
+	if type(_G) == "table" and type((_G :: any)._InventoryCraftService_QueryAPI) == "table" then
+		craftApi = (_G :: any)._InventoryCraftService_QueryAPI
+	end
+	if type(craftApi) ~= "table" or type(craftApi.GrantItems) ~= "function" then
+		debugWarn(
+			string.format(
+				"Skipped inventory grant material=%s moved=%.0f reason=inventory_craft_api_missing",
+				material,
+				movedAmount
+			)
+		)
+		return
+	end
+
+	local result = craftApi.GrantItems(player, grants, "warehouse_deliver:" .. material)
+	if type(result) == "table" and result.accepted ~= true then
+		debugWarn(
+			string.format(
+				"Inventory grant rejected userId=%d material=%s moved=%.0f reason=%s",
+				player.UserId,
+				material,
+				movedAmount,
+				tostring(result.reason)
+			)
+		)
+		return
+	end
+
+	debugLog(
+		string.format(
+			"Granted inventory materials userId=%d material=%s moved=%.0f",
+			player.UserId,
+			material,
+			movedAmount
+		)
+	)
 end
 
 local function applyHaulDebugAttributes(
@@ -141,6 +196,9 @@ local function applyDebugAttributes(state: WarehouseState)
 	state.part:SetAttribute("FoodInTransitTotal", flowSnapshot.Food.inTransit)
 	state.part:SetAttribute("FoodStoredTotal", flowSnapshot.Food.stored)
 	state.part:SetAttribute("FoodUsableTotal", flowSnapshot.Food.usable)
+	state.part:SetAttribute("MetalInTransitTotal", flowSnapshot.Metal.inTransit)
+	state.part:SetAttribute("MetalStoredTotal", flowSnapshot.Metal.stored)
+	state.part:SetAttribute("MetalUsableTotal", flowSnapshot.Metal.usable)
 end
 
 local function applyGranaryDebugAttributes(state: GranaryState)
@@ -154,6 +212,9 @@ local function applyGranaryDebugAttributes(state: GranaryState)
 	state.part:SetAttribute("FoodInTransitTotal", flowSnapshot.Food.inTransit)
 	state.part:SetAttribute("FoodStoredTotal", flowSnapshot.Food.stored)
 	state.part:SetAttribute("FoodUsableTotal", flowSnapshot.Food.usable)
+	state.part:SetAttribute("MetalInTransitTotal", flowSnapshot.Metal.inTransit)
+	state.part:SetAttribute("MetalStoredTotal", flowSnapshot.Metal.stored)
+	state.part:SetAttribute("MetalUsableTotal", flowSnapshot.Metal.usable)
 end
 
 local function findWarehousesRoot(): Instance?
@@ -300,7 +361,7 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	end
 
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
-	local inTransitTotal = flowSnapshot.Wood.inTransit + flowSnapshot.Stone.inTransit
+	local inTransitTotal = flowSnapshot.Wood.inTransit + flowSnapshot.Stone.inTransit + flowSnapshot.Metal.inTransit
 	if inTransitTotal <= 0 then
 		rejectDeliver(player, "nothing_in_transit")
 		return
@@ -318,7 +379,14 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Stone", stoneDeliverAmount)
 		deliveredMaterial = "Stone"
 		movedAmount = flowSnapshot.Stone.inTransit - afterSnapshot.inTransit
+	elseif flowSnapshot.Metal.inTransit > 0 then
+		local metalDeliverAmount = getDeliveryTransferAmount("Metal", flowSnapshot.Metal.inTransit)
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored("Metal", metalDeliverAmount)
+		deliveredMaterial = "Metal"
+		movedAmount = flowSnapshot.Metal.inTransit - afterSnapshot.inTransit
 	end
+
+	applyInventoryGrantsForDelivery(player, deliveredMaterial, movedAmount)
 
 	applyDebugAttributes(warehouseState)
 	applyHaulDebugAttributes(player, "warehouse_deliver", warehouseId, deliveredMaterial, movedAmount)
@@ -424,6 +492,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 			foodInTransit = flowSnapshot.Food.inTransit,
 			foodStored = flowSnapshot.Food.stored,
 			foodUsable = flowSnapshot.Food.usable,
+			metalInTransit = flowSnapshot.Metal.inTransit,
+			metalStored = flowSnapshot.Metal.stored,
+			metalUsable = flowSnapshot.Metal.usable,
 		})
 		debugLog(
 			string.format(
@@ -449,6 +520,9 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 			foodInTransit = flowSnapshot.Food.inTransit,
 			foodStored = flowSnapshot.Food.stored,
 			foodUsable = flowSnapshot.Food.usable,
+			metalInTransit = flowSnapshot.Metal.inTransit,
+			metalStored = flowSnapshot.Metal.stored,
+			metalUsable = flowSnapshot.Metal.usable,
 		})
 	end
 

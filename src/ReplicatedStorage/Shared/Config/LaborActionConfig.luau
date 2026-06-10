@@ -7,6 +7,7 @@ LaborActionConfig.Actions = {
 	Mine = "mine",
 	Farm = "farm",
 	Sermon = "sermon",
+	Refine = "refine",
 }
 
 LaborActionConfig.ActionBySpecialistRole = {
@@ -21,6 +22,7 @@ LaborActionConfig.SpecialistRoleByAction = {
 	[LaborActionConfig.Actions.Mine] = "Miner",
 	[LaborActionConfig.Actions.Farm] = "Farmer",
 	[LaborActionConfig.Actions.Sermon] = "Worshipper",
+	[LaborActionConfig.Actions.Refine] = "Miner",
 }
 
 LaborActionConfig.LaborActionAttribute = "LaborAction"
