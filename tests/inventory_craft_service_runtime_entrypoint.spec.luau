@@ -314,6 +314,7 @@ do
 end
 
 do
+	InventoryCraftService.TestHarness.ResetSessionForTests(tinyfolk.UserId, InventoryCraftConfig.TEST_STARTING_ITEMS)
 	local listed = api.ListCraftableRecipes(tinyfolk)
 	assertTrue(listed.accepted, "list craftable recipes accepted")
 	assertTrue(type(listed.recipes) == "table", "list craftable recipes table")

@@ -187,9 +187,16 @@ addChild(remotesFolder, "WarehousingDebugStateResponse", debugResponseRemote)
 
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
+configFolder._Children["AdvancedMaterialFlowConfig"] =
+	"../../ReplicatedStorage/Shared/Config/AdvancedMaterialFlowConfig"
+
+local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
+giantRealmFolder._Children["AdvancedMaterialFlowState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/AdvancedMaterialFlowState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
 addChild(replicatedStorage, "Shared", sharedFolder)

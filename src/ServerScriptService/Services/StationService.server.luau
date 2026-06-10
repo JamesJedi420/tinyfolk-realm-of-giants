@@ -48,7 +48,7 @@ type StationState = {
 	part: BasePart,
 	isActive: boolean,
 	resourceTotal: number,
-	materialType: "Wood" | "Stone" | "Food",
+	materialType: "Wood" | "Stone" | "Food" | "Metal",
 	tickCount: number,
 	lastTickAt: number,
 	activatedByUserId: number?,
@@ -127,7 +127,7 @@ end
 
 local function resolveStationGenerationLimits(
 	stationId: string,
-	materialType: "Wood" | "Stone" | "Food"
+	materialType: "Wood" | "Stone" | "Food" | "Metal"
 ): (number, number, any)
 	local modifiers = getProductionModifiersForStation(stationId)
 	local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number" then modifiers.perTickMultiplier else 1
@@ -143,6 +143,9 @@ local function resolveStationGenerationLimits(
 	elseif materialType == "Food" then
 		maxTotal = StationConfig.MaxFoodTotal
 		perTick = StationConfig.FoodPerTick
+	elseif materialType == "Metal" then
+		maxTotal = StationConfig.MaxMetalTotal
+		perTick = StationConfig.MetalPerTick
 	end
 	maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
 	perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
@@ -269,18 +272,23 @@ end
 
 local ATTRIBUTE_FOOD_PRODUCED_TOTAL = "FoodProducedTotal"
 local ATTRIBUTE_FOOD_TOTAL = "FoodTotal"
+local ATTRIBUTE_METAL_PRODUCED_TOTAL = "MetalProducedTotal"
+local ATTRIBUTE_METAL_TOTAL = "MetalTotal"
 
 local function applyDebugAttributes(state: StationState)
 	local flowSnapshot = ResourceFlowState.GetSnapshot()
 	local woodTotal = 0
 	local stoneTotal = 0
 	local foodTotal = 0
+	local metalTotal = 0
 	if state.materialType == "Wood" then
 		woodTotal = state.resourceTotal
 	elseif state.materialType == "Stone" then
 		stoneTotal = state.resourceTotal
 	elseif state.materialType == "Food" then
 		foodTotal = state.resourceTotal
+	elseif state.materialType == "Metal" then
+		metalTotal = state.resourceTotal
 	end
 
 	state.part:SetAttribute(ATTRIBUTE_IS_ACTIVE, state.isActive)
@@ -288,7 +296,9 @@ local function applyDebugAttributes(state: StationState)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_TOTAL, woodTotal)
 	state.part:SetAttribute(ATTRIBUTE_STONE_TOTAL, stoneTotal)
 	state.part:SetAttribute(ATTRIBUTE_FOOD_TOTAL, foodTotal)
+	state.part:SetAttribute(ATTRIBUTE_METAL_TOTAL, metalTotal)
 	state.part:SetAttribute(ATTRIBUTE_FOOD_PRODUCED_TOTAL, flowSnapshot.Food.produced)
+	state.part:SetAttribute(ATTRIBUTE_METAL_PRODUCED_TOTAL, flowSnapshot.Metal.produced)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_PRODUCED_TOTAL, flowSnapshot.Wood.produced)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_IN_TRANSIT_TOTAL, flowSnapshot.Wood.inTransit)
 	state.part:SetAttribute(ATTRIBUTE_WOOD_STORED_TOTAL, flowSnapshot.Wood.stored)
@@ -309,15 +319,27 @@ local function applyDebugAttributes(state: StationState)
 	ResourceFlowState.ApplyAttributesToPart(state.part)
 end
 
-local function getMaterialTypeForStation(stationId: string): "Wood" | "Stone" | "Food"
+local function getMaterialTypeForStation(stationId: string): "Wood" | "Stone" | "Food" | "Metal"
 	if string.match(stationId, "^" .. StationConfig.MiningStationNamePrefix) ~= nil then
 		return "Stone"
+	end
+	if string.match(stationId, "^" .. StationConfig.ForgeNamePrefix) ~= nil then
+		return "Metal"
 	end
 	if string.match(stationId, "^" .. StationConfig.FarmNamePrefix) ~= nil then
 		return "Food"
 	end
 
 	return "Wood"
+end
+
+local function resolveLaborActionForStation(stationId: string, specialistRole: string?): string?
+	local stationOverride = StationConfig.LaborActionByStationId[stationId]
+	if type(stationOverride) == "string" and stationOverride ~= "" then
+		return stationOverride
+	end
+
+	return LaborActionState.ResolveActionForSpecialistRole(specialistRole)
 end
 
 local function getRequiredSpecialistRoleForStation(stationId: string): string?
@@ -374,6 +396,10 @@ local function shouldTrackStationPart(part: BasePart): boolean
 	end
 
 	if string.match(part.Name, "^" .. StationConfig.FarmNamePrefix) ~= nil then
+		return true
+	end
+
+	if string.match(part.Name, "^" .. StationConfig.ForgeNamePrefix) ~= nil then
 		return true
 	end
 
@@ -611,13 +637,14 @@ local function performProductionTick(stationState: StationState, activatingPlaye
 
 	local perTick, maxTotal = resolveStationGenerationLimits(stationState.stationId, stationState.materialType)
 
-	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
+	local materialName: "Wood" | "Stone" | "Food" | "Metal" = stationState.materialType
 	local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
 	local remainingCapacity = maxTotal - materialSnapshot.produced
 	local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
 	local maxReachedReason = if materialName == "Stone"
 		then "max_stone_produced_reached"
 		elseif materialName == "Food" then "max_food_produced_reached"
+		elseif materialName == "Metal" then "max_metal_produced_reached"
 		else "max_wood_produced_reached"
 	if generatedAmount <= 0 then
 		applyDebugAttributes(stationState)
@@ -627,9 +654,32 @@ local function performProductionTick(stationState: StationState, activatingPlaye
 		}
 	end
 
+	if materialName == "Metal" then
+		local stoneCost = StationConfig.StoneStoredCostPerRefineTick
+		local stoneSnapshot = ResourceFlowState.GetMaterialSnapshot("Stone")
+		if stoneSnapshot.stored < stoneCost then
+			applyDebugAttributes(stationState)
+			return {
+				generatedAmount = 0,
+				deactivateReason = "insufficient_stored_stone",
+			}
+		end
+
+		local spent, _, spendError =
+			ResourceFlowState.SpendStoredAtomic(0, stoneCost, "forge_refine:" .. stationState.stationId)
+		if spent ~= true then
+			applyDebugAttributes(stationState)
+			return {
+				generatedAmount = 0,
+				deactivateReason = spendError or "forge_refine_spend_failed",
+			}
+		end
+	end
+
 	local sourcePrefix = if materialName == "Stone"
 		then "MiningStation:"
 		elseif materialName == "Food" then "Farm:"
+		elseif materialName == "Metal" then "Forge:"
 		else "WorkStation:"
 	local flowSnapshot =
 		ResourceFlowState.AddProduced(materialName, sourcePrefix .. stationState.stationId, generatedAmount)
@@ -639,6 +689,7 @@ local function performProductionTick(stationState: StationState, activatingPlaye
 	local tickLabel = if stationState.materialType == "Stone"
 		then "Stone"
 		elseif stationState.materialType == "Food" then "Food"
+		elseif stationState.materialType == "Metal" then "Metal"
 		else "Wood"
 	debugLog(
 		string.format(
@@ -692,13 +743,14 @@ local function completeStationWorkAction(
 		return false, workValidation.reason or "labor_action_rejected"
 	end
 
-	if workValidation.laborAction ~= laborAction then
+	local expectedLaborAction = resolveLaborActionForStation(stationState.stationId, specialistRole)
+	if expectedLaborAction == nil then
+		return false, workValidation.reason or "labor_action_unmapped"
+	end
+
+	if expectedLaborAction ~= laborAction then
 		return false,
-			string.format(
-				"labor_action_mismatch expected=%s actual=%s",
-				laborAction,
-				tostring(workValidation.laborAction)
-			)
+			string.format("labor_action_mismatch expected=%s actual=%s", expectedLaborAction, tostring(laborAction))
 	end
 
 	local tickResult = performProductionTick(stationState, player)
@@ -865,7 +917,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationIdValue)
 		local specialistRole = player:GetAttribute("SpecialistRole")
 		local workValidation = LaborActionState.ValidateWorkAction(specialistRole, requiredSpecialistRole)
-		local resolvedLaborAction = workValidation.laborAction
+		local resolvedLaborAction = resolveLaborActionForStation(stationIdValue, specialistRole)
 
 		if requestMode == "begin" then
 			applyLaborDebugAttributes(
@@ -903,7 +955,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
+	local materialName: "Wood" | "Stone" | "Food" | "Metal" = stationState.materialType
 	local maxHaulAmount = StationConfig.HaulTransferPerStepByMaterial[materialName]
 	if type(maxHaulAmount) == "number" and maxHaulAmount > 0 then
 		maxHaulAmount = resolveHaulTransferAmount(player, maxHaulAmount)
@@ -979,6 +1031,7 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			woodTotal = stationState.materialType == "Wood" and stationState.resourceTotal or 0,
 			stoneTotal = stationState.materialType == "Stone" and stationState.resourceTotal or 0,
 			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
+			metalTotal = stationState.materialType == "Metal" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
 			upgradeLevel = modifiers.level,
@@ -996,6 +1049,10 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			foodInTransitTotal = flowSnapshot.Food.inTransit,
 			foodStoredTotal = flowSnapshot.Food.stored,
 			foodUsableTotal = flowSnapshot.Food.usable,
+			metalProducedTotal = flowSnapshot.Metal.produced,
+			metalInTransitTotal = flowSnapshot.Metal.inTransit,
+			metalStoredTotal = flowSnapshot.Metal.stored,
+			metalUsableTotal = flowSnapshot.Metal.usable,
 			warehouseId = flowSnapshot.deliveryPoints.warehouseId,
 			granaryId = flowSnapshot.deliveryPoints.granaryId,
 		})
@@ -1016,6 +1073,7 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			woodTotal = stationState.materialType == "Wood" and stationState.resourceTotal or 0,
 			stoneTotal = stationState.materialType == "Stone" and stationState.resourceTotal or 0,
 			foodTotal = stationState.materialType == "Food" and stationState.resourceTotal or 0,
+			metalTotal = stationState.materialType == "Metal" and stationState.resourceTotal or 0,
 			tickCount = stationState.tickCount,
 			activatedByUserId = stationState.activatedByUserId,
 			upgradeLevel = modifiers.level,
@@ -1033,6 +1091,10 @@ stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, pa
 			foodInTransitTotal = flowSnapshot.Food.inTransit,
 			foodStoredTotal = flowSnapshot.Food.stored,
 			foodUsableTotal = flowSnapshot.Food.usable,
+			metalProducedTotal = flowSnapshot.Metal.produced,
+			metalInTransitTotal = flowSnapshot.Metal.inTransit,
+			metalStoredTotal = flowSnapshot.Metal.stored,
+			metalUsableTotal = flowSnapshot.Metal.usable,
 			warehouseId = flowSnapshot.deliveryPoints.warehouseId,
 			granaryId = flowSnapshot.deliveryPoints.granaryId,
 		})

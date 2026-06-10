@@ -1,0 +1,101 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "Forge_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Metal",
+        "Color": [
+          0.35,
+          0.34,
+          0.33
+        ],
+        "Size": [
+          8,
+          6,
+          8
+        ],
+        "Position": [
+          90,
+          3,
+          -43
+        ]
+      }
+    },
+    {
+      "name": "Forge_BasePad",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.28,
+          0.26,
+          0.24
+        ],
+        "Size": [
+          14,
+          1,
+          14
+        ],
+        "Position": [
+          90,
+          0.5,
+          -43
+        ]
+      }
+    },
+    {
+      "name": "Forge_Chamber",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.42,
+          0.24,
+          0.16
+        ],
+        "Size": [
+          4,
+          3,
+          4
+        ],
+        "Position": [
+          90,
+          4.5,
+          -43
+        ]
+      }
+    },
+    {
+      "name": "Forge_Chimney",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.31,
+          0.31,
+          0.33
+        ],
+        "Size": [
+          2,
+          5,
+          2
+        ],
+        "Position": [
+          92.5,
+          7,
+          -41.5
+        ]
+      }
+    }
+  ]
+}
