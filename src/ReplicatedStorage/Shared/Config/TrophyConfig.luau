@@ -3,6 +3,8 @@
 local TrophyConfig: any = {}
 
 TrophyConfig.MaxRetainedTrophies = 50
+TrophyConfig.CaseDisplayMaxEntries = 5
+TrophyConfig.TrophyCaseSurfaceAttribute = "TrophyCaseSurface"
 
 TrophyConfig.Kinds = {
 	CaptureSuccess = "capture_success",
@@ -26,6 +28,16 @@ TrophyConfig.StateAttributes = {
 	Count = "GiantTrophyCount",
 	LatestSummary = "GiantTrophyLatestSummary",
 	LatestKind = "GiantTrophyLatestKind",
+	CaseHeader = "GiantTrophyCaseHeader",
+	CaseSummary = "GiantTrophyCaseSummary",
+	CaseUpdatedAt = "GiantTrophyCaseUpdatedAt",
+}
+
+TrophyConfig.MapSurfaceAttributes = {
+	Header = "TrophyCaseHeader",
+	Summary = "TrophyCaseSummary",
+	Count = "TrophyCaseCount",
+	UpdatedAt = "TrophyCaseUpdatedAt",
 }
 
 return TrophyConfig

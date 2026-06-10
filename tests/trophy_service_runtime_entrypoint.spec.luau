@@ -34,6 +34,8 @@ configFolder._Children["GiantReputationConfig"] = "../../ReplicatedStorage/Share
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["TrophyState"] = "../../ReplicatedStorage/Shared/GiantRealm/TrophyState"
 giantRealmFolder._Children["GiantReputationState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantReputationState"
+giantRealmFolder._Children["TrophyCasePresentation"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/TrophyCasePresentation"
 
 local sharedFolder = makeNode("Shared")
 sharedFolder._Children["Config"] = configFolder
@@ -55,6 +57,29 @@ local ownerPlayer = {
 
 local playersList = { ownerPlayer }
 
+local trophyCasePart = {
+	Name = "GiantDwelling_TrophyCasePlaque",
+	ClassName = "Part",
+	_Attributes = {
+		TrophyCaseSurface = true,
+	},
+	IsA = function(_self: any, className: string): boolean
+		return className == "BasePart"
+	end,
+	GetAttribute = function(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
+	end,
+	SetAttribute = function(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end,
+}
+
+local workspaceService = {
+	GetDescendants = function(): { any }
+		return { trophyCasePart }
+	end,
+}
+
 local fakeGame: any = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "ReplicatedStorage" then
@@ -66,6 +91,9 @@ function fakeGame:GetService(serviceName: string): any
 				return playersList
 			end,
 		}
+	end
+	if serviceName == "Workspace" then
+		return workspaceService
 	end
 	return nil
 end
@@ -134,6 +162,25 @@ assertEqual(trophyApi.GetTrophyCount(), 4, "raid defense increments trophy count
 local reputationApi = _G._GiantReputationService_QueryAPI
 assertEqual(reputationApi.GetScore(), 72, "trophies grant reputation score")
 assertEqual(ownerPlayer:GetAttribute(GiantReputationConfig.StateAttributes.Score), 72, "reputation score attribute")
+
+local caseModel = trophyApi.GetCaseModel()
+assertEqual(caseModel.count, 4, "case model count")
+assertTrue(string.find(caseModel.body, "Intruder Snared") ~= nil, "case model lists newest trophy")
+assertEqual(
+	ownerPlayer:GetAttribute(TrophyConfig.StateAttributes.CaseSummary),
+	caseModel.body,
+	"realm owner case summary attribute"
+)
+assertTrue(
+	type(ownerPlayer:GetAttribute(TrophyConfig.StateAttributes.CaseUpdatedAt)) == "number",
+	"realm owner case updated at attribute"
+)
+assertEqual(
+	trophyCasePart:GetAttribute(TrophyConfig.MapSurfaceAttributes.Summary),
+	caseModel.body,
+	"map surface case summary attribute"
+)
+assertEqual(trophyCasePart:GetAttribute(TrophyConfig.MapSurfaceAttributes.Count), 4, "map surface case count attribute")
 
 local persistence = trophyApi.BuildPersistenceState()
 assertEqual(#persistence.trophies, 4, "persistence includes trophies")
