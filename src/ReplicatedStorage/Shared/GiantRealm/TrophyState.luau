@@ -57,7 +57,10 @@ local function cloneRecord(record: TrophyRecord): TrophyRecord
 	}
 end
 
-function TrophyState.ComputeTargetDisplayToken(targetUserId: number): string
+function TrophyState.ComputeTargetDisplayToken(targetUserId: number, optOutOfNameDisplay: boolean?): string
+	if optOutOfNameDisplay == true then
+		return TrophyConfig.AnonymousTargetDisplayToken
+	end
 	if not isPositiveInteger(targetUserId) then
 		return "ref-unknown"
 	end
@@ -156,7 +159,10 @@ function TrophyState.ApplyEvent(state: State, input: any): any
 		return { accepted = false, reason = "target_user_id_invalid", state = state, record = nil }
 	end
 
-	local targetDisplayToken = TrophyState.ComputeTargetDisplayToken(input.targetUserId)
+	local optOutOfNameDisplay = if type(input.optOutOfNameDisplay) == "boolean"
+		then input.optOutOfNameDisplay
+		else false
+	local targetDisplayToken = TrophyState.ComputeTargetDisplayToken(input.targetUserId, optOutOfNameDisplay)
 	local heldSeconds = if isFiniteNumber(input.heldSeconds) then input.heldSeconds else nil
 	local endReason = nonEmptyString(input.endReason)
 	local summary = nonEmptyString(input.summary)

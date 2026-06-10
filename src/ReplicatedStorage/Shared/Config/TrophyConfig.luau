@@ -5,6 +5,7 @@ local TrophyConfig: any = {}
 TrophyConfig.MaxRetainedTrophies = 50
 TrophyConfig.CaseDisplayMaxEntries = 5
 TrophyConfig.TrophyCaseSurfaceAttribute = "TrophyCaseSurface"
+TrophyConfig.AnonymousTargetDisplayToken = "Private Visitor"
 
 TrophyConfig.Kinds = {
 	CaptureSuccess = "capture_success",
@@ -38,6 +39,15 @@ TrophyConfig.MapSurfaceAttributes = {
 	Summary = "TrophyCaseSummary",
 	Count = "TrophyCaseCount",
 	UpdatedAt = "TrophyCaseUpdatedAt",
+}
+
+TrophyConfig.DisplayPolicyAttributes = {
+	OptOutOfNameDisplay = "TinyfolkTrophyNameOptOut",
+}
+
+TrophyConfig.DisplayPolicyRemotes = {
+	UpdateRequest = "TrophyDisplayPolicyUpdateRequest",
+	UpdateResponse = "TrophyDisplayPolicyUpdateResponse",
 }
 
 return TrophyConfig

@@ -2,6 +2,8 @@
 --!nolint BuiltinGlobalWrite
 -- selene: allow(global_usage)
 
+local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
+
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
 		error(string.format("FAIL [%s]: expected=%s actual=%s", label, tostring(expected), tostring(actual)))
@@ -20,6 +22,14 @@ local function makeNode(name: string, className: string?)
 		_Children = {},
 	}
 
+	function node.IsA(self: any, expectedClass: string): boolean
+		return self.ClassName == expectedClass
+	end
+
+	function node.FindFirstChild(self: any, childName: string): any
+		return self._Children[childName]
+	end
+
 	function node:WaitForChild(childName: string): any
 		return self._Children[childName]
 	end
@@ -27,7 +37,59 @@ local function makeNode(name: string, className: string?)
 	return node
 end
 
+local function cloneTable(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local result = {}
+	for key, child in pairs(value) do
+		result[key] = cloneTable(child)
+	end
+	return result
+end
+
+local function makeSignal()
+	return {
+		Connect = function(_self: any, callback: (...any) -> ())
+			callback()
+			return {}
+		end,
+	}
+end
+
+local profileDataByUserId: { [number]: any } = {}
+local ownerLayer = {
+	LoadPlayerProfile = function(_profileKey: string, userId: number): any
+		local data = profileDataByUserId[userId]
+		if type(data) ~= "table" then
+			data = ProfilePersistenceGateway.LoadDefaultPlayerProfile(userId).data
+			profileDataByUserId[userId] = cloneTable(data)
+		end
+		return { ok = true, operation = "LoadPlayerProfile", data = cloneTable(profileDataByUserId[userId]) }
+	end,
+	SavePlayerProfile = function(_profileKey: string, userId: number, data: any): any
+		profileDataByUserId[userId] = cloneTable(data)
+		return { ok = true, operation = "SavePlayerProfile" }
+	end,
+	ReleasePlayerProfile = function(): any
+		return { ok = true, operation = "ReleasePlayerProfile" }
+	end,
+	LoadGiantRealmProfile = function(): any
+		return { ok = true, operation = "LoadGiantRealmProfile", data = {} }
+	end,
+	SaveGiantRealmProfile = function(): any
+		return { ok = true, operation = "SaveGiantRealmProfile" }
+	end,
+	ReleaseGiantRealmProfile = function(): any
+		return { ok = true, operation = "ReleaseGiantRealmProfile" }
+	end,
+}
+
+ProfilePersistenceGateway.ResetForTests()
+ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
+
 local configFolder = makeNode("Config")
+configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["TrophyConfig"] = "../../ReplicatedStorage/Shared/Config/TrophyConfig"
 configFolder._Children["GiantReputationConfig"] = "../../ReplicatedStorage/Shared/Config/GiantReputationConfig"
 
@@ -36,26 +98,64 @@ giantRealmFolder._Children["TrophyState"] = "../../ReplicatedStorage/Shared/Gian
 giantRealmFolder._Children["GiantReputationState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantReputationState"
 giantRealmFolder._Children["TrophyCasePresentation"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/TrophyCasePresentation"
+giantRealmFolder._Children["TrophyDisplayPolicyState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyState"
 
 local sharedFolder = makeNode("Shared")
 sharedFolder._Children["Config"] = configFolder
 sharedFolder._Children["GiantRealm"] = giantRealmFolder
 
+local function makeRemoteEvent(remoteName: string)
+	local remote: any = {
+		Name = remoteName,
+		ClassName = "RemoteEvent",
+	}
+
+	function remote.IsA(self: any, expectedClass: string): boolean
+		return self.ClassName == expectedClass
+	end
+
+	remote.OnServerEvent = {
+		Connect = function() end,
+	}
+
+	return remote
+end
+
+local remotesFolder = makeNode("Remotes")
+remotesFolder._Children["TrophyDisplayPolicyUpdateRequest"] = makeRemoteEvent("TrophyDisplayPolicyUpdateRequest")
+remotesFolder._Children["TrophyDisplayPolicyUpdateResponse"] = makeRemoteEvent("TrophyDisplayPolicyUpdateResponse")
+
 local replicatedStorage = makeNode("ReplicatedStorage")
 replicatedStorage._Children["Shared"] = sharedFolder
+replicatedStorage._Children["Remotes"] = remotesFolder
 
-local ownerPlayer = {
-	UserId = 5001,
-	_Attributes = {},
-	SetAttribute = function(self: any, attributeName: string, value: any)
-		self._Attributes[attributeName] = value
-	end,
-	GetAttribute = function(self: any, attributeName: string): any
-		return self._Attributes[attributeName]
-	end,
-}
+local function makePlayer(userId: number, role: string?): any
+	return {
+		UserId = userId,
+		_Attributes = if role ~= nil then { Role = role } else {},
+		_RoleChangedSignal = makeSignal(),
+		SetAttribute = function(self: any, attributeName: string, value: any)
+			self._Attributes[attributeName] = value
+		end,
+		GetAttribute = function(self: any, attributeName: string): any
+			return self._Attributes[attributeName]
+		end,
+		GetAttributeChangedSignal = function(self: any, attributeName: string): any
+			if attributeName == "Role" then
+				return self._RoleChangedSignal
+			end
+			return makeSignal()
+		end,
+	}
+end
 
-local playersList = { ownerPlayer }
+local ownerPlayer = makePlayer(5001, "Giant")
+local targetPlayer = makePlayer(5101, "Tinyfolk")
+local playersList = { ownerPlayer, targetPlayer }
+local playerAddedSignal = makeSignal()
+
+assertTrue(ProfilePersistenceGateway.LoadPlayerProfile(targetPlayer).ok, "target profile loaded")
 
 local trophyCasePart = {
 	Name = "GiantDwelling_TrophyCasePlaque",
@@ -90,6 +190,7 @@ function fakeGame:GetService(serviceName: string): any
 			GetPlayers = function()
 				return playersList
 			end,
+			PlayerAdded = playerAddedSignal,
 		}
 	end
 	if serviceName == "Workspace" then
@@ -110,6 +211,7 @@ local TrophyConfig = require("../src/ReplicatedStorage/Shared/Config/TrophyConfi
 local GiantReputationConfig = require("../src/ReplicatedStorage/Shared/Config/GiantReputationConfig")
 
 require("../src/ServerScriptService/Services/GiantReputationService.server")
+require("../src/ServerScriptService/Services/TrophyDisplayPolicyService.server")
 require("../src/ServerScriptService/Services/TrophyService.server")
 
 local trophyApi = _G._TrophyService_QueryAPI
@@ -195,5 +297,16 @@ local applied, applyReason = trophyApi.ApplyPersistenceState(persistence)
 assertTrue(applied, "apply persistence accepted")
 assertEqual(applyReason, nil, "apply persistence reason")
 assertEqual(trophyApi.GetTrophyCount(), 4, "apply persistence restores trophies")
+
+trophyApi.ResetForTests()
+local policyApi = _G._TrophyDisplayPolicyService_QueryAPI
+policyApi.SetOptOutForPlayer(targetPlayer, true)
+local optedOutCapture = trophyApi.RecordCaptureSuccess(5001, 5101, 99)
+assertTrue(optedOutCapture.accepted, "opt-out capture trophy recorded")
+assertEqual(
+	optedOutCapture.record.targetDisplayToken,
+	TrophyConfig.AnonymousTargetDisplayToken,
+	"opt-out capture uses anonymous display token"
+)
 
 print("trophy_service_runtime_entrypoint.spec.luau: all checks passed")

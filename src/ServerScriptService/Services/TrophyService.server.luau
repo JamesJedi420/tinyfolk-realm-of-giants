@@ -151,7 +151,41 @@ local function refreshCaseDisplay()
 	projectRealmOwnerAttributes()
 end
 
+local function getTrophyDisplayPolicyQueryApi(): any?
+	local queryApi = globalEnv._TrophyDisplayPolicyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._TrophyDisplayPolicyService_QueryAPI) == "table" then
+		return (_G :: any)._TrophyDisplayPolicyService_QueryAPI
+	end
+	return nil
+end
+
+local function resolveTargetOptOutOfNameDisplay(targetUserId: number): boolean
+	local policyApi = getTrophyDisplayPolicyQueryApi()
+	if type(policyApi) ~= "table" or type(policyApi.GetOptOutForUserId) ~= "function" then
+		return false
+	end
+
+	local ok, optOut = pcall(policyApi.GetOptOutForUserId, targetUserId)
+	if not ok or type(optOut) ~= "boolean" then
+		return true
+	end
+
+	return optOut
+end
+
 local function recordEvent(input: any): any
+	if type(input) ~= "table" then
+		return { accepted = false, reason = "input_invalid" }
+	end
+
+	if type(input.targetUserId) == "number" and input.optOutOfNameDisplay == nil then
+		input = table.clone(input)
+		input.optOutOfNameDisplay = resolveTargetOptOutOfNameDisplay(input.targetUserId)
+	end
+
 	local result = TrophyState.ApplyEvent(trophyState, input)
 	if type(result) ~= "table" then
 		return { accepted = false, reason = "apply_event_invalid" }
