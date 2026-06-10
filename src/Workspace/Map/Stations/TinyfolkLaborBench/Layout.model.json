@@ -1,0 +1,29 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "TinyfolkLaborBench_Haul_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [0.44, 0.32, 0.2],
+        "Size": [10, 3, 6],
+        "Position": [-100, 2.5, 12]
+      }
+    },
+    {
+      "name": "TinyfolkLaborBench_Pace_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [0.36, 0.28, 0.18],
+        "Size": [10, 3, 6],
+        "Position": [-108, 2.5, 12]
+      }
+    }
+  ]
+}

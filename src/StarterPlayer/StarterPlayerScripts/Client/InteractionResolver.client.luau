@@ -16,6 +16,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
+local TinyfolkLaborUpgradeConfig = require(Config:WaitForChild("TinyfolkLaborUpgradeConfig"))
 local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -28,6 +29,7 @@ local ESCAPE_ATTEMPT_REMOTE_NAME = "EscapeAttemptRequest"
 local CONSTRUCTION_BUILD_REMOTE_NAME = "ConstructionBuildRequest"
 local UPGRADE_HUB_REMOTE_NAME = "VillageUpgradeHubRequest"
 local WORKSITE_UPGRADE_REMOTE_NAME = "VillageWorksiteUpgradeRequest"
+local TINYFOLK_LABOR_UPGRADE_REMOTE_NAME = "TinyfolkLaborUpgradeRequest"
 local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
 
 local INTERACT_KEY = Enum.KeyCode.F
@@ -43,6 +45,7 @@ local escapeAttemptRemote = remotesFolder:WaitForChild(ESCAPE_ATTEMPT_REMOTE_NAM
 local constructionBuildRemote = remotesFolder:WaitForChild(CONSTRUCTION_BUILD_REMOTE_NAME) :: RemoteEvent
 local upgradeHubRemote = remotesFolder:WaitForChild(UPGRADE_HUB_REMOTE_NAME) :: RemoteEvent
 local worksiteUpgradeRemote = remotesFolder:WaitForChild(WORKSITE_UPGRADE_REMOTE_NAME) :: RemoteEvent
+local tinyfolkLaborUpgradeRemote = remotesFolder:WaitForChild(TINYFOLK_LABOR_UPGRADE_REMOTE_NAME) :: RemoteEvent
 local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
@@ -70,6 +73,7 @@ type CandidateAction =
 	| "worksite_upgrade"
 	| "warehouse_deliver"
 	| "granary_deliver"
+	| "tinyfolk_labor_upgrade"
 	| "station_pickup_or_assign"
 	| "shrine_assign_worshipper"
 	| "remote_control_station"
@@ -90,6 +94,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	worksite_upgrade = 3,
 	warehouse_deliver = 4,
 	granary_deliver = 4,
+	tinyfolk_labor_upgrade = 4,
 	station_pickup_or_assign = 5,
 	shrine_assign_worshipper = 6,
 	remote_control_station = 7,
@@ -307,6 +312,21 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 		end
 
 		if
+			isTinyfolk
+			and type(TinyfolkLaborUpgradeConfig.TrackByBenchId[targetId]) == "string"
+			and distance <= TinyfolkLaborUpgradeConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "tinyfolk_labor_upgrade",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("tinyfolk_labor_upgrade"),
+				mode = "upgrade",
+				payload = targetId,
+			})
+		end
+
+		if
 			startsWithPrefix(targetId, StationConfig.StationNamePrefix)
 			or startsWithPrefix(targetId, StationConfig.MiningStationNamePrefix)
 			or startsWithPrefix(targetId, StationConfig.FarmNamePrefix)
@@ -497,6 +517,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "granary_deliver" then
 		granaryDeliverRemote:FireServer(candidate.payload)
+		return
+	end
+
+	if candidate.action == "tinyfolk_labor_upgrade" then
+		tinyfolkLaborUpgradeRemote:FireServer(candidate.payload)
 		return
 	end
 

@@ -68,6 +68,47 @@ local function debugWarn(message: string)
 	warn(string.format("[StationService] %s", message))
 end
 
+local function getTinyfolkLaborUpgradeQueryApi(): any?
+	local upgradeApi = globalEnv._TinyfolkLaborUpgradeService_QueryAPI
+	if type(upgradeApi) == "table" then
+		return upgradeApi
+	end
+	if type(_G) == "table" and type((_G :: any)._TinyfolkLaborUpgradeService_QueryAPI) == "table" then
+		return (_G :: any)._TinyfolkLaborUpgradeService_QueryAPI
+	end
+	return nil
+end
+
+local function resolveTaskDurationSeconds(player: Player): number
+	local baseDuration = StationConfig.TaskDurationSeconds
+	local upgradeApi = getTinyfolkLaborUpgradeQueryApi()
+	if type(upgradeApi) == "table" and type(upgradeApi.GetTaskPaceMultiplier) == "function" then
+		local multiplier = upgradeApi.GetTaskPaceMultiplier(player.UserId)
+		if type(multiplier) == "number" and multiplier > 0 then
+			return math.max(0.2, baseDuration * multiplier)
+		end
+	end
+	return baseDuration
+end
+
+local function resolveHaulTransferAmount(player: Player, baseAmount: number): number
+	local upgradeApi = getTinyfolkLaborUpgradeQueryApi()
+	if type(upgradeApi) == "table" and type(upgradeApi.GetHaulYieldMultiplier) == "function" then
+		local multiplier = upgradeApi.GetHaulYieldMultiplier(player.UserId)
+		if type(multiplier) == "number" and multiplier > 0 then
+			return math.max(1, math.floor(baseAmount * multiplier + 0.5))
+		end
+	end
+	return baseAmount
+end
+
+local function notifyLaborWorkActionCompleted(player: Player)
+	local upgradeApi = getTinyfolkLaborUpgradeQueryApi()
+	if type(upgradeApi) == "table" and type(upgradeApi.RecordWorkActionCompleted) == "function" then
+		upgradeApi.RecordWorkActionCompleted(player)
+	end
+end
+
 local function getProductionModifiersForStation(stationId: string): any
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
 	if type(upgradeApi) ~= "table" and type(_G) == "table" then
@@ -666,6 +707,7 @@ local function completeStationWorkAction(
 	end
 
 	applyLaborDebugAttributes(player, laborAction, "completed", stationState.stationId, "work_action_completed")
+	notifyLaborWorkActionCompleted(player)
 	debugLog(
 		string.format(
 			"Accepted station work action userId=%d stationId=%s action=%s generated=%.0f",
@@ -766,6 +808,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 
 		local taskState = getTaskStateForStation(stationIdValue)
 		local resolvedNow = if type(requestNow) == "number" then requestNow else os.clock()
+		local taskDurationSeconds = resolveTaskDurationSeconds(player)
 
 		if requestMode == "complete" and StationConfig.TaskQteEnabled == true then
 			local qteAttemptAt = if type(requestQteTapAt) == "number" then requestQteTapAt else resolvedNow
@@ -786,7 +829,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 						eventType = "disrupt",
 						taskId = stationIdValue,
 						now = resolvedNow,
-						durationSeconds = StationConfig.TaskDurationSeconds,
+						durationSeconds = taskDurationSeconds,
 						regressionPerSecond = StationConfig.TaskRegressionPerSecond,
 						stabilizationThresholdSeconds = StationConfig.TaskStabilizationThresholdSeconds,
 						majorRegressionStepSeconds = StationConfig.TaskMajorRegressionStepSeconds,
@@ -805,7 +848,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 			eventType = requestMode,
 			taskId = stationIdValue,
 			now = resolvedNow,
-			durationSeconds = StationConfig.TaskDurationSeconds,
+			durationSeconds = taskDurationSeconds,
 			regressionPerSecond = StationConfig.TaskRegressionPerSecond,
 			stabilizationThresholdSeconds = StationConfig.TaskStabilizationThresholdSeconds,
 			majorRegressionStepSeconds = StationConfig.TaskMajorRegressionStepSeconds,
@@ -863,6 +906,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
 	local maxHaulAmount = StationConfig.HaulTransferPerStepByMaterial[materialName]
 	if type(maxHaulAmount) == "number" and maxHaulAmount > 0 then
+		maxHaulAmount = resolveHaulTransferAmount(player, maxHaulAmount)
 		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
 		if beforeSnapshot.produced > 0 then
 			local haulAllowed, haulReason = validateActivationRequest(player, stationState, true)

@@ -74,6 +74,36 @@ local function resolveMaxEssenceTotal(shrineId: string): number
 	return maxTotal
 end
 
+local function getTinyfolkLaborUpgradeQueryApi(): any?
+	local upgradeApi = globalEnv._TinyfolkLaborUpgradeService_QueryAPI
+	if type(upgradeApi) == "table" then
+		return upgradeApi
+	end
+	if type(_G) == "table" and type((_G :: any)._TinyfolkLaborUpgradeService_QueryAPI) == "table" then
+		return (_G :: any)._TinyfolkLaborUpgradeService_QueryAPI
+	end
+	return nil
+end
+
+local function resolveTaskDurationSeconds(player: Player): number
+	local baseDuration = ShrineConfig.TaskDurationSeconds
+	local upgradeApi = getTinyfolkLaborUpgradeQueryApi()
+	if type(upgradeApi) == "table" and type(upgradeApi.GetTaskPaceMultiplier) == "function" then
+		local multiplier = upgradeApi.GetTaskPaceMultiplier(player.UserId)
+		if type(multiplier) == "number" and multiplier > 0 then
+			return math.max(0.2, baseDuration * multiplier)
+		end
+	end
+	return baseDuration
+end
+
+local function notifyLaborWorkActionCompleted(player: Player)
+	local upgradeApi = getTinyfolkLaborUpgradeQueryApi()
+	if type(upgradeApi) == "table" and type(upgradeApi.RecordWorkActionCompleted) == "function" then
+		upgradeApi.RecordWorkActionCompleted(player)
+	end
+end
+
 type ShrineState = {
 	shrineId: string,
 	part: BasePart,
@@ -718,6 +748,7 @@ local function completeShrineWorkAction(
 	end
 
 	applyLaborDebugAttributes(player, laborAction, "completed", shrineState.shrineId, "work_action_completed")
+	notifyLaborWorkActionCompleted(player)
 	debugLog(
 		string.format(
 			"Accepted shrine work action userId=%d shrineId=%s action=%s generated=%.0f",
@@ -808,6 +839,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 
 		local taskState = getTaskStateForShrine(shrineIdValue)
 		local resolvedNow = if type(requestNow) == "number" then requestNow else os.clock()
+		local taskDurationSeconds = resolveTaskDurationSeconds(player)
 
 		if requestMode == "complete" and ShrineConfig.TaskQteEnabled == true then
 			local qteAttemptAt = if type(requestQteTapAt) == "number" then requestQteTapAt else resolvedNow
@@ -828,7 +860,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 						eventType = "disrupt",
 						taskId = shrineIdValue,
 						now = resolvedNow,
-						durationSeconds = ShrineConfig.TaskDurationSeconds,
+						durationSeconds = taskDurationSeconds,
 						regressionPerSecond = ShrineConfig.TaskRegressionPerSecond,
 						stabilizationThresholdSeconds = ShrineConfig.TaskStabilizationThresholdSeconds,
 						majorRegressionStepSeconds = ShrineConfig.TaskMajorRegressionStepSeconds,
@@ -847,7 +879,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 			eventType = requestMode,
 			taskId = shrineIdValue,
 			now = resolvedNow,
-			durationSeconds = ShrineConfig.TaskDurationSeconds,
+			durationSeconds = taskDurationSeconds,
 			regressionPerSecond = ShrineConfig.TaskRegressionPerSecond,
 			stabilizationThresholdSeconds = ShrineConfig.TaskStabilizationThresholdSeconds,
 			majorRegressionStepSeconds = ShrineConfig.TaskMajorRegressionStepSeconds,
