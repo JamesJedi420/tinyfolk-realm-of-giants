@@ -300,13 +300,7 @@ local function RecordWorkActionCompleted(player: Player)
 	local nextState = TinyfolkLaborUpgradeState.GrantWorkActionReward(getOrCreatePlayerState(player.UserId))
 	playerStateByUserId[player.UserId] = nextState
 	applyDebugAttributes(player, nextState, "work_action_rewarded")
-	debugLog(
-		string.format(
-			"Granted labor tokens userId=%d tokens=%d",
-			player.UserId,
-			nextState.laborTokens
-		)
-	)
+	debugLog(string.format("Granted labor tokens userId=%d tokens=%d", player.UserId, nextState.laborTokens))
 end
 
 local function GetHaulYieldMultiplier(userId: number): number

@@ -158,7 +158,11 @@ function TinyfolkLaborUpgradeState.ResolveUpgrade(state: PlayerState, track: str
 	}
 end
 
-function TinyfolkLaborUpgradeState.ApplyFoodSpendSuccess(state: PlayerState, track: string, nextLevel: number): PlayerState
+function TinyfolkLaborUpgradeState.ApplyFoodSpendSuccess(
+	state: PlayerState,
+	track: string,
+	nextLevel: number
+): PlayerState
 	local nextState = table.clone(state)
 	if track == TinyfolkLaborUpgradeConfig.Tracks.TaskPace then
 		nextState.taskPaceLevel = normalizeLevel(nextLevel)
