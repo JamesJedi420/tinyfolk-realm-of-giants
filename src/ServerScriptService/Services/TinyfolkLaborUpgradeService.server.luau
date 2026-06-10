@@ -87,6 +87,13 @@ local function applyDebugAttributes(player: Player, state: TinyfolkLaborUpgradeS
 	end
 end
 
+local function magnitudeBetweenPositions(a: any, b: any): number
+	local dx = a.X - b.X
+	local dy = a.Y - b.Y
+	local dz = a.Z - b.Z
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
 local function getHumanoidRootPart(player: Player): BasePart?
 	local character = player.Character
 	if character == nil then
@@ -125,12 +132,7 @@ local function isWithinBenchRange(player: Player, benchId: string): boolean
 		return false
 	end
 
-	local rootPosition = root.Position
-	local benchPosition = benchPart.Position
-	local deltaX = rootPosition.X - benchPosition.X
-	local deltaY = rootPosition.Y - benchPosition.Y
-	local deltaZ = rootPosition.Z - benchPosition.Z
-	local distance = math.sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ))
+	local distance = magnitudeBetweenPositions(root.Position :: any, benchPart.Position :: any)
 	return distance <= TinyfolkLaborUpgradeConfig.InteractionRangeStuds
 end
 
