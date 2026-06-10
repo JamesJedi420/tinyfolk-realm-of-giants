@@ -45,7 +45,12 @@ assertEqual(
 	TrophyConfig.Kinds.ContainmentEscapeFailure,
 	"escaped kind"
 )
-assertEqual(TrophyState.ResolveKindFromContainmentEnd("released"), TrophyConfig.Kinds.ContainmentHeld, "released kind")
+assertEqual(
+	TrophyState.ResolveKindFromContainmentEnd("released"),
+	TrophyConfig.Kinds.NegotiatedRelease,
+	"released kind"
+)
+assertEqual(TrophyState.ResolveKindFromContainmentEnd("timeout"), TrophyConfig.Kinds.ContainmentHeld, "timeout kind")
 assertEqual(TrophyState.ResolveKindFromContainmentEnd("rescued"), nil, "rescued not trophy eligible")
 
 local escapeFailure = TrophyState.ApplyEvent(capture.state, {
@@ -64,9 +69,34 @@ assertTrue(
 	"escape failure summary includes display title"
 )
 
-local serialized = TrophyState.SerializePersistenceState(escapeFailure.state)
+local raidDefense = TrophyState.ApplyEvent(escapeFailure.state, {
+	operationId = "trophy-raid-defense-trap-a-202-9000",
+	trophyKind = TrophyConfig.Kinds.RaidDefenseWin,
+	awardedAt = 25,
+	custodianUserId = 101,
+	targetUserId = 202,
+})
+assertTrue(raidDefense.accepted, "raid defense trophy accepted")
+assertTrue(string.find(raidDefense.record.summary, "Intruder Snared") ~= nil, "raid defense summary title")
+
+local negotiatedRelease = TrophyState.ApplyEvent(raidDefense.state, {
+	operationId = "containment-released-101-303-10000",
+	trophyKind = TrophyConfig.Kinds.NegotiatedRelease,
+	awardedAt = 30,
+	custodianUserId = 101,
+	targetUserId = 303,
+	endReason = "released",
+	heldSeconds = 3,
+})
+assertTrue(negotiatedRelease.accepted, "negotiated release trophy accepted")
+assertTrue(
+	string.find(negotiatedRelease.record.summary, "Negotiated Release") ~= nil,
+	"negotiated release summary title"
+)
+
+local serialized = TrophyState.SerializePersistenceState(negotiatedRelease.state)
 local restored = TrophyState.ApplyPersistenceState(serialized)
 assertTrue(restored.accepted, "persistence round trip accepted")
-assertEqual(#restored.state.trophies, 2, "persistence round trip count")
+assertEqual(#restored.state.trophies, 4, "persistence round trip count")
 
 print("trophy_state.spec.luau: all checks passed")

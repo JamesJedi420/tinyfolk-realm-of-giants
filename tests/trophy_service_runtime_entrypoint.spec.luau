@@ -107,6 +107,11 @@ local containmentResult = trophyApi.RecordContainmentEnd({
 	heldSeconds = 4,
 })
 assertTrue(containmentResult.accepted, "containment trophy recorded")
+assertEqual(
+	containmentResult.record.trophyKind,
+	TrophyConfig.Kinds.NegotiatedRelease,
+	"released maps to negotiated release"
+)
 assertEqual(trophyApi.GetTrophyCount(), 2, "containment increments trophy count")
 
 local escapeResult = trophyApi.RecordContainmentEnd({
@@ -121,12 +126,17 @@ assertTrue(escapeResult.accepted, "escape failure trophy recorded")
 assertEqual(escapeResult.record.trophyKind, TrophyConfig.Kinds.ContainmentEscapeFailure, "escape failure trophy kind")
 assertEqual(trophyApi.GetTrophyCount(), 3, "escape failure increments trophy count")
 
+local raidDefenseResult = trophyApi.RecordRaidDefenseWin(5001, 5201, "snare-trap-runtime-a", 35)
+assertTrue(raidDefenseResult.accepted, "raid defense trophy recorded")
+assertEqual(raidDefenseResult.record.trophyKind, TrophyConfig.Kinds.RaidDefenseWin, "raid defense trophy kind")
+assertEqual(trophyApi.GetTrophyCount(), 4, "raid defense increments trophy count")
+
 local reputationApi = _G._GiantReputationService_QueryAPI
-assertEqual(reputationApi.GetScore(), 60, "trophies grant reputation score")
-assertEqual(ownerPlayer:GetAttribute(GiantReputationConfig.StateAttributes.Score), 60, "reputation score attribute")
+assertEqual(reputationApi.GetScore(), 72, "trophies grant reputation score")
+assertEqual(ownerPlayer:GetAttribute(GiantReputationConfig.StateAttributes.Score), 72, "reputation score attribute")
 
 local persistence = trophyApi.BuildPersistenceState()
-assertEqual(#persistence.trophies, 3, "persistence includes trophies")
+assertEqual(#persistence.trophies, 4, "persistence includes trophies")
 assertTrue(
 	persistence.trophies[1].targetDisplayToken:find("^ref%-") ~= nil,
 	"persisted trophy uses display token not raw target id"
@@ -137,6 +147,6 @@ trophyApi.ResetForTests()
 local applied, applyReason = trophyApi.ApplyPersistenceState(persistence)
 assertTrue(applied, "apply persistence accepted")
 assertEqual(applyReason, nil, "apply persistence reason")
-assertEqual(trophyApi.GetTrophyCount(), 3, "apply persistence restores trophies")
+assertEqual(trophyApi.GetTrophyCount(), 4, "apply persistence restores trophies")
 
 print("trophy_service_runtime_entrypoint.spec.luau: all checks passed")

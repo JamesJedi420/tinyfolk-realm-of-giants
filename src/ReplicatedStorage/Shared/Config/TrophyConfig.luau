@@ -9,6 +9,8 @@ TrophyConfig.Kinds = {
 	ContainmentHeld = "containment_held",
 	ContainmentStarvation = "containment_starvation",
 	ContainmentEscapeFailure = "containment_escape_failure",
+	RaidDefenseWin = "raid_defense_win",
+	NegotiatedRelease = "negotiated_release",
 }
 
 TrophyConfig.DisplayTitlesByKind = {
@@ -16,6 +18,8 @@ TrophyConfig.DisplayTitlesByKind = {
 	containment_held = "Containment Completed",
 	containment_starvation = "Starvation Release",
 	containment_escape_failure = "Escape Denied",
+	raid_defense_win = "Intruder Snared",
+	negotiated_release = "Negotiated Release",
 }
 
 TrophyConfig.StateAttributes = {

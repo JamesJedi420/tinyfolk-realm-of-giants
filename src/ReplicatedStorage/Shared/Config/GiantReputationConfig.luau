@@ -22,6 +22,8 @@ GiantReputationConfig.ScoreAwardsByTrophyKind = {
 	containment_held = 20,
 	containment_starvation = 10,
 	containment_escape_failure = 25,
+	raid_defense_win = 20,
+	negotiated_release = 12,
 }
 
 GiantReputationConfig.StateAttributes = {
