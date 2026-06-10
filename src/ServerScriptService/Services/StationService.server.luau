@@ -9,7 +9,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
+local LaborActionState = require(GiantRealm:WaitForChild("LaborActionState"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
+local LaborActionConfig = require(Config:WaitForChild("LaborActionConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local ConstructionFolder = Shared:WaitForChild("Construction")
@@ -176,7 +178,7 @@ local function getHumanoidRootPart(player: Player): BasePart?
 	return nil
 end
 
-local function getPlayerByUserId(userId: number): Player?
+local function _getPlayerByUserId(userId: number): Player?
 	for _, player in Players:GetPlayers() do
 		if player.UserId == userId then
 			return player :: Player
@@ -373,6 +375,23 @@ local function deactivateStation(state: StationState, reason: string)
 	)
 end
 
+local function applyLaborDebugAttributes(
+	player: Player,
+	laborAction: string?,
+	objectiveState: string?,
+	targetId: string?,
+	lastReason: string?
+)
+	player:SetAttribute(LaborActionConfig.LaborActionAttribute, laborAction)
+	player:SetAttribute(LaborActionConfig.LaborActionStateAttribute, objectiveState)
+	player:SetAttribute(LaborActionConfig.LaborActionTargetIdAttribute, targetId)
+	player:SetAttribute(LaborActionConfig.LaborActionLastReasonAttribute, lastReason)
+end
+
+local function clearLaborDebugAttributes(player: Player)
+	applyLaborDebugAttributes(player, nil, nil, nil, nil)
+end
+
 local function applyTaskAttributes(player: Player, taskSnapshot: any)
 	player:SetAttribute(StationConfig.TaskActiveStationIdAttribute, taskSnapshot.activeTaskId)
 	player:SetAttribute(StationConfig.TaskProgressRatioAttribute, taskSnapshot.progressRatio)
@@ -484,6 +503,167 @@ local function ensureInteractionSpecialistAssignment(player: Player, stationStat
 	return true, nil
 end
 
+type ProductionTickResult = {
+	generatedAmount: number,
+	deactivateReason: string?,
+}
+
+local function performProductionTick(stationState: StationState, activatingPlayer: Player): ProductionTickResult
+	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
+	if requiredSpecialistRole then
+		if activatingPlayer:GetAttribute("Role") ~= RoleConfig.Roles.Tinyfolk then
+			return {
+				generatedAmount = 0,
+				deactivateReason = "activator_not_tinyfolk",
+			}
+		end
+
+		local specialistRole = activatingPlayer:GetAttribute("SpecialistRole")
+		if specialistRole ~= requiredSpecialistRole then
+			return {
+				generatedAmount = 0,
+				deactivateReason = "specialist_role_lost",
+			}
+		end
+
+		if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= stationState.stationId then
+			return {
+				generatedAmount = 0,
+				deactivateReason = "specialist_assignment_target_lost",
+			}
+		end
+	end
+
+	stationState.tickCount += 1
+	stationState.lastTickAt = os.clock()
+	stationState.activatedByUserId = activatingPlayer.UserId
+
+	local modifiers = getProductionModifiersForStation(stationState.stationId)
+	local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number" then modifiers.perTickMultiplier else 1
+	local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
+		then modifiers.maxTotalMultiplier
+		else 1
+
+	local maxTotal = StationConfig.MaxWoodTotal
+	local perTick = StationConfig.WoodPerTick
+	if stationState.materialType == "Stone" then
+		maxTotal = StationConfig.MaxStoneTotal
+		perTick = StationConfig.StonePerTick
+	elseif stationState.materialType == "Food" then
+		maxTotal = StationConfig.MaxFoodTotal
+		perTick = StationConfig.FoodPerTick
+	end
+	maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
+	perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
+
+	local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
+	local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
+	local remainingCapacity = maxTotal - materialSnapshot.produced
+	local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
+	local maxReachedReason = if materialName == "Stone"
+		then "max_stone_produced_reached"
+		elseif materialName == "Food" then "max_food_produced_reached"
+		else "max_wood_produced_reached"
+	if generatedAmount <= 0 then
+		applyDebugAttributes(stationState)
+		return {
+			generatedAmount = 0,
+			deactivateReason = maxReachedReason,
+		}
+	end
+
+	local sourcePrefix = if materialName == "Stone"
+		then "MiningStation:"
+		elseif materialName == "Food" then "Farm:"
+		else "WorkStation:"
+	local flowSnapshot =
+		ResourceFlowState.AddProduced(materialName, sourcePrefix .. stationState.stationId, generatedAmount)
+	stationState.resourceTotal = flowSnapshot.produced
+	applyDebugAttributes(stationState)
+
+	local tickLabel = if stationState.materialType == "Stone"
+		then "Stone"
+		elseif stationState.materialType == "Food" then "Food"
+		else "Wood"
+	debugLog(
+		string.format(
+			"Labor %s action tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f userId=%d",
+			tickLabel,
+			stationState.stationId,
+			stationState.tickCount,
+			generatedAmount,
+			stationState.resourceTotal,
+			flowSnapshot.inTransit,
+			flowSnapshot.stored,
+			flowSnapshot.usable,
+			activatingPlayer.UserId
+		)
+	)
+
+	if flowSnapshot.produced >= maxTotal then
+		stationState.resourceTotal = maxTotal
+		applyDebugAttributes(stationState)
+		return {
+			generatedAmount = generatedAmount,
+			deactivateReason = maxReachedReason,
+		}
+	end
+
+	return {
+		generatedAmount = generatedAmount,
+		deactivateReason = nil,
+	}
+end
+
+local function completeStationWorkAction(
+	player: Player,
+	stationState: StationState,
+	laborAction: string
+): (boolean, string?)
+	local assigned, assignReason = ensureInteractionSpecialistAssignment(player, stationState)
+	if not assigned then
+		return false, assignReason
+	end
+
+	local allowed, reason = validateActivationRequest(player, stationState)
+	if not allowed then
+		return false, reason
+	end
+
+	local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
+	local specialistRole = player:GetAttribute("SpecialistRole")
+	local workValidation = LaborActionState.ValidateWorkAction(specialistRole, requiredSpecialistRole)
+	if not workValidation.accepted then
+		return false, workValidation.reason or "labor_action_rejected"
+	end
+
+	if workValidation.laborAction ~= laborAction then
+		return false,
+			string.format(
+				"labor_action_mismatch expected=%s actual=%s",
+				laborAction,
+				tostring(workValidation.laborAction)
+			)
+	end
+
+	local tickResult = performProductionTick(stationState, player)
+	if tickResult.generatedAmount <= 0 then
+		return false, tickResult.deactivateReason or "production_blocked"
+	end
+
+	applyLaborDebugAttributes(player, laborAction, "completed", stationState.stationId, "work_action_completed")
+	debugLog(
+		string.format(
+			"Accepted station work action userId=%d stationId=%s action=%s generated=%.0f",
+			player.UserId,
+			stationState.stationId,
+			laborAction,
+			tickResult.generatedAmount
+		)
+	)
+	return true, nil
+end
+
 local remotesFolder = ensureRemotesFolder()
 local stationActivateRequestRemote = ensureRemoteEvent(remotesFolder, ACTIVATE_REMOTE_NAME)
 local stationDebugStateRequestRemote = ensureRemoteEvent(remotesFolder, DEBUG_REQUEST_REMOTE_NAME)
@@ -541,7 +721,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 				return
 			end
 			markHaulRequest(player.UserId, requestNow)
-		else
+		elseif requestMode ~= "legacy" then
 			if isCoolingDown(player.UserId, requestNow) then
 				rejectActivate(player, "request_cooldown")
 				return
@@ -625,9 +805,42 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 			return
 		end
 
-		if requestMode ~= "complete" then
+		local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationIdValue)
+		local specialistRole = player:GetAttribute("SpecialistRole")
+		local workValidation = LaborActionState.ValidateWorkAction(specialistRole, requiredSpecialistRole)
+		local resolvedLaborAction = workValidation.laborAction
+
+		if requestMode == "begin" then
+			applyLaborDebugAttributes(
+				player,
+				resolvedLaborAction,
+				taskResult.snapshot.objectiveState,
+				stationIdValue,
+				taskResult.reason
+			)
 			return
 		end
+
+		if requestMode == "cancel" then
+			clearLaborDebugAttributes(player)
+			return
+		end
+
+		if requestMode == "complete" then
+			if resolvedLaborAction == nil then
+				rejectActivate(player, workValidation.reason or "labor_action_unmapped")
+				return
+			end
+
+			local completed, completeReason = completeStationWorkAction(player, stationState, resolvedLaborAction)
+			if not completed then
+				rejectActivate(player, completeReason :: string)
+				return
+			end
+			return
+		end
+
+		return
 	elseif requestMode ~= "legacy" then
 		rejectActivate(player, "invalid_mode")
 		return
@@ -672,24 +885,14 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 		return
 	end
 
-	local allowed, reason = validateActivationRequest(player, stationState)
-	if not allowed then
-		rejectActivate(player, reason :: string)
-		return
-	end
-
-	if stationState.isActive then
-		rejectActivate(player, "already_active_no_produced_to_haul")
-		return
-	end
-
-	stationState.isActive = true
-	stationState.activatedByUserId = player.UserId
-	stationState.lastTickAt = os.clock()
-	stationState.accumulatorSeconds = 0
-	applyDebugAttributes(stationState)
-
-	debugLog(string.format("Accepted StationActivateRequest userId=%d stationId=%s", player.UserId, stationIdValue))
+	debugLog(
+		string.format(
+			"Accepted StationAssignRequest userId=%d stationId=%s reason=%s (production requires completed work action)",
+			player.UserId,
+			stationIdValue,
+			tostring(assignReason)
+		)
+	)
 end)
 
 stationDebugStateRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
@@ -782,161 +985,11 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	end
 end)
 
-RunService.Heartbeat:Connect(function(deltaTime: number)
+RunService.Heartbeat:Connect(function(_deltaTime: number)
 	for _, stationState in stationStateById do
-		if not stationState.isActive then
-			continue
+		if stationState.isActive then
+			deactivateStation(stationState, "passive_generation_disabled")
 		end
-
-		stationState.accumulatorSeconds += deltaTime
-
-		while stationState.accumulatorSeconds >= StationConfig.GenerationIntervalSeconds and stationState.isActive do
-			local requiredSpecialistRole = getRequiredSpecialistRoleForStation(stationState.stationId)
-			local activatingPlayer = stationState.activatedByUserId
-					and getPlayerByUserId(stationState.activatedByUserId)
-				or nil
-			if requiredSpecialistRole then
-				if not activatingPlayer then
-					deactivateStation(stationState, "activator_missing")
-					break
-				end
-
-				if activatingPlayer:GetAttribute("Role") ~= RoleConfig.Roles.Tinyfolk then
-					deactivateStation(stationState, "activator_not_tinyfolk")
-					break
-				end
-
-				local specialistRole = activatingPlayer:GetAttribute("SpecialistRole")
-				if specialistRole ~= requiredSpecialistRole then
-					deactivateStation(stationState, "specialist_role_lost")
-					break
-				end
-
-				if activatingPlayer:GetAttribute("SpecialistAssignedStationId") ~= stationState.stationId then
-					deactivateStation(stationState, "specialist_assignment_target_lost")
-					break
-				end
-			end
-
-			stationState.accumulatorSeconds -= StationConfig.GenerationIntervalSeconds
-			stationState.tickCount += 1
-			stationState.lastTickAt = os.clock()
-
-			local modifiers = getProductionModifiersForStation(stationState.stationId)
-			local perTickMultiplier = if type(modifiers.perTickMultiplier) == "number"
-				then modifiers.perTickMultiplier
-				else 1
-			local maxTotalMultiplier = if type(modifiers.maxTotalMultiplier) == "number"
-				then modifiers.maxTotalMultiplier
-				else 1
-
-			local maxTotal = StationConfig.MaxWoodTotal
-			local perTick = StationConfig.WoodPerTick
-			if stationState.materialType == "Stone" then
-				maxTotal = StationConfig.MaxStoneTotal
-				perTick = StationConfig.StonePerTick
-			elseif stationState.materialType == "Food" then
-				maxTotal = StationConfig.MaxFoodTotal
-				perTick = StationConfig.FoodPerTick
-			end
-			maxTotal = math.max(1, math.floor(maxTotal * maxTotalMultiplier + 0.5))
-			perTick = math.max(1, math.floor(perTick * perTickMultiplier + 0.5))
-
-			local materialName: "Wood" | "Stone" | "Food" = stationState.materialType
-			local materialSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
-			local remainingCapacity = maxTotal - materialSnapshot.produced
-			local generatedAmount = math.min(perTick, math.max(0, remainingCapacity))
-			local maxReachedReason = if materialName == "Stone"
-				then "max_stone_produced_reached"
-				elseif materialName == "Food" then "max_food_produced_reached"
-				else "max_wood_produced_reached"
-			if generatedAmount <= 0 then
-				applyDebugAttributes(stationState)
-				deactivateStation(stationState, maxReachedReason)
-				break
-			end
-
-			local sourcePrefix = if materialName == "Stone"
-				then "MiningStation:"
-				elseif materialName == "Food" then "Farm:"
-				else "WorkStation:"
-			local flowSnapshot =
-				ResourceFlowState.AddProduced(materialName, sourcePrefix .. stationState.stationId, generatedAmount)
-			stationState.resourceTotal = flowSnapshot.produced
-
-			if flowSnapshot.produced >= maxTotal then
-				stationState.resourceTotal = maxTotal
-				applyDebugAttributes(stationState)
-				if stationState.materialType == "Stone" then
-					debugLog(
-						string.format(
-							"Stone tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-							stationState.stationId,
-							stationState.tickCount,
-							generatedAmount,
-							stationState.resourceTotal,
-							flowSnapshot.inTransit,
-							flowSnapshot.stored,
-							flowSnapshot.usable
-						)
-					)
-					deactivateStation(stationState, "max_stone_produced_reached")
-				elseif stationState.materialType == "Food" then
-					debugLog(
-						string.format(
-							"Food tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-							stationState.stationId,
-							stationState.tickCount,
-							generatedAmount,
-							stationState.resourceTotal,
-							flowSnapshot.inTransit,
-							flowSnapshot.stored,
-							flowSnapshot.usable
-						)
-					)
-					deactivateStation(stationState, "max_food_produced_reached")
-				else
-					debugLog(
-						string.format(
-							"Wood tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-							stationState.stationId,
-							stationState.tickCount,
-							generatedAmount,
-							stationState.resourceTotal,
-							flowSnapshot.inTransit,
-							flowSnapshot.stored,
-							flowSnapshot.usable
-						)
-					)
-					deactivateStation(stationState, "max_wood_produced_reached")
-				end
-				break
-			end
-
-			applyDebugAttributes(stationState)
-			if stationState.tickCount % StationConfig.DebugLogEveryTicks == 0 then
-				local tickLabel = if stationState.materialType == "Stone"
-					then "Stone"
-					elseif stationState.materialType == "Food" then "Food"
-					else "Wood"
-				debugLog(
-					string.format(
-						"%s tick id=%s tick=%d generated=%.0f produced=%d inTransit=%.0f stored=%.0f usable=%.0f",
-						tickLabel,
-						stationState.stationId,
-						stationState.tickCount,
-						generatedAmount,
-						stationState.resourceTotal,
-						flowSnapshot.inTransit,
-						flowSnapshot.stored,
-						flowSnapshot.usable
-					)
-				)
-			end
-		end
-	end
-
-	for _, stationState in stationStateById do
 		applyDebugAttributes(stationState)
 	end
 end)
