@@ -181,7 +181,7 @@ end
 
 game = fakeGame
 
-scriptParent = makeNode("Services")
+local scriptParent = makeNode("Services")
 scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
 script = {
 	Parent = scriptParent,
@@ -233,8 +233,6 @@ require("../src/ServerScriptService/Services/TinyfolkLaborUpgradeService.server"
 
 local upgradeApi = globalEnv._TinyfolkLaborUpgradeService_QueryAPI
 assertTrue(type(upgradeApi) == "table", "tinyfolk labor upgrade query api available")
-
-local responseRemote = remotesFolder:WaitForChild("TinyfolkLaborUpgradeResponse")
 
 upgradeApi.SetPlayerStateForTests(8101, {
 	laborTokens = 3,

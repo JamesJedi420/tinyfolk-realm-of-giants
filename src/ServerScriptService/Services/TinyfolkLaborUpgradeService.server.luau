@@ -125,8 +125,13 @@ local function isWithinBenchRange(player: Player, benchId: string): boolean
 		return false
 	end
 
-	local delta = root.Position - benchPart.Position
-	return delta.Magnitude <= TinyfolkLaborUpgradeConfig.InteractionRangeStuds
+	local rootPosition = root.Position
+	local benchPosition = benchPart.Position
+	local deltaX = rootPosition.X - benchPosition.X
+	local deltaY = rootPosition.Y - benchPosition.Y
+	local deltaZ = rootPosition.Z - benchPosition.Z
+	local distance = math.sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ))
+	return distance <= TinyfolkLaborUpgradeConfig.InteractionRangeStuds
 end
 
 local function registerBenchFromPart(part: BasePart)
