@@ -2,6 +2,7 @@
 
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
+local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 
 local function assertTrue(value: boolean, label: string)
@@ -147,6 +148,7 @@ assertTrue(
 	"default tinyfolk tool loadout tables cloned"
 )
 assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
+assertTrue(defaultA.data.rolePreference == nil, "default profile omits role preference")
 assertTrue(defaultA.data.specialistPreference == nil, "default profile omits specialist preference")
 
 local calls: { any } = {}
@@ -530,6 +532,70 @@ assertEqual(
 )
 assertEqual(loadedSpecialistProfile.data.specialistPreference.lastAssignedAt, 100, "load keeps valid timestamp")
 assertTrue(loadedSpecialistProfile.data.counters.coins == 1, "load keeps non-preference profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			rolePreference = {
+				preferredRole = RoleConfig.Roles.Tinyfolk,
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 2,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local roleSanitizePlayer = makePlayer(9404)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(roleSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9404",
+	"load role sanitize player"
+)
+local loadedRoleProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(roleSanitizePlayer)
+assertSuccess(loadedRoleProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9404", "get role sanitize")
+assertEqual(
+	loadedRoleProfile.data.rolePreference.preferredRole,
+	RoleConfig.Roles.Tinyfolk,
+	"load sanitizes preferred role"
+)
+assertTrue(loadedRoleProfile.data.rolePreference.invalidField == nil, "load drops invalid role preference fields")
+assertTrue(loadedRoleProfile.data.counters.coins == 2, "load keeps non-preference profile fields for role sanitize")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			rolePreference = {
+				preferredRole = "NotARealRole",
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidRoleSanitizePlayer = makePlayer(9405)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidRoleSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9405",
+	"load invalid role sanitize player"
+)
+local loadedInvalidRoleProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidRoleSanitizePlayer)
+assertSuccess(loadedInvalidRoleProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9405", "get invalid role sanitize")
+assertTrue(loadedInvalidRoleProfile.data.rolePreference == nil, "load drops invalid preferred role")
 
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
