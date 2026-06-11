@@ -207,6 +207,7 @@ local playerUpdateFail = makePlayer(2002)
 local playerRealmLoadFail = makePlayer(2003)
 local playerRealmSaveFail = makePlayer(2004)
 local playerOwnershipBlocked = makePlayer(2005)
+local playerLoadFailureFallback = makePlayer(2006)
 
 local playersList = {
 	playerStoredGiant,
@@ -218,6 +219,7 @@ local playersList = {
 	playerRealmLoadFail,
 	playerRealmSaveFail,
 	playerOwnershipBlocked,
+	playerLoadFailureFallback,
 }
 
 local playerAdded = makeSignal()
@@ -284,10 +286,14 @@ local ownershipReadyByUserId: { [number]: boolean } = {
 	[2004] = true,
 	[2005] = true,
 }
+local loadFailureRouteByUserId: { [number]: string? } = {}
 local ownershipCallbacksByUserId: { [number]: { (boolean, string?) -> () } } = {}
 _G._ProfilePersistenceLifecycle_QueryAPI = {
 	IsPlayerOwnershipReady = function(userId: number): boolean
 		return ownershipReadyByUserId[userId] == true
+	end,
+	GetLoadFailureRoute = function(userId: number): string?
+		return loadFailureRouteByUserId[userId]
 	end,
 	RegisterOwnershipReadyCallback = function(userId: number, callback: any): boolean
 		if type(callback) ~= "function" then
@@ -646,6 +652,19 @@ for _, callback in ipairs(teleportCallbacks :: { (any) -> () }) do
 	callback({ ok = true, handoffToken = "test-token" })
 end
 assertEqual(playerOwnershipBlocked.loadCharacterCount, 1, "teleport callback resumes blocked spawn")
+
+loadFailureRouteByUserId[2006] = "safe_fallback"
+roleChangeRemote:FireServer(playerLoadFailureFallback, RoleConfig.Roles.Tinyfolk)
+assertEqual(
+	playerLoadFailureFallback:GetAttribute("Role"),
+	RoleConfig.Roles.Tinyfolk,
+	"load-failure fallback still sets active role"
+)
+assertEqual(playerLoadFailureFallback.loadCharacterCount, 1, "load-failure fallback spawns without profile ownership")
+assertTrue(
+	sawWarnContaining("Spawn routed to safe fallback userId=2006 trigger=role_select"),
+	"load-failure fallback spawn warning emitted"
+)
 
 playerRemoving:Fire(playerRealmSaveFail)
 assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")

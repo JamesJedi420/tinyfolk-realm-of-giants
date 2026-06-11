@@ -376,8 +376,10 @@ assertEqual(
 	"profile_session_start_failed",
 	"failed load ownership reason set"
 )
+assertEqual(failureLifecycleQueryApi.GetLoadFailureRoute(404), "safe_fallback", "failed load routes to safe fallback")
 
 failurePlayers.PlayerRemoving:Fire(playerD)
+assertEqual(failureLifecycleQueryApi.GetLoadFailureRoute(404), nil, "removed player clears load failure route")
 assertEqual(countCalls(failureGateway, "SavePlayerProfile"), 1, "removing after failed load saves")
 assertEqual(countCalls(failureGateway, "ReleasePlayerProfile"), 1, "release still runs after save failure")
 assertTrue(string.find(failureLogger.lines[2], "phase=save", 1, true) ~= nil, "save failure logs phase")
