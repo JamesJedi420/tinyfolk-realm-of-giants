@@ -11,6 +11,12 @@ local InventoryCraftConfig = require(Config:WaitForChild("InventoryCraftConfig")
 local InventoryCraftState = if script ~= nil and script.Parent ~= nil
 	then require(InventoryCraft:WaitForChild("InventoryCraftState"))
 	else require("../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftState")
+local InventoryCraftProfileState = if script ~= nil and script.Parent ~= nil
+	then require(InventoryCraft:WaitForChild("InventoryCraftProfileState"))
+	else require("../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftProfileState")
+local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+	else require("./ProfilePersistenceGateway")
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local CRAFT_REQUEST_REMOTE_NAME = "InventoryCraftRequest"
@@ -23,6 +29,7 @@ local CANONICAL_RECIPE_CATALOG = InventoryCraftConfig.DEFAULT_RECIPE_CATALOG
 type SessionState = InventoryCraftState.State
 
 local sessionByUserId: { [number]: SessionState? } = {}
+local globalEnv: any = getfenv()
 
 local function debugLog(message: string)
 	print(string.format("[InventoryCraftService] %s", message))
@@ -30,6 +37,82 @@ end
 
 local function debugWarn(message: string)
 	warn(string.format("[InventoryCraftService] %s", message))
+end
+
+local function applyDebugAttributes(player: Player, snapshot: any)
+	local attributes = InventoryCraftConfig.Attributes
+	player:SetAttribute(attributes.ItemCount, #snapshot.items)
+	player:SetAttribute(attributes.CraftedTotal, snapshot.craftedTotal)
+	player:SetAttribute(
+		attributes.CraftableRecipeCount,
+		if type(snapshot.craftableRecipeIds) == "table" then #snapshot.craftableRecipeIds else 0
+	)
+	player:SetAttribute(attributes.LastCraftRecipeId, snapshot.lastCraftRecipeId)
+	player:SetAttribute(attributes.LastCraftAt, snapshot.lastCraftAt)
+	player:SetAttribute(attributes.LastReason, snapshot.lastReason)
+end
+
+local function getProfilePersistenceLifecycleQueryApi(): any?
+	local queryApi = globalEnv._ProfilePersistenceLifecycle_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
+local function readProfileData(player: Player): any?
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+	if not profileResult.ok then
+		return nil
+	end
+	if type(profileResult.data) ~= "table" then
+		return nil
+	end
+	return profileResult.data
+end
+
+local function persistItemCounts(player: Player, itemCounts: { [string]: number })
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local transition = InventoryCraftProfileState.ApplyItemCounts(currentData, itemCounts, CANONICAL_ITEM_CATALOG)
+		if not transition.accepted then
+			return nil, transition.reason
+		end
+		return transition.profileData
+	end)
+
+	if not updateResult.ok then
+		debugWarn(
+			string.format("Inventory persist failed userId=%d reason=%s", player.UserId, tostring(updateResult.reason))
+		)
+	end
+end
+
+local function buildSessionFromItemCounts(itemCounts: { [string]: number }): SessionState
+	local state = InventoryCraftState.NewState(nil)
+	local transition = InventoryCraftState.AddItems(state, itemCounts, CANONICAL_ITEM_CATALOG)
+	local nextState = transition.state
+	nextState.lastReason = if transition.accepted then "hydrated_from_profile" else transition.reason
+	return nextState
+end
+
+local function hydrateSessionFromProfile(player: Player): SessionState?
+	local profileData = readProfileData(player)
+	if profileData == nil then
+		return nil
+	end
+
+	if InventoryCraftProfileState.HasPersistedState(profileData) then
+		local itemCounts = InventoryCraftProfileState.GetItemCounts(profileData, CANONICAL_ITEM_CATALOG)
+		return buildSessionFromItemCounts(itemCounts)
+	end
+
+	local bootstrapped = InventoryCraftState.NewState(InventoryCraftConfig.TEST_STARTING_ITEMS)
+	persistItemCounts(player, bootstrapped.itemCounts)
+	return bootstrapped
+end
+
+local function persistSessionState(player: Player, state: SessionState)
+	persistItemCounts(player, state.itemCounts)
 end
 
 local function ensureRemotesFolder(): Folder
@@ -62,16 +145,42 @@ local function isTinyfolk(player: Player): boolean
 	return player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
 end
 
-local function getOrCreateSession(userId: number): SessionState
+local function getOrCreateSession(player: Player): SessionState
+	local userId = player.UserId
 	local existing = sessionByUserId[userId]
 	if existing ~= nil then
 		return existing
+	end
+
+	local hydrated = hydrateSessionFromProfile(player)
+	if hydrated ~= nil then
+		sessionByUserId[userId] = hydrated
+		debugLog(string.format("Hydrated inventory session userId=%d reason=%s", userId, tostring(hydrated.lastReason)))
+		return hydrated
 	end
 
 	local created = InventoryCraftState.NewState(InventoryCraftConfig.TEST_STARTING_ITEMS)
 	sessionByUserId[userId] = created
 	debugLog(string.format("Initialized inventory session userId=%d", userId))
 	return created
+end
+
+local function refreshSessionFromProfile(player: Player)
+	if not isTinyfolk(player) then
+		return
+	end
+
+	local hydrated = hydrateSessionFromProfile(player)
+	if hydrated == nil then
+		return
+	end
+
+	sessionByUserId[player.UserId] = hydrated
+	local snapshot = InventoryCraftState.GetSnapshot(hydrated, CANONICAL_ITEM_CATALOG)
+	applyDebugAttributes(player, snapshot)
+	debugLog(
+		string.format("Refreshed inventory session from profile userId=%d itemCount=%d", player.UserId, #snapshot.items)
+	)
 end
 
 local function setSession(userId: number, state: SessionState)
@@ -83,21 +192,8 @@ local function clearSession(userId: number, reason: string)
 	debugLog(string.format("Cleared inventory session userId=%d reason=%s", userId, reason))
 end
 
-local function applyDebugAttributes(player: Player, snapshot: any)
-	local attributes = InventoryCraftConfig.Attributes
-	player:SetAttribute(attributes.ItemCount, #snapshot.items)
-	player:SetAttribute(attributes.CraftedTotal, snapshot.craftedTotal)
-	player:SetAttribute(
-		attributes.CraftableRecipeCount,
-		if type(snapshot.craftableRecipeIds) == "table" then #snapshot.craftableRecipeIds else 0
-	)
-	player:SetAttribute(attributes.LastCraftRecipeId, snapshot.lastCraftRecipeId)
-	player:SetAttribute(attributes.LastCraftAt, snapshot.lastCraftAt)
-	player:SetAttribute(attributes.LastReason, snapshot.lastReason)
-end
-
 local function snapshotForPlayer(player: Player): any
-	local state = getOrCreateSession(player.UserId)
+	local state = getOrCreateSession(player)
 	local snapshot = InventoryCraftState.GetSnapshot(state, CANONICAL_ITEM_CATALOG)
 	applyDebugAttributes(player, snapshot)
 	return {
@@ -122,7 +218,7 @@ local function listCraftableRecipesForPlayer(player: Player): any
 		}
 	end
 
-	local state = getOrCreateSession(player.UserId)
+	local state = getOrCreateSession(player)
 	local recipes = InventoryCraftState.ListCraftableRecipes(
 		state,
 		RoleConfig.Roles.Tinyfolk,
@@ -153,7 +249,7 @@ local function consumeItemsForPlayer(player: Player, consumptions: any): any
 		}
 	end
 
-	local currentState = getOrCreateSession(player.UserId)
+	local currentState = getOrCreateSession(player)
 	local transition = InventoryCraftState.ConsumeItems(currentState, consumptions, CANONICAL_ITEM_CATALOG)
 	if not transition.accepted then
 		local rejectedState = transition.state
@@ -179,6 +275,7 @@ local function consumeItemsForPlayer(player: Player, consumptions: any): any
 	end
 
 	setSession(player.UserId, transition.state)
+	persistSessionState(player, transition.state)
 	local snapshot = InventoryCraftState.GetSnapshot(transition.state, CANONICAL_ITEM_CATALOG)
 	applyDebugAttributes(player, snapshot)
 	debugLog(
@@ -223,7 +320,7 @@ local function grantItemsForPlayer(player: Player, additions: any, reason: strin
 		}
 	end
 
-	local currentState = getOrCreateSession(player.UserId)
+	local currentState = getOrCreateSession(player)
 	local transition = InventoryCraftState.AddItems(currentState, additions, CANONICAL_ITEM_CATALOG)
 	if not transition.accepted then
 		local rejectedState = transition.state
@@ -253,6 +350,7 @@ local function grantItemsForPlayer(player: Player, additions: any, reason: strin
 		nextState.lastReason = reason
 	end
 	setSession(player.UserId, nextState)
+	persistSessionState(player, nextState)
 	local snapshot = InventoryCraftState.GetSnapshot(nextState, CANONICAL_ITEM_CATALOG)
 	applyDebugAttributes(player, snapshot)
 	debugLog(
@@ -292,7 +390,7 @@ local function craftForPlayer(player: Player, recipeId: any, catalogOverride: an
 	local itemCatalog = if catalogOverride ~= nil then catalogOverride else CANONICAL_ITEM_CATALOG
 	local recipeCatalog = if recipeCatalogOverride ~= nil then recipeCatalogOverride else CANONICAL_RECIPE_CATALOG
 
-	local currentState = getOrCreateSession(player.UserId)
+	local currentState = getOrCreateSession(player)
 	local transition = InventoryCraftState.ResolveCraft(currentState, {
 		recipeId = recipeId,
 		requesterRole = RoleConfig.Roles.Tinyfolk,
@@ -323,6 +421,7 @@ local function craftForPlayer(player: Player, recipeId: any, catalogOverride: an
 	end
 
 	setSession(player.UserId, transition.state)
+	persistSessionState(player, transition.state)
 	local snapshot = InventoryCraftState.GetSnapshot(transition.state, itemCatalog)
 	applyDebugAttributes(player, snapshot)
 	debugLog(
@@ -401,12 +500,23 @@ debugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 end)
 
 local function setupPlayer(player: Player)
+	local lifecycleApi = getProfilePersistenceLifecycleQueryApi()
+	if lifecycleApi ~= nil and type(lifecycleApi.RegisterOwnershipReadyCallback) == "function" then
+		lifecycleApi.RegisterOwnershipReadyCallback(player.UserId, function(ready: boolean, _failureReason: string?)
+			if not ready then
+				return
+			end
+			refreshSessionFromProfile(player)
+		end)
+	end
+
 	if isTinyfolk(player) then
 		snapshotForPlayer(player)
 	end
 
 	player:GetAttributeChangedSignal("Role"):Connect(function()
 		if player:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
+			refreshSessionFromProfile(player)
 			snapshotForPlayer(player)
 			return
 		end
@@ -430,6 +540,10 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	local state = sessionByUserId[player.UserId]
+	if state ~= nil and isTinyfolk(player) then
+		persistSessionState(player, state)
+	end
 	clearSession(player.UserId, "player_removing")
 end)
 
@@ -465,6 +579,9 @@ InventoryCraftService.TestHarness = {
 	end,
 	ResetSessionForTests = function(userId: number, bootstrapItems: any?)
 		sessionByUserId[userId] = InventoryCraftState.NewState(bootstrapItems)
+	end,
+	HydrateSessionFromProfileForTests = function(player: Player)
+		refreshSessionFromProfile(player)
 	end,
 }
 

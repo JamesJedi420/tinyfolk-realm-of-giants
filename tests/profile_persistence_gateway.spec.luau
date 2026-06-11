@@ -54,6 +54,7 @@ local expectedApi = {
 	ResolveEventOutcomeWriteBack = true,
 	ResolveReconnectRestoreAction = true,
 	GetLoadedPlayerProfileData = true,
+	GetLoadedPlayerReputationTitleIds = true,
 	UpdateLoadedPlayerProfileData = true,
 	LoadPlayerProfile = true,
 	LoadDefaultPlayerProfile = true,
@@ -144,6 +145,7 @@ assertTrue(
 	defaultB.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1 == nil,
 	"default tinyfolk tool loadout tables cloned"
 )
+assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
 
 local calls: { any } = {}
 local ownerLayer: any = {}
@@ -230,6 +232,12 @@ local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(pla
 	currentData.roleLoadoutState.selectedByRole.Giant = {
 		passive_1 = "Giant_Builder_WorksiteEfficiency",
 	}
+	currentData.inventoryCraftState = {
+		schemaVersion = 1,
+		itemCounts = {
+			iron_filings = 3,
+		},
+	}
 	return currentData
 end)
 assertSuccess(updateResult, "UpdateLoadedPlayerProfileData", "PlayerProfile:9402", "update loaded")
@@ -239,6 +247,7 @@ assertEqual(
 	"Giant_Builder_WorksiteEfficiency",
 	"update result loadout data"
 )
+assertEqual(updateResult.data.inventoryCraftState.itemCounts.iron_filings, 3, "update result inventory craft data")
 updaterReceivedData.counters.coins = 333
 updaterReceivedData.roleLoadoutState.selectedByRole.Giant.passive_1 = "tampered"
 local afterUpdaterMutation = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
@@ -295,6 +304,11 @@ assertEqual(
 	calls[2].data.roleLoadoutState.selectedByRole.Giant.passive_1,
 	"Giant_Builder_WorksiteEfficiency",
 	"save owner uses updated loadout data"
+)
+assertEqual(
+	calls[2].data.inventoryCraftState.itemCounts.iron_filings,
+	3,
+	"save owner uses updated inventory craft data"
 )
 
 assertSuccess(
