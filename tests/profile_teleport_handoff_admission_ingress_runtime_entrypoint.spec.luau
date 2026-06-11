@@ -33,7 +33,66 @@ globalEnv._ProfilePersistenceLifecycle_QueryAPI = {
 ProfilePersistenceGateway.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
-ProfilePersistenceGateway.ReleasePlayerProfile = function(_player: any): any
+local loadedProfileByUserId: { [number]: any } = {}
+
+local function cloneTable(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local copied = {}
+	for key, child in pairs(value) do
+		copied[key] = cloneTable(child)
+	end
+	return copied
+end
+
+ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, updater: any): any
+	local userId = player.UserId
+	local currentData = loadedProfileByUserId[userId] or {
+		userId = userId,
+	}
+	local ok, newData, reason = pcall(updater, cloneTable(currentData))
+	if not ok or type(newData) ~= "table" then
+		return {
+			ok = false,
+			operation = "UpdateLoadedPlayerProfileData",
+			reason = if type(reason) == "string" then reason else "profile_update_failed",
+		}
+	end
+	loadedProfileByUserId[userId] = cloneTable(newData)
+	return {
+		ok = true,
+		operation = "UpdateLoadedPlayerProfileData",
+		data = cloneTable(newData),
+	}
+end
+
+ProfilePersistenceGateway.GetLoadedPlayerProfileData = function(player: any): any
+	local userId = player.UserId
+	local data = loadedProfileByUserId[userId]
+	if type(data) ~= "table" then
+		return {
+			ok = false,
+			operation = "GetLoadedPlayerProfileData",
+			reason = "player_profile_not_loaded",
+		}
+	end
+	return {
+		ok = true,
+		operation = "GetLoadedPlayerProfileData",
+		data = cloneTable(data),
+	}
+end
+
+ProfilePersistenceGateway.SavePlayerProfile = function(_player: any): any
+	return {
+		ok = true,
+		operation = "SavePlayerProfile",
+	}
+end
+
+ProfilePersistenceGateway.ReleasePlayerProfile = function(player: any): any
+	loadedProfileByUserId[player.UserId] = nil
 	return {
 		ok = true,
 		operation = "ReleasePlayerProfile",
