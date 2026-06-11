@@ -34,6 +34,11 @@ local DownedState =
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else (require :: any)("./ProfilePersistenceGateway")
+local RolePreferenceProfileState = requireDependency(
+	Shared:FindFirstChild("Role"),
+	"RolePreferenceProfileState",
+	"../../ReplicatedStorage/Shared/Role/RolePreferenceProfileState"
+)
 
 local RoleService: any = {}
 
@@ -658,24 +663,23 @@ local function readStoredPreferredRole(player: Player): string?
 		return nil
 	end
 
-	local rolePreference = profileResult.data[PROFILE_ROLE_PREFERENCE_KEY]
-	if type(rolePreference) ~= "table" then
-		return nil
-	end
-
-	local preferredRole = rolePreference[PROFILE_PREFERRED_ROLE_KEY]
-	if isValidRole(preferredRole) then
-		return preferredRole :: string
-	end
-
-	if preferredRole ~= nil then
-		debugWarn(
-			string.format(
-				"Role preference ignored userId=%d reason=invalid_preferred_role value=%s",
-				player.UserId,
-				tostring(preferredRole)
+	local rawPreference = profileResult.data[PROFILE_ROLE_PREFERENCE_KEY]
+	if type(rawPreference) == "table" and rawPreference[PROFILE_PREFERRED_ROLE_KEY] ~= nil then
+		local storedValue = rawPreference[PROFILE_PREFERRED_ROLE_KEY]
+		if not isValidRole(storedValue) then
+			debugWarn(
+				string.format(
+					"Role preference ignored userId=%d reason=invalid_preferred_role value=%s",
+					player.UserId,
+					tostring(storedValue)
+				)
 			)
-		)
+		end
+	end
+
+	local preference = RolePreferenceProfileState.GetPreference(profileResult.data)
+	if preference.preferredRole ~= nil then
+		return preference.preferredRole
 	end
 
 	return nil
@@ -683,13 +687,11 @@ end
 
 local function persistPreferredRole(player: Player, roleName: string)
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
-		local nextData = currentData
-		if type(nextData[PROFILE_ROLE_PREFERENCE_KEY]) ~= "table" then
-			nextData[PROFILE_ROLE_PREFERENCE_KEY] = {}
+		local transition = RolePreferenceProfileState.ApplyPreferredRole(currentData, roleName)
+		if not transition.accepted then
+			return nil, transition.reason
 		end
-
-		nextData[PROFILE_ROLE_PREFERENCE_KEY][PROFILE_PREFERRED_ROLE_KEY] = roleName
-		return nextData
+		return transition.profileData
 	end)
 
 	if not updateResult.ok then
