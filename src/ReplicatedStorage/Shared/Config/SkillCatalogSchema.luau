@@ -67,6 +67,13 @@ local defaultSkillCatalog: { SkillRecord } = {
 		availability = "available",
 		sourceId = "tin242_custody_stewardship",
 	},
+	{
+		skillId = "objective_craft",
+		displayName = "Objective Craft",
+		unlockSource = "progression",
+		availability = "available",
+		sourceId = "tin243_objective_craft",
+	},
 }
 
 SkillCatalogSchema.DEFAULT_SKILL_CATALOG = defaultSkillCatalog

@@ -12,6 +12,7 @@ local EmergencyReinforcementConfig = require(Config:WaitForChild("EmergencyReinf
 local RealmObjectiveState = require(GiantRealm:WaitForChild("RealmObjectiveState"))
 
 local ROLE_ATTRIBUTE = "Role"
+local OBJECTIVE_COMPLETION_SKILL_ID = "objective_craft"
 
 local OBJECTIVE_PATH = { "Map", "Objectives" }
 
@@ -222,6 +223,63 @@ local function getEscapeServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getSkillProgressionQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._SkillProgressionService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
+local function getPlayerByUserId(userId: number): any?
+	if type(Players.GetPlayerByUserId) ~= "function" then
+		return nil
+	end
+
+	local ok, result = pcall(function()
+		return Players:GetPlayerByUserId(userId)
+	end)
+	if ok then
+		return result
+	end
+
+	local okDot, resultDot = pcall(function()
+		return Players.GetPlayerByUserId(userId)
+	end)
+	if okDot then
+		return resultDot
+	end
+
+	return nil
+end
+
+local function recordObjectiveSkillUnlock(player: any): (boolean, string?)
+	if type(player) ~= "table" then
+		return false, "player_invalid"
+	end
+
+	local skillProgressionApi = getSkillProgressionQueryApi()
+	if type(skillProgressionApi) ~= "table" or type(skillProgressionApi.UnlockSkill) ~= "function" then
+		return false, "skill_progression_api_unavailable"
+	end
+
+	local ok, result = pcall(skillProgressionApi.UnlockSkill, player, OBJECTIVE_COMPLETION_SKILL_ID)
+	if not ok or type(result) ~= "table" then
+		return false, "skill_unlock_failed"
+	end
+	if result.accepted == true then
+		return true, "accepted"
+	end
+	if result.reason == "skill_already_unlocked" then
+		return true, "skill_already_unlocked"
+	end
+	return false, tostring(result.reason or "skill_unlock_rejected")
+end
+
 local function registerObjectiveSite(siteId: string, siteType: string)
 	local transition = RealmObjectiveState.RegisterSite(state, siteId, siteType, countActiveTinyfolk())
 	state = transition.state
@@ -343,11 +401,26 @@ _G._RealmObjectiveService_QueryAPI = {
 			if type(at) == "number" then at else getNow()
 		)
 		state = transition.state
+
+		local skillUnlockAccepted = false
+		local skillUnlockReason: string? = "skill_unlock_skipped"
+		if transition.accepted == true and isValidPositiveInteger(completedByUserId) then
+			local player = getPlayerByUserId(completedByUserId :: number)
+			if type(player) == "table" then
+				skillUnlockAccepted, skillUnlockReason = recordObjectiveSkillUnlock(player)
+			else
+				skillUnlockReason = "player_not_found"
+			end
+		end
+
 		return {
 			accepted = transition.accepted,
 			reason = transition.reason,
 			alert = transition.alert,
 			snapshot = RealmObjectiveState.GetSnapshot(state),
+			skillUnlockAccepted = skillUnlockAccepted,
+			skillUnlockReason = skillUnlockReason,
+			skillUnlockId = OBJECTIVE_COMPLETION_SKILL_ID,
 		}
 	end,
 	BeginObjectiveProgress = function(siteId: string, userId: number?, at: number?): any
