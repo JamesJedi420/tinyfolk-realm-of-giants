@@ -140,12 +140,35 @@ assertTrue(
 	type(defaultA.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk) == "table",
 	"default tinyfolk tool selectedByRole exists"
 )
+assertTrue(
+	type(defaultA.data.tinyfolkToolProgressionState) == "table",
+	"default tinyfolk tool progression state exists"
+)
+assertEqual(
+	defaultA.data.tinyfolkToolProgressionState.schemaVersion,
+	1,
+	"default tinyfolk tool progression schema version"
+)
+assertTrue(
+	type(defaultA.data.tinyfolkToolProgressionState.unlockedToolIds) == "table",
+	"default tinyfolk tool progression unlocked ids exists"
+)
+assertEqual(
+	next(defaultA.data.tinyfolkToolProgressionState.unlockedToolIds),
+	nil,
+	"default tinyfolk tool progression empty"
+)
 defaultA.data.roleLoadoutState.selectedByRole.Giant.passive_1 = "mutated"
 defaultA.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1 = "mutated"
+defaultA.data.tinyfolkToolProgressionState.unlockedToolIds[1] = "mutated"
 assertTrue(defaultB.data.roleLoadoutState.selectedByRole.Giant.passive_1 == nil, "default loadout tables cloned")
 assertTrue(
 	defaultB.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1 == nil,
 	"default tinyfolk tool loadout tables cloned"
+)
+assertTrue(
+	defaultB.data.tinyfolkToolProgressionState.unlockedToolIds[1] == nil,
+	"default tinyfolk tool progression tables cloned"
 )
 assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
 assertTrue(defaultA.data.rolePreference == nil, "default profile omits role preference")
@@ -777,6 +800,61 @@ assertTrue(
 	"load drops invalid tinyfolk tool loadout fields"
 )
 assertTrue(loadedToolLoadoutProfile.data.counters.coins == 5, "load keeps non-tool-loadout profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			tinyfolkToolProgressionState = {
+				schemaVersion = 1,
+				unlockedToolIds = {
+					"grappling_hook",
+					"invalid_tool",
+					"",
+				},
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 6,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local toolProgressionSanitizePlayer = makePlayer(9409)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(toolProgressionSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9409",
+	"load tinyfolk tool progression sanitize player"
+)
+local loadedToolProgressionProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(toolProgressionSanitizePlayer)
+assertSuccess(
+	loadedToolProgressionProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9409",
+	"get tinyfolk tool progression sanitize"
+)
+assertEqual(
+	loadedToolProgressionProfile.data.tinyfolkToolProgressionState.schemaVersion,
+	1,
+	"load keeps valid tinyfolk tool progression schema version"
+)
+assertEqual(
+	next(loadedToolProgressionProfile.data.tinyfolkToolProgressionState.unlockedToolIds),
+	nil,
+	"load drops invalid tinyfolk tool progression ids"
+)
+assertTrue(
+	loadedToolProgressionProfile.data.tinyfolkToolProgressionState.invalidField == nil,
+	"load drops invalid tinyfolk tool progression fields"
+)
+assertTrue(loadedToolProgressionProfile.data.counters.coins == 6, "load keeps non-tool-progression profile fields")
 
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
