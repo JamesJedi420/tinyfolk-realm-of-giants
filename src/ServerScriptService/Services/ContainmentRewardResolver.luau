@@ -19,6 +19,7 @@ local ReputationState = if script ~= nil and script.Parent ~= nil
 	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
 
 local DEFAULT_PAIR_RETENTION_SECONDS = 300
+local CONTAINMENT_REWARD_SKILL_ID = "custody_stewardship"
 
 local VALID_END_REASONS = {
 	released = true,
@@ -332,6 +333,31 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		})
 	end
 
+	local function recordSkillUnlock(custodianPlayer: any): (boolean, string?)
+		if type(custodianPlayer) ~= "table" then
+			return false, "player_invalid"
+		end
+
+		local skillProgressionApi = if type(depsAny.skillProgressionApi) == "table"
+			then depsAny.skillProgressionApi
+			else getGlobalApi("_SkillProgressionService_QueryAPI")
+		if type(skillProgressionApi) ~= "table" or type(skillProgressionApi.UnlockSkill) ~= "function" then
+			return false, "skill_progression_api_unavailable"
+		end
+
+		local ok, result = pcall(skillProgressionApi.UnlockSkill, custodianPlayer, CONTAINMENT_REWARD_SKILL_ID)
+		if not ok or type(result) ~= "table" then
+			return false, "skill_unlock_failed"
+		end
+		if result.accepted == true then
+			return true, "accepted"
+		end
+		if result.reason == "skill_already_unlocked" then
+			return true, "skill_already_unlocked"
+		end
+		return false, tostring(result.reason or "skill_unlock_rejected")
+	end
+
 	local function recordReputationLog(userId: number, metadata: any, reputationResult: any)
 		local eventLogApi = if type(depsAny.eventLogApi) == "table"
 			then depsAny.eventLogApi
@@ -493,6 +519,11 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		}
 		local scoreResult = requestScore(input.custodianUserId, endedAt, metadata)
 		local reputationResult = updateReputation(input.custodianUserId, metadata)
+		local skillUnlockAccepted = false
+		local skillUnlockReason: string? = "skill_unlock_skipped"
+		if type(input.custodianPlayer) == "table" then
+			skillUnlockAccepted, skillUnlockReason = recordSkillUnlock(input.custodianPlayer)
+		end
 		recordReputationLog(input.custodianUserId, metadata, reputationResult)
 		local trophyResult = recordTrophy(metadata)
 		local giantLevelResult = recordGiantLevel(metadata)
@@ -547,6 +578,9 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			giantLevelReason = if type(giantLevelResult) == "table"
 				then giantLevelResult.reason
 				else "giant_level_result_invalid",
+			skillUnlockAccepted = skillUnlockAccepted,
+			skillUnlockReason = skillUnlockReason,
+			skillUnlockId = CONTAINMENT_REWARD_SKILL_ID,
 		}
 	end
 
