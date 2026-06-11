@@ -28,3 +28,5 @@ All passed locally.
 ## Studio follow-up
 
 Complete a realm objective as a loaded Tinyfolk player, leave, rejoin, and confirm `skillsProfileState.unlockedSkillIds` contains `objective_craft`.
+
+Runbook: `docs/TIN-243_OBJECTIVE_SKILL_UNLOCK_STUDIO_EVIDENCE_2026-06-11.md`.

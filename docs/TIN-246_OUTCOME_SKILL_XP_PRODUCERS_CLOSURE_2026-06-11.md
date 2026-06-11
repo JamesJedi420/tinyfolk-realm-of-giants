@@ -24,4 +24,4 @@ All passed locally.
 ## Remaining scope
 
 - Per-skill catalog threshold overrides.
-- Studio TIN-243 objective unlock round-trip proof.
+- Studio TIN-243 objective unlock round-trip proof (`docs/TIN-243_OBJECTIVE_SKILL_UNLOCK_STUDIO_EVIDENCE_2026-06-11.md`).

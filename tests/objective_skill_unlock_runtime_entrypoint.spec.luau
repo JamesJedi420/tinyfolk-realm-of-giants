@@ -195,6 +195,19 @@ assertEqual(
 	"profile stores objective-unlocked skill id"
 )
 
+assertTrue(ProfilePersistenceGateway.SavePlayerProfile(completer).ok, "save profile before leave")
+assertTrue(ProfilePersistenceGateway.ReleasePlayerProfile(completer).ok, "release profile on leave")
+local reload = ProfilePersistenceGateway.LoadPlayerProfile(completer)
+assertTrue(reload.ok, "reload profile on rejoin")
+assertEqual(
+	reload.data.skillsProfileState.unlockedSkillIds[1],
+	progressionSkillId,
+	"reloaded profile keeps objective_craft unlock"
+)
+local rejoinUnlocked = progressionApi.GetUnlockedSkillIds(completer)
+assertEqual(#rejoinUnlocked, 1, "one unlocked skill after rejoin load")
+assertEqual(rejoinUnlocked[1], progressionSkillId, "progression api sees unlock after rejoin")
+
 local duplicateCompletion = queryApi.RecordObjectiveCompletion("ConstructionSite_A", 2431, 11)
 assertFalse(duplicateCompletion.accepted, "duplicate site completion rejected")
 assertEqual(duplicateCompletion.reason, "site_already_completed", "duplicate completion reason")
