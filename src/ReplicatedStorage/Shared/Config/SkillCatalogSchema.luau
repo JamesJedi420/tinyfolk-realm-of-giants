@@ -15,6 +15,11 @@ export type SkillRecord = {
 SkillCatalogSchema.SCHEMA_VERSION = 1
 SkillCatalogSchema.CATALOG_VERSION = "tinyfolk_skills_v1"
 
+SkillCatalogSchema.Progression = {
+	DefaultMaxLevel = 5,
+	LevelXpThresholds = { 0, 100, 250, 500, 1000 },
+}
+
 SkillCatalogSchema.Availability = {
 	Available = "available",
 	Locked = "locked",
@@ -139,6 +144,36 @@ function SkillCatalogSchema.GetAllSkillRecords(catalog: any?): { SkillRecord }
 		table.insert(copied, cloneSkillRecord(record))
 	end
 	return copied
+end
+
+function SkillCatalogSchema.GetSkillMaxLevel(_skillId: any, _catalog: any?): number
+	return SkillCatalogSchema.Progression.DefaultMaxLevel
+end
+
+function SkillCatalogSchema.GetSkillLevelXpThresholds(_skillId: any, _catalog: any?): { number }
+	return SkillCatalogSchema.Progression.LevelXpThresholds
+end
+
+function SkillCatalogSchema.ResolveLevelFromXp(skillId: any, xp: number, catalog: any?): number
+	local thresholds = SkillCatalogSchema.GetSkillLevelXpThresholds(skillId, catalog)
+	local resolvedLevel = 1
+	for index = #thresholds, 2, -1 do
+		if xp >= thresholds[index] then
+			resolvedLevel = index
+			break
+		end
+	end
+	return math.min(resolvedLevel, SkillCatalogSchema.GetSkillMaxLevel(skillId, catalog))
+end
+
+function SkillCatalogSchema.ResolveMaxXpForSkill(skillId: any, catalog: any?): number
+	local thresholds = SkillCatalogSchema.GetSkillLevelXpThresholds(skillId, catalog)
+	local maxLevel = SkillCatalogSchema.GetSkillMaxLevel(skillId, catalog)
+	local maxThreshold = thresholds[maxLevel]
+	if type(maxThreshold) == "number" then
+		return math.max(0, math.floor(maxThreshold))
+	end
+	return 0
 end
 
 return SkillCatalogSchema

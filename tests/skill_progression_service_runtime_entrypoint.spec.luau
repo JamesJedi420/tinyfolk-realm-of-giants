@@ -157,4 +157,42 @@ local missingUnlock = progressionApi.UnlockSkill(player, "missing_skill")
 assertFalse(missingUnlock.accepted, "missing skill unlock rejected")
 assertEqual(missingUnlock.reason, "skill_missing", "missing skill unlock reason")
 
+assertTrue(type(unlockResult.progress) == "table", "unlock returns seeded progress")
+assertEqual(unlockResult.progress.level, 1, "unlock progress level one")
+assertEqual(unlockResult.progress.xp, 0, "unlock progress zero xp")
+
+local progressById = progressionApi.GetSkillProgressById(player)
+assertTrue(type(progressById[progressionSkillId]) == "table", "get progress by id returns unlocked skill")
+assertEqual(progressById[progressionSkillId].level, 1, "get progress by id level one")
+
+local progress = progressionApi.GetSkillProgress(player, progressionSkillId)
+assertTrue(type(progress) == "table", "get single progress returns record")
+assertEqual(progress.xp, 0, "get single progress zero xp")
+
+local awardResult = progressionApi.AwardSkillXp(player, progressionSkillId, 150)
+assertTrue(awardResult.accepted, "award xp accepted")
+assertEqual(awardResult.progress.level, 2, "award xp level two")
+assertEqual(awardResult.progress.xp, 150, "award xp total")
+
+local lockedAward = progressionApi.AwardSkillXp(player, "custody_stewardship", 10)
+assertFalse(lockedAward.accepted, "award xp rejected when locked")
+assertEqual(lockedAward.reason, "skill_not_unlocked", "locked award reason")
+
+local cooldownResult = progressionApi.SetSkillCooldownEndsAt(player, progressionSkillId, 250.25)
+assertTrue(cooldownResult.accepted, "set cooldown accepted")
+assertEqual(cooldownResult.progress.cooldownEndsAt, 250.25, "set cooldown ends at")
+
+local persistedProgress = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+assertTrue(persistedProgress.ok, "progress persisted after award and cooldown")
+assertEqual(
+	persistedProgress.data.skillsProfileState.skillProgressById[progressionSkillId].xp,
+	150,
+	"profile stores awarded xp"
+)
+assertEqual(
+	persistedProgress.data.skillsProfileState.skillProgressById[progressionSkillId].cooldownEndsAt,
+	250.25,
+	"profile stores cooldown ends at"
+)
+
 print("skill_progression_service_runtime_entrypoint.spec.luau: all checks passed")

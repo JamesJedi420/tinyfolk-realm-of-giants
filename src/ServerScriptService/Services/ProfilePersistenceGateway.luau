@@ -236,8 +236,9 @@ local function makeDefaultPlayerProfileData(userId: number): any
 			unlockedToolIds = {},
 		},
 		skillsProfileState = {
-			schemaVersion = 1,
+			schemaVersion = 2,
 			unlockedSkillIds = {},
+			skillProgressById = {},
 		},
 	}
 end
