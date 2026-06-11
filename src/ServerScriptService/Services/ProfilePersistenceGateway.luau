@@ -56,6 +56,15 @@ local SafeLocationProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/Escape/SafeLocationProfileState")
 
+local TinyfolkToolLoadoutProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("TinyfolkTools")
+			:WaitForChild("TinyfolkToolLoadoutProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/TinyfolkTools/TinyfolkToolLoadoutProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -166,7 +175,6 @@ local function copyDefaultPlayerProfileData(data: any): any
 	local giantTraitState: any = data.giantTraitState
 	local reputationState: any = data.reputationState
 	local roleLoadoutState: any = data.roleLoadoutState
-	local tinyfolkToolLoadoutState: any = data.tinyfolkToolLoadoutState
 	local inventoryCraftState: any = data.inventoryCraftState
 	local unlockedTraitIds = {}
 	local unlockedTraitIdsValue: any = if type(giantTraitState) == "table"
@@ -211,23 +219,6 @@ local function copyDefaultPlayerProfileData(data: any): any
 				and count % 1 == 0
 			then
 				copied[itemId] = count
-			end
-		end
-		return copied
-	end
-
-	local function copyTinyfolkToolSelectedByRole(roleName: string): { [string]: string }
-		local copied = {}
-		local selectedByRole: any = if type(tinyfolkToolLoadoutState) == "table"
-			then tinyfolkToolLoadoutState["selectedByRole"]
-			else nil
-		local selectedSlots: any = if type(selectedByRole) == "table" then selectedByRole[roleName] else nil
-		if type(selectedSlots) ~= "table" then
-			return copied
-		end
-		for slotId, toolId in pairs(selectedSlots) do
-			if type(slotId) == "string" and slotId ~= "" and type(toolId) == "string" and toolId ~= "" then
-				copied[slotId] = toolId
 			end
 		end
 		return copied
@@ -291,15 +282,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 				Tinyfolk = copySelectedByRole("Tinyfolk"),
 			},
 		},
-		tinyfolkToolLoadoutState = {
-			schemaVersion = if type(tinyfolkToolLoadoutState) == "table"
-					and type(tinyfolkToolLoadoutState["schemaVersion"]) == "number"
-				then tinyfolkToolLoadoutState["schemaVersion"]
-				else 1,
-			selectedByRole = {
-				Tinyfolk = copyTinyfolkToolSelectedByRole("Tinyfolk"),
-			},
-		},
+		tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(data),
 		inventoryCraftState = if type(inventoryCraftState) == "table"
 				and type(inventoryCraftState["schemaVersion"]) == "number"
 			then {
@@ -414,6 +397,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(loadedData)
 			loadedData.escapeHistory = EscapeHistoryProfileState.CopyProfileField(loadedData)
 			loadedData.safeLocation = SafeLocationProfileState.CopyProfileField(loadedData)
+			loadedData.tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end

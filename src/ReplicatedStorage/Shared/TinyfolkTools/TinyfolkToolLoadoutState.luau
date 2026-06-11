@@ -1,12 +1,9 @@
 --!strict
 
 local TinyfolkToolCatalogSchema = require("../Config/TinyfolkToolCatalogSchema")
+local TinyfolkToolLoadoutProfileState = require("./TinyfolkToolLoadoutProfileState")
 
 local TinyfolkToolLoadoutState: any = {}
-
-local PROFILE_KEY = "tinyfolkToolLoadoutState"
-local SELECTED_BY_ROLE_KEY = "selectedByRole"
-local STATE_VERSION = 1
 
 export type SelectionInput = {
 	requesterRole: string?,
@@ -31,38 +28,6 @@ cloneTable = function(value: any): any
 		cloned[key] = cloneTable(child)
 	end
 	return cloned
-end
-
-local function normalizeSelectedByRole(value: any): { [string]: string }
-	if type(value) ~= "table" then
-		return {}
-	end
-
-	local normalized = {}
-	for _, definition in ipairs(TinyfolkToolCatalogSchema.GetSlotDefinitions()) do
-		local selectedToolId = value[definition.slotId]
-		if type(selectedToolId) == "string" and selectedToolId ~= "" then
-			normalized[definition.slotId] = selectedToolId
-		end
-	end
-	return normalized
-end
-
-local function ensureProfileState(profileData: any): any
-	local nextProfile = if type(profileData) == "table" then cloneTable(profileData) else {}
-	if type(nextProfile[PROFILE_KEY]) ~= "table" then
-		nextProfile[PROFILE_KEY] = {}
-	end
-	if type(nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY]) ~= "table" then
-		nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY] = {}
-	end
-
-	nextProfile[PROFILE_KEY]["schemaVersion"] = STATE_VERSION
-	nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY][TinyfolkToolCatalogSchema.Roles.Tinyfolk] = normalizeSelectedByRole(
-		nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY][TinyfolkToolCatalogSchema.Roles.Tinyfolk]
-	)
-
-	return nextProfile
 end
 
 local function getUnlockedToolSet(profileData: any): { [string]: boolean }
@@ -107,11 +72,7 @@ local function hasCooldownMetadata(toolRecord: any): boolean
 end
 
 function TinyfolkToolLoadoutState.GetSelectedLoadout(profileData: any, role: any): { [string]: string }
-	local nextProfile = ensureProfileState(profileData)
-	if role ~= TinyfolkToolCatalogSchema.Roles.Tinyfolk then
-		return {}
-	end
-	return cloneTable(nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY][role])
+	return TinyfolkToolLoadoutProfileState.GetSelectedLoadout(profileData, role)
 end
 
 function TinyfolkToolLoadoutState.ResolveSelection(
@@ -119,8 +80,12 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 	input: SelectionInput,
 	catalog: any?
 ): SelectionResult
-	local nextProfile = ensureProfileState(profileData)
 	if type(input) ~= "table" then
+		local nextProfile = TinyfolkToolLoadoutProfileState.ApplySelectedLoadout(
+			profileData,
+			TinyfolkToolCatalogSchema.Roles.Tinyfolk,
+			{}
+		).profileData
 		return {
 			accepted = false,
 			reason = "tool_loadout_request_invalid",
@@ -129,6 +94,11 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 		}
 	end
 	if input.requesterRole ~= TinyfolkToolCatalogSchema.Roles.Tinyfolk then
+		local nextProfile = TinyfolkToolLoadoutProfileState.ApplySelectedLoadout(
+			profileData,
+			TinyfolkToolCatalogSchema.Roles.Tinyfolk,
+			{}
+		).profileData
 		return {
 			accepted = false,
 			reason = "tinyfolk_role_required",
@@ -137,6 +107,8 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 		}
 	end
 	if type(input.selectedToolIds) ~= "table" then
+		local nextProfile =
+			TinyfolkToolLoadoutProfileState.ApplySelectedLoadout(profileData, input.requesterRole, {}).profileData
 		return {
 			accepted = false,
 			reason = "tool_loadout_request_invalid",
@@ -145,6 +117,8 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 		}
 	end
 
+	local nextProfile =
+		TinyfolkToolLoadoutProfileState.ApplySelectedLoadout(profileData, input.requesterRole, {}).profileData
 	local slotDefinitions = TinyfolkToolCatalogSchema.GetSlotDefinitions()
 	local maxSlots = #slotDefinitions
 	local nextSelectedBySlot: { [string]: string } = {}
@@ -225,11 +199,15 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 		nextSelectedBySlot[slotDefinitions[assignedCount].slotId] = toolId
 	end
 
-	nextProfile[PROFILE_KEY][SELECTED_BY_ROLE_KEY][TinyfolkToolCatalogSchema.Roles.Tinyfolk] = nextSelectedBySlot
+	local applied = TinyfolkToolLoadoutProfileState.ApplySelectedLoadout(
+		nextProfile,
+		TinyfolkToolCatalogSchema.Roles.Tinyfolk,
+		nextSelectedBySlot
+	)
 	return {
-		accepted = true,
-		reason = "accepted",
-		profileData = nextProfile,
+		accepted = applied.accepted,
+		reason = applied.reason,
+		profileData = applied.profileData,
 		selectedBySlot = cloneTable(nextSelectedBySlot),
 	}
 end
@@ -239,7 +217,6 @@ function TinyfolkToolLoadoutState.BuildDefaultLoadout(profileData: any, role: an
 		return {}
 	end
 
-	local nextProfile = ensureProfileState(profileData)
 	local slotDefinitions = TinyfolkToolCatalogSchema.GetSlotDefinitions()
 	local selectedBySlot: { [string]: string } = {}
 	local assignedCount = 0
@@ -257,7 +234,7 @@ function TinyfolkToolLoadoutState.BuildDefaultLoadout(profileData: any, role: an
 			toolRecord.role == TinyfolkToolCatalogSchema.Roles.Tinyfolk
 			and toolRecord.availability == TinyfolkToolCatalogSchema.Availability.Available
 			and hasCooldownMetadata(toolRecord)
-			and isToolUnlocked(nextProfile, toolRecord, toolRecord.toolId)
+			and isToolUnlocked(profileData, toolRecord, toolRecord.toolId)
 		then
 			assignedCount += 1
 			selectedBySlot[slotDefinitions[assignedCount].slotId] = toolRecord.toolId

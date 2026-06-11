@@ -716,6 +716,68 @@ assertEqual(
 assertTrue(loadedSafeLocationProfile.data.safeLocation.invalidField == nil, "load drops invalid safe location fields")
 assertTrue(loadedSafeLocationProfile.data.counters.coins == 4, "load keeps non-safe-location profile fields")
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			tinyfolkToolLoadoutState = {
+				schemaVersion = 1,
+				selectedByRole = {
+					Tinyfolk = {
+						tool_1 = "grappling_hook",
+						invalid_slot = "decoy",
+						tool_2 = "",
+					},
+				},
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 5,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local toolLoadoutSanitizePlayer = makePlayer(9408)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(toolLoadoutSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9408",
+	"load tinyfolk tool loadout sanitize player"
+)
+local loadedToolLoadoutProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(toolLoadoutSanitizePlayer)
+assertSuccess(
+	loadedToolLoadoutProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9408",
+	"get tinyfolk tool loadout sanitize"
+)
+assertEqual(
+	loadedToolLoadoutProfile.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_1,
+	"grappling_hook",
+	"load keeps valid tinyfolk tool slot"
+)
+assertEqual(
+	loadedToolLoadoutProfile.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.invalid_slot,
+	nil,
+	"load drops invalid tinyfolk tool slot"
+)
+assertEqual(
+	loadedToolLoadoutProfile.data.tinyfolkToolLoadoutState.selectedByRole.Tinyfolk.tool_2,
+	nil,
+	"load drops empty tinyfolk tool id"
+)
+assertTrue(
+	loadedToolLoadoutProfile.data.tinyfolkToolLoadoutState.invalidField == nil,
+	"load drops invalid tinyfolk tool loadout fields"
+)
+assertTrue(loadedToolLoadoutProfile.data.counters.coins == 5, "load keeps non-tool-loadout profile fields")
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()
