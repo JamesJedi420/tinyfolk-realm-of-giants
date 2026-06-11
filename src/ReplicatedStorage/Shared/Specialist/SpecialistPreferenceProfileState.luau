@@ -252,7 +252,10 @@ function SpecialistPreferenceProfileState.ApplySpecialistRole(profileData: any, 
 	}
 end
 
-function SpecialistPreferenceProfileState.ApplyAssignedStationId(profileData: any, assignedStationId: any): PersistResult
+function SpecialistPreferenceProfileState.ApplyAssignedStationId(
+	profileData: any,
+	assignedStationId: any
+): PersistResult
 	local nextProfile = ensureProfileState(profileData)
 	local snapshot = normalizePreferenceTable(nextProfile[PROFILE_KEY])
 	if snapshot.specialistRole == SpecialistConfig.SpecialistRoles.None then
