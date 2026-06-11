@@ -28,6 +28,7 @@ local ReputationState = if script ~= nil and script.Parent ~= nil
 
 local DEFAULT_BASE_REWARD_POINTS = 100
 local DEFAULT_LOOT_VALUE_MULTIPLIER = 10
+local ESCAPE_SUCCESS_SKILL_ID = "realm_adaptation"
 
 local function isFiniteNumber(value: any): boolean
 	if type(value) ~= "number" then
@@ -322,6 +323,31 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 		return true, nil
 	end
 
+	local function recordSkillUnlock(player: any): (boolean, string?)
+		if type(player) ~= "table" then
+			return false, "player_invalid"
+		end
+
+		local skillProgressionApi = if type(depsAny.skillProgressionApi) == "table"
+			then depsAny.skillProgressionApi
+			else getGlobalApi("_SkillProgressionService_QueryAPI")
+		if type(skillProgressionApi) ~= "table" or type(skillProgressionApi.UnlockSkill) ~= "function" then
+			return false, "skill_progression_api_unavailable"
+		end
+
+		local ok, result = pcall(skillProgressionApi.UnlockSkill, player, ESCAPE_SUCCESS_SKILL_ID)
+		if not ok or type(result) ~= "table" then
+			return false, "skill_unlock_failed"
+		end
+		if result.accepted == true then
+			return true, "accepted"
+		end
+		if result.reason == "skill_already_unlocked" then
+			return true, "skill_already_unlocked"
+		end
+		return false, tostring(result.reason or "skill_unlock_rejected")
+	end
+
 	local function recordReputationLog(userId: number, at: number, metadata: any, reputationResult: any)
 		local eventLogApi = if type(depsAny.eventLogApi) == "table"
 			then depsAny.eventLogApi
@@ -462,6 +488,11 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 		}
 		local profileUpdated, profileReason, reputationResult =
 			updateProfile(input.player, profileEntry, reputationInput)
+		local skillUnlockAccepted = false
+		local skillUnlockReason: string? = "skill_unlock_skipped"
+		if type(input.player) == "table" then
+			skillUnlockAccepted, skillUnlockReason = recordSkillUnlock(input.player)
+		end
 		recordReputationLog(userId, nowAt, metadata, reputationResult)
 		local defenseUpdated, defenseReason = recordDefense({
 			operationId = operationId,
@@ -523,6 +554,9 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			returnedToHub = returnedToHub,
 			safeLocationUpdated = safeLocationUpdated,
 			safeLocationReason = safeLocationReason,
+			skillUnlockAccepted = skillUnlockAccepted,
+			skillUnlockReason = skillUnlockReason,
+			skillUnlockId = ESCAPE_SUCCESS_SKILL_ID,
 		}
 	end
 

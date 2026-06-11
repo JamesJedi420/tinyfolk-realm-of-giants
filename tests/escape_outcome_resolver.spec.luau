@@ -28,6 +28,7 @@ do
 	local profileCalls = 0
 	local defenseCalls = 0
 	local returnCalls = 0
+	local skillUnlockCalls = 0
 	local reputationLogEvents = {}
 	local profileData: any = {
 		schemaVersion = 1,
@@ -86,6 +87,14 @@ do
 			assertEqual(player.UserId, 101, "return user")
 			return true
 		end,
+		skillProgressionApi = {
+			UnlockSkill = function(player: any, skillId: string): any
+				skillUnlockCalls += 1
+				assertEqual(player.UserId, 101, "skill unlock user")
+				assertEqual(skillId, "realm_adaptation", "skill unlock id")
+				return { accepted = true, reason = "accepted", skillId = skillId }
+			end,
+		},
 		eventLogApi = {
 			RecordEvent = function(category: string, message: string, severity: string, _at: number, metadata: any)
 				table.insert(reputationLogEvents, {
@@ -120,11 +129,15 @@ do
 	assertTrue(first.defenseUpdated, "defense updated")
 	assertTrue(first.returnedToHub, "returned to hub")
 	assertTrue(first.safeLocationUpdated, "safe location updated")
+	assertTrue(first.skillUnlockAccepted, "skill unlock accepted")
+	assertEqual(first.skillUnlockReason, "accepted", "skill unlock reason")
+	assertEqual(first.skillUnlockId, "realm_adaptation", "skill unlock id")
 	assertEqual(scoreCalls, 1, "score called once")
 	assertEqual(lootCalls, 1, "loot called once")
 	assertEqual(profileCalls, 2, "profile called for escape history and safe location")
 	assertEqual(defenseCalls, 1, "defense called once")
 	assertEqual(returnCalls, 1, "return called once")
+	assertEqual(skillUnlockCalls, 1, "skill unlock called once")
 	assertEqual(#profileData.escapeHistory, 1, "profile history appended")
 	assertEqual(profileData.escapeHistory[1].operationId, "op-escape-1", "profile history operation")
 	assertEqual(profileData.safeLocation.returnReason, "escape_success", "profile safe location reason")
@@ -151,6 +164,7 @@ do
 	assertEqual(profileCalls, 2, "duplicate skips profile")
 	assertEqual(defenseCalls, 1, "duplicate skips defense")
 	assertEqual(returnCalls, 1, "duplicate skips return")
+	assertEqual(skillUnlockCalls, 1, "duplicate skips skill unlock")
 end
 
 do
