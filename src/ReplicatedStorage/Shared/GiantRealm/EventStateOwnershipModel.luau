@@ -23,6 +23,7 @@ local ownersByNamespace = {
 	trophyDisplayPreference = EventStateOwnershipModel.Owners.playerProfile,
 	pendingRecovery = EventStateOwnershipModel.Owners.playerProfile,
 	discoveredRealms = EventStateOwnershipModel.Owners.playerProfile,
+	partyHistory = EventStateOwnershipModel.Owners.playerProfile,
 	skillsProfileState = EventStateOwnershipModel.Owners.playerProfile,
 	emergencyReinforcement = EventStateOwnershipModel.Owners.realmProfile,
 	shrinePersistence = EventStateOwnershipModel.Owners.realmProfile,

@@ -9,6 +9,15 @@ local RealmAdmissionQueueState = if game ~= nil and type(game.GetService) == "fu
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmAdmissionQueueState")
 
+local PartyHistoryProfileState = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PartyHistoryProfileState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PartyHistoryProfileState")
+
 local MemoryStoreStructurePolicy = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
 	else (require :: any)("./MemoryStoreStructurePolicy")
@@ -362,6 +371,83 @@ local function unregisterResolverParty(partyId: any)
 	pcall((resolverAny :: any).UnregisterParty, partyId)
 end
 
+local function resolveProfilePersistenceGateway(): any?
+	local gateway = getGlobalTable("_ProfilePersistenceGateway_QueryAPI")
+	if type(gateway) == "table" then
+		return gateway
+	end
+
+	local ok, loaded = pcall(function()
+		if script ~= nil and script.Parent ~= nil then
+			return require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+		end
+		return (require :: any)("./ProfilePersistenceGateway")
+	end)
+	if ok then
+		return loaded
+	end
+
+	return nil
+end
+
+local function makePlayerStub(userId: number): any
+	return {
+		UserId = userId,
+	}
+end
+
+local function persistPartyHistoryForAdmission(input: any)
+	if type(input) ~= "table" or type(input.partyMemberUserIds) ~= "table" or #input.partyMemberUserIds <= 0 then
+		return
+	end
+
+	local gateway = resolveProfilePersistenceGateway()
+	if type(gateway) ~= "table" or type(gateway.UpdateLoadedPlayerProfileData) ~= "function" then
+		return
+	end
+
+	local historyEntry = {
+		operationId = input.operationId,
+		partyId = input.partyId,
+		targetRealmId = input.targetRealmId,
+		entryType = input.entryType,
+		formedAt = input.createdAt,
+		partySize = input.partySize,
+		partyMemberUserIds = input.partyMemberUserIds,
+	}
+
+	for _, memberUserId in ipairs(input.partyMemberUserIds) do
+		if type(memberUserId) ~= "number" then
+			continue
+		end
+
+		local player = makePlayerStub(memberUserId)
+		local updateOk, updateResult = pcall(
+			gateway.UpdateLoadedPlayerProfileData,
+			player,
+			function(currentData: any): any
+				if type(currentData) ~= "table" then
+					return nil, "profile_data_invalid"
+				end
+				local historyResult = PartyHistoryProfileState.AppendEntry(
+					currentData,
+					historyEntry,
+					PartyHistoryProfileState.GetDefaultHistoryLimit()
+				)
+				if historyResult.accepted ~= true then
+					return nil, historyResult.reason
+				end
+				return historyResult.profileData
+			end
+		)
+		if updateOk and type(updateResult) == "table" and updateResult.ok == true then
+			if type(gateway.SavePlayerProfile) == "function" then
+				pcall(gateway.SavePlayerProfile, player)
+			end
+		end
+	end
+end
+
 local function buildRuntime(config: any)
 	stopProcessingLoop()
 	resetProcessingDiagnostics("started")
@@ -676,6 +762,10 @@ function RealmAdmissionQueueService.EnqueueAdmission(input: any): EnqueueResult
 		reason = if type(result.reason) == "string" then result.reason else "queue_store_result_invalid",
 		snapshot = result.snapshot,
 	}
+
+	if response.accepted == true and type(input) == "table" then
+		persistPartyHistoryForAdmission(input)
+	end
 
 	local fanoutAny: any = runtimeQueueNotificationFanout
 	if type(fanoutAny) == "table" and type(fanoutAny.PublishAdmission) == "function" then

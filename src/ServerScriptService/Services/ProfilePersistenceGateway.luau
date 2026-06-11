@@ -110,6 +110,15 @@ local DiscoveredRealmsProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/GiantRealm/DiscoveredRealmsProfileState")
 
+local PartyHistoryProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PartyHistoryProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/PartyHistoryProfileState")
+
 local SkillsProfileState = if script ~= nil and script.Parent ~= nil
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -334,6 +343,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(data),
 		pendingRecovery = PendingRecoveryProfileState.CopyProfileField(data),
 		discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(data),
+		partyHistory = PartyHistoryProfileState.CopyProfileField(data),
 		skillsProfileState = SkillsProfileState.CopyProfileField(data),
 	}
 end
@@ -444,6 +454,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(loadedData)
 			loadedData.pendingRecovery = PendingRecoveryProfileState.CopyProfileField(loadedData)
 			loadedData.discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(loadedData)
+			loadedData.partyHistory = PartyHistoryProfileState.CopyProfileField(loadedData)
 			loadedData.skillsProfileState = SkillsProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
