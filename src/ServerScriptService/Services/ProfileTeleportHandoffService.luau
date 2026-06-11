@@ -48,6 +48,17 @@ export type AdmissionIngressDiagnostics = {
 	lastFallbackReason: string,
 }
 
+export type DestinationOrchestrationDiagnostics = {
+	totalAttempts: number,
+	confirmed: number,
+	awaitingOwnership: number,
+	noTransferSkipped: number,
+	confirmFailed: number,
+	capacityCommitted: number,
+	capacitySkipped: number,
+	lastReason: string,
+}
+
 local pendingHandoffByUserId: { [number]: { handoffToken: string, targetRealmId: string? }? } = {}
 local releaseReadyCallbacksByUserId: { [number]: { (HandoffResult) -> () }? } = {}
 local handoffCounter = 0
@@ -64,6 +75,19 @@ local admissionIngressDiagnostics: AdmissionIngressDiagnostics = {
 	lastPrimaryReason = "none",
 	lastFallbackReason = "none",
 }
+local destinationOrchestrationStarted = false
+local destinationAwaitingOwnershipByUserId: { [number]: boolean } = {}
+local destinationOrchestrationDiagnostics: DestinationOrchestrationDiagnostics = {
+	totalAttempts = 0,
+	confirmed = 0,
+	awaitingOwnership = 0,
+	noTransferSkipped = 0,
+	confirmFailed = 0,
+	capacityCommitted = 0,
+	capacitySkipped = 0,
+	lastReason = "not_started",
+}
+local destinationTeleportContextResolver: ((player: any) -> any?)? = nil
 
 local function cloneAdmissionIngressDiagnostics(): AdmissionIngressDiagnostics
 	return {
@@ -78,6 +102,19 @@ local function cloneAdmissionIngressDiagnostics(): AdmissionIngressDiagnostics
 		lastReason = admissionIngressDiagnostics.lastReason,
 		lastPrimaryReason = admissionIngressDiagnostics.lastPrimaryReason,
 		lastFallbackReason = admissionIngressDiagnostics.lastFallbackReason,
+	}
+end
+
+local function cloneDestinationOrchestrationDiagnostics(): DestinationOrchestrationDiagnostics
+	return {
+		totalAttempts = destinationOrchestrationDiagnostics.totalAttempts,
+		confirmed = destinationOrchestrationDiagnostics.confirmed,
+		awaitingOwnership = destinationOrchestrationDiagnostics.awaitingOwnership,
+		noTransferSkipped = destinationOrchestrationDiagnostics.noTransferSkipped,
+		confirmFailed = destinationOrchestrationDiagnostics.confirmFailed,
+		capacityCommitted = destinationOrchestrationDiagnostics.capacityCommitted,
+		capacitySkipped = destinationOrchestrationDiagnostics.capacitySkipped,
+		lastReason = destinationOrchestrationDiagnostics.lastReason,
 	}
 end
 
@@ -431,10 +468,201 @@ local function notifyReleaseReadyCallbacks(userId: number, result: HandoffResult
 	end
 end
 
+local function defaultTeleportContextFromPlayer(player: any): any?
+	if type(player) ~= "table" and typeof(player) ~= "Instance" then
+		return nil
+	end
+	if type(player.GetJoinData) ~= "function" then
+		return nil
+	end
+
+	local ok, joinData = pcall(function()
+		return player:GetJoinData()
+	end)
+	if not ok or type(joinData) ~= "table" then
+		return nil
+	end
+
+	local teleportData = joinData.TeleportData
+	if type(teleportData) ~= "table" then
+		return nil
+	end
+
+	return teleportData
+end
+
+local function resolveTeleportContext(player: any): any?
+	if destinationTeleportContextResolver ~= nil then
+		local ok, teleportContext = pcall(destinationTeleportContextResolver, player)
+		if ok and type(teleportContext) == "table" then
+			return teleportContext
+		end
+	end
+
+	return defaultTeleportContextFromPlayer(player)
+end
+
+local function resolveHandoffTokenFromTeleportContext(userId: number, teleportContext: any): string?
+	if type(teleportContext) ~= "table" then
+		return nil
+	end
+
+	local tokensByUserId = teleportContext.handoffTokensByUserId
+	if type(tokensByUserId) ~= "table" then
+		return nil
+	end
+
+	local token = tokensByUserId[userId]
+	if isNonEmptyString(token) then
+		return token
+	end
+
+	return nil
+end
+
+local function resolveTargetRealmIdFromTeleportContext(teleportContext: any): string?
+	if type(teleportContext) ~= "table" then
+		return nil
+	end
+
+	if isNonEmptyString(teleportContext.targetRealmId) then
+		return teleportContext.targetRealmId
+	end
+
+	return nil
+end
+
+local function getCapacityQueryApi(): any?
+	local queryApi = globalEnv._ActiveRealmCapacity_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	if type((queryApi :: any).CommitTinyfolkArrival) ~= "function" then
+		return nil
+	end
+
+	return queryApi
+end
+
+local function tryCommitCapacityArrival(targetRealmId: string?)
+	if not isNonEmptyString(targetRealmId) then
+		destinationOrchestrationDiagnostics.capacitySkipped += 1
+		return
+	end
+
+	local capacityApi = getCapacityQueryApi()
+	if capacityApi == nil then
+		destinationOrchestrationDiagnostics.capacitySkipped += 1
+		return
+	end
+
+	local ok, result = pcall(function()
+		return (capacityApi :: any).CommitTinyfolkArrival(targetRealmId, 1, os.time())
+	end)
+	if not ok or type(result) ~= "table" or result.accepted ~= true then
+		destinationOrchestrationDiagnostics.capacitySkipped += 1
+		return
+	end
+
+	destinationOrchestrationDiagnostics.capacityCommitted += 1
+end
+
+local function clearDestinationAwaitingOwnership(userId: number)
+	destinationAwaitingOwnershipByUserId[userId] = nil
+end
+
+local function attemptDestinationConfirmation(
+	userId: number,
+	handoffToken: string?,
+	targetRealmId: string?
+): HandoffResult
+	local confirmResult = ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId, handoffToken)
+	if confirmResult.ok == true then
+		destinationOrchestrationDiagnostics.confirmed += 1
+		destinationOrchestrationDiagnostics.lastReason = "confirmed"
+		clearDestinationAwaitingOwnership(userId)
+		tryCommitCapacityArrival(targetRealmId)
+		return confirmResult
+	end
+
+	if confirmResult.reason == "ownership_not_ready" and confirmResult.retryable == true then
+		destinationOrchestrationDiagnostics.awaitingOwnership += 1
+		destinationOrchestrationDiagnostics.lastReason = "ownership_not_ready"
+		destinationAwaitingOwnershipByUserId[userId] = true
+		return confirmResult
+	end
+
+	destinationOrchestrationDiagnostics.confirmFailed += 1
+	destinationOrchestrationDiagnostics.lastReason = if type(confirmResult.reason) == "string"
+		then confirmResult.reason
+		else "confirm_failed"
+	clearDestinationAwaitingOwnership(userId)
+	return confirmResult
+end
+
+local function orchestrateDestinationArrivalForPlayer(player: any): HandoffResult
+	local userId = getPlayerUserId(player)
+	if userId == nil then
+		return makeResult(false, "OrchestrateDestinationArrival", "invalid_player_user_id", false, nil, "safe_fallback")
+	end
+
+	destinationOrchestrationDiagnostics.totalAttempts += 1
+
+	local teleportContext = resolveTeleportContext(player)
+	local teleportHandoffToken = resolveHandoffTokenFromTeleportContext(userId, teleportContext)
+	local teleportTargetRealmId = resolveTargetRealmIdFromTeleportContext(teleportContext)
+
+	ProfileTeleportHandoffService.RestorePendingHandoffFromProfile(player)
+
+	local pending = pendingHandoffByUserId[userId]
+	local pendingToken: string? = nil
+	local pendingTargetRealmId: string? = nil
+	if pending ~= nil then
+		pendingToken = pending.handoffToken
+		pendingTargetRealmId = pending.targetRealmId
+	end
+
+	if pendingToken == nil and teleportHandoffToken == nil then
+		destinationOrchestrationDiagnostics.noTransferSkipped += 1
+		destinationOrchestrationDiagnostics.lastReason = "no_transfer_context"
+		return makeResult(true, "OrchestrateDestinationArrival", "no_transfer_context", false, nil, nil)
+	end
+
+	local handoffToken = if teleportHandoffToken ~= nil then teleportHandoffToken else pendingToken
+	local targetRealmId = if teleportTargetRealmId ~= nil then teleportTargetRealmId else pendingTargetRealmId
+
+	return attemptDestinationConfirmation(userId, handoffToken, targetRealmId)
+end
+
+local function registerDestinationOwnershipCallback(userId: number, player: any)
+	local queryApi = getLifecycleQueryApi()
+	if queryApi == nil or type(queryApi.RegisterOwnershipReadyCallback) ~= "function" then
+		return
+	end
+
+	queryApi.RegisterOwnershipReadyCallback(userId, function(ready: boolean, _failureReason: string?)
+		if ready ~= true then
+			return
+		end
+		if destinationAwaitingOwnershipByUserId[userId] ~= true then
+			return
+		end
+		if getPlayerUserId(player) ~= userId then
+			return
+		end
+
+		orchestrateDestinationArrivalForPlayer(player)
+	end)
+end
+
 function ProfileTeleportHandoffService.ResetForTests()
 	pendingHandoffByUserId = {}
 	releaseReadyCallbacksByUserId = {}
 	handoffCounter = 0
+	destinationOrchestrationStarted = false
+	destinationAwaitingOwnershipByUserId = {}
+	destinationTeleportContextResolver = nil
 	admissionIngressDiagnostics = {
 		totalAttempts = 0,
 		primaryAttempts = 0,
@@ -447,6 +675,16 @@ function ProfileTeleportHandoffService.ResetForTests()
 		lastReason = "none",
 		lastPrimaryReason = "none",
 		lastFallbackReason = "none",
+	}
+	destinationOrchestrationDiagnostics = {
+		totalAttempts = 0,
+		confirmed = 0,
+		awaitingOwnership = 0,
+		noTransferSkipped = 0,
+		confirmFailed = 0,
+		capacityCommitted = 0,
+		capacitySkipped = 0,
+		lastReason = "not_started",
 	}
 end
 
@@ -608,6 +846,83 @@ function ProfileTeleportHandoffService.CanSpawnGameplayForUserId(userId: any): b
 	return false
 end
 
+function ProfileTeleportHandoffService.OrchestrateDestinationArrival(player: any): HandoffResult
+	return orchestrateDestinationArrivalForPlayer(player)
+end
+
+function ProfileTeleportHandoffService.GetDestinationOrchestrationDiagnostics(): DestinationOrchestrationDiagnostics
+	return cloneDestinationOrchestrationDiagnostics()
+end
+
+function ProfileTeleportHandoffService.StartDestinationOrchestration(config: any?): { ok: boolean, reason: string? }
+	if destinationOrchestrationStarted then
+		return {
+			ok = true,
+			reason = "already_started",
+		}
+	end
+
+	local configAny: any = config
+	if type(configAny) == "table" and type(configAny.teleportContextResolver) == "function" then
+		destinationTeleportContextResolver = configAny.teleportContextResolver
+	end
+
+	local playersService = if type(configAny) == "table" then configAny.players else nil
+	if playersService == nil and game ~= nil and type(game.GetService) == "function" then
+		local ok, resolvedPlayers = pcall(function()
+			return game:GetService("Players")
+		end)
+		if ok then
+			playersService = resolvedPlayers
+		end
+	end
+
+	if
+		type(playersService) ~= "table"
+		or type(playersService.PlayerAdded) ~= "table"
+		or type(playersService.PlayerAdded.Connect) ~= "function"
+		or type(playersService.PlayerRemoving) ~= "table"
+		or type(playersService.PlayerRemoving.Connect) ~= "function"
+		or type(playersService.GetPlayers) ~= "function"
+	then
+		return {
+			ok = false,
+			reason = "players_service_missing",
+		}
+	end
+
+	local function onPlayerAdded(player: any)
+		local userId = getPlayerUserId(player)
+		if userId == nil then
+			return
+		end
+
+		local result = orchestrateDestinationArrivalForPlayer(player)
+		if result.ok ~= true and result.reason == "ownership_not_ready" then
+			registerDestinationOwnershipCallback(userId, player)
+		end
+	end
+
+	playersService.PlayerAdded:Connect(onPlayerAdded)
+	playersService.PlayerRemoving:Connect(function(player: any)
+		local userId = getPlayerUserId(player)
+		if userId ~= nil then
+			clearDestinationAwaitingOwnership(userId)
+		end
+	end)
+
+	for _, player in playersService:GetPlayers() do
+		onPlayerAdded(player)
+	end
+
+	destinationOrchestrationStarted = true
+	destinationOrchestrationDiagnostics.lastReason = "started"
+	return {
+		ok = true,
+		reason = nil,
+	}
+end
+
 globalEnv._ProfileTeleportHandoffService_QueryAPI = {
 	BeginCrossServerHandoff = function(player: any, context: any?): HandoffResult
 		return ProfileTeleportHandoffService.BeginCrossServerHandoff(player, context)
@@ -626,6 +941,15 @@ globalEnv._ProfileTeleportHandoffService_QueryAPI = {
 	end,
 	GetAdmissionIngressDiagnostics = function(): AdmissionIngressDiagnostics
 		return ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics()
+	end,
+	OrchestrateDestinationArrival = function(player: any): HandoffResult
+		return ProfileTeleportHandoffService.OrchestrateDestinationArrival(player)
+	end,
+	GetDestinationOrchestrationDiagnostics = function(): DestinationOrchestrationDiagnostics
+		return ProfileTeleportHandoffService.GetDestinationOrchestrationDiagnostics()
+	end,
+	StartDestinationOrchestration = function(config: any?): { ok: boolean, reason: string? }
+		return ProfileTeleportHandoffService.StartDestinationOrchestration(config)
 	end,
 	ResetForTests = function()
 		ProfileTeleportHandoffService.ResetForTests()
