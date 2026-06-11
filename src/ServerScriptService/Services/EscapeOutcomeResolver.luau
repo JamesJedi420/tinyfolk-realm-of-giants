@@ -1,6 +1,14 @@
 --!strict
 
 local EscapeOutcomeResolver: any = {}
+local EscapeHistoryProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Escape")
+			:WaitForChild("EscapeHistoryProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/Escape/EscapeHistoryProfileState")
 local ReputationState = if script ~= nil and script.Parent ~= nil
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -10,7 +18,6 @@ local ReputationState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
 
-local DEFAULT_PROFILE_HISTORY_LIMIT = 25
 local DEFAULT_BASE_REWARD_POINTS = 100
 local DEFAULT_LOOT_VALUE_MULTIPLIER = 10
 
@@ -155,22 +162,6 @@ local function makeMemoryIdempotencyStore(): any
 	}
 end
 
-local function appendBounded(list: any, entry: any, limit: number): { any }
-	local output = {}
-	if type(list) == "table" then
-		for _, existing in ipairs(list) do
-			if type(existing) == "table" and existing.operationId ~= entry.operationId then
-				table.insert(output, cloneValue(existing))
-			end
-		end
-	end
-	table.insert(output, cloneValue(entry))
-	while #output > limit do
-		table.remove(output, 1)
-	end
-	return output
-end
-
 function EscapeOutcomeResolver.Create(deps: any?): any
 	local depsAny: any = if type(deps) == "table" then deps else {}
 	local nowFn = if type(depsAny.now) == "function" then depsAny.now else defaultNow
@@ -261,7 +252,15 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			if type(currentData) ~= "table" then
 				return nil, "profile_data_invalid"
 			end
-			currentData.escapeHistory = appendBounded(currentData.escapeHistory, entry, DEFAULT_PROFILE_HISTORY_LIMIT)
+			local historyResult = EscapeHistoryProfileState.AppendEntry(
+				currentData,
+				entry,
+				EscapeHistoryProfileState.GetDefaultHistoryLimit()
+			)
+			if historyResult.accepted ~= true then
+				return nil, historyResult.reason
+			end
+			currentData = historyResult.profileData
 			reputationResult = ReputationState.ApplyOutcome(currentData, reputationInput, depsAny.traitRegistry)
 			currentData = reputationResult.profileData
 			return currentData
