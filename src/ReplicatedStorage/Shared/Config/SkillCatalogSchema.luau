@@ -52,7 +52,15 @@ local function cloneSkillRecord(record: SkillRecord): SkillRecord
 	}
 end
 
-local defaultSkillCatalog: { SkillRecord } = {}
+local defaultSkillCatalog: { SkillRecord } = {
+	{
+		skillId = "realm_adaptation",
+		displayName = "Realm Adaptation",
+		unlockSource = "progression",
+		availability = "available",
+		sourceId = "tin67_realm_adaptation",
+	},
+}
 
 SkillCatalogSchema.DEFAULT_SKILL_CATALOG = defaultSkillCatalog
 
