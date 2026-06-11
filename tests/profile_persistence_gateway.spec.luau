@@ -174,6 +174,7 @@ assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inve
 assertTrue(defaultA.data.rolePreference == nil, "default profile omits role preference")
 assertTrue(defaultA.data.specialistPreference == nil, "default profile omits specialist preference")
 assertTrue(defaultA.data.escapeHistory == nil, "default profile omits escape history")
+assertTrue(defaultA.data.trophyDisplayPreference == nil, "default profile omits trophy display preference")
 
 local calls: { any } = {}
 local ownerLayer: any = {}
@@ -738,6 +739,89 @@ assertEqual(
 )
 assertTrue(loadedSafeLocationProfile.data.safeLocation.invalidField == nil, "load drops invalid safe location fields")
 assertTrue(loadedSafeLocationProfile.data.counters.coins == 4, "load keeps non-safe-location profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			trophyDisplayPreference = {
+				optOutOfNameDisplay = true,
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 6,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local trophyDisplaySanitizePlayer = makePlayer(9408)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(trophyDisplaySanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9408",
+	"load trophy display sanitize player"
+)
+local loadedTrophyDisplayProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(trophyDisplaySanitizePlayer)
+assertSuccess(
+	loadedTrophyDisplayProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9408",
+	"get trophy display sanitize"
+)
+assertTrue(
+	loadedTrophyDisplayProfile.data.trophyDisplayPreference.optOutOfNameDisplay,
+	"load keeps valid trophy display opt-out"
+)
+assertTrue(
+	loadedTrophyDisplayProfile.data.trophyDisplayPreference.invalidField == nil,
+	"load drops invalid trophy display fields"
+)
+assertTrue(loadedTrophyDisplayProfile.data.counters.coins == 6, "load keeps non-trophy-display profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			trophyDisplayPreference = {
+				optOutOfNameDisplay = "yes",
+			},
+			counters = {
+				coins = 7,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidTrophyDisplayPlayer = makePlayer(9409)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidTrophyDisplayPlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9409",
+	"load invalid trophy display player"
+)
+local loadedInvalidTrophyDisplayProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidTrophyDisplayPlayer)
+assertSuccess(
+	loadedInvalidTrophyDisplayProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9409",
+	"get invalid trophy display"
+)
+assertTrue(
+	loadedInvalidTrophyDisplayProfile.data.trophyDisplayPreference == nil,
+	"load drops invalid trophy display preference"
+)
 
 ProfilePersistenceGateway.ConfigureOwnerLayer({
 	LoadPlayerProfile = function(profileKey: string, userId: number): any

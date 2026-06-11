@@ -8,7 +8,7 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local TrophyConfig = require(Config:WaitForChild("TrophyConfig"))
-local TrophyDisplayPolicyState = require(GiantRealm:WaitForChild("TrophyDisplayPolicyState"))
+local TrophyDisplayPolicyProfileState = require(GiantRealm:WaitForChild("TrophyDisplayPolicyProfileState"))
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else require("./ProfilePersistenceGateway")
@@ -86,10 +86,10 @@ local function readPreferenceFromProfile(player: Player): any
 				tostring(profileResult.reason)
 			)
 		)
-		return TrophyDisplayPolicyState.CreateDefaultPreference()
+		return TrophyDisplayPolicyProfileState.CreateDefaultPreference()
 	end
 
-	return TrophyDisplayPolicyState.ReadFromProfile(profileResult.data)
+	return TrophyDisplayPolicyProfileState.GetPreference(profileResult.data)
 end
 
 local function findPlayerByUserId(userId: number): Player?
@@ -138,7 +138,7 @@ local function setOptOutForPlayer(player: Player, optOutOfNameDisplay: boolean):
 	end
 
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
-		local transition = TrophyDisplayPolicyState.ApplyUpdate(currentData, optOutOfNameDisplay)
+		local transition = TrophyDisplayPolicyProfileState.ApplyOptOut(currentData, optOutOfNameDisplay)
 		if transition.accepted ~= true then
 			return nil, transition.reason
 		end
@@ -153,7 +153,7 @@ local function setOptOutForPlayer(player: Player, optOutOfNameDisplay: boolean):
 		}
 	end
 
-	local preference = TrophyDisplayPolicyState.ReadFromProfile(updateResult.data)
+	local preference = TrophyDisplayPolicyProfileState.GetPreference(updateResult.data)
 	projectPreferenceAttributes(player, preference)
 	debugLog(
 		string.format(
