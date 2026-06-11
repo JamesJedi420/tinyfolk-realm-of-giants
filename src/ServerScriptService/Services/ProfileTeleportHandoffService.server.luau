@@ -1,3 +1,4 @@
 --!nocheck
 
-require(script.Parent.ProfileTeleportHandoffService)
+local ProfileTeleportHandoffService = require(script.Parent.ProfileTeleportHandoffService)
+ProfileTeleportHandoffService.StartDestinationOrchestration(nil)
