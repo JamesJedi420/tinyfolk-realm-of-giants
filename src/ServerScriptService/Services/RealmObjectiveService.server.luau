@@ -11,6 +11,20 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 local EmergencyReinforcementConfig = require(Config:WaitForChild("EmergencyReinforcementConfig"))
 local RealmObjectiveState = require(GiantRealm:WaitForChild("RealmObjectiveState"))
 
+local outcomeSkillXpProducer: any = nil
+
+local function getOutcomeSkillXpProducer(): any
+	if outcomeSkillXpProducer ~= nil then
+		return outcomeSkillXpProducer
+	end
+	if script ~= nil and script.Parent ~= nil then
+		outcomeSkillXpProducer = require(script.Parent:WaitForChild("OutcomeSkillXpProducer"))
+	else
+		outcomeSkillXpProducer = require("./OutcomeSkillXpProducer")
+	end
+	return outcomeSkillXpProducer
+end
+
 local ROLE_ATTRIBUTE = "Role"
 local OBJECTIVE_COMPLETION_SKILL_ID = "objective_craft"
 
@@ -280,6 +294,17 @@ local function recordObjectiveSkillUnlock(player: any): (boolean, string?)
 	return false, tostring(result.reason or "skill_unlock_rejected")
 end
 
+local function recordObjectiveSkillXp(player: any): (boolean, string?)
+	if type(player) ~= "table" then
+		return false, "skill_xp_skipped"
+	end
+	local ok, accepted, reason = pcall(getOutcomeSkillXpProducer().RecordObjectiveCompletionXp, player)
+	if not ok then
+		return false, "skill_xp_award_failed"
+	end
+	return accepted == true, reason
+end
+
 local function registerObjectiveSite(siteId: string, siteType: string)
 	local transition = RealmObjectiveState.RegisterSite(state, siteId, siteType, countActiveTinyfolk())
 	state = transition.state
@@ -404,12 +429,16 @@ _G._RealmObjectiveService_QueryAPI = {
 
 		local skillUnlockAccepted = false
 		local skillUnlockReason: string? = "skill_unlock_skipped"
+		local skillXpAccepted = false
+		local skillXpReason: string? = "skill_xp_skipped"
 		if transition.accepted == true and isValidPositiveInteger(completedByUserId) then
 			local player = getPlayerByUserId(completedByUserId :: number)
 			if type(player) == "table" then
 				skillUnlockAccepted, skillUnlockReason = recordObjectiveSkillUnlock(player)
+				skillXpAccepted, skillXpReason = recordObjectiveSkillXp(player)
 			else
 				skillUnlockReason = "player_not_found"
+				skillXpReason = "player_not_found"
 			end
 		end
 
@@ -421,6 +450,9 @@ _G._RealmObjectiveService_QueryAPI = {
 			skillUnlockAccepted = skillUnlockAccepted,
 			skillUnlockReason = skillUnlockReason,
 			skillUnlockId = OBJECTIVE_COMPLETION_SKILL_ID,
+			skillXpAccepted = skillXpAccepted,
+			skillXpReason = skillXpReason,
+			skillXpId = OBJECTIVE_COMPLETION_SKILL_ID,
 		}
 	end,
 	BeginObjectiveProgress = function(siteId: string, userId: number?, at: number?): any

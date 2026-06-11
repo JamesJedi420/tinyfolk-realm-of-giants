@@ -253,6 +253,36 @@ do
 	local missingAward, missingReason = SkillXpAwardPolicy.ResolveXpAward("missing_outcome")
 	assertTrue(missingAward == nil, "missing outcome has no award")
 	assertEqual(missingReason, "xp_award_unconfigured", "missing outcome reason")
+
+	local escapeAward, escapeReason =
+		SkillXpAwardPolicy.ResolveXpAward(SkillProgressionConfig.OutcomeKinds.EscapeSuccess)
+	assertTrue(type(escapeAward) == "table", "escape success xp award resolves")
+	if escapeAward == nil then
+		error("escape success xp award missing after resolve")
+	end
+	assertEqual(escapeAward.skillId, "realm_adaptation", "escape success xp award skill id")
+	assertEqual(escapeAward.xpAmount, 100, "escape success xp award amount")
+	assertTrue(escapeReason == nil, "escape success xp award has no reason")
+
+	local containmentAward, containmentReason =
+		SkillXpAwardPolicy.ResolveXpAward(SkillProgressionConfig.OutcomeKinds.ContainmentReward)
+	assertTrue(type(containmentAward) == "table", "containment reward xp award resolves")
+	if containmentAward == nil then
+		error("containment reward xp award missing after resolve")
+	end
+	assertEqual(containmentAward.skillId, "custody_stewardship", "containment reward xp award skill id")
+	assertEqual(containmentAward.xpAmount, 50, "containment reward xp award amount")
+	assertTrue(containmentReason == nil, "containment reward xp award has no reason")
+
+	local completionAward, completionReason =
+		SkillXpAwardPolicy.ResolveXpAward(SkillProgressionConfig.OutcomeKinds.ObjectiveCompletion)
+	assertTrue(type(completionAward) == "table", "objective completion xp award resolves")
+	if completionAward == nil then
+		error("objective completion xp award missing after resolve")
+	end
+	assertEqual(completionAward.skillId, "objective_craft", "objective completion xp award skill id")
+	assertEqual(completionAward.xpAmount, 50, "objective completion xp award amount")
+	assertTrue(completionReason == nil, "objective completion xp award has no reason")
 end
 
 print("skills_profile_state: all checks passed")
