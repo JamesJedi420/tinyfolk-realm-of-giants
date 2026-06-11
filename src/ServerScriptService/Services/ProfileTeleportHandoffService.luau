@@ -4,6 +4,15 @@ local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else (require :: any)("./ProfilePersistenceGateway")
 
+local PendingRecoveryProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PendingRecoveryProfileState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PendingRecoveryProfileState")
+
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
 
@@ -30,7 +39,7 @@ export type AdmissionIngressDiagnostics = {
 	lastFallbackReason: string,
 }
 
-local pendingHandoffByUserId: { [number]: { handoffToken: string }? } = {}
+local pendingHandoffByUserId: { [number]: { handoffToken: string, targetRealmId: string? }? } = {}
 local releaseReadyCallbacksByUserId: { [number]: { (HandoffResult) -> () }? } = {}
 local handoffCounter = 0
 local admissionIngressDiagnostics: AdmissionIngressDiagnostics = {
@@ -112,6 +121,84 @@ local function makeResult(
 		handoffToken = handoffToken,
 		fallbackRoute = fallbackRoute,
 	}
+end
+
+local function makePlayerStub(userId: number): any
+	return {
+		UserId = userId,
+	}
+end
+
+local function persistPendingRecovery(
+	player: any,
+	handoffToken: string,
+	targetRealmId: string,
+	startedAt: number
+): (boolean, string?)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local applyResult = PendingRecoveryProfileState.ApplyPendingHandoff(currentData, {
+			handoffToken = handoffToken,
+			targetRealmId = targetRealmId,
+			startedAt = startedAt,
+			status = PendingRecoveryProfileState.Status.AwaitingDestination,
+		})
+		if not applyResult.accepted then
+			return nil, applyResult.reason
+		end
+		return applyResult.profileData
+	end)
+	if not updateResult.ok then
+		return false, updateResult.reason or "pending_recovery_persist_failed"
+	end
+
+	local saveResult = ProfilePersistenceGateway.SavePlayerProfile(player)
+	if not saveResult.ok then
+		return false, saveResult.reason or "pending_recovery_save_failed"
+	end
+
+	return true, nil
+end
+
+local function clearPersistedPendingRecovery(userId: number)
+	local player = makePlayerStub(userId)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local clearResult = PendingRecoveryProfileState.ClearRecovery(currentData)
+		if not clearResult.accepted then
+			return nil, clearResult.reason
+		end
+		return clearResult.profileData
+	end)
+	if updateResult.ok then
+		pcall(ProfilePersistenceGateway.SavePlayerProfile, player)
+	end
+end
+
+local function tryRestorePendingHandoffFromProfile(userId: number): boolean
+	if pendingHandoffByUserId[userId] ~= nil then
+		return true
+	end
+
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(makePlayerStub(userId))
+	if not profileResult.ok or type(profileResult.data) ~= "table" then
+		return false
+	end
+
+	local recovery = PendingRecoveryProfileState.GetRecovery(profileResult.data)
+	if recovery == nil then
+		return false
+	end
+
+	pendingHandoffByUserId[userId] = {
+		handoffToken = recovery.handoffToken,
+		targetRealmId = recovery.targetRealmId,
+	}
+	return true
+end
+
+local function clearPendingHandoff(userId: number)
+	pendingHandoffByUserId[userId] = nil
+	releaseReadyCallbacksByUserId[userId] = nil
+	clearPersistedPendingRecovery(userId)
 end
 
 local function nextHandoffToken(userId: number): string
@@ -370,18 +457,6 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 		return makeResult(false, "BeginCrossServerHandoff", "target_realm_id_invalid", false, nil, "safe_fallback")
 	end
 
-	local releaseResult = ProfilePersistenceGateway.ReleasePlayerProfile(player)
-	if not releaseResult.ok then
-		return makeResult(
-			false,
-			"BeginCrossServerHandoff",
-			"release_before_transfer_failed",
-			releaseResult.retryable == true,
-			nil,
-			"safe_fallback"
-		)
-	end
-
 	local handoffToken = nextHandoffToken(userId)
 	local enqueueResult = requestAdmissionHandoff(userId, handoffToken, targetRealmId)
 	if enqueueResult.accepted ~= true then
@@ -395,8 +470,34 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 		)
 	end
 
+	local startedAt = os.time()
+	local persisted, persistReason = persistPendingRecovery(player, handoffToken, targetRealmId, startedAt)
+	if not persisted then
+		return makeResult(
+			false,
+			"BeginCrossServerHandoff",
+			persistReason or "pending_recovery_persist_failed",
+			false,
+			nil,
+			"safe_fallback"
+		)
+	end
+
+	local releaseResult = ProfilePersistenceGateway.ReleasePlayerProfile(player)
+	if not releaseResult.ok then
+		return makeResult(
+			false,
+			"BeginCrossServerHandoff",
+			"release_before_transfer_failed",
+			releaseResult.retryable == true,
+			nil,
+			"safe_fallback"
+		)
+	end
+
 	pendingHandoffByUserId[userId] = {
 		handoffToken = handoffToken,
+		targetRealmId = targetRealmId,
 	}
 
 	local result = makeResult(true, "BeginCrossServerHandoff", nil, nil, handoffToken, nil)
@@ -404,10 +505,21 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 	return result
 end
 
+function ProfileTeleportHandoffService.RestorePendingHandoffFromProfile(player: any): boolean
+	local userId = getPlayerUserId(player)
+	if userId == nil then
+		return false
+	end
+
+	return tryRestorePendingHandoffFromProfile(userId)
+end
+
 function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, handoffToken: any?): HandoffResult
 	if not isValidUserId(userId) then
 		return makeResult(false, "ConfirmDestinationOwnership", "invalid_user_id", false, nil, "safe_fallback")
 	end
+
+	tryRestorePendingHandoffFromProfile(userId)
 
 	local pending = pendingHandoffByUserId[userId]
 	local pendingToken: string? = nil
@@ -434,8 +546,7 @@ function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, 
 		)
 	end
 
-	pendingHandoffByUserId[userId] = nil
-	releaseReadyCallbacksByUserId[userId] = nil
+	clearPendingHandoff(userId)
 	return makeResult(
 		true,
 		"ConfirmDestinationOwnership",
@@ -451,14 +562,15 @@ function ProfileTeleportHandoffService.CanSpawnGameplayForUserId(userId: any): b
 		return false
 	end
 
+	tryRestorePendingHandoffFromProfile(userId)
+
 	local pending = pendingHandoffByUserId[userId]
 	if pending == nil then
 		return true
 	end
 
 	if isOwnershipReady(userId) then
-		pendingHandoffByUserId[userId] = nil
-		releaseReadyCallbacksByUserId[userId] = nil
+		clearPendingHandoff(userId)
 		return true
 	end
 
@@ -474,6 +586,9 @@ globalEnv._ProfileTeleportHandoffService_QueryAPI = {
 	end,
 	CanSpawnGameplayForUserId = function(userId: any): boolean
 		return ProfileTeleportHandoffService.CanSpawnGameplayForUserId(userId)
+	end,
+	RestorePendingHandoffFromProfile = function(player: any): boolean
+		return ProfileTeleportHandoffService.RestorePendingHandoffFromProfile(player)
 	end,
 	RegisterReleaseReadyCallback = function(userId: any, callback: any): boolean
 		return ProfileTeleportHandoffService.RegisterReleaseReadyCallback(userId, callback)
