@@ -9,9 +9,16 @@ local function getOutcomeSkillXpProducer(): any
 	if outcomeSkillXpProducer ~= nil then
 		return outcomeSkillXpProducer
 	end
-	if script ~= nil and script.Parent ~= nil then
-		outcomeSkillXpProducer = require(script.Parent:WaitForChild("OutcomeSkillXpProducer"))
-	else
+	if script ~= nil and script.Parent ~= nil and type(script.Parent.WaitForChild) == "function" then
+		local moduleValue = script.Parent:WaitForChild("OutcomeSkillXpProducer")
+		if moduleValue ~= nil then
+			local ok, loaded = pcall(require, moduleValue)
+			if ok and type(loaded) == "table" then
+				outcomeSkillXpProducer = loaded
+			end
+		end
+	end
+	if outcomeSkillXpProducer == nil then
 		outcomeSkillXpProducer = require("./OutcomeSkillXpProducer")
 	end
 	return outcomeSkillXpProducer
