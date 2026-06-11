@@ -2,6 +2,7 @@
 
 local TinyfolkToolCatalogSchema = require("../Config/TinyfolkToolCatalogSchema")
 local TinyfolkToolLoadoutProfileState = require("./TinyfolkToolLoadoutProfileState")
+local TinyfolkToolProgressionProfileState = require("./TinyfolkToolProgressionProfileState")
 
 local TinyfolkToolLoadoutState: any = {}
 
@@ -30,28 +31,11 @@ cloneTable = function(value: any): any
 	return cloned
 end
 
-local function getUnlockedToolSet(profileData: any): { [string]: boolean }
-	local unlockedSet: { [string]: boolean } = {}
-	local progressionState = if type(profileData) == "table" then profileData["tinyfolkToolProgressionState"] else nil
-	local unlockedToolIds = if type(progressionState) == "table" then progressionState["unlockedToolIds"] else nil
-	if type(unlockedToolIds) ~= "table" then
-		return unlockedSet
-	end
-
-	for _, toolId in ipairs(unlockedToolIds) do
-		if type(toolId) == "string" and toolId ~= "" then
-			unlockedSet[toolId] = true
-		end
-	end
-
-	return unlockedSet
-end
-
-local function isToolUnlocked(profileData: any, toolRecord: any, toolId: string): boolean
+local function isToolUnlocked(profileData: any, toolRecord: any, toolId: string, catalog: any?): boolean
 	if toolRecord.unlockSource == TinyfolkToolCatalogSchema.UnlockSources.Starter then
 		return true
 	end
-	return getUnlockedToolSet(profileData)[toolId] == true
+	return TinyfolkToolProgressionProfileState.GetUnlockedToolSet(profileData, catalog)[toolId] == true
 end
 
 local function hasCooldownMetadata(toolRecord: any): boolean
@@ -168,7 +152,7 @@ function TinyfolkToolLoadoutState.ResolveSelection(
 				selectedBySlot = {},
 			}
 		end
-		if not isToolUnlocked(nextProfile, toolRecord, toolId) then
+		if not isToolUnlocked(nextProfile, toolRecord, toolId, catalog) then
 			return {
 				accepted = false,
 				reason = "tool_locked_or_unavailable",
@@ -234,7 +218,7 @@ function TinyfolkToolLoadoutState.BuildDefaultLoadout(profileData: any, role: an
 			toolRecord.role == TinyfolkToolCatalogSchema.Roles.Tinyfolk
 			and toolRecord.availability == TinyfolkToolCatalogSchema.Availability.Available
 			and hasCooldownMetadata(toolRecord)
-			and isToolUnlocked(profileData, toolRecord, toolRecord.toolId)
+			and isToolUnlocked(profileData, toolRecord, toolRecord.toolId, catalog)
 		then
 			assignedCount += 1
 			selectedBySlot[slotDefinitions[assignedCount].slotId] = toolRecord.toolId

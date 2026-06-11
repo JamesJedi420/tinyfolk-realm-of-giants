@@ -154,6 +154,20 @@ do
 end
 
 do
+	local profile = makeProfile()
+	profile.tinyfolkToolProgressionState = {
+		schemaVersion = 1,
+		unlockedToolIds = { "locked_progression_tool" },
+	}
+	local transition = TinyfolkToolLoadoutState.ResolveSelection(profile, {
+		requesterRole = "Tinyfolk",
+		selectedToolIds = { "locked_progression_tool" },
+	}, catalog)
+	assertTrue(transition.accepted, "unlocked progression tool accepted")
+	assertEqual(transition.selectedBySlot.tool_1, "locked_progression_tool", "unlocked progression tool fills slot")
+end
+
+do
 	local transition = TinyfolkToolLoadoutState.ResolveSelection(makeProfile(), {
 		requesterRole = "Tinyfolk",
 		selectedToolIds = { "locked_progression_tool" },

@@ -65,6 +65,15 @@ local TinyfolkToolLoadoutProfileState = if script ~= nil and script.Parent ~= ni
 	)
 	else require("../../ReplicatedStorage/Shared/TinyfolkTools/TinyfolkToolLoadoutProfileState")
 
+local TinyfolkToolProgressionProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("TinyfolkTools")
+			:WaitForChild("TinyfolkToolProgressionProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/TinyfolkTools/TinyfolkToolProgressionProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -167,6 +176,10 @@ local function makeDefaultPlayerProfileData(userId: number): any
 			selectedByRole = {
 				Tinyfolk = {},
 			},
+		},
+		tinyfolkToolProgressionState = {
+			schemaVersion = 1,
+			unlockedToolIds = {},
 		},
 	}
 end
@@ -283,6 +296,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 			},
 		},
 		tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(data),
+		tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(data),
 		inventoryCraftState = if type(inventoryCraftState) == "table"
 				and type(inventoryCraftState["schemaVersion"]) == "number"
 			then {
@@ -398,6 +412,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.escapeHistory = EscapeHistoryProfileState.CopyProfileField(loadedData)
 			loadedData.safeLocation = SafeLocationProfileState.CopyProfileField(loadedData)
 			loadedData.tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(loadedData)
+			loadedData.tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end
