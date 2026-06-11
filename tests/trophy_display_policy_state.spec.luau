@@ -1,7 +1,8 @@
 --!strict
 
 local TrophyConfig = require("../src/ReplicatedStorage/Shared/Config/TrophyConfig")
-local TrophyDisplayPolicyState = require("../src/ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyState")
+local TrophyDisplayPolicyProfileState =
+	require("../src/ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyProfileState")
 local TrophyState = require("../src/ReplicatedStorage/Shared/GiantRealm/TrophyState")
 
 local function assertEqual(actual: any, expected: any, label: string)
@@ -14,40 +15,28 @@ local function assertTrue(value: boolean, label: string)
 	assertEqual(value, true, label)
 end
 
-local defaultPreference = TrophyDisplayPolicyState.CreateDefaultPreference()
+local defaultPreference = TrophyDisplayPolicyProfileState.CreateDefaultPreference()
 assertTrue(defaultPreference.optOutOfNameDisplay == false, "default preference allows visitor reference")
 
-local readDefault = TrophyDisplayPolicyState.ReadFromProfile({})
+local readDefault = TrophyDisplayPolicyProfileState.GetPreference({})
 assertTrue(readDefault.optOutOfNameDisplay == false, "missing profile preference defaults to allow reference")
 
-local readStored = TrophyDisplayPolicyState.ReadFromProfile({
+local readStored = TrophyDisplayPolicyProfileState.GetPreference({
 	trophyDisplayPreference = {
 		optOutOfNameDisplay = true,
 	},
 })
 assertTrue(readStored.optOutOfNameDisplay == true, "stored opt-out preference is read")
 
-local valid, validReason = TrophyDisplayPolicyState.ValidatePreference({
-	optOutOfNameDisplay = false,
-})
-assertTrue(valid, "valid preference accepted")
-assertEqual(validReason, nil, "valid preference reason")
-
-local invalid, invalidReason = TrophyDisplayPolicyState.ValidatePreference({
-	optOutOfNameDisplay = "yes",
-})
-assertTrue(not invalid, "invalid preference rejected")
-assertEqual(invalidReason, "trophy_display_opt_out_invalid", "invalid preference reason")
-
-local update = TrophyDisplayPolicyState.ApplyUpdate({}, true)
+local update = TrophyDisplayPolicyProfileState.ApplyOptOut({}, true)
 assertTrue(update.accepted, "apply update accepted")
 assertTrue(update.preference.optOutOfNameDisplay == true, "apply update stores opt-out")
 assertTrue(
-	update.profileData[TrophyDisplayPolicyState.PROFILE_KEY][TrophyDisplayPolicyState.OPT_OUT_KEY] == true,
+	update.profileData[TrophyDisplayPolicyProfileState.PROFILE_KEY][TrophyDisplayPolicyProfileState.OPT_OUT_KEY] == true,
 	"apply update writes profile key"
 )
 
-local revert = TrophyDisplayPolicyState.ApplyUpdate(update.profileData, false)
+local revert = TrophyDisplayPolicyProfileState.ApplyOptOut(update.profileData, false)
 assertTrue(revert.accepted, "revert update accepted")
 assertTrue(revert.preference.optOutOfNameDisplay == false, "revert update clears opt-out")
 

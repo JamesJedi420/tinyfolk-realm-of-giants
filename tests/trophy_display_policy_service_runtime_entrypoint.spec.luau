@@ -130,8 +130,8 @@ configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/Ro
 configFolder._Children["TrophyConfig"] = "../../ReplicatedStorage/Shared/Config/TrophyConfig"
 
 local giantRealmFolder = makeNode("GiantRealm")
-giantRealmFolder._Children["TrophyDisplayPolicyState"] =
-	"../../ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyState"
+giantRealmFolder._Children["TrophyDisplayPolicyProfileState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyProfileState"
 
 local sharedFolder = makeNode("Shared")
 sharedFolder._Children["Config"] = configFolder

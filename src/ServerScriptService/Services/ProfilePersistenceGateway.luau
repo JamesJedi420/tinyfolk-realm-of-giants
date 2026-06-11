@@ -83,6 +83,15 @@ local InventoryCraftProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftProfileState")
 
+local TrophyDisplayPolicyProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("TrophyDisplayPolicyProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -291,6 +300,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(data),
 		escapeHistory = EscapeHistoryProfileState.CopyProfileField(data),
 		safeLocation = SafeLocationProfileState.CopyProfileField(data),
+		trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(data),
 	}
 end
 
@@ -397,6 +407,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(loadedData)
 			loadedData.tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(loadedData)
 			loadedData.inventoryCraftState = InventoryCraftProfileState.CopyProfileField(loadedData)
+			loadedData.trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end
