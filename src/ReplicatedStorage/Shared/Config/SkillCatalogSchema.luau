@@ -60,6 +60,13 @@ local defaultSkillCatalog: { SkillRecord } = {
 		availability = "available",
 		sourceId = "tin67_realm_adaptation",
 	},
+	{
+		skillId = "custody_stewardship",
+		displayName = "Custody Stewardship",
+		unlockSource = "progression",
+		availability = "available",
+		sourceId = "tin242_custody_stewardship",
+	},
 }
 
 SkillCatalogSchema.DEFAULT_SKILL_CATALOG = defaultSkillCatalog

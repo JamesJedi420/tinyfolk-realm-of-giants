@@ -321,6 +321,7 @@ local function resolveContainmentRewardForRecord(
 		return resolver.Resolve({
 			operationId = operationId,
 			custodianUserId = record.custodianUserId,
+			custodianPlayer = getPlayerByUserId(record.custodianUserId),
 			targetUserId = record.targetUserId,
 			captureStartedAt = record.startedAt,
 			captureExpiresAt = record.expiresAt,
