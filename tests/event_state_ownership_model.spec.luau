@@ -43,6 +43,11 @@ local function run()
 			EventStateOwnershipModel.Owners.playerProfile,
 			"pending recovery owner"
 		)
+		assertEqual(
+			namespaceOwners.discoveredRealms,
+			EventStateOwnershipModel.Owners.playerProfile,
+			"discovered realms owner"
+		)
 		assertEqual(namespaceOwners.rescuePersistence, EventStateOwnershipModel.Owners.realmProfile, "rescue owner")
 		assertEqual(namespaceOwners.captureRuntime, EventStateOwnershipModel.Owners.sessionRuntime, "capture owner")
 		assertEqual(namespaceOwners.escapeRuntime, EventStateOwnershipModel.Owners.sessionRuntime, "escape owner")
@@ -61,6 +66,7 @@ local function run()
 			specialistPreference = EventStateOwnershipModel.Owners.playerProfile,
 			trophyDisplayPreference = EventStateOwnershipModel.Owners.playerProfile,
 			pendingRecovery = EventStateOwnershipModel.Owners.playerProfile,
+			discoveredRealms = EventStateOwnershipModel.Owners.playerProfile,
 			emergencyReinforcement = EventStateOwnershipModel.Owners.realmProfile,
 			rescuePersistence = EventStateOwnershipModel.Owners.realmProfile,
 			captureRuntime = EventStateOwnershipModel.Owners.sessionRuntime,

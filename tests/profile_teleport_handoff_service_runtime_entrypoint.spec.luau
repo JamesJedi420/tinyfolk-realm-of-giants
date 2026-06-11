@@ -323,6 +323,12 @@ local confirmReady = ProfileTeleportHandoffService.ConfirmDestinationOwnership(4
 assertEqual(confirmReady.ok, true, "confirm ready succeeds")
 assertEqual(confirmReady.handoffToken, firstHandoff.handoffToken, "confirm ready token")
 assertEqual(ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4001), true, "confirmed handoff allows spawn")
+assertTrue(type(loadedProfileByUserId[4001].discoveredRealms) == "table", "confirm records discovered realms")
+assertEqual(loadedProfileByUserId[4001].discoveredRealms[1].realmId, "realm-main-01", "confirm records target realm id")
+assertTrue(
+	type(loadedProfileByUserId[4001].discoveredRealms[1].firstDiscoveredAt) == "number",
+	"confirm records first discovered timestamp"
+)
 
 loadedProfileByUserId[4001] = {
 	userId = 4001,
@@ -351,6 +357,11 @@ assertEqual(
 	"restored pending recovery clears on ready"
 )
 assertTrue(loadedProfileByUserId[4001].pendingRecovery == nil, "restored pending recovery cleared from profile")
+assertEqual(
+	loadedProfileByUserId[4001].discoveredRealms[1].realmId,
+	"realm-main-01",
+	"restored pending recovery records discovered realm"
+)
 
 ownershipReadyByUserId[4001] = false
 local secondHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
