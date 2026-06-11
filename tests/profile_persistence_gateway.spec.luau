@@ -856,6 +856,110 @@ assertTrue(
 )
 assertTrue(loadedToolProgressionProfile.data.counters.coins == 6, "load keeps non-tool-progression profile fields")
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			inventoryCraftState = {
+				schemaVersion = 1,
+				itemCounts = {
+					iron_filings = 4,
+					stone_shard = 2,
+					unknown_item = 9,
+					raw_fiber = 0,
+				},
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 7,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local inventoryCraftSanitizePlayer = makePlayer(9410)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(inventoryCraftSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9410",
+	"load inventory craft sanitize player"
+)
+local loadedInventoryCraftProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(inventoryCraftSanitizePlayer)
+assertSuccess(
+	loadedInventoryCraftProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9410",
+	"get inventory craft sanitize"
+)
+assertEqual(
+	loadedInventoryCraftProfile.data.inventoryCraftState.itemCounts.iron_filings,
+	4,
+	"load keeps valid inventory craft item count"
+)
+assertEqual(
+	loadedInventoryCraftProfile.data.inventoryCraftState.itemCounts.stone_shard,
+	2,
+	"load keeps second valid inventory craft item count"
+)
+assertEqual(
+	loadedInventoryCraftProfile.data.inventoryCraftState.itemCounts.unknown_item,
+	nil,
+	"load drops unknown inventory craft item"
+)
+assertEqual(
+	loadedInventoryCraftProfile.data.inventoryCraftState.itemCounts.raw_fiber,
+	nil,
+	"load drops non-positive inventory craft count"
+)
+assertTrue(
+	loadedInventoryCraftProfile.data.inventoryCraftState.invalidField == nil,
+	"load drops invalid inventory craft fields"
+)
+assertTrue(loadedInventoryCraftProfile.data.counters.coins == 7, "load keeps non-inventory-craft profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			inventoryCraftState = {
+				itemCounts = {
+					iron_filings = 4,
+				},
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidInventoryCraftSanitizePlayer = makePlayer(9411)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidInventoryCraftSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9411",
+	"load invalid inventory craft sanitize player"
+)
+local loadedInvalidInventoryCraftProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidInventoryCraftSanitizePlayer)
+assertSuccess(
+	loadedInvalidInventoryCraftProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9411",
+	"get invalid inventory craft sanitize"
+)
+assertTrue(
+	loadedInvalidInventoryCraftProfile.data.inventoryCraftState == nil,
+	"load drops invalid inventory craft state without schema version"
+)
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()

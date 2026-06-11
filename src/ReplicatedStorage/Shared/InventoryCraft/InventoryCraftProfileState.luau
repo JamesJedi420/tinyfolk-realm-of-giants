@@ -6,6 +6,7 @@ local InventoryCraftProfileState: any = {}
 
 local PROFILE_KEY = "inventoryCraftState"
 local ITEM_COUNTS_KEY = "itemCounts"
+local SCHEMA_VERSION_KEY = "schemaVersion"
 local STATE_VERSION = 1
 
 export type PersistResult = {
@@ -63,17 +64,38 @@ local function normalizeItemCounts(value: any, catalogOverride: any?): { [string
 	return normalized
 end
 
-local function ensureProfileState(profileData: any): any
-	local nextProfile = if type(profileData) == "table" then cloneTable(profileData) else {}
-	if type(nextProfile[PROFILE_KEY]) ~= "table" then
-		nextProfile[PROFILE_KEY] = {}
+local function normalizeSchemaVersion(value: any): number
+	if type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge then
+		return value
 	end
-	if type(nextProfile[PROFILE_KEY][ITEM_COUNTS_KEY]) ~= "table" then
-		nextProfile[PROFILE_KEY][ITEM_COUNTS_KEY] = {}
+	return STATE_VERSION
+end
+
+local function normalizePersistedState(value: any, catalogOverride: any?): any?
+	if type(value) ~= "table" then
+		return nil
+	end
+	if type(value[SCHEMA_VERSION_KEY]) ~= "number" then
+		return nil
 	end
 
-	nextProfile[PROFILE_KEY]["schemaVersion"] = STATE_VERSION
-	nextProfile[PROFILE_KEY][ITEM_COUNTS_KEY] = normalizeItemCounts(nextProfile[PROFILE_KEY][ITEM_COUNTS_KEY], nil)
+	local persisted: any = {}
+	persisted[SCHEMA_VERSION_KEY] = normalizeSchemaVersion(value[SCHEMA_VERSION_KEY])
+	persisted[ITEM_COUNTS_KEY] = normalizeItemCounts(value[ITEM_COUNTS_KEY], catalogOverride)
+	return persisted
+end
+
+local function ensureProfileState(profileData: any, catalogOverride: any?): any
+	local nextProfile = if type(profileData) == "table" then cloneTable(profileData) else {}
+	local normalized = normalizePersistedState(nextProfile[PROFILE_KEY], catalogOverride)
+	if normalized == nil then
+		local persisted: any = {}
+		persisted[SCHEMA_VERSION_KEY] = STATE_VERSION
+		persisted[ITEM_COUNTS_KEY] = {}
+		nextProfile[PROFILE_KEY] = persisted
+	else
+		nextProfile[PROFILE_KEY] = normalized
+	end
 
 	return nextProfile
 end
@@ -88,7 +110,7 @@ function InventoryCraftProfileState.HasPersistedState(profileData: any): boolean
 		return false
 	end
 
-	return type(inventoryState["schemaVersion"]) == "number"
+	return type(inventoryState[SCHEMA_VERSION_KEY]) == "number"
 end
 
 function InventoryCraftProfileState.GetItemCounts(profileData: any, catalogOverride: any?): { [string]: number }
@@ -101,12 +123,20 @@ function InventoryCraftProfileState.GetItemCounts(profileData: any, catalogOverr
 	return normalizeItemCounts(itemCounts, catalogOverride)
 end
 
+function InventoryCraftProfileState.CopyProfileField(profileData: any, catalogOverride: any?): any?
+	if type(profileData) ~= "table" then
+		return nil
+	end
+
+	return normalizePersistedState(profileData[PROFILE_KEY], catalogOverride)
+end
+
 function InventoryCraftProfileState.ApplyItemCounts(
 	profileData: any,
 	itemCounts: any,
 	catalogOverride: any?
 ): PersistResult
-	local nextProfile = ensureProfileState(profileData)
+	local nextProfile = ensureProfileState(profileData, catalogOverride)
 	if type(itemCounts) ~= "table" then
 		return {
 			accepted = false,

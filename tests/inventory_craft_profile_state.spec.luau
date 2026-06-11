@@ -49,6 +49,38 @@ do
 end
 
 do
+	local copied = InventoryCraftProfileState.CopyProfileField({
+		inventoryCraftState = {
+			schemaVersion = 1,
+			itemCounts = {
+				iron_filings = 3,
+				unknown_item = 9,
+				raw_fiber = 0,
+			},
+			invalidField = "ignored",
+		},
+	})
+	assertTrue(type(copied) == "table", "copy returns persisted state")
+	assertEqual(copied.schemaVersion, 1, "copy keeps schema version")
+	assertEqual(copied.itemCounts.iron_filings, 3, "copy keeps valid item count")
+	assertEqual(copied.itemCounts.unknown_item, nil, "copy drops unknown item")
+	assertEqual(copied.itemCounts.raw_fiber, nil, "copy drops non-positive count")
+	assertTrue(copied.invalidField == nil, "copy drops invalid fields")
+
+	local missingSchemaCopied = InventoryCraftProfileState.CopyProfileField({
+		inventoryCraftState = {
+			itemCounts = {
+				iron_filings = 3,
+			},
+		},
+	})
+	assertTrue(missingSchemaCopied == nil, "copy omits state without schema version")
+
+	local nilCopied = InventoryCraftProfileState.CopyProfileField(nil)
+	assertTrue(nilCopied == nil, "nil profile copy returns nil")
+end
+
+do
 	local applyResult = InventoryCraftProfileState.ApplyItemCounts({}, {
 		iron_filings = 3,
 		twine_satchel = 1,
