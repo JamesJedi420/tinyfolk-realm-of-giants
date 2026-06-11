@@ -13,6 +13,15 @@ local PendingRecoveryProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PendingRecoveryProfileState")
 
+local DiscoveredRealmsProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("DiscoveredRealmsProfileState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/DiscoveredRealmsProfileState")
+
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
 
@@ -173,6 +182,23 @@ local function clearPersistedPendingRecovery(userId: number)
 	end
 end
 
+local function persistDiscoveredRealm(userId: number, realmId: string, discoveredAt: number)
+	local player = makePlayerStub(userId)
+	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		local recordResult = DiscoveredRealmsProfileState.RecordDiscovery(currentData, {
+			realmId = realmId,
+			firstDiscoveredAt = discoveredAt,
+		})
+		if not recordResult.accepted then
+			return nil, recordResult.reason
+		end
+		return recordResult.profileData
+	end)
+	if updateResult.ok then
+		pcall(ProfilePersistenceGateway.SavePlayerProfile, player)
+	end
+end
+
 local function tryRestorePendingHandoffFromProfile(userId: number): boolean
 	if pendingHandoffByUserId[userId] ~= nil then
 		return true
@@ -196,6 +222,11 @@ local function tryRestorePendingHandoffFromProfile(userId: number): boolean
 end
 
 local function clearPendingHandoff(userId: number)
+	local pending = pendingHandoffByUserId[userId]
+	if pending ~= nil and isNonEmptyString(pending.targetRealmId) then
+		persistDiscoveredRealm(userId, pending.targetRealmId :: string, os.time())
+	end
+
 	pendingHandoffByUserId[userId] = nil
 	releaseReadyCallbacksByUserId[userId] = nil
 	clearPersistedPendingRecovery(userId)

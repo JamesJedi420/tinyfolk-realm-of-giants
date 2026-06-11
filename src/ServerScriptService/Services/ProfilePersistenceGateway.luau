@@ -101,6 +101,15 @@ local PendingRecoveryProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/GiantRealm/PendingRecoveryProfileState")
 
+local DiscoveredRealmsProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("DiscoveredRealmsProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/DiscoveredRealmsProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -311,6 +320,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		safeLocation = SafeLocationProfileState.CopyProfileField(data),
 		trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(data),
 		pendingRecovery = PendingRecoveryProfileState.CopyProfileField(data),
+		discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(data),
 	}
 end
 
@@ -419,6 +429,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.inventoryCraftState = InventoryCraftProfileState.CopyProfileField(loadedData)
 			loadedData.trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(loadedData)
 			loadedData.pendingRecovery = PendingRecoveryProfileState.CopyProfileField(loadedData)
+			loadedData.discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end

@@ -1133,6 +1133,99 @@ assertSuccess(
 )
 assertTrue(loadedInvalidPendingRecoveryProfile.data.pendingRecovery == nil, "load drops invalid pending recovery state")
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			discoveredRealms = {
+				{
+					realmId = "realm-main-01",
+					firstDiscoveredAt = 10,
+					invalidField = "ignored",
+				},
+			},
+			counters = {
+				coins = 8,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local discoveredRealmsSanitizePlayer = makePlayer(9414)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(discoveredRealmsSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9414",
+	"load discovered realms sanitize player"
+)
+local loadedDiscoveredRealmsProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(discoveredRealmsSanitizePlayer)
+assertSuccess(
+	loadedDiscoveredRealmsProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9414",
+	"get discovered realms sanitize"
+)
+assertEqual(
+	loadedDiscoveredRealmsProfile.data.discoveredRealms[1].realmId,
+	"realm-main-01",
+	"load keeps valid discovered realm id"
+)
+assertEqual(
+	loadedDiscoveredRealmsProfile.data.discoveredRealms[1].firstDiscoveredAt,
+	10,
+	"load keeps valid discovered realm timestamp"
+)
+assertTrue(
+	loadedDiscoveredRealmsProfile.data.discoveredRealms[1].invalidField == nil,
+	"load drops invalid discovered realm fields"
+)
+assertTrue(loadedDiscoveredRealmsProfile.data.counters.coins == 8, "load keeps non-discovered-realms profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			discoveredRealms = {
+				{
+					realmId = "",
+					firstDiscoveredAt = 10,
+				},
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidDiscoveredRealmsSanitizePlayer = makePlayer(9415)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidDiscoveredRealmsSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9415",
+	"load invalid discovered realms sanitize player"
+)
+local loadedInvalidDiscoveredRealmsProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidDiscoveredRealmsSanitizePlayer)
+assertSuccess(
+	loadedInvalidDiscoveredRealmsProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9415",
+	"get invalid discovered realms sanitize"
+)
+assertTrue(
+	loadedInvalidDiscoveredRealmsProfile.data.discoveredRealms == nil,
+	"load drops invalid discovered realms state"
+)
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()
