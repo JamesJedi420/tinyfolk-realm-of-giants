@@ -136,6 +136,8 @@ configFolder._Children["InventoryCraftConfig"] = "../../ReplicatedStorage/Shared
 local inventoryCraftFolder = makeNode("InventoryCraft")
 inventoryCraftFolder._Children["InventoryCraftState"] =
 	"../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftState"
+inventoryCraftFolder._Children["InventoryCraftProfileState"] =
+	"../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftProfileState"
 
 local sharedFolder = makeNode("Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -208,6 +210,100 @@ local function makePlayer(userId: number, role: string): any
 	return player
 end
 
+local function cloneTable(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local copied = {}
+	for key, child in pairs(value) do
+		copied[key] = cloneTable(child)
+	end
+	return copied
+end
+
+local profileDataByUserId: { [number]: any } = {}
+local updateCallCountByUserId: { [number]: number } = {}
+
+local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
+ProfilePersistenceGateway.ResetForTests()
+
+ProfilePersistenceGateway.GetLoadedPlayerProfileData = function(player: any): any
+	local data = profileDataByUserId[player.UserId]
+	if type(data) ~= "table" then
+		return {
+			ok = false,
+			operation = "GetLoadedPlayerProfileData",
+			reason = "player_profile_not_loaded",
+			profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		}
+	end
+
+	return {
+		ok = true,
+		operation = "GetLoadedPlayerProfileData",
+		profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		data = cloneTable(data),
+	}
+end
+
+ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, updater: any): any
+	local activeData = profileDataByUserId[player.UserId]
+	if type(activeData) ~= "table" then
+		return {
+			ok = false,
+			operation = "UpdateLoadedPlayerProfileData",
+			reason = "player_profile_not_loaded",
+			profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		}
+	end
+
+	local updateOk, newData = pcall(updater, cloneTable(activeData))
+	if not updateOk or type(newData) ~= "table" then
+		return {
+			ok = false,
+			operation = "UpdateLoadedPlayerProfileData",
+			reason = "profile_update_failed",
+			profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		}
+	end
+
+	profileDataByUserId[player.UserId] = cloneTable(newData)
+	updateCallCountByUserId[player.UserId] = (updateCallCountByUserId[player.UserId] or 0) + 1
+
+	return {
+		ok = true,
+		operation = "UpdateLoadedPlayerProfileData",
+		profileKey = "PlayerProfile:" .. tostring(player.UserId),
+		data = cloneTable(profileDataByUserId[player.UserId]),
+	}
+end
+
+local ownershipCallbacksByUserId: { [number]: { (boolean, string?) -> () } } = {}
+_G._ProfilePersistenceLifecycle_QueryAPI = {
+	RegisterOwnershipReadyCallback = function(userId: number, callback: any): boolean
+		if type(callback) ~= "function" then
+			return false
+		end
+		local callbacks = ownershipCallbacksByUserId[userId]
+		if callbacks == nil then
+			callbacks = {}
+			ownershipCallbacksByUserId[userId] = callbacks
+		end
+		table.insert(callbacks, callback)
+		return true
+	end,
+}
+
+local function fireOwnershipReady(userId: number)
+	local callbacks = ownershipCallbacksByUserId[userId]
+	if callbacks == nil then
+		return
+	end
+	for _, callback in ipairs(callbacks) do
+		callback(true, nil)
+	end
+end
+
 local InventoryCraftService = require("../src/ServerScriptService/Services/InventoryCraftService.server")
 
 local api: any = _G._InventoryCraftService_QueryAPI
@@ -221,12 +317,23 @@ assertTrue(craftRequestRemote ~= nil, "craft request remote created")
 assertTrue(debugRequestRemote ~= nil, "debug request remote created")
 assertTrue(debugResponseRemote ~= nil, "debug response remote created")
 
+profileDataByUserId[9201] = {
+	schemaVersion = 1,
+	userId = 9201,
+}
+profileDataByUserId[9202] = {
+	schemaVersion = 1,
+	userId = 9202,
+}
+
 local tinyfolk = makePlayer(9201, "Tinyfolk")
 local giant = makePlayer(9202, "Giant")
 table.insert(playersService._Players, tinyfolk)
 table.insert(playersService._Players, giant)
 playerAdded:Fire(tinyfolk)
 playerAdded:Fire(giant)
+fireOwnershipReady(9201)
+fireOwnershipReady(9202)
 
 do
 	local snapshot = api.GetSnapshot(tinyfolk)
@@ -244,6 +351,14 @@ do
 		"tinyfolk craftable recipe count attribute"
 	)
 	assertTrue(type(snapshot.craftableRecipeIds) == "table", "snapshot craftable recipe ids")
+end
+
+do
+	assertTrue(
+		type(profileDataByUserId[9201].inventoryCraftState) == "table",
+		"first session bootstrap persisted inventory state"
+	)
+	assertEqual(profileDataByUserId[9201].inventoryCraftState.itemCounts.raw_fiber, 4, "bootstrap raw_fiber persisted")
 end
 
 do
@@ -334,6 +449,41 @@ do
 	local rejectedConsume = api.ConsumeItems(giant, { smoke_pouch = 1 })
 	assertFalse(rejectedConsume.accepted, "giant consume rejected")
 	assertEqual(rejectedConsume.reason, "tinyfolk_role_required", "giant consume reason")
+end
+
+do
+	profileDataByUserId[9203] = {
+		schemaVersion = 1,
+		userId = 9203,
+		inventoryCraftState = {
+			schemaVersion = 1,
+			itemCounts = {
+				iron_filings = 7,
+				stone_shard = 1,
+			},
+		},
+	}
+	local returningTinyfolk = makePlayer(9203, "Tinyfolk")
+	table.insert(playersService._Players, returningTinyfolk)
+	playerAdded:Fire(returningTinyfolk)
+	fireOwnershipReady(9203)
+
+	local snapshot = api.GetSnapshot(returningTinyfolk)
+	assertEqual(snapshot.itemCounts.iron_filings, 7, "returning player iron_filings hydrated")
+	assertEqual(snapshot.itemCounts.stone_shard, 1, "returning player stone_shard hydrated")
+	assertEqual(snapshot.itemCounts.raw_fiber, nil, "returning player skips bootstrap raw_fiber")
+end
+
+do
+	InventoryCraftService.TestHarness.ResetSessionForTests(9201, InventoryCraftConfig.TEST_STARTING_ITEMS)
+	local granted = api.GrantItems(tinyfolk, { iron_filings = 2 }, "warehouse_delivery")
+	assertTrue(granted.accepted, "grant persists inventory")
+	assertEqual(
+		profileDataByUserId[9201].inventoryCraftState.itemCounts.iron_filings,
+		4,
+		"grant writes iron_filings to profile"
+	)
+	assertTrue((updateCallCountByUserId[9201] or 0) >= 1, "grant triggers profile update")
 end
 
 print("inventory_craft_service_runtime_entrypoint: all checks passed")
