@@ -333,6 +333,24 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		})
 	end
 
+	local outcomeSkillXpProducer: any = nil
+
+	local function getOutcomeSkillXpProducer(): any
+		if outcomeSkillXpProducer ~= nil then
+			return outcomeSkillXpProducer
+		end
+		if type(depsAny.outcomeSkillXpProducer) == "table" then
+			outcomeSkillXpProducer = depsAny.outcomeSkillXpProducer
+			return outcomeSkillXpProducer
+		end
+		if script ~= nil and script.Parent ~= nil then
+			outcomeSkillXpProducer = require(script.Parent:WaitForChild("OutcomeSkillXpProducer"))
+		else
+			outcomeSkillXpProducer = require("./OutcomeSkillXpProducer")
+		end
+		return outcomeSkillXpProducer
+	end
+
 	local function recordSkillUnlock(custodianPlayer: any): (boolean, string?)
 		if type(custodianPlayer) ~= "table" then
 			return false, "player_invalid"
@@ -356,6 +374,21 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			return true, "skill_already_unlocked"
 		end
 		return false, tostring(result.reason or "skill_unlock_rejected")
+	end
+
+	local function recordSkillXp(custodianPlayer: any): (boolean, string?)
+		if type(custodianPlayer) ~= "table" then
+			return false, "skill_xp_skipped"
+		end
+		local producer = getOutcomeSkillXpProducer()
+		if type(producer) ~= "table" or type(producer.RecordContainmentRewardXp) ~= "function" then
+			return false, "skill_xp_producer_unavailable"
+		end
+		local ok, accepted, reason = pcall(producer.RecordContainmentRewardXp, custodianPlayer)
+		if not ok then
+			return false, "skill_xp_award_failed"
+		end
+		return accepted == true, reason
 	end
 
 	local function recordReputationLog(userId: number, metadata: any, reputationResult: any)
@@ -521,8 +554,11 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		local reputationResult = updateReputation(input.custodianUserId, metadata)
 		local skillUnlockAccepted = false
 		local skillUnlockReason: string? = "skill_unlock_skipped"
+		local skillXpAccepted = false
+		local skillXpReason: string? = "skill_xp_skipped"
 		if type(input.custodianPlayer) == "table" then
 			skillUnlockAccepted, skillUnlockReason = recordSkillUnlock(input.custodianPlayer)
+			skillXpAccepted, skillXpReason = recordSkillXp(input.custodianPlayer)
 		end
 		recordReputationLog(input.custodianUserId, metadata, reputationResult)
 		local trophyResult = recordTrophy(metadata)
@@ -581,6 +617,9 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			skillUnlockAccepted = skillUnlockAccepted,
 			skillUnlockReason = skillUnlockReason,
 			skillUnlockId = CONTAINMENT_REWARD_SKILL_ID,
+			skillXpAccepted = skillXpAccepted,
+			skillXpReason = skillXpReason,
+			skillXpId = CONTAINMENT_REWARD_SKILL_ID,
 		}
 	end
 
