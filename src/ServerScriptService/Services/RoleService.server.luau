@@ -241,6 +241,30 @@ local function getProfileTeleportHandoffQueryApi(): any?
 	return queryApi
 end
 
+local function hasSafeLoadFailureRoute(userId: number): boolean
+	local queryApi = getProfilePersistenceLifecycleQueryApi()
+	if queryApi == nil or type(queryApi.GetLoadFailureRoute) ~= "function" then
+		return false
+	end
+
+	local ok, route = pcall(function()
+		return queryApi.GetLoadFailureRoute(userId)
+	end)
+	if not ok then
+		return false
+	end
+
+	return route == "safe_fallback"
+end
+
+local function logSafeLoadFailureSpawn(player: Player, trigger: string)
+	if not hasSafeLoadFailureRoute(player.UserId) then
+		return
+	end
+
+	debugWarn(string.format("Spawn routed to safe fallback userId=%d trigger=%s", player.UserId, trigger))
+end
+
 local function canSpawnGameplayForPlayer(player: Player): boolean
 	local queryApi = getProfilePersistenceLifecycleQueryApi()
 	if queryApi == nil or type(queryApi.IsPlayerOwnershipReady) ~= "function" then
@@ -254,7 +278,7 @@ local function canSpawnGameplayForPlayer(player: Player): boolean
 		return true
 	end
 
-	if ready ~= true then
+	if ready ~= true and not hasSafeLoadFailureRoute(player.UserId) then
 		return false
 	end
 
@@ -307,6 +331,7 @@ local function deferSpawnUntilOwnershipReady(player: Player, spawnMethod: string
 		end
 
 		pendingSpawnDeferredByUserId[player.UserId] = nil
+		logSafeLoadFailureSpawn(player, reason)
 
 		if spawnMethod == "LoadCharacterAsync" then
 			(player :: any):LoadCharacterAsync()
@@ -319,11 +344,14 @@ local function deferSpawnUntilOwnershipReady(player: Player, spawnMethod: string
 	local registered = queryApi.RegisterOwnershipReadyCallback(
 		player.UserId,
 		function(ready: boolean, _failureReason: string?)
-			if not ready then
+			if ready then
+				trySpawnIfReady()
 				return
 			end
 
-			trySpawnIfReady()
+			if hasSafeLoadFailureRoute(player.UserId) then
+				trySpawnIfReady()
+			end
 		end
 	)
 
@@ -900,6 +928,7 @@ roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 		return
 	end
 
+	logSafeLoadFailureSpawn(player, "role_select")
 	local playerAny: any = player
 	playerAny:LoadCharacter()
 end)

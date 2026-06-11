@@ -69,6 +69,7 @@ type AutosaveRetryState = {
 	token: any?,
 }
 
+local LOAD_FAILURE_SAFE_ROUTE = "safe_fallback"
 local DEFAULT_AUTOSAVE_INTERVAL_SECONDS = 60
 local DEFAULT_AUTOSAVE_RETRY_INITIAL_DELAY_SECONDS = 2
 local DEFAULT_AUTOSAVE_RETRY_MAX_DELAY_SECONDS = 30
@@ -80,6 +81,7 @@ local trackedUserIds: { [number]: boolean } = {}
 local cleanedUserIds: { [number]: boolean } = {}
 local ownershipReadyByUserId: { [number]: boolean } = {}
 local ownershipFailureReasonByUserId: { [number]: string? } = {}
+local loadFailureRouteByUserId: { [number]: string? } = {}
 local ownershipReadyCallbacksByUserId: { [number]: { (boolean, string?) -> () }? } = {}
 local autosaveScheduler: AutosaveScheduler? = nil
 local autosaveScheduledToken: any = nil
@@ -180,6 +182,14 @@ local function clearOwnershipCallbacks(userId: number)
 	ownershipReadyCallbacksByUserId[userId] = nil
 end
 
+local function clearLoadFailureRoute(userId: number)
+	loadFailureRouteByUserId[userId] = nil
+end
+
+local function setLoadFailureRoute(userId: number)
+	loadFailureRouteByUserId[userId] = LOAD_FAILURE_SAFE_ROUTE
+end
+
 local function registerOwnershipReadyCallback(userId: number, callback: any): boolean
 	if type(userId) ~= "number" or userId <= 0 or userId % 1 ~= 0 then
 		return false
@@ -208,6 +218,9 @@ globalEnv._ProfilePersistenceLifecycle_QueryAPI = {
 	end,
 	GetOwnershipFailureReason = function(userId: number): string?
 		return ownershipFailureReasonByUserId[userId]
+	end,
+	GetLoadFailureRoute = function(userId: number): string?
+		return loadFailureRouteByUserId[userId]
 	end,
 	RegisterOwnershipReadyCallback = function(userId: number, callback: any): boolean
 		return registerOwnershipReadyCallback(userId, callback)
@@ -326,11 +339,13 @@ local function loadPlayer(gateway: Gateway, logger: Logger?, player: any)
 
 	local result = gateway.LoadPlayerProfile(player)
 	if not result.ok then
+		setLoadFailureRoute(userId)
 		setOwnershipState(userId, false, tostring(result.reason or "load_failed"))
 		logFailure(logger, "load", userId, result)
 		return
 	end
 
+	clearLoadFailureRoute(userId)
 	setOwnershipState(userId, true, nil)
 end
 
@@ -338,6 +353,7 @@ local function saveAndReleasePlayer(gateway: Gateway, logger: Logger?, player: a
 	local userId = getUserId(player)
 	if userId ~= nil then
 		clearRetryState(makePlayerRetryKey(userId))
+		clearLoadFailureRoute(userId)
 		setOwnershipState(userId, false, "released_or_unloaded")
 		clearOwnershipCallbacks(userId)
 	end
@@ -612,6 +628,7 @@ function ProfilePersistenceLifecycle.ResetForTests()
 	cleanedUserIds = {}
 	ownershipReadyByUserId = {}
 	ownershipFailureReasonByUserId = {}
+	loadFailureRouteByUserId = {}
 	ownershipReadyCallbacksByUserId = {}
 end
 
