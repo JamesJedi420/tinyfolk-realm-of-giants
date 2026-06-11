@@ -170,6 +170,15 @@ assertTrue(
 	defaultB.data.tinyfolkToolProgressionState.unlockedToolIds[1] == nil,
 	"default tinyfolk tool progression tables cloned"
 )
+assertTrue(type(defaultA.data.skillsProfileState) == "table", "default skills profile state exists")
+assertEqual(defaultA.data.skillsProfileState.schemaVersion, 1, "default skills profile schema version")
+assertTrue(
+	type(defaultA.data.skillsProfileState.unlockedSkillIds) == "table",
+	"default skills profile unlocked ids exists"
+)
+assertEqual(next(defaultA.data.skillsProfileState.unlockedSkillIds), nil, "default skills profile empty")
+defaultA.data.skillsProfileState.unlockedSkillIds[1] = "mutated"
+assertTrue(defaultB.data.skillsProfileState.unlockedSkillIds[1] == nil, "default skills profile tables cloned")
 assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
 assertTrue(defaultA.data.rolePreference == nil, "default profile omits role preference")
 assertTrue(defaultA.data.specialistPreference == nil, "default profile omits specialist preference")
@@ -939,6 +948,53 @@ assertTrue(
 	"load drops invalid tinyfolk tool progression fields"
 )
 assertTrue(loadedToolProgressionProfile.data.counters.coins == 6, "load keeps non-tool-progression profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			skillsProfileState = {
+				schemaVersion = 1,
+				unlockedSkillIds = {
+					"starter_skill",
+					"invalid_skill",
+					"",
+				},
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 6,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local skillsSanitizePlayer = makePlayer(9415)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(skillsSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9415",
+	"load skills profile sanitize player"
+)
+local loadedSkillsProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(skillsSanitizePlayer)
+assertSuccess(loadedSkillsProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9415", "get skills profile sanitize")
+assertEqual(
+	loadedSkillsProfile.data.skillsProfileState.schemaVersion,
+	1,
+	"load keeps valid skills profile schema version"
+)
+assertEqual(
+	next(loadedSkillsProfile.data.skillsProfileState.unlockedSkillIds),
+	nil,
+	"load drops invalid skills profile ids"
+)
+assertTrue(loadedSkillsProfile.data.skillsProfileState.invalidField == nil, "load drops invalid skills profile fields")
+assertTrue(loadedSkillsProfile.data.counters.coins == 6, "load keeps non-skills profile fields")
 
 ProfilePersistenceGateway.ConfigureOwnerLayer({
 	LoadPlayerProfile = function(profileKey: string, userId: number): any
