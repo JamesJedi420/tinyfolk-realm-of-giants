@@ -20,6 +20,15 @@ local ReputationState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
 
+local SpecialistPreferenceProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Specialist")
+			:WaitForChild("SpecialistPreferenceProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/Specialist/SpecialistPreferenceProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -271,6 +280,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 				itemCounts = copyInventoryItemCounts(inventoryCraftState["itemCounts"]),
 			}
 			else nil,
+		specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(data),
 	}
 end
 
@@ -368,7 +378,11 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 
 	local result = configuredOwnerLayer.LoadPlayerProfile(key, userId)
 	if result.ok then
-		activePlayerProfileDataByUserId[userId] = result.data
+		local loadedData = result.data
+		if type(loadedData) == "table" then
+			loadedData.specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(loadedData)
+		end
+		activePlayerProfileDataByUserId[userId] = loadedData
 	end
 	return result
 end
