@@ -1044,6 +1044,95 @@ assertTrue(
 	"load drops invalid inventory craft state without schema version"
 )
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			pendingRecovery = {
+				handoffToken = "handoff:9412:1",
+				targetRealmId = "realm-main-01",
+				startedAt = 10,
+				status = "awaiting_destination",
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 8,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local pendingRecoverySanitizePlayer = makePlayer(9412)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(pendingRecoverySanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9412",
+	"load pending recovery sanitize player"
+)
+local loadedPendingRecoveryProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(pendingRecoverySanitizePlayer)
+assertSuccess(
+	loadedPendingRecoveryProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9412",
+	"get pending recovery sanitize"
+)
+assertEqual(
+	loadedPendingRecoveryProfile.data.pendingRecovery.handoffToken,
+	"handoff:9412:1",
+	"load keeps valid pending recovery handoff token"
+)
+assertEqual(
+	loadedPendingRecoveryProfile.data.pendingRecovery.targetRealmId,
+	"realm-main-01",
+	"load keeps valid pending recovery target realm id"
+)
+assertTrue(
+	loadedPendingRecoveryProfile.data.pendingRecovery.invalidField == nil,
+	"load drops invalid pending recovery fields"
+)
+assertTrue(loadedPendingRecoveryProfile.data.counters.coins == 8, "load keeps non-pending-recovery profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			pendingRecovery = {
+				handoffToken = "",
+				targetRealmId = "realm-main-01",
+				startedAt = 10,
+				status = "awaiting_destination",
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidPendingRecoverySanitizePlayer = makePlayer(9413)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidPendingRecoverySanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9413",
+	"load invalid pending recovery sanitize player"
+)
+local loadedInvalidPendingRecoveryProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidPendingRecoverySanitizePlayer)
+assertSuccess(
+	loadedInvalidPendingRecoveryProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9413",
+	"get invalid pending recovery sanitize"
+)
+assertTrue(loadedInvalidPendingRecoveryProfile.data.pendingRecovery == nil, "load drops invalid pending recovery state")
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()

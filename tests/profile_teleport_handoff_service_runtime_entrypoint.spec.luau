@@ -95,6 +95,67 @@ globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmis
 ProfilePersistenceGateway.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
+local loadedProfileByUserId: { [number]: any } = {}
+local saveAttemptCountByUserId: { [number]: number } = {}
+
+local function cloneTable(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local copied = {}
+	for key, child in pairs(value) do
+		copied[key] = cloneTable(child)
+	end
+	return copied
+end
+
+ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, updater: any): any
+	local userId = player.UserId
+	local currentData = loadedProfileByUserId[userId] or {
+		userId = userId,
+	}
+	local ok, newData, reason = pcall(updater, cloneTable(currentData))
+	if not ok or type(newData) ~= "table" then
+		return {
+			ok = false,
+			operation = "UpdateLoadedPlayerProfileData",
+			reason = if type(reason) == "string" then reason else "profile_update_failed",
+		}
+	end
+	loadedProfileByUserId[userId] = cloneTable(newData)
+	return {
+		ok = true,
+		operation = "UpdateLoadedPlayerProfileData",
+		data = cloneTable(newData),
+	}
+end
+
+ProfilePersistenceGateway.GetLoadedPlayerProfileData = function(player: any): any
+	local userId = player.UserId
+	local data = loadedProfileByUserId[userId]
+	if type(data) ~= "table" then
+		return {
+			ok = false,
+			operation = "GetLoadedPlayerProfileData",
+			reason = "player_profile_not_loaded",
+		}
+	end
+	return {
+		ok = true,
+		operation = "GetLoadedPlayerProfileData",
+		data = cloneTable(data),
+	}
+end
+
+ProfilePersistenceGateway.SavePlayerProfile = function(player: any): any
+	saveAttemptCountByUserId[player.UserId] = (saveAttemptCountByUserId[player.UserId] or 0) + 1
+	return {
+		ok = true,
+		operation = "SavePlayerProfile",
+		profileKey = "PlayerProfile:" .. tostring(player.UserId),
+	}
+end
+
 local releaseAttemptCountByUserId: { [number]: number } = {}
 local releaseFailureByUserId: { [number]: boolean } = {
 	[4002] = true,
@@ -112,6 +173,7 @@ ProfilePersistenceGateway.ReleasePlayerProfile = function(player: any): any
 		}
 	end
 
+	loadedProfileByUserId[player.UserId] = nil
 	return {
 		ok = true,
 		operation = "ReleasePlayerProfile",
@@ -165,7 +227,8 @@ assertEqual(queueUnavailableHandoff.reason, "admission_queue_unavailable", "queu
 assertEqual(queueUnavailableHandoff.retryable, true, "queue-unavailable handoff retryable")
 assertEqual(queueUnavailableHandoff.handoffToken, nil, "queue-unavailable handoff has no token")
 assertEqual(queueUnavailableHandoff.fallbackRoute, "safe_fallback", "queue-unavailable handoff fallback route")
-assertEqual(releaseAttemptCountByUserId[4005], 1, "queue-unavailable handoff still performs release attempt")
+assertEqual(releaseAttemptCountByUserId[4005], nil, "queue-unavailable handoff skips release attempt")
+assertEqual(saveAttemptCountByUserId[4005], nil, "queue-unavailable handoff skips profile save")
 assertEqual(queueUnavailableCallbackResult, nil, "queue-unavailable handoff does not trigger callback")
 assertEqual(
 	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4005),
@@ -181,6 +244,7 @@ local firstHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makeP
 })
 assertEqual(firstHandoff.ok, true, "first handoff succeeds")
 assertTrue(type(firstHandoff.handoffToken) == "string", "first handoff token assigned")
+assertEqual(saveAttemptCountByUserId[4001], 1, "first handoff save attempted")
 assertEqual(releaseAttemptCountByUserId[4001], 1, "first handoff release attempted")
 assertEqual(callbackResult.handoffToken, firstHandoff.handoffToken, "release-ready callback receives token")
 
@@ -219,7 +283,8 @@ assertEqual(enqueueFailedHandoff.reason, "admission_queue_unavailable", "enqueue
 assertEqual(enqueueFailedHandoff.retryable, true, "enqueue-failed handoff retryable")
 assertEqual(enqueueFailedHandoff.handoffToken, nil, "enqueue-failed handoff has no token")
 assertEqual(enqueueFailedHandoff.fallbackRoute, "safe_fallback", "enqueue-failed handoff fallback route")
-assertEqual(releaseAttemptCountByUserId[4003], 1, "enqueue-failed handoff still performs release attempt")
+assertEqual(releaseAttemptCountByUserId[4003], nil, "enqueue-failed handoff skips release attempt")
+assertEqual(saveAttemptCountByUserId[4003], nil, "enqueue-failed handoff skips profile save")
 assertEqual(enqueueFailureCallbackResult, nil, "enqueue-failed handoff does not trigger callback")
 assertEqual(
 	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4003),
@@ -258,6 +323,34 @@ local confirmReady = ProfileTeleportHandoffService.ConfirmDestinationOwnership(4
 assertEqual(confirmReady.ok, true, "confirm ready succeeds")
 assertEqual(confirmReady.handoffToken, firstHandoff.handoffToken, "confirm ready token")
 assertEqual(ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4001), true, "confirmed handoff allows spawn")
+
+loadedProfileByUserId[4001] = {
+	userId = 4001,
+	pendingRecovery = {
+		handoffToken = "handoff:4001:restored",
+		targetRealmId = "realm-main-01",
+		startedAt = 10,
+		status = "awaiting_destination",
+	},
+}
+ownershipReadyByUserId[4001] = false
+assertEqual(
+	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4001),
+	false,
+	"restored pending recovery blocks spawn"
+)
+assertEqual(
+	ProfileTeleportHandoffService.RestorePendingHandoffFromProfile(makePlayer(4001)),
+	true,
+	"restore pending handoff from profile"
+)
+ownershipReadyByUserId[4001] = true
+assertEqual(
+	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4001),
+	true,
+	"restored pending recovery clears on ready"
+)
+assertTrue(loadedProfileByUserId[4001].pendingRecovery == nil, "restored pending recovery cleared from profile")
 
 ownershipReadyByUserId[4001] = false
 local secondHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(4001), {
