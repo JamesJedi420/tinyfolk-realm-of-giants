@@ -86,8 +86,16 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 	local GiantRealm = if Shared ~= nil and type(Shared.WaitForChild) == "function"
 		then Shared:WaitForChild("GiantRealm")
 		else nil
+	local Escape = if Shared ~= nil and type(Shared.WaitForChild) == "function"
+		then Shared:WaitForChild("Escape")
+		else nil
 
 	local EscapeConfig = resolveDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
+	local SafeLocationProfileState = resolveDependency(
+		Escape,
+		"SafeLocationProfileState",
+		"../../ReplicatedStorage/Shared/Escape/SafeLocationProfileState"
+	)
 	local RescueContractConfig =
 		resolveDependency(Config, "RescueContractConfig", "../../ReplicatedStorage/Shared/Config/RescueContractConfig")
 	local RoleConfig = resolveDependency(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
@@ -840,6 +848,52 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			(player.Character :: any):PivotTo(targetPivot)
 		end)
 		return ok
+	end
+
+	local function getProfileGateway(): any?
+		if options ~= nil and type(options.profileGateway) == "table" then
+			return options.profileGateway
+		end
+		if type(globalEnv._ProfilePersistenceGateway_QueryAPI) == "table" then
+			return globalEnv._ProfilePersistenceGateway_QueryAPI
+		end
+		if type(_G) == "table" then
+			local globalGateway = rawget(_G, "_ProfilePersistenceGateway_QueryAPI")
+			if type(globalGateway) == "table" then
+				return globalGateway
+			end
+		end
+		return nil
+	end
+
+	local function recordSafeLocationReturn(player: any, input: any): boolean
+		local gateway = getProfileGateway()
+		if gateway == nil then
+			local ok, loaded = pcall(function()
+				if script ~= nil and script.Parent ~= nil then
+					return require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+				end
+				return require("./ProfilePersistenceGateway")
+			end)
+			if ok then
+				gateway = loaded
+			end
+		end
+		if type(gateway) ~= "table" or type(gateway.UpdateLoadedPlayerProfileData) ~= "function" then
+			return false
+		end
+
+		local ok, result = pcall(gateway.UpdateLoadedPlayerProfileData, player, function(currentData: any): any
+			if type(currentData) ~= "table" then
+				return nil, "profile_data_invalid"
+			end
+			local safeLocationResult = SafeLocationProfileState.ApplySafeReturn(currentData, input)
+			if safeLocationResult.accepted ~= true then
+				return nil, safeLocationResult.reason
+			end
+			return safeLocationResult.profileData
+		end)
+		return ok and type(result) == "table" and result.ok == true
 	end
 
 	local function readPositiveAttribute(instance: any, attributeName: string): number?
@@ -1997,6 +2051,17 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 						custodyEndOutcomesByUserId[userId] =
 							resolveCaptureCustodyEnd(userId, "safe_return", transportResolvedAt)
 						if relocatePlayerToTinyfolkReturn(player) then
+							local realmOwnerUserId = resolveActiveRealmOwnerUserId()
+							recordSafeLocationReturn(player, {
+								returnPointName = EscapeConfig.TinyfolkReturnPointName,
+								returnedAt = transportResolvedAt,
+								returnReason = "safe_return",
+								realmId = if type(realmOwnerUserId) == "number"
+									then string.format("giant_realm_%d", realmOwnerUserId)
+									else nil,
+								realmOwnerUserId = realmOwnerUserId,
+								sourceId = endpointId,
+							})
 							table.insert(safeReturnedUserIds, userId)
 						else
 							table.insert(unresolvedUserIds, userId)
