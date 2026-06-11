@@ -74,6 +74,15 @@ local TinyfolkToolProgressionProfileState = if script ~= nil and script.Parent ~
 	)
 	else require("../../ReplicatedStorage/Shared/TinyfolkTools/TinyfolkToolProgressionProfileState")
 
+local InventoryCraftProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("InventoryCraft")
+			:WaitForChild("InventoryCraftProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/InventoryCraft/InventoryCraftProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -188,7 +197,6 @@ local function copyDefaultPlayerProfileData(data: any): any
 	local giantTraitState: any = data.giantTraitState
 	local reputationState: any = data.reputationState
 	local roleLoadoutState: any = data.roleLoadoutState
-	local inventoryCraftState: any = data.inventoryCraftState
 	local unlockedTraitIds = {}
 	local unlockedTraitIdsValue: any = if type(giantTraitState) == "table"
 		then giantTraitState["unlockedTraitIds"]
@@ -213,25 +221,6 @@ local function copyDefaultPlayerProfileData(data: any): any
 		for slotId, traitId in pairs(selectedSlots) do
 			if type(slotId) == "string" and slotId ~= "" and type(traitId) == "string" and traitId ~= "" then
 				copied[slotId] = traitId
-			end
-		end
-		return copied
-	end
-
-	local function copyInventoryItemCounts(value: any): { [string]: number }
-		local copied: { [string]: number } = {}
-		if type(value) ~= "table" then
-			return copied
-		end
-		for itemId, count in pairs(value) do
-			if
-				type(itemId) == "string"
-				and itemId ~= ""
-				and type(count) == "number"
-				and count > 0
-				and count % 1 == 0
-			then
-				copied[itemId] = count
 			end
 		end
 		return copied
@@ -297,13 +286,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		},
 		tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(data),
 		tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(data),
-		inventoryCraftState = if type(inventoryCraftState) == "table"
-				and type(inventoryCraftState["schemaVersion"]) == "number"
-			then {
-				schemaVersion = inventoryCraftState["schemaVersion"],
-				itemCounts = copyInventoryItemCounts(inventoryCraftState["itemCounts"]),
-			}
-			else nil,
+		inventoryCraftState = InventoryCraftProfileState.CopyProfileField(data),
 		rolePreference = RolePreferenceProfileState.CopyProfileField(data),
 		specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(data),
 		escapeHistory = EscapeHistoryProfileState.CopyProfileField(data),
@@ -413,6 +396,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.safeLocation = SafeLocationProfileState.CopyProfileField(loadedData)
 			loadedData.tinyfolkToolLoadoutState = TinyfolkToolLoadoutProfileState.CopyProfileField(loadedData)
 			loadedData.tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(loadedData)
+			loadedData.inventoryCraftState = InventoryCraftProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end
