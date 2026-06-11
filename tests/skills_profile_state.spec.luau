@@ -92,7 +92,7 @@ do
 			invalidField = "ignored",
 		},
 	}, catalog)
-	assertEqual(copied.schemaVersion, 1, "copy keeps schema version")
+	assertEqual(copied.schemaVersion, 2, "copy keeps schema version")
 	assertEqual(#copied.unlockedSkillIds, 1, "copy keeps only valid progression ids")
 	assertEqual(copied.unlockedSkillIds[1], "locked_progression_skill", "copy keeps valid progression id")
 	assertTrue(copied.invalidField == nil, "copy drops invalid fields")
@@ -100,7 +100,7 @@ end
 
 do
 	local defaultCopied = SkillsProfileState.CopyProfileField(nil)
-	assertEqual(defaultCopied.schemaVersion, 1, "nil profile copy defaults schema version")
+	assertEqual(defaultCopied.schemaVersion, 2, "nil profile copy defaults schema version")
 	assertTrue(type(defaultCopied.unlockedSkillIds) == "table", "nil profile copy defaults unlocked ids")
 	assertEqual(next(defaultCopied.unlockedSkillIds), nil, "nil profile copy defaults empty unlock list")
 end
@@ -112,7 +112,7 @@ do
 		"locked_progression_skill",
 	}, catalog)
 	assertTrue(applied.accepted, "apply accepted")
-	assertEqual(applied.profileData.skillsProfileState.schemaVersion, 1, "apply writes schema version")
+	assertEqual(applied.profileData.skillsProfileState.schemaVersion, 2, "apply writes schema version")
 	assertEqual(#applied.profileData.skillsProfileState.unlockedSkillIds, 1, "apply writes filtered ids")
 	assertEqual(
 		applied.profileData.skillsProfileState.unlockedSkillIds[1],
@@ -142,6 +142,100 @@ do
 	local starterUnlock = SkillsProfileState.ResolveUnlock({}, "starter_skill", catalog)
 	assertFalse(starterUnlock.accepted, "starter skill unlock rejected")
 	assertEqual(starterUnlock.reason, "skill_not_progression_unlock", "starter skill unlock reason")
+
+	local seededProgress = firstUnlock.profileData.skillsProfileState.skillProgressById.locked_progression_skill
+	assertTrue(type(seededProgress) == "table", "unlock seeds progress entry")
+	assertEqual(seededProgress.level, 1, "unlock seeds level one")
+	assertEqual(seededProgress.xp, 0, "unlock seeds zero xp")
+	assertTrue(seededProgress.cooldownEndsAt == nil, "unlock seeds nil cooldown")
+end
+
+do
+	local migrated = SkillsProfileState.CopyProfileField({
+		skillsProfileState = {
+			schemaVersion = 1,
+			unlockedSkillIds = { "locked_progression_skill" },
+			skillProgressById = {
+				locked_progression_skill = {
+					level = 99,
+					xp = 99999,
+					cooldownEndsAt = -1,
+				},
+				starter_skill = {
+					level = 2,
+					xp = 50,
+				},
+			},
+			invalidField = "ignored",
+		},
+	}, catalog)
+	assertEqual(migrated.schemaVersion, 2, "v1 profile migrates to schema version two")
+	assertEqual(#migrated.unlockedSkillIds, 1, "v1 migration keeps valid unlock ids")
+	local progress = migrated.skillProgressById.locked_progression_skill
+	assertTrue(type(progress) == "table", "v1 migration keeps unlocked progress")
+	assertEqual(progress.level, 5, "v1 migration clamps xp-driven level to max")
+	assertEqual(progress.xp, 1000, "v1 migration clamps xp to max threshold")
+	assertTrue(progress.cooldownEndsAt == nil, "v1 migration drops invalid cooldown")
+	assertTrue(migrated.skillProgressById.starter_skill == nil, "v1 migration drops non-unlocked progress")
+	assertTrue(migrated.invalidField == nil, "v1 migration drops invalid fields")
+end
+
+do
+	local unlockedProfile = SkillsProfileState.ResolveUnlock({}, "locked_progression_skill", catalog).profileData
+	local awarded = SkillsProfileState.ResolveAwardXp(unlockedProfile, "locked_progression_skill", 150, catalog)
+	assertTrue(awarded.accepted, "award xp accepted")
+	assertEqual(awarded.progress.level, 2, "award xp resolves level two")
+	assertEqual(awarded.progress.xp, 150, "award xp writes total xp")
+
+	local lockedAward = SkillsProfileState.ResolveAwardXp({}, "locked_progression_skill", 10, catalog)
+	assertFalse(lockedAward.accepted, "award xp rejected when locked")
+	assertEqual(lockedAward.reason, "skill_not_unlocked", "award xp locked reason")
+
+	local invalidAward = SkillsProfileState.ResolveAwardXp(unlockedProfile, "locked_progression_skill", 0, catalog)
+	assertFalse(invalidAward.accepted, "zero xp rejected")
+	assertEqual(invalidAward.reason, "xp_amount_invalid", "zero xp reason")
+end
+
+do
+	local unlockedProfile = SkillsProfileState.ResolveUnlock({}, "locked_progression_skill", catalog).profileData
+	local cooldownSet =
+		SkillsProfileState.ResolveSetCooldown(unlockedProfile, "locked_progression_skill", 120.5, catalog)
+	assertTrue(cooldownSet.accepted, "set cooldown accepted")
+	assertEqual(cooldownSet.progress.cooldownEndsAt, 120.5, "set cooldown writes ends at")
+
+	local cleared =
+		SkillsProfileState.ResolveSetCooldown(cooldownSet.profileData, "locked_progression_skill", nil, catalog)
+	assertTrue(cleared.accepted, "clear cooldown accepted")
+	assertTrue(cleared.progress.cooldownEndsAt == nil, "clear cooldown writes nil")
+
+	local invalidCooldown =
+		SkillsProfileState.ResolveSetCooldown(unlockedProfile, "locked_progression_skill", -1, catalog)
+	assertFalse(invalidCooldown.accepted, "invalid cooldown rejected")
+	assertEqual(invalidCooldown.reason, "cooldown_ends_at_invalid", "invalid cooldown reason")
+end
+
+do
+	local unlocked = SkillsProfileState.ApplyUnlockedSkillIds({}, { "locked_progression_skill" }, catalog)
+	local applied = SkillsProfileState.ApplySkillProgressById(unlocked.profileData, {
+		locked_progression_skill = {
+			level = 3,
+			xp = 300,
+			cooldownEndsAt = 50,
+		},
+		starter_skill = {
+			level = 2,
+			xp = 100,
+		},
+	}, catalog)
+	assertTrue(applied.accepted, "apply progress accepted")
+	local progress = applied.profileData.skillsProfileState.skillProgressById.locked_progression_skill
+	assertEqual(progress.level, 3, "apply progress keeps normalized level")
+	assertEqual(progress.xp, 300, "apply progress keeps normalized xp")
+	assertEqual(progress.cooldownEndsAt, 50, "apply progress keeps normalized cooldown")
+	assertTrue(
+		applied.profileData.skillsProfileState.skillProgressById.starter_skill == nil,
+		"apply progress drops non-unlocked skill entries"
+	)
 end
 
 print("skills_profile_state: all checks passed")

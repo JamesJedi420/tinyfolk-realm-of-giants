@@ -171,7 +171,7 @@ assertTrue(
 	"default tinyfolk tool progression tables cloned"
 )
 assertTrue(type(defaultA.data.skillsProfileState) == "table", "default skills profile state exists")
-assertEqual(defaultA.data.skillsProfileState.schemaVersion, 1, "default skills profile schema version")
+assertEqual(defaultA.data.skillsProfileState.schemaVersion, 2, "default skills profile schema version")
 assertTrue(
 	type(defaultA.data.skillsProfileState.unlockedSkillIds) == "table",
 	"default skills profile unlocked ids exists"
@@ -983,11 +983,7 @@ assertSuccess(
 )
 local loadedSkillsProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(skillsSanitizePlayer)
 assertSuccess(loadedSkillsProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9415", "get skills profile sanitize")
-assertEqual(
-	loadedSkillsProfile.data.skillsProfileState.schemaVersion,
-	1,
-	"load keeps valid skills profile schema version"
-)
+assertEqual(loadedSkillsProfile.data.skillsProfileState.schemaVersion, 2, "load migrates skills profile schema version")
 assertEqual(
 	next(loadedSkillsProfile.data.skillsProfileState.unlockedSkillIds),
 	nil,
