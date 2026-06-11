@@ -150,6 +150,7 @@ assertTrue(
 assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
 assertTrue(defaultA.data.rolePreference == nil, "default profile omits role preference")
 assertTrue(defaultA.data.specialistPreference == nil, "default profile omits specialist preference")
+assertTrue(defaultA.data.escapeHistory == nil, "default profile omits escape history")
 
 local calls: { any } = {}
 local ownerLayer: any = {}
@@ -596,6 +597,73 @@ assertSuccess(
 local loadedInvalidRoleProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidRoleSanitizePlayer)
 assertSuccess(loadedInvalidRoleProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9405", "get invalid role sanitize")
 assertTrue(loadedInvalidRoleProfile.data.rolePreference == nil, "load drops invalid preferred role")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		local escapeHistory: any = {}
+		table.insert(escapeHistory, {
+			operationId = "op-escape-1",
+			escapedAt = 10,
+			sourceKind = "final_exit",
+			sourceId = "EscapeRoute_A",
+			routeId = "EscapeRoute_A",
+			realmOwnerUserId = 9001,
+			difficulty = 2,
+			reward = {
+				points = 125,
+				basePoints = 100,
+				difficulty = 2,
+				lootValue = 3,
+			},
+			loot = {
+				items = { "glimmer" },
+				value = 3,
+			},
+			invalidField = "ignored",
+		})
+		table.insert(escapeHistory, {
+			operationId = "",
+			escapedAt = 10,
+			sourceKind = "final_exit",
+			sourceId = "EscapeRoute_B",
+		})
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			escapeHistory = escapeHistory,
+			counters = {
+				coins = 3,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local escapeSanitizePlayer = makePlayer(9406)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(escapeSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9406",
+	"load escape sanitize player"
+)
+local loadedEscapeProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(escapeSanitizePlayer)
+assertSuccess(loadedEscapeProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9406", "get escape sanitize")
+assertEqual(#loadedEscapeProfile.data.escapeHistory, 1, "load sanitizes escape history length")
+assertEqual(
+	loadedEscapeProfile.data.escapeHistory[1].operationId,
+	"op-escape-1",
+	"load keeps valid escape history entry"
+)
+assertEqual(
+	loadedEscapeProfile.data.escapeHistory[1].realmOwnerUserId,
+	9001,
+	"load keeps valid escape history realm owner"
+)
+assertTrue(loadedEscapeProfile.data.escapeHistory[1].invalidField == nil, "load drops invalid escape history fields")
+assertTrue(loadedEscapeProfile.data.counters.coins == 3, "load keeps non-escape profile fields")
 
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
