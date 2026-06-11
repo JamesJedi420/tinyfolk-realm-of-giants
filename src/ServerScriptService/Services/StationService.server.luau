@@ -18,6 +18,7 @@ local ConstructionFolder = Shared:WaitForChild("Construction")
 local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
 local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"))
+local ObjectiveSkillXpProducer = require(script.Parent:WaitForChild("ObjectiveSkillXpProducer"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ACTIVATE_REMOTE_NAME = "StationActivateRequest"
@@ -874,6 +875,7 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 			if qteResult.success then
 				setTaskQteResultAttribute(player, "success")
 				resolvedNow = qteResult.effectiveNow
+				ObjectiveSkillXpProducer.RecordObjectiveQteSuccessXp(player)
 			else
 				setTaskQteResultAttribute(player, "failed")
 				if StationConfig.TaskQteFailureDisrupts == true then

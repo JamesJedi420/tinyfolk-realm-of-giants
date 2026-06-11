@@ -230,9 +230,15 @@ giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
+configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"
+configFolder._Children["SkillCatalogSchema"] = "../../ReplicatedStorage/Shared/Config/SkillCatalogSchema"
+
+local skillsFolder = makeNode("Skills", "Folder", "ReplicatedStorage.Shared.Skills")
+skillsFolder._Children["SkillXpAwardPolicy"] = "../../ReplicatedStorage/Shared/Skills/SkillXpAwardPolicy"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "Skills", skillsFolder)
 addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
@@ -294,6 +300,7 @@ game = fakeGame
 
 local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
 scriptParent._Children["GiantEssenceSession"] = "../../ServerScriptService/Services/GiantEssenceSession"
+scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
 script = {
 	Parent = scriptParent,
 } :: any

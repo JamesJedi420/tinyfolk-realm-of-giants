@@ -9,6 +9,7 @@ local ConstructionConfig: any
 local ResourceFlowState: any
 local ContextualTaskProgressLogic: any
 local TaskQteTimingLogic: any
+local ObjectiveSkillXpProducer: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local BUILD_REMOTE_NAME = "ConstructionBuildRequest"
@@ -111,6 +112,7 @@ local function resolveDependencies()
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 	ContextualTaskProgressLogic = requireChildModule(construction, "ContextualTaskProgressLogic")
 	TaskQteTimingLogic = requireChildModule(construction, "TaskQteTimingLogic")
+	ObjectiveSkillXpProducer = requireChildModule(script.Parent, "ObjectiveSkillXpProducer")
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -688,6 +690,7 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 			if qteResult.success then
 				setTaskQteResultAttribute(player, "success")
 				resolvedNow = qteResult.effectiveNow
+				ObjectiveSkillXpProducer.RecordObjectiveQteSuccessXp(player)
 			else
 				setTaskQteResultAttribute(player, "failed")
 				if ConstructionConfig.TaskQteFailureDisrupts == true then
