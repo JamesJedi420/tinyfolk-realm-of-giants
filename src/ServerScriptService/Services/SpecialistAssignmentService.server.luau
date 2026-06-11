@@ -4,10 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
+local Specialist = Shared:WaitForChild("Specialist")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local ShrineConfig = require(Config:WaitForChild("ShrineConfig"))
+local SpecialistPreferenceProfileState = if script ~= nil and script.Parent ~= nil
+	then require(Specialist:WaitForChild("SpecialistPreferenceProfileState"))
+	else require("../../ReplicatedStorage/Shared/Specialist/SpecialistPreferenceProfileState")
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else require("./ProfilePersistenceGateway")
@@ -317,13 +321,11 @@ end
 
 local function persistSpecialistRole(player: Player, specialistRole: string)
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
-		local nextData = currentData
-		if type(nextData[PROFILE_SPECIALIST_PREFERENCE_KEY]) ~= "table" then
-			nextData[PROFILE_SPECIALIST_PREFERENCE_KEY] = {}
+		local transition = SpecialistPreferenceProfileState.ApplySpecialistRole(currentData, specialistRole)
+		if not transition.accepted then
+			return nil, transition.reason
 		end
-
-		nextData[PROFILE_SPECIALIST_PREFERENCE_KEY][PROFILE_SPECIALIST_ROLE_KEY] = specialistRole
-		return nextData
+		return transition.profileData
 	end)
 
 	if not updateResult.ok then
@@ -339,13 +341,11 @@ end
 
 local function persistAssignedStationId(player: Player, assignedStationId: string?)
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
-		local nextData = currentData
-		if type(nextData[PROFILE_SPECIALIST_PREFERENCE_KEY]) ~= "table" then
-			nextData[PROFILE_SPECIALIST_PREFERENCE_KEY] = {}
+		local transition = SpecialistPreferenceProfileState.ApplyAssignedStationId(currentData, assignedStationId)
+		if not transition.accepted then
+			return nil, transition.reason
 		end
-
-		nextData[PROFILE_SPECIALIST_PREFERENCE_KEY][PROFILE_ASSIGNED_STATION_ID_KEY] = assignedStationId
-		return nextData
+		return transition.profileData
 	end)
 
 	if not updateResult.ok then
@@ -361,13 +361,11 @@ end
 
 local function persistLastAssignedAt(player: Player, lastAssignedAt: number)
 	local updateResult = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
-		local nextData = currentData
-		if type(nextData[PROFILE_SPECIALIST_PREFERENCE_KEY]) ~= "table" then
-			nextData[PROFILE_SPECIALIST_PREFERENCE_KEY] = {}
+		local transition = SpecialistPreferenceProfileState.ApplyLastAssignedAt(currentData, lastAssignedAt)
+		if not transition.accepted then
+			return nil, transition.reason
 		end
-
-		nextData[PROFILE_SPECIALIST_PREFERENCE_KEY][PROFILE_LAST_ASSIGNED_AT_KEY] = lastAssignedAt
-		return nextData
+		return transition.profileData
 	end)
 
 	if not updateResult.ok then

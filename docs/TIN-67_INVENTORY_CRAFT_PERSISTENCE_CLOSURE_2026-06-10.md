@@ -18,6 +18,7 @@
 ## Remaining TIN-67 scope
 
 - Tools, skills, escape records, discovered realms, party history, safe location, and pending recovery persistence.
+- See also `docs/TIN-67_SPECIALIST_PREFERENCE_PERSISTENCE_CLOSURE_2026-06-10.md` for specialist preference hardening.
 
 ## Studio follow-up
 

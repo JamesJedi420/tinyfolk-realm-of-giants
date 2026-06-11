@@ -2,6 +2,7 @@
 
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
+local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 
 local function assertTrue(value: boolean, label: string)
 	if not value then
@@ -146,6 +147,7 @@ assertTrue(
 	"default tinyfolk tool loadout tables cloned"
 )
 assertTrue(defaultA.data.inventoryCraftState == nil, "default profile omits inventory craft state")
+assertTrue(defaultA.data.specialistPreference == nil, "default profile omits specialist preference")
 
 local calls: { any } = {}
 local ownerLayer: any = {}
@@ -484,6 +486,52 @@ assertFailure(
 	"giant_realm_save_root_missing",
 	"owner load missing save root"
 )
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			specialistPreference = {
+				specialistRole = SpecialistConfig.SpecialistRoles.Miner,
+				assignedStationId = "MiningStation_A",
+				lastAssignedAt = 100,
+				invalidRole = "InvalidRole",
+			},
+			counters = {
+				coins = 1,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local specialistSanitizePlayer = makePlayer(9403)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(specialistSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9403",
+	"load specialist sanitize player"
+)
+local loadedSpecialistProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(specialistSanitizePlayer)
+assertSuccess(loadedSpecialistProfile, "GetLoadedPlayerProfileData", "PlayerProfile:9403", "get specialist sanitize")
+assertEqual(
+	loadedSpecialistProfile.data.specialistPreference.specialistRole,
+	SpecialistConfig.SpecialistRoles.Miner,
+	"load sanitizes specialist role"
+)
+assertEqual(
+	loadedSpecialistProfile.data.specialistPreference.assignedStationId,
+	"MiningStation_A",
+	"load keeps valid assigned station"
+)
+assertEqual(loadedSpecialistProfile.data.specialistPreference.lastAssignedAt, 100, "load keeps valid timestamp")
+assertTrue(loadedSpecialistProfile.data.counters.coins == 1, "load keeps non-preference profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()
 ProfilePersistenceGateway.ResetForTests()
