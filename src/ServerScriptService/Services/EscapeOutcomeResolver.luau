@@ -9,6 +9,14 @@ local EscapeHistoryProfileState = if script ~= nil and script.Parent ~= nil
 			:WaitForChild("EscapeHistoryProfileState")
 	)
 	else require("../../ReplicatedStorage/Shared/Escape/EscapeHistoryProfileState")
+local SafeLocationProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Escape")
+			:WaitForChild("SafeLocationProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/Escape/SafeLocationProfileState")
 local ReputationState = if script ~= nil and script.Parent ~= nil
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -275,6 +283,45 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 		return true, nil, reputationResult
 	end
 
+	local function recordSafeLocation(player: any, input: any): (boolean, string?)
+		local gateway = if type(depsAny.profileGateway) == "table"
+			then depsAny.profileGateway
+			else getGlobalApi("_ProfilePersistenceGateway_QueryAPI")
+		if gateway == nil then
+			local ok, loaded = pcall(function()
+				if script ~= nil and script.Parent ~= nil then
+					return require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
+				end
+				return require("./ProfilePersistenceGateway")
+			end)
+			if ok then
+				gateway = loaded
+			end
+		end
+
+		if type(gateway) ~= "table" or type(gateway.UpdateLoadedPlayerProfileData) ~= "function" then
+			return false, "profile_gateway_unavailable"
+		end
+
+		local ok, result = pcall(gateway.UpdateLoadedPlayerProfileData, player, function(currentData: any): any
+			if type(currentData) ~= "table" then
+				return nil, "profile_data_invalid"
+			end
+			local safeLocationResult = SafeLocationProfileState.ApplySafeReturn(currentData, input)
+			if safeLocationResult.accepted ~= true then
+				return nil, safeLocationResult.reason
+			end
+			return safeLocationResult.profileData
+		end)
+		if not ok or type(result) ~= "table" or result.ok ~= true then
+			return false,
+				if type(result) == "table" and type(result.reason) == "string"
+					then result.reason
+					else "profile_update_failed"
+		end
+		return true, nil
+	end
+
 	local function recordReputationLog(userId: number, at: number, metadata: any, reputationResult: any)
 		local eventLogApi = if type(depsAny.eventLogApi) == "table"
 			then depsAny.eventLogApi
@@ -428,6 +475,17 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			rewardPoints = rewardPoints,
 		})
 		local returnedToHub = returnToHub(input.player)
+		local safeLocationUpdated = false
+		local safeLocationReason: string? = nil
+		if returnedToHub then
+			safeLocationUpdated, safeLocationReason = recordSafeLocation(input.player, {
+				returnedAt = nowAt,
+				returnReason = "escape_success",
+				realmId = input.realmId,
+				realmOwnerUserId = input.realmOwnerUserId,
+				sourceId = sourceId,
+			})
+		end
 
 		local completedOk, completedResult = pcall(idempotencyStore.MarkCompleted, operationId)
 		if not completedOk or type(completedResult) ~= "table" or completedResult.accepted ~= true then
@@ -463,6 +521,8 @@ function EscapeOutcomeResolver.Create(deps: any?): any
 			lootReason = lootReason,
 			loot = loot,
 			returnedToHub = returnedToHub,
+			safeLocationUpdated = safeLocationUpdated,
+			safeLocationReason = safeLocationReason,
 		}
 	end
 

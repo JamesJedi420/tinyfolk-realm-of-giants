@@ -665,6 +665,57 @@ assertEqual(
 assertTrue(loadedEscapeProfile.data.escapeHistory[1].invalidField == nil, "load drops invalid escape history fields")
 assertTrue(loadedEscapeProfile.data.counters.coins == 3, "load keeps non-escape profile fields")
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			safeLocation = {
+				returnPointName = "TinyfolkReturnPoint",
+				returnedAt = 10,
+				returnReason = "safe_return",
+				realmOwnerUserId = 9001,
+				sourceId = "Transport_A",
+				invalidField = "ignored",
+			},
+			counters = {
+				coins = 4,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local safeLocationSanitizePlayer = makePlayer(9407)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(safeLocationSanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9407",
+	"load safe location sanitize player"
+)
+local loadedSafeLocationProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(safeLocationSanitizePlayer)
+assertSuccess(
+	loadedSafeLocationProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9407",
+	"get safe location sanitize"
+)
+assertEqual(
+	loadedSafeLocationProfile.data.safeLocation.returnReason,
+	"safe_return",
+	"load keeps valid safe location reason"
+)
+assertEqual(
+	loadedSafeLocationProfile.data.safeLocation.sourceId,
+	"Transport_A",
+	"load keeps valid safe location source"
+)
+assertTrue(loadedSafeLocationProfile.data.safeLocation.invalidField == nil, "load drops invalid safe location fields")
+assertTrue(loadedSafeLocationProfile.data.counters.coins == 4, "load keeps non-safe-location profile fields")
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()

@@ -47,6 +47,15 @@ local EscapeHistoryProfileState = if script ~= nil and script.Parent ~= nil
 	)
 	else require("../../ReplicatedStorage/Shared/Escape/EscapeHistoryProfileState")
 
+local SafeLocationProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("Escape")
+			:WaitForChild("SafeLocationProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/Escape/SafeLocationProfileState")
+
 export type GatewayResult = {
 	ok: boolean,
 	operation: string,
@@ -301,6 +310,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		rolePreference = RolePreferenceProfileState.CopyProfileField(data),
 		specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(data),
 		escapeHistory = EscapeHistoryProfileState.CopyProfileField(data),
+		safeLocation = SafeLocationProfileState.CopyProfileField(data),
 	}
 end
 
@@ -403,6 +413,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.rolePreference = RolePreferenceProfileState.CopyProfileField(loadedData)
 			loadedData.specialistPreference = SpecialistPreferenceProfileState.CopyProfileField(loadedData)
 			loadedData.escapeHistory = EscapeHistoryProfileState.CopyProfileField(loadedData)
+			loadedData.safeLocation = SafeLocationProfileState.CopyProfileField(loadedData)
 		end
 		activePlayerProfileDataByUserId[userId] = loadedData
 	end
