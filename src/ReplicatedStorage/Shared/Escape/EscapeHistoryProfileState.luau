@@ -114,9 +114,7 @@ local function normalizeReward(value: any, difficulty: number, loot: any): any
 		points = if isFiniteNumber(value.points) and value.points >= 0 then value.points else 0,
 		basePoints = if isFiniteNumber(value.basePoints) and value.basePoints >= 0 then value.basePoints else 0,
 		difficulty = normalizeDifficulty(value.difficulty),
-		lootValue = if isFiniteNumber(value.lootValue) and value.lootValue >= 0
-			then value.lootValue
-			else loot.value,
+		lootValue = if isFiniteNumber(value.lootValue) and value.lootValue >= 0 then value.lootValue else loot.value,
 	}
 end
 
@@ -228,7 +226,8 @@ function EscapeHistoryProfileState.CopyProfileField(profileData: any, limit: num
 		return nil
 	end
 
-	local history = normalizeHistoryList(profileData[PROFILE_KEY], if type(limit) == "number" then limit else DEFAULT_HISTORY_LIMIT)
+	local history =
+		normalizeHistoryList(profileData[PROFILE_KEY], if type(limit) == "number" then limit else DEFAULT_HISTORY_LIMIT)
 	if #history == 0 then
 		return nil
 	end
