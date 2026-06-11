@@ -1,6 +1,8 @@
 --!strict
 
 local SkillCatalogSchema = require("../src/ReplicatedStorage/Shared/Config/SkillCatalogSchema")
+local SkillProgressionConfig = require("../src/ReplicatedStorage/Shared/Config/SkillProgressionConfig")
+local SkillXpAwardPolicy = require("../src/ReplicatedStorage/Shared/Skills/SkillXpAwardPolicy")
 local SkillsProfileState = require("../src/ReplicatedStorage/Shared/Skills/SkillsProfileState")
 
 local function assertEqual(actual: any, expected: any, label: string)
@@ -236,6 +238,21 @@ do
 		applied.profileData.skillsProfileState.skillProgressById.starter_skill == nil,
 		"apply progress drops non-unlocked skill entries"
 	)
+end
+
+do
+	local award, reason = SkillXpAwardPolicy.ResolveXpAward(SkillProgressionConfig.OutcomeKinds.ObjectiveQteSuccess)
+	assertTrue(type(award) == "table", "objective qte xp award resolves")
+	if award == nil then
+		error("objective qte xp award missing after resolve")
+	end
+	assertEqual(award.skillId, "objective_craft", "objective qte xp award skill id")
+	assertEqual(award.xpAmount, 25, "objective qte xp award amount")
+	assertTrue(reason == nil, "objective qte xp award has no reason")
+
+	local missingAward, missingReason = SkillXpAwardPolicy.ResolveXpAward("missing_outcome")
+	assertTrue(missingAward == nil, "missing outcome has no award")
+	assertEqual(missingReason, "xp_award_unconfigured", "missing outcome reason")
 end
 
 print("skills_profile_state: all checks passed")

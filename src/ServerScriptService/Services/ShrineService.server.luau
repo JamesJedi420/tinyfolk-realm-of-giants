@@ -14,6 +14,7 @@ local SpecialistConfig = require(Config:WaitForChild("SpecialistConfig"))
 local ConstructionFolder = Shared:WaitForChild("Construction")
 local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("ContextualTaskProgressLogic"))
 local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
+local ObjectiveSkillXpProducer = require(script.Parent:WaitForChild("ObjectiveSkillXpProducer"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
@@ -853,6 +854,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 			if qteResult.success then
 				setTaskQteResultAttribute(player, "success")
 				resolvedNow = qteResult.effectiveNow
+				ObjectiveSkillXpProducer.RecordObjectiveQteSuccessXp(player)
 			else
 				setTaskQteResultAttribute(player, "failed")
 				if ShrineConfig.TaskQteFailureDisrupts == true then
