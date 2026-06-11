@@ -1282,6 +1282,105 @@ assertTrue(
 	"load drops invalid discovered realms state"
 )
 
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			partyHistory = {
+				{
+					operationId = "op-party-1",
+					partyId = "party-42",
+					targetRealmId = "realm-main-01",
+					entryType = "rescue_contract",
+					formedAt = 100,
+					partySize = 2,
+					partyMemberUserIds = { 7101, 7102 },
+					invalidField = "ignored",
+				},
+			},
+			counters = {
+				coins = 9,
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local partyHistorySanitizePlayer = makePlayer(9416)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(partyHistorySanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9416",
+	"load party history sanitize player"
+)
+local loadedPartyHistoryProfile = ProfilePersistenceGateway.GetLoadedPlayerProfileData(partyHistorySanitizePlayer)
+assertSuccess(
+	loadedPartyHistoryProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9416",
+	"get party history sanitize"
+)
+assertEqual(
+	loadedPartyHistoryProfile.data.partyHistory[1].operationId,
+	"op-party-1",
+	"load keeps valid party history operation id"
+)
+assertEqual(
+	loadedPartyHistoryProfile.data.partyHistory[1].partyMemberUserIds[1],
+	7101,
+	"load keeps valid party member ids"
+)
+assertTrue(
+	loadedPartyHistoryProfile.data.partyHistory[1].invalidField == nil,
+	"load drops invalid party history fields"
+)
+assertTrue(loadedPartyHistoryProfile.data.counters.coins == 9, "load keeps non-party-history profile fields")
+
+ProfilePersistenceGateway.ConfigureOwnerLayer({
+	LoadPlayerProfile = function(profileKey: string, userId: number): any
+		return makeOwnerResult("LoadPlayerProfile", profileKey, {
+			userId = userId,
+			partyHistory = {
+				{
+					operationId = "",
+					partyId = "party-42",
+					targetRealmId = "realm-main-01",
+					entryType = "rescue_contract",
+					formedAt = 100,
+					partySize = 2,
+					partyMemberUserIds = { 7101, 7102 },
+				},
+			},
+		})
+	end,
+	SavePlayerProfile = ownerLayer.SavePlayerProfile,
+	ReleasePlayerProfile = ownerLayer.ReleasePlayerProfile,
+	LoadGiantRealmProfile = ownerLayer.LoadGiantRealmProfile,
+	SaveGiantRealmProfile = ownerLayer.SaveGiantRealmProfile,
+	ReleaseGiantRealmProfile = ownerLayer.ReleaseGiantRealmProfile,
+})
+
+local invalidPartyHistorySanitizePlayer = makePlayer(9417)
+assertSuccess(
+	ProfilePersistenceGateway.LoadPlayerProfile(invalidPartyHistorySanitizePlayer),
+	"LoadPlayerProfile",
+	"PlayerProfile:9417",
+	"load invalid party history sanitize player"
+)
+local loadedInvalidPartyHistoryProfile =
+	ProfilePersistenceGateway.GetLoadedPlayerProfileData(invalidPartyHistorySanitizePlayer)
+assertSuccess(
+	loadedInvalidPartyHistoryProfile,
+	"GetLoadedPlayerProfileData",
+	"PlayerProfile:9417",
+	"get invalid party history sanitize"
+)
+assertTrue(loadedInvalidPartyHistoryProfile.data.partyHistory == nil, "load drops invalid party history state")
+
 ProfilePersistenceGateway.ConfigureOwnerLayer(ownerLayer)
 
 clearGiantQueryApi()

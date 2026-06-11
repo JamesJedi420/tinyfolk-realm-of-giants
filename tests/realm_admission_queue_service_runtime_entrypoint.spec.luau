@@ -593,4 +593,135 @@ do
 	RealmAdmissionQueueService.ResetForTests()
 end
 
+do
+	local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
+	local globalEnv: any = getfenv()
+	local loadedProfileByUserId: { [number]: any } = {}
+	local saveAttemptCountByUserId: { [number]: number } = {}
+
+	local function cloneTable(value: any): any
+		if type(value) ~= "table" then
+			return value
+		end
+		local copied = {}
+		for key, child in pairs(value) do
+			copied[key] = cloneTable(child)
+		end
+		return copied
+	end
+
+	ProfilePersistenceGateway.ResetForTests()
+	ProfilePersistenceGateway.UpdateLoadedPlayerProfileData = function(player: any, updater: any): any
+		local userId = player.UserId
+		local currentData = loadedProfileByUserId[userId] or {
+			userId = userId,
+		}
+		local ok, newData, reason = pcall(updater, cloneTable(currentData))
+		if not ok or type(newData) ~= "table" then
+			return {
+				ok = false,
+				reason = if type(reason) == "string" then reason else "profile_update_failed",
+			}
+		end
+		loadedProfileByUserId[userId] = cloneTable(newData)
+		return {
+			ok = true,
+			data = cloneTable(newData),
+		}
+	end
+	ProfilePersistenceGateway.SavePlayerProfile = function(player: any): any
+		saveAttemptCountByUserId[player.UserId] = (saveAttemptCountByUserId[player.UserId] or 0) + 1
+		return {
+			ok = true,
+		}
+	end
+	globalEnv._ProfilePersistenceGateway_QueryAPI = ProfilePersistenceGateway
+
+	loadedProfileByUserId[8101] = { userId = 8101 }
+	loadedProfileByUserId[8102] = { userId = 8102 }
+
+	local partyHistoryAdapter = makeQueueAdapter()
+	local configuredPartyHistory = RealmAdmissionQueueService.ConfigureForTests({
+		adapter = partyHistoryAdapter,
+		codec = makeCodec(),
+		queueState = RealmAdmissionQueueState,
+		structurePolicy = MemoryStoreStructurePolicy,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return {
+					accepted = true,
+				}
+			end,
+		},
+		partyResolver = {
+			RegisterPartyMembers = function(_input: any)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+			ResolvePartyMemberUserIds = function(_partyId: string): { number }
+				return { 8101, 8102 }
+			end,
+			UnregisterParty = function(_partyId: string)
+				return {
+					accepted = true,
+					reason = "accepted",
+				}
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				return {
+					ok = true,
+					retryable = false,
+				}
+			end,
+		},
+		operationLock = {
+			TryAcquire = function(_operationId: string): boolean
+				return true
+			end,
+			Release = function(_operationId: string)
+				return
+			end,
+		},
+		now = function(): number
+			return 150
+		end,
+	})
+	assertTrue(configuredPartyHistory.ok, "party history configure accepted")
+
+	local enqueuePartyHistory = RealmAdmissionQueueService.EnqueueAdmission(makeEntry({
+		operationId = "op-party-history",
+		partyId = "party-history-1",
+		entryType = "rescue_contract",
+		expiration = 220,
+		partySize = 2,
+		partyMemberUserIds = { 8102, 8101 },
+	}))
+	assertTrue(enqueuePartyHistory.accepted, "party history enqueue accepted")
+	assertTrue(type(loadedProfileByUserId[8101].partyHistory) == "table", "party history persisted for first member")
+	assertTrue(type(loadedProfileByUserId[8102].partyHistory) == "table", "party history persisted for second member")
+	assertEqual(
+		loadedProfileByUserId[8101].partyHistory[1].operationId,
+		"op-party-history",
+		"party history operation id"
+	)
+	assertEqual(loadedProfileByUserId[8102].partyHistory[1].entryType, "rescue_contract", "party history entry type")
+	assertEqual(loadedProfileByUserId[8101].partyHistory[1].partyMemberUserIds[1], 8101, "party history members sorted")
+	assertEqual(saveAttemptCountByUserId[8101], 1, "party history save first member")
+	assertEqual(saveAttemptCountByUserId[8102], 1, "party history save second member")
+
+	globalEnv._ProfilePersistenceGateway_QueryAPI = nil
+	RealmAdmissionQueueService.ResetForTests()
+	ProfilePersistenceGateway.ResetForTests()
+end
+
 print("realm_admission_queue_service_runtime_entrypoint: all checks passed")
