@@ -25,4 +25,4 @@ All passed locally.
 
 - Execute `docs/TIN-149_GAMEPLAY_COLLISION_GROUP_MATRIX_STUDIO_EVIDENCE_2026-06-12.md` ownership sections (manual).
 - Runtime refresh hook when GiantBuild snare trap artifacts materialize BaseParts (folder-only artifacts today).
-- Authored `GameplayDoor` / `RewardLoot` map attribute pass beyond heuristic triggers.
+- Broader `GameplayDoor` / `RewardLoot` map attribute pass beyond warehouse door and trade-dock loot anchors (see TIN-149 map authoring tags closure).

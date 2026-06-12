@@ -1,6 +1,7 @@
 --!strict
 
 local GameplayPhysicsOwnershipConfig = require("../Config/GameplayPhysicsOwnershipConfig")
+local GameplayMapAuthoringResolver = require("./GameplayMapAuthoringResolver")
 
 export type OwnershipTier = GameplayPhysicsOwnershipConfig.OwnershipTier
 export type AssemblyKind = GameplayPhysicsOwnershipConfig.AssemblyKind
@@ -88,6 +89,11 @@ function GameplayPhysicsOwnershipPolicy.ResolveWorldPartAssembly(part: any): Ass
 		local explicitAssembly = part:GetAttribute(GameplayPhysicsOwnershipConfig.WorldPartAssemblyAttribute)
 		if type(explicitAssembly) == "string" and string.len(explicitAssembly) > 0 then
 			return explicitAssembly :: AssemblyKind
+		end
+
+		local taggedAssembly = GameplayMapAuthoringResolver.ResolveOwnershipAssemblyFromTags(part)
+		if taggedAssembly ~= nil then
+			return taggedAssembly :: AssemblyKind
 		end
 
 		local snareTrapId = part:GetAttribute(GameplayPhysicsOwnershipConfig.SnareTrapIdAttribute)

@@ -1013,6 +1013,11 @@
         {
           "name": "GiantLoadingFace",
           "className": "Folder",
+          "properties": {
+            "Tags": [
+              "GameplayTag_Door"
+            ]
+          },
           "children": [
             {
               "name": "Door_Frame_Giant",
