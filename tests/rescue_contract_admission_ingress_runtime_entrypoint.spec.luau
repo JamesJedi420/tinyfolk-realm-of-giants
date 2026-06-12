@@ -120,6 +120,11 @@ addChild(
 	"GiantRealmResourceState",
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 )
+addChild(
+	giantRealmFolder,
+	"CapturePersistenceRules",
+	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)

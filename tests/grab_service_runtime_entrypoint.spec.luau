@@ -100,6 +100,11 @@ local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 addChild(giantRealmFolder, "GrabState", "../../ReplicatedStorage/Shared/GiantRealm/GrabState")
 addChild(giantRealmFolder, "CarryLoadState", "../../ReplicatedStorage/Shared/GiantRealm/CarryLoadState")
+addChild(
+	giantRealmFolder,
+	"CapturePersistenceRules",
+	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -192,6 +197,17 @@ _G._RoleService_QueryAPI = {
 			isDowned = false,
 			carryEligibleMarker = false,
 		}
+	end,
+}
+
+local counterplayEscapeActionAllowed = true
+local captureQueryFault = false
+_G._CaptureService_QueryAPI = {
+	CanTargetPerformEscapeAction = function(_action: string): boolean
+		if captureQueryFault == true then
+			error("capture query fault")
+		end
+		return counterplayEscapeActionAllowed == true
 	end,
 }
 
@@ -314,6 +330,37 @@ do
 	local restricted = grabApi.CanGiantPerformCarryInteraction(otherGiant.UserId, "throughGapReach")
 	assertFalse(restricted.accepted, "carrier through-gap interaction restricted")
 	assertEqual(restricted.reason, "carrier_encumbered", "carrier interaction restriction reason")
+end
+
+do
+	local carrierGiant = MockPlayer.new(10, "CounterplayCarrierGiant", { role = "Giant", positionZ = 0 })
+	local carriedTarget = MockPlayer.new(11, "CounterplayCarriedTinyfolk", { role = "Tinyfolk", positionZ = 4 })
+	table.insert(playersList, carrierGiant)
+	table.insert(playersList, carriedTarget)
+
+	local grabResult = grabApi.RequestGrab(carrierGiant.UserId, carriedTarget.UserId, 200)
+	assertTrue(grabResult.accepted, "counterplay setup grab accepted")
+
+	counterplayEscapeActionAllowed = false
+	local blocked = grabApi.RequestCounterplay(carriedTarget.UserId, 201)
+	assertFalse(blocked.accepted, "blocked counterplay escape action rejects")
+	assertEqual(blocked.reason, "escape_action_blocked", "blocked counterplay escape action reason")
+	assertTrue(grabApi.IsPlayerCarried(carriedTarget.UserId), "blocked counterplay keeps target carried")
+end
+
+do
+	local carrierGiant = MockPlayer.new(12, "FaultyCaptureCarrierGiant", { role = "Giant", positionZ = 0 })
+	local carriedTarget = MockPlayer.new(13, "FaultyCaptureCarriedTinyfolk", { role = "Tinyfolk", positionZ = 4 })
+	table.insert(playersList, carrierGiant)
+	table.insert(playersList, carriedTarget)
+
+	local grabResult = grabApi.RequestGrab(carrierGiant.UserId, carriedTarget.UserId, 210)
+	assertTrue(grabResult.accepted, "capture fault setup grab accepted")
+
+	captureQueryFault = true
+	local faulted = grabApi.RequestCounterplay(carriedTarget.UserId, 211)
+	assertFalse(faulted.accepted, "capture query fault rejects counterplay")
+	assertEqual(faulted.reason, "capture_query_fault", "capture query fault counterplay reason")
 end
 
 print("grab_service_runtime_entrypoint: all checks passed")

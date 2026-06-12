@@ -117,6 +117,11 @@ addChild(
 	"GiantRealmResourceState",
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmResourceState"
 )
+addChild(
+	giantRealmFolder,
+	"CapturePersistenceRules",
+	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -247,6 +252,8 @@ globalEnv._ScoreService_QueryAPI = {
 }
 
 local captureCustodyEndRequests: { any } = {}
+local rescueEscapeActionAllowed = true
+local captureQueryFault = false
 globalEnv._CaptureService_QueryAPI = {
 	ResolveCustodyEnd = function(targetUserId: number, endReason: string, at: number, operationId: string?): any
 		table.insert(captureCustodyEndRequests, {
@@ -256,6 +263,12 @@ globalEnv._CaptureService_QueryAPI = {
 			operationId = operationId,
 		})
 		return { accepted = true, reason = endReason }
+	end,
+	CanTargetPerformEscapeAction = function(_action: string): boolean
+		if captureQueryFault == true then
+			error("capture query fault")
+		end
+		return rescueEscapeActionAllowed == true
 	end,
 }
 
@@ -389,6 +402,8 @@ local function resetState()
 	routeRequests = {}
 	scoreRequests = {}
 	captureCustodyEndRequests = {}
+	rescueEscapeActionAllowed = true
+	captureQueryFault = false
 	handoffRequests = {}
 	handoffShouldReject = false
 	handoffExpiryProbeAt = nil
@@ -997,6 +1012,27 @@ end
 
 do
 	resetState()
+	rescueEscapeActionAllowed = false
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 305)
+	assertFalse(rejected.accepted, "blocked rescue escape action rejects request")
+	assertEqual(rejected.reason, "escape_action_blocked", "blocked rescue escape action reason")
+	assertEqual(
+		rescuer:GetAttribute("RescueContractLastReason"),
+		"escape_action_blocked",
+		"blocked rescue escape action projects rescuer reason"
+	)
+end
+
+do
+	resetState()
+	captureQueryFault = true
+	local rejected = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 306)
+	assertFalse(rejected.accepted, "capture query fault rejects rescue request")
+	assertEqual(rejected.reason, "capture_query_fault", "capture query fault rescue request reason")
+end
+
+do
+	resetState()
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 400)
 	assertTrue(accepted.accepted, "request accepted before completion")
 
@@ -1024,6 +1060,17 @@ do
 	assertEqual(captureCustodyEndRequests[1].targetUserId, target.UserId, "completion custody end target")
 	assertEqual(captureCustodyEndRequests[1].endReason, "rescued", "completion custody end reason")
 	assertEqual(captureCustodyEndRequests[1].at, 401, "completion custody end timestamp")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 402)
+	assertTrue(accepted.accepted, "request accepted before blocked completion")
+	rescueEscapeActionAllowed = false
+	local blockedComplete = rescueApi.CompleteRescueContract(rescuer.UserId, target.UserId, 403)
+	assertFalse(blockedComplete.accepted, "blocked rescue escape action rejects completion")
+	assertEqual(blockedComplete.reason, "escape_action_blocked", "blocked rescue completion reason")
+	assertTrue(rescueApi.GetRescuerContract(rescuer.UserId, 403) ~= nil, "blocked completion leaves contract active")
 end
 
 do

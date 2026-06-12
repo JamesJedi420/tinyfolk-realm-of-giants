@@ -118,6 +118,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"FallbackEscapeState",
 		"../../ReplicatedStorage/Shared/GiantRealm/FallbackEscapeState"
 	)
+	local CapturePersistenceRules = resolveDependency(
+		GiantRealm,
+		"CapturePersistenceRules",
+		"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
+	)
 	local PlayerCreatedRouteState = resolveDependency(
 		GiantRealm,
 		"PlayerCreatedRouteState",
@@ -999,6 +1004,23 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return result
 	end
 
+	local function canPerformEscapeAction(action: string): (boolean, string?)
+		local captureApi = getCaptureServiceQueryApi()
+		if captureApi == nil or type(captureApi.CanTargetPerformEscapeAction) ~= "function" then
+			return true, nil
+		end
+
+		local ok, allowed = pcall(captureApi.CanTargetPerformEscapeAction, action)
+		if not ok then
+			return false, "capture_query_fault"
+		end
+		if allowed ~= true then
+			return false, "escape_action_blocked"
+		end
+
+		return true, nil
+	end
+
 	local function resolveCaptureCustodyEnd(userId: number, endReason: string, at: number?): any?
 		if type(at) ~= "number" then
 			return nil
@@ -1789,6 +1811,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			end
 		end
 
+		local escapeActionAllowed, escapeActionReason =
+			canPerformEscapeAction(CapturePersistenceRules.EscapeActions.escape_route)
+		if escapeActionAllowed ~= true then
+			return { accepted = false, reason = escapeActionReason or "escape_action_blocked" }
+		end
+
 		if escapedTinyfolkByUserId[player.UserId] then
 			return { accepted = false, reason = "already_escaped" }
 		end
@@ -2007,6 +2035,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 					boardedByUserId[userId] = true
 					local player = getPlayerByUserId(userId)
 					if player ~= nil and isTinyfolk(player) then
+						local transportEscapeAllowed =
+							canPerformEscapeAction(CapturePersistenceRules.EscapeActions.escape_route)
+						if transportEscapeAllowed ~= true then
+							table.insert(unresolvedUserIds, userId)
+							continue
+						end
 						if markPlayerEscaped(player, endpointId) then
 							custodyEndOutcomesByUserId[userId] =
 								resolveCaptureCustodyEnd(userId, "escaped", transportResolvedAt)
