@@ -288,9 +288,13 @@
                                             "CanTouch":  false,
                                             "CanQuery":  false,
                                             "CastShadow":  false,
-                                            "Locked":  true
+                                            "Locked":  true,
+                                            "Tags":  [
+                                                         "GameplayTag_Containment"
+                                                     ]
                                         },
                          "attributes":  {
+                                            "DistrictId":  "Containment",
                                             "VisualOnly":  true,
                                             "ScreenshotSoftened":  true
                                         }

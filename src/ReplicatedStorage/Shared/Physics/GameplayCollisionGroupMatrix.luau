@@ -1,6 +1,7 @@
 --!strict
 
 local GameplayCollisionGroupConfig = require("../Config/GameplayCollisionGroupConfig")
+local GameplayMapAuthoringResolver = require("./GameplayMapAuthoringResolver")
 
 export type RelationKind = GameplayCollisionGroupConfig.RelationKind
 
@@ -115,6 +116,11 @@ function GameplayCollisionGroupMatrix.ResolveWorldPartGroup(part: any): string
 		local explicitGroup = part:GetAttribute(GameplayCollisionGroupConfig.WorldPartGroupAttribute)
 		if type(explicitGroup) == "string" and string.len(explicitGroup) > 0 then
 			return explicitGroup
+		end
+
+		local taggedGroup = GameplayMapAuthoringResolver.ResolveCollisionGroupFromTags(part)
+		if taggedGroup ~= nil then
+			return taggedGroup
 		end
 
 		for attributeName, groupName in pairs(GameplayCollisionGroupConfig.WorldPartAttributeMappings) do

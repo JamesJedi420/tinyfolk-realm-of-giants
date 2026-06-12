@@ -24,8 +24,12 @@ All passed locally.
 
 - `docs/TIN-149_GAMEPLAY_COLLISION_GROUP_MATRIX_STUDIO_EVIDENCE_2026-06-12.md` — manual Play Solo / two-player spot-check runbook for tunnels, containment, grab/carry, escape pads, safe zones, and trigger volumes (includes TIN-150 ownership attribute checks).
 
+## Map authoring
+
+- `docs/TIN-149_MAP_GAMEPLAY_AUTHORING_TAGS_CLOSURE_2026-06-12.md` — CollectionService tag pass for pen, capture zones, doors, containment dressing, and reward loot anchors.
+
 ## Remaining scope
 
 - Execute the Studio runbook and fill the evidence table (manual).
-- CollectionService tag authoring pass for map folders beyond attribute heuristics.
+- Broader map folder tag pass beyond authored anchors in `GameplayMapAuthoringConfig.RequiredTaggedRoots`.
 - Build preview part assignment when runtime preview parts exist.

@@ -2787,6 +2787,11 @@
     {
       "name": "Dressing_Containment_PenOutline_A",
       "className": "Model",
+      "properties": {
+        "Tags": [
+          "GameplayTag_Containment"
+        ]
+      },
       "children": [
         {
           "name": "Rail_Back",
@@ -3897,6 +3902,11 @@
     {
       "name": "Dressing_TradeDock_CrateCluster_A",
       "className": "Model",
+      "properties": {
+        "Tags": [
+          "GameplayTag_RewardLoot"
+        ]
+      },
       "children": [
         {
           "name": "TradeCrate_01",
@@ -4019,6 +4029,7 @@
         "ExternalAssetsImported": false,
         "GeneratedBlockout": true,
         "NoTradeDockGameplay": true,
+        "RewardLoot": true,
         "VisualOnly": true
       }
     },

@@ -1,5 +1,10 @@
 {
   "className": "Folder",
+  "properties": {
+    "Tags": [
+      "GameplayTag_TriggerZone"
+    ]
+  },
   "children": [
     {
       "name": "GiantCaptureZone_A",

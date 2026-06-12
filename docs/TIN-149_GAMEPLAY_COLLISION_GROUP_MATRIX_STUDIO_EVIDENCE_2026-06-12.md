@@ -21,7 +21,7 @@ Manually verify representative map surfaces and runtime character states against
 ## Boundary
 
 - Does not replace Lune specs (`tests/gameplay_collision_group_matrix.spec.luau`, `tests/collision_group_service_runtime_entrypoint.spec.luau`).
-- Does not validate full map authoring coverage (CollectionService tag pass remains deferred).
+- Validates representative authored tags from `GameplayMapAuthoringConfig.RequiredTaggedRoots`; full-map tag pass beyond those anchors remains deferred.
 - Snare trap artifacts are folder-only today; trap ownership is validated via Query API when BaseParts exist.
 
 ## Preconditions
@@ -118,8 +118,9 @@ print(_G._CollisionGroupService_QueryAPI.GetRelation("Gameplay_Giant", "Gameplay
 
 **Map anchors**
 
+- `Workspace.Map.Stations.Pen` root tagged `GameplayTag_Containment` (child parts inherit via ancestor tag walk)
 - `Workspace.Map.DistrictPads.DistrictPad_Containment` (`DistrictId=Containment`)
-- Containment dressing near `(55, 0, -78)` if authored with `DistrictId=Containment`
+- `Workspace.Map.ExternalDressingPlaceholder.Dressing_Containment_PenOutline_A` tagged `GameplayTag_Containment`
 
 **Steps**
 

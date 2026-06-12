@@ -79,6 +79,9 @@
       "properties": {
         "Anchored": true,
         "CanCollide": false,
+        "Tags": [
+          "GameplayTag_Door"
+        ],
         "Material": "Wood",
         "Color": [
           0.4,
@@ -95,6 +98,9 @@
           3,
           44.4
         ]
+      },
+      "attributes": {
+        "GameplayDoor": true
       }
     },
     {

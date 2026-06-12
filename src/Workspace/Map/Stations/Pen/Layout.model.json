@@ -1,5 +1,10 @@
 {
   "className": "Model",
+  "properties": {
+    "Tags": [
+      "GameplayTag_Containment"
+    ]
+  },
   "children": [
     {
       "name": "Pen_A",
