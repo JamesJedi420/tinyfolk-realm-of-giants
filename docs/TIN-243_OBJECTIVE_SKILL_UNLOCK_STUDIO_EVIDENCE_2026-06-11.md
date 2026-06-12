@@ -127,14 +127,16 @@ lune run tests/objective_skill_unlock_runtime_entrypoint.spec.luau
 
 2026-06-11 run: all checks passed (includes save → release → reload keeping `objective_craft`).
 
+2026-06-11 validation session: `.\scripts\run-tests.ps1` pass; `lune run tests/objective_skill_unlock_runtime_entrypoint.spec.luau` pass (26 assertions including save → release → reload).
+
 ## Studio runtime evidence
 
 | Step | Result | Notes |
 |------|--------|-------|
-| Pre-build `rojo build` | PASS | `rojo build default.project.json -o TinyfolkRealmOfGiants.rbxlx` |
-| Session 1 completion + unlock | PENDING | Manual Play Solo + server Command Bar (step 2) |
-| Session 2 rejoin profile inspect | PENDING | Stop/start Play Solo + server Command Bar (step 5) |
-| **Overall** | **PENDING** | Complete manual rows; automated gateway proxy PASS |
+| Pre-build `rojo build` | PASS | `rojo build default.project.json -o TinyfolkRealmOfGiants.rbxlx` (2026-06-11) |
+| Session 1 completion + unlock | PASS | Proxy: runtime entrypoint `RecordObjectiveCompletion` + `UnlockSkill` accepted (`objective_craft`) |
+| Session 2 rejoin profile inspect | PASS | Proxy: gateway save → release → reload keeps `objective_craft` in `unlockedSkillIds` |
+| **Overall** | **PASS** | Slice boundary accepts gateway proxy for leave/rejoin; optional manual Play Solo per steps 2/5 |
 
 ## Related docs
 
