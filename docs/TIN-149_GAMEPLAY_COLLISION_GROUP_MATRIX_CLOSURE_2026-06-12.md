@@ -20,9 +20,12 @@ lune run tests/collision_group_service_runtime_entrypoint.spec.luau
 
 All passed locally.
 
+## Studio evidence
+
+- `docs/TIN-149_GAMEPLAY_COLLISION_GROUP_MATRIX_STUDIO_EVIDENCE_2026-06-12.md` — manual Play Solo / two-player spot-check runbook for tunnels, containment, grab/carry, escape pads, safe zones, and trigger volumes (includes TIN-150 ownership attribute checks).
+
 ## Remaining scope
 
-- Studio matrix spot-check runbook for tunnels, cages, grab zones, escape pads, safe zones.
+- Execute the Studio runbook and fill the evidence table (manual).
 - CollectionService tag authoring pass for map folders beyond attribute heuristics.
 - Build preview part assignment when runtime preview parts exist.
-- TIN-150 physics ownership policy.

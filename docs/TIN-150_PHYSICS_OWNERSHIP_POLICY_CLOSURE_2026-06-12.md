@@ -23,6 +23,6 @@ All passed locally.
 
 ## Remaining scope
 
-- TIN-149 Studio collision matrix spot-check runbook.
+- Execute `docs/TIN-149_GAMEPLAY_COLLISION_GROUP_MATRIX_STUDIO_EVIDENCE_2026-06-12.md` ownership sections (manual).
 - Runtime refresh hook when GiantBuild snare trap artifacts materialize BaseParts (folder-only artifacts today).
 - Authored `GameplayDoor` / `RewardLoot` map attribute pass beyond heuristic triggers.
