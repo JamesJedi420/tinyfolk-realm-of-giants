@@ -226,6 +226,8 @@ local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Sha
 giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
+giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
@@ -290,9 +292,23 @@ end
 
 game = fakeGame
 
+local objectiveCompletionCalls: { any } = {}
+_G._RealmObjectiveService_QueryAPI = {
+	RecordObjectiveCompletion = function(siteId: string, completedByUserId: number?, at: number?): any
+		table.insert(objectiveCompletionCalls, {
+			siteId = siteId,
+			completedByUserId = completedByUserId,
+			at = at,
+		})
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+
 local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
 scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
+scriptParent._Children["RealmObjectiveCompletionCaller"] =
+	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
 script = {
 	Parent = scriptParent,
 } :: any
@@ -435,6 +451,7 @@ assertEqual(
 	"legacy string payload assigns only without passive activation"
 )
 
+local objectiveCompletionCallsBeforeTask = #objectiveCompletionCalls
 _G._StationService_TaskState["WorkStation_A"] =
 	require("../src/ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic").New()
 activateRemote:FireServer(taskPlayer, {
@@ -485,6 +502,22 @@ assertEqual(stationStateById["WorkStation_A"].isActive, false, "task complete ge
 assertTrue(stationStateById["WorkStation_A"].resourceTotal > 0, "task complete generates bounded wood output")
 assertEqual(taskPlayer:GetAttribute("StationTaskLastReason"), "completed", "task complete sets completed reason")
 assertEqual(taskPlayer:GetAttribute("StationTaskObjectiveState"), "completed", "task complete sets completed state")
+assertEqual(
+	#objectiveCompletionCalls,
+	objectiveCompletionCallsBeforeTask + 1,
+	"contextual task completion records realm objective once"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].siteId,
+	"ObjectiveSite_Workyard",
+	"work station contextual task maps to registered objective site"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].completedByUserId,
+	7102,
+	"station contextual task completion forwards completer user id"
+)
+assertEqual(objectiveCompletionCalls[#objectiveCompletionCalls].at, 104, "station completion forwards timestamp")
 
 activateRemote:FireServer(taskPlayer, {
 	stationId = "WorkStation_A",
