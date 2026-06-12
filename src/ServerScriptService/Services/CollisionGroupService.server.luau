@@ -4,8 +4,18 @@ local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
+local function requireSiblingModule(moduleName: string): any
+	local parent = script.Parent
+	for _, child in parent:GetChildren() do
+		if child.Name == moduleName and child:IsA("ModuleScript") then
+			return require(child)
+		end
+	end
+	error(string.format("ModuleScript %s not found under %s", moduleName, parent:GetFullName()))
+end
+
 local CollisionGroupService = if script ~= nil and script.Parent ~= nil
-	then require(script.Parent:WaitForChild("CollisionGroupService"))
+	then requireSiblingModule("CollisionGroupService")
 	else (require :: any)("./CollisionGroupService")
 
 local MAP_ROOT_NAME = "Map"
@@ -99,3 +109,4 @@ globalEnv._CollisionGroupService_QueryAPI = {
 		return CollisionGroupService.IsMatrixRegistered()
 	end,
 }
+rawset(_G, "_CollisionGroupService_QueryAPI", globalEnv._CollisionGroupService_QueryAPI)

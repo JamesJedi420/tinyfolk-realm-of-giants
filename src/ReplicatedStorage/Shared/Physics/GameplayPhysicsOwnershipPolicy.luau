@@ -20,6 +20,16 @@ local function isCarriedState(carriedState: string?): boolean
 	return carriedState == "Carried" or carriedState == "Counterplay"
 end
 
+local function isBasePart(value: any): boolean
+	if type(value) == "table" and value.ClassName == "Part" then
+		return true
+	end
+	local ok, isPart = pcall(function()
+		return typeof(value) == "Instance" and value:IsA("BasePart")
+	end)
+	return ok and isPart == true
+end
+
 function GameplayPhysicsOwnershipPolicy.ValidateConfig(): (boolean, string?)
 	local assemblies = GameplayPhysicsOwnershipConfig.Assemblies
 	for assemblyKind, tier in pairs(GameplayPhysicsOwnershipConfig.AssemblyTier) do
@@ -81,41 +91,39 @@ function GameplayPhysicsOwnershipPolicy.ResolveCharacterTier(profile: CharacterP
 end
 
 function GameplayPhysicsOwnershipPolicy.ResolveWorldPartAssembly(part: any): AssemblyKind
-	if type(part) ~= "table" then
+	if type(part.GetAttribute) ~= "function" then
 		return GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry :: AssemblyKind
 	end
 
-	if type(part.GetAttribute) == "function" then
-		local explicitAssembly = part:GetAttribute(GameplayPhysicsOwnershipConfig.WorldPartAssemblyAttribute)
-		if type(explicitAssembly) == "string" and string.len(explicitAssembly) > 0 then
-			return explicitAssembly :: AssemblyKind
-		end
+	local explicitAssembly = part:GetAttribute(GameplayPhysicsOwnershipConfig.WorldPartAssemblyAttribute)
+	if type(explicitAssembly) == "string" and string.len(explicitAssembly) > 0 then
+		return explicitAssembly :: AssemblyKind
+	end
 
-		local taggedAssembly = GameplayMapAuthoringResolver.ResolveOwnershipAssemblyFromTags(part)
-		if taggedAssembly ~= nil then
-			return taggedAssembly :: AssemblyKind
-		end
+	local taggedAssembly = GameplayMapAuthoringResolver.ResolveOwnershipAssemblyFromTags(part)
+	if taggedAssembly ~= nil then
+		return taggedAssembly :: AssemblyKind
+	end
 
-		local snareTrapId = part:GetAttribute(GameplayPhysicsOwnershipConfig.SnareTrapIdAttribute)
-		if type(snareTrapId) == "string" and string.len(snareTrapId) > 0 then
-			return GameplayPhysicsOwnershipConfig.Assemblies.SnareTrap :: AssemblyKind
-		end
+	local snareTrapId = part:GetAttribute(GameplayPhysicsOwnershipConfig.SnareTrapIdAttribute)
+	if type(snareTrapId) == "string" and string.len(snareTrapId) > 0 then
+		return GameplayPhysicsOwnershipConfig.Assemblies.SnareTrap :: AssemblyKind
+	end
 
-		for attributeName, assemblyKind in pairs(GameplayPhysicsOwnershipConfig.WorldPartAttributeMappings) do
-			local attributeValue = part:GetAttribute(attributeName)
-			if attributeValue == true or attributeValue == "true" then
-				return assemblyKind :: AssemblyKind
-			end
+	for attributeName, assemblyKind in pairs(GameplayPhysicsOwnershipConfig.WorldPartAttributeMappings) do
+		local attributeValue = part:GetAttribute(attributeName)
+		if attributeValue == true or attributeValue == "true" then
+			return assemblyKind :: AssemblyKind
 		end
+	end
 
-		local districtId = part:GetAttribute("DistrictId")
-		if districtId == "Containment" then
-			return GameplayPhysicsOwnershipConfig.Assemblies.ContainmentStructure :: AssemblyKind
-		end
+	local districtId = part:GetAttribute("DistrictId")
+	if districtId == "Containment" then
+		return GameplayPhysicsOwnershipConfig.Assemblies.ContainmentStructure :: AssemblyKind
+	end
 
-		if part.CanCollide == false and part.CanTouch == true then
-			return GameplayPhysicsOwnershipConfig.Assemblies.TriggerZone :: AssemblyKind
-		end
+	if isBasePart(part) and part.CanCollide == false and part.CanTouch == true then
+		return GameplayPhysicsOwnershipConfig.Assemblies.TriggerZone :: AssemblyKind
 	end
 
 	return GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry :: AssemblyKind
@@ -127,15 +135,13 @@ function GameplayPhysicsOwnershipPolicy.ResolveWorldPartTier(part: any): Ownersh
 end
 
 function GameplayPhysicsOwnershipPolicy.ResolveModelAssembly(model: any): AssemblyKind
-	if type(model) ~= "table" then
+	if type(model.GetAttribute) ~= "function" then
 		return GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry :: AssemblyKind
 	end
 
-	if type(model.GetAttribute) == "function" then
-		local assemblyFromModel = GameplayPhysicsOwnershipPolicy.ResolveWorldPartAssembly(model)
-		if assemblyFromModel ~= GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry then
-			return assemblyFromModel
-		end
+	local assemblyFromModel = GameplayPhysicsOwnershipPolicy.ResolveWorldPartAssembly(model)
+	if assemblyFromModel ~= GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry then
+		return assemblyFromModel
 	end
 
 	return GameplayPhysicsOwnershipConfig.Assemblies.WorldGeometry :: AssemblyKind

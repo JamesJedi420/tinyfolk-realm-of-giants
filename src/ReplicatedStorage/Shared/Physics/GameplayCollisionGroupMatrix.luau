@@ -13,6 +13,16 @@ export type CharacterProfile = {
 
 local GameplayCollisionGroupMatrix = {}
 
+local function isBasePart(value: any): boolean
+	if type(value) == "table" and value.ClassName == "Part" then
+		return true
+	end
+	local ok, isPart = pcall(function()
+		return typeof(value) == "Instance" and value:IsA("BasePart")
+	end)
+	return ok and isPart == true
+end
+
 local function normalizePair(groupA: string, groupB: string): (string, string)
 	if groupA <= groupB then
 		return groupA, groupB
@@ -108,36 +118,34 @@ function GameplayCollisionGroupMatrix.ResolveCharacterGroup(profile: CharacterPr
 end
 
 function GameplayCollisionGroupMatrix.ResolveWorldPartGroup(part: any): string
-	if type(part) ~= "table" then
+	if type(part.GetAttribute) ~= "function" then
 		return GameplayCollisionGroupConfig.Groups.WorldGeometry
 	end
 
-	if type(part.GetAttribute) == "function" then
-		local explicitGroup = part:GetAttribute(GameplayCollisionGroupConfig.WorldPartGroupAttribute)
-		if type(explicitGroup) == "string" and string.len(explicitGroup) > 0 then
-			return explicitGroup
-		end
+	local explicitGroup = part:GetAttribute(GameplayCollisionGroupConfig.WorldPartGroupAttribute)
+	if type(explicitGroup) == "string" and string.len(explicitGroup) > 0 then
+		return explicitGroup
+	end
 
-		local taggedGroup = GameplayMapAuthoringResolver.ResolveCollisionGroupFromTags(part)
-		if taggedGroup ~= nil then
-			return taggedGroup
-		end
+	local taggedGroup = GameplayMapAuthoringResolver.ResolveCollisionGroupFromTags(part)
+	if taggedGroup ~= nil then
+		return taggedGroup
+	end
 
-		for attributeName, groupName in pairs(GameplayCollisionGroupConfig.WorldPartAttributeMappings) do
-			local attributeValue = part:GetAttribute(attributeName)
-			if attributeValue == true or attributeValue == "true" then
-				return groupName
-			end
+	for attributeName, groupName in pairs(GameplayCollisionGroupConfig.WorldPartAttributeMappings) do
+		local attributeValue = part:GetAttribute(attributeName)
+		if attributeValue == true or attributeValue == "true" then
+			return groupName
 		end
+	end
 
-		local districtId = part:GetAttribute("DistrictId")
-		if districtId == "Containment" then
-			return GameplayCollisionGroupConfig.Groups.Containment
-		end
+	local districtId = part:GetAttribute("DistrictId")
+	if districtId == "Containment" then
+		return GameplayCollisionGroupConfig.Groups.Containment
+	end
 
-		if part.CanCollide == false and part.CanTouch == true then
-			return GameplayCollisionGroupConfig.Groups.TriggerZone
-		end
+	if isBasePart(part) and part.CanCollide == false and part.CanTouch == true then
+		return GameplayCollisionGroupConfig.Groups.TriggerZone
 	end
 
 	return GameplayCollisionGroupConfig.Groups.WorldGeometry

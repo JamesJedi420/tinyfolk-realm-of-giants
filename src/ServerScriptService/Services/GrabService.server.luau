@@ -22,6 +22,8 @@ local REMOTES_FOLDER_NAME = "Remotes"
 local GRAB_REMOTE_NAME = "GrabRequest"
 local PLACE_REMOTE_NAME = "PlaceRequest"
 local COUNTERPLAY_REMOTE_NAME = "CarriedCounterplayRequest"
+local STUDIO_DEBUG_REQUEST_REMOTE_NAME = "GrabStudioDebugRequest"
+local STUDIO_DEBUG_RESPONSE_REMOTE_NAME = "GrabStudioDebugResponse"
 
 local HELD_TARGET_ATTRIBUTE = "HeldTargetUserId"
 local HELD_BY_ATTRIBUTE = "HeldByUserId"
@@ -266,18 +268,27 @@ local function resolveDistance(a: any, b: any): number?
 	local ok, delta = pcall(function()
 		return a - b
 	end)
-	if not ok then
+	if not ok or delta == nil then
 		return nil
 	end
-	if type(delta) == "table" and type((delta :: any).Magnitude) == "function" then
-		return (delta :: any):Magnitude()
+
+	if typeof(delta) == "Vector3" then
+		return (delta :: Vector3).Magnitude
 	end
-	if type(delta) == "table" and type((delta :: any).Magnitude) == "number" then
-		return (delta :: any).Magnitude
+
+	if type(delta) == "table" then
+		if type((delta :: any).Magnitude) == "function" then
+			return (delta :: any):Magnitude()
+		end
+		if type((delta :: any).Magnitude) == "number" then
+			return (delta :: any).Magnitude
+		end
 	end
+
 	if type(delta) == "number" then
 		return math.abs(delta)
 	end
+
 	return nil
 end
 
@@ -330,7 +341,12 @@ local function setGiantCarriedAttributes(giant: Player?, snapshot: any)
 	if giant == nil then
 		return
 	end
-	giant:SetAttribute(GrabConfig.CarriedStateAttribute, snapshot.state)
+	local giantCarriedState = snapshot.state
+	if giantCarriedState == GrabState.States.Carried or giantCarriedState == GrabState.States.Counterplay then
+		-- Carrier keeps Free; HeldTargetUserId drives CarryingGiant physics/collision refresh.
+		giantCarriedState = GrabState.States.Free
+	end
+	giant:SetAttribute(GrabConfig.CarriedStateAttribute, giantCarriedState)
 	giant:SetAttribute(GrabConfig.CarriedTargetUserIdAttribute, snapshot.targetUserId)
 	giant:SetAttribute(GrabConfig.CarriedCooldownEndsAtAttribute, snapshot.cooldownEndsAt)
 	giant:SetAttribute(GrabConfig.CarriedLastActionAttribute, snapshot.lastAction)
@@ -921,6 +937,57 @@ placeRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 
 	debugLog(string.format("Accepted PlaceRequest giantUserId=%d targetUserId=%d", player.UserId, target.UserId))
 end)
+
+local isStudioEnvironment = type(RunService.IsStudio) == "function" and RunService:IsStudio() == true
+
+if isStudioEnvironment then
+	local studioDebugRequestRemote = ensureRemote(remotesFolder, STUDIO_DEBUG_REQUEST_REMOTE_NAME)
+	local studioDebugResponseRemote = ensureRemote(remotesFolder, STUDIO_DEBUG_RESPONSE_REMOTE_NAME)
+
+	studioDebugRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
+		if type(payload) ~= "table" then
+			studioDebugResponseRemote:FireClient(player, { accepted = false, reason = "malformed_payload" })
+			return
+		end
+
+		local action = payload.action
+		if action == "applySharedHubSafeZone" then
+			player:SetAttribute(EscapeConfig.SafeZoneAttribute, true)
+			player:SetAttribute(EscapeConfig.SafeZoneTypeAttribute, EscapeConfig.SafeZoneTypes.SharedHub)
+			debugLog(string.format("Studio safe zone applied userId=%d", player.UserId))
+			studioDebugResponseRemote:FireClient(player, {
+				accepted = true,
+				action = action,
+				inSafeZone = player:GetAttribute(EscapeConfig.SafeZoneAttribute),
+				safeZoneType = player:GetAttribute(EscapeConfig.SafeZoneTypeAttribute),
+			})
+			return
+		end
+
+		if action == "probeGrab" then
+			local targetUserId = payload.targetUserId
+			if type(targetUserId) ~= "number" then
+				studioDebugResponseRemote:FireClient(player, { accepted = false, reason = "malformed_target_user_id" })
+				return
+			end
+
+			local result = requestGrab(player, targetUserId, os.clock())
+			if result.accepted ~= true then
+				rejectGrab(player, tostring(result.reason))
+			end
+			studioDebugResponseRemote:FireClient(player, {
+				action = action,
+				accepted = result.accepted == true,
+				reason = result.reason,
+			})
+			return
+		end
+
+		studioDebugResponseRemote:FireClient(player, { accepted = false, reason = "unknown_action" })
+	end)
+
+	debugLog("GrabService studio debug remotes ready")
+end
 
 local function setupPlayer(player: Player)
 	player:SetAttribute(HELD_TARGET_ATTRIBUTE, nil)
