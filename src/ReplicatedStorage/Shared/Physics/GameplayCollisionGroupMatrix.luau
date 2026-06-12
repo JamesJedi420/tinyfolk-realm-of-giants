@@ -42,7 +42,11 @@ function GameplayCollisionGroupMatrix.BuildRelationLookup(): { [string]: Relatio
 	return lookup
 end
 
-function GameplayCollisionGroupMatrix.GetRelation(groupA: string, groupB: string, lookup: { [string]: RelationKind }?): RelationKind
+function GameplayCollisionGroupMatrix.GetRelation(
+	groupA: string,
+	groupB: string,
+	lookup: { [string]: RelationKind }?
+): RelationKind
 	if groupA == groupB then
 		local sameGroupRelation = if lookup ~= nil then lookup[pairKey(groupA, groupB)] else nil
 		if sameGroupRelation ~= nil then
