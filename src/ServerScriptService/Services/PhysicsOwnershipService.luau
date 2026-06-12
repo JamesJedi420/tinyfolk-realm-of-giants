@@ -79,6 +79,15 @@ local function setDebugAttributes(part: any, applyDiagnostics: ApplyDiagnostics)
 	part:SetAttribute(GameplayPhysicsOwnershipConfig.LastReasonAttribute, applyDiagnostics.reason)
 end
 
+local function trySetNetworkOwner(part: any, owner: any?): boolean
+	if type(part.SetNetworkOwner) ~= "function" then
+		return false
+	end
+
+	local ok = pcall(part.SetNetworkOwner, part, owner)
+	return ok
+end
+
 function PhysicsOwnershipService.ResetForTests()
 	diagnostics = {
 		partsEnforced = 0,
@@ -113,24 +122,13 @@ function PhysicsOwnershipService.ApplyOwnershipToPart(
 
 	local enforced = false
 	if tier == GameplayPhysicsOwnershipConfig.OwnershipTier.Server then
-		if type(part.SetNetworkOwner) == "function" then
-			part:SetNetworkOwner(nil)
-			enforced = true
-		end
+		enforced = trySetNetworkOwner(part, nil)
 	elseif tier == GameplayPhysicsOwnershipConfig.OwnershipTier.Client then
-		if type(part.SetNetworkOwner) == "function" and ownerPlayer ~= nil then
-			part:SetNetworkOwner(ownerPlayer)
-			enforced = true
+		if ownerPlayer ~= nil then
+			enforced = trySetNetworkOwner(part, ownerPlayer)
 		end
 	elseif tier == GameplayPhysicsOwnershipConfig.OwnershipTier.Automatic then
-		if type(part.SetNetworkOwner) == "function" then
-			if ownerPlayer ~= nil then
-				part:SetNetworkOwner(ownerPlayer)
-			else
-				part:SetNetworkOwner(nil)
-			end
-			enforced = true
-		end
+		enforced = trySetNetworkOwner(part, ownerPlayer)
 	end
 
 	local applyDiagnostics: ApplyDiagnostics = {
@@ -154,7 +152,7 @@ function PhysicsOwnershipService.ApplyOwnershipToCharacter(
 	reason: string,
 	assemblyKind: string
 )
-	if type(character) ~= "table" or type(character.GetDescendants) ~= "function" then
+	if character == nil or type(character.GetDescendants) ~= "function" then
 		return
 	end
 
@@ -166,7 +164,7 @@ function PhysicsOwnershipService.ApplyOwnershipToCharacter(
 end
 
 function PhysicsOwnershipService.ResolveCharacterProfileForPlayer(player: any): any
-	if type(player) ~= "table" then
+	if type(player.GetAttribute) ~= "function" then
 		return {
 			role = nil,
 			captureActive = false,
@@ -176,17 +174,11 @@ function PhysicsOwnershipService.ResolveCharacterProfileForPlayer(player: any): 
 		}
 	end
 
-	local role = if type(player.GetAttribute) == "function" then player:GetAttribute(ROLE_ATTRIBUTE) else nil
-	local captureActive = if type(player.GetAttribute) == "function"
-		then player:GetAttribute(CAPTURE_ACTIVE_ATTRIBUTE)
-		else nil
-	local carriedState = if type(player.GetAttribute) == "function"
-		then player:GetAttribute(CARRIED_STATE_ATTRIBUTE)
-		else nil
-	local heldTargetUserId = if type(player.GetAttribute) == "function"
-		then player:GetAttribute(HELD_TARGET_ATTRIBUTE)
-		else nil
-	local heldByUserId = if type(player.GetAttribute) == "function" then player:GetAttribute(HELD_BY_ATTRIBUTE) else nil
+	local role = player:GetAttribute(ROLE_ATTRIBUTE)
+	local captureActive = player:GetAttribute(CAPTURE_ACTIVE_ATTRIBUTE)
+	local carriedState = player:GetAttribute(CARRIED_STATE_ATTRIBUTE)
+	local heldTargetUserId = player:GetAttribute(HELD_TARGET_ATTRIBUTE)
+	local heldByUserId = player:GetAttribute(HELD_BY_ATTRIBUTE)
 
 	return {
 		role = if type(role) == "string" then role else nil,
@@ -198,7 +190,7 @@ function PhysicsOwnershipService.ResolveCharacterProfileForPlayer(player: any): 
 end
 
 function PhysicsOwnershipService.RefreshPlayerCharacter(player: any)
-	if type(player) ~= "table" then
+	if type(player.GetAttribute) ~= "function" then
 		return
 	end
 
@@ -231,7 +223,7 @@ function PhysicsOwnershipService.ApplyGroupToPart(part: any, assemblyKind: strin
 end
 
 function PhysicsOwnershipService.AssignWorldPartsUnderRoot(root: any): number
-	if type(root) ~= "table" or type(root.GetDescendants) ~= "function" then
+	if root == nil or type(root.GetDescendants) ~= "function" then
 		return 0
 	end
 

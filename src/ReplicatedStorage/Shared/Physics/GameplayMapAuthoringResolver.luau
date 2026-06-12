@@ -5,7 +5,7 @@ local GameplayMapAuthoringConfig = require("../Config/GameplayMapAuthoringConfig
 local GameplayMapAuthoringResolver = {}
 
 local function instanceHasTag(instance: any, tag: string): boolean
-	if type(instance) ~= "table" then
+	if instance == nil then
 		return false
 	end
 
@@ -18,9 +18,24 @@ local function instanceHasTag(instance: any, tag: string): boolean
 		end
 	end
 
-	if type(instance._tags) == "table" then
+	if type(instance) == "table" and type(instance._tags) == "table" then
 		for _, existingTag in instance._tags do
 			if existingTag == tag then
+				return true
+			end
+		end
+	end
+
+	local okIsInstance, isInstance = pcall(function()
+		return typeof(instance) == "Instance"
+	end)
+	if okIsInstance and isInstance then
+		local okService, collectionService = pcall(function()
+			return game:GetService("CollectionService")
+		end)
+		if okService and collectionService ~= nil and type(collectionService.HasTag) == "function" then
+			local okHasTag, hasTag = pcall(collectionService.HasTag, collectionService, instance, tag)
+			if okHasTag and hasTag == true then
 				return true
 			end
 		end
@@ -31,7 +46,7 @@ end
 
 function GameplayMapAuthoringResolver.HasTagOnSelfOrAncestor(instance: any, tag: string): boolean
 	local current = instance
-	while type(current) == "table" do
+	while current ~= nil do
 		if instanceHasTag(current, tag) then
 			return true
 		end

@@ -82,7 +82,9 @@ function CollisionGroupService.GetRegistrationDiagnostics(): RegistrationDiagnos
 end
 
 function CollisionGroupService.RegisterMatrix(physicsService: any): (boolean, string?)
-	if type(physicsService) ~= "table" then
+	local registerGroup = if physicsService ~= nil then physicsService.RegisterCollisionGroup else nil
+	local setCollidable = if physicsService ~= nil then physicsService.CollisionGroupSetCollidable else nil
+	if type(registerGroup) ~= "function" or type(setCollidable) ~= "function" then
 		return false, "physics_service_invalid"
 	end
 
@@ -90,13 +92,6 @@ function CollisionGroupService.RegisterMatrix(physicsService: any): (boolean, st
 	if not valid then
 		return false, reason
 	end
-
-	local registerGroup = physicsService.RegisterCollisionGroup
-	local setCollidable = physicsService.CollisionGroupSetCollidable
-	if type(registerGroup) ~= "function" or type(setCollidable) ~= "function" then
-		return false, "physics_service_missing_api"
-	end
-
 	local registeredGroups: { string } = {}
 	for _, groupName in pairs(GameplayCollisionGroupConfig.Groups) do
 		local ok = pcall(registerGroup, physicsService, groupName)
@@ -132,17 +127,13 @@ function CollisionGroupService.RegisterMatrix(physicsService: any): (boolean, st
 end
 
 function CollisionGroupService.ResolveCharacterGroupForPlayer(player: any): string
-	if type(player) ~= "table" then
+	if type(player.GetAttribute) ~= "function" then
 		return GameplayCollisionGroupConfig.Groups.Tinyfolk
 	end
 
-	local role = if type(player.GetAttribute) == "function" then player:GetAttribute(ROLE_ATTRIBUTE) else nil
-	local captureActive = if type(player.GetAttribute) == "function"
-		then player:GetAttribute(CAPTURE_ACTIVE_ATTRIBUTE)
-		else nil
-	local carriedState = if type(player.GetAttribute) == "function"
-		then player:GetAttribute(CARRIED_STATE_ATTRIBUTE)
-		else nil
+	local role = player:GetAttribute(ROLE_ATTRIBUTE)
+	local captureActive = player:GetAttribute(CAPTURE_ACTIVE_ATTRIBUTE)
+	local carriedState = player:GetAttribute(CARRIED_STATE_ATTRIBUTE)
 
 	return GameplayCollisionGroupMatrix.ResolveCharacterGroup({
 		role = if type(role) == "string" then role else nil,
@@ -152,7 +143,7 @@ function CollisionGroupService.ResolveCharacterGroupForPlayer(player: any): stri
 end
 
 function CollisionGroupService.ApplyGroupToCharacter(character: any, groupName: string)
-	if type(character) ~= "table" or type(character.GetDescendants) ~= "function" then
+	if character == nil or type(character.GetDescendants) ~= "function" then
 		return
 	end
 
@@ -170,7 +161,7 @@ function CollisionGroupService.ApplyGroupToPart(part: any, groupName: string?)
 end
 
 function CollisionGroupService.RefreshPlayerCharacter(player: any)
-	if type(player) ~= "table" then
+	if type(player.GetAttribute) ~= "function" then
 		return
 	end
 
@@ -188,7 +179,7 @@ function CollisionGroupService.RefreshPlayerCharacter(player: any)
 end
 
 function CollisionGroupService.AssignWorldPartsUnderRoot(root: any): number
-	if type(root) ~= "table" or type(root.GetDescendants) ~= "function" then
+	if root == nil or type(root.GetDescendants) ~= "function" then
 		return 0
 	end
 

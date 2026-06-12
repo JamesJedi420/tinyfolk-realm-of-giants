@@ -8,8 +8,18 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Physics = Shared:WaitForChild("Physics")
 
+local function requireSiblingModule(moduleName: string): any
+	local parent = script.Parent
+	for _, child in parent:GetChildren() do
+		if child.Name == moduleName and child:IsA("ModuleScript") then
+			return require(child)
+		end
+	end
+	error(string.format("ModuleScript %s not found under %s", moduleName, parent:GetFullName()))
+end
+
 local PhysicsOwnershipService = if script ~= nil and script.Parent ~= nil
-	then require(script.Parent:WaitForChild("PhysicsOwnershipService"))
+	then requireSiblingModule("PhysicsOwnershipService")
 	else (require :: any)("./PhysicsOwnershipService")
 local GameplayPhysicsOwnershipPolicy = require(Physics:WaitForChild("GameplayPhysicsOwnershipPolicy"))
 
@@ -221,3 +231,4 @@ globalEnv._PhysicsOwnershipService_QueryAPI = {
 		return PhysicsOwnershipService.ApplyOwnershipToPart(part, tier, ownerPlayer, reason, assemblyKind)
 	end,
 }
+rawset(_G, "_PhysicsOwnershipService_QueryAPI", globalEnv._PhysicsOwnershipService_QueryAPI)

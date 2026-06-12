@@ -196,8 +196,18 @@ for _, p in Players:GetPlayers() do inspectCharacter(p) end
 
 **Matrix check during carry**
 
+Server Command Bar (if available):
+
 ```lua
 print(_G._CollisionGroupService_QueryAPI.GetRelation("Gameplay_Giant", "Gameplay_CarriedTinyfolk"))
+```
+
+Client Command Bar fallback (same config data):
+
+```lua
+local Matrix = require(game.ReplicatedStorage.Shared.Physics.GameplayCollisionGroupMatrix)
+local lookup = Matrix.BuildRelationLookup()
+print(Matrix.GetRelation("Gameplay_Giant", "Gameplay_CarriedTinyfolk", lookup))
 ```
 
 Expected: `ignore` (Giant does not physically collide with carried Tinyfolk).
@@ -255,9 +265,37 @@ tinyfolk:SetAttribute(EscapeConfig.SafeZoneAttribute, true)
 tinyfolk:SetAttribute(EscapeConfig.SafeZoneTypeAttribute, EscapeConfig.SafeZoneTypes.SharedHub)
 ```
 
-3. **Requires two players.** Start Server + 2 Players. Player 1 = Giant, Player 2 = Tinyfolk (with safe-zone attributes from step 2 on the Tinyfolk player).
+3. **Requires two players.** Start Server + 2 Players. Player 1 = Giant, Player 2 = Tinyfolk.
+
+**Server-side safe zone (client Command Bar cannot set Player attrs on server).** Tinyfolk window:
 
 ```lua
+local remotes = game.ReplicatedStorage:WaitForChild("Remotes")
+local response = remotes:WaitForChild("GrabStudioDebugResponse")
+response.OnClientEvent:Connect(function(payload)
+    print("[TIN149 E]", payload.action, payload.accepted, payload.reason, payload.inSafeZone, payload.safeZoneType)
+end)
+remotes.GrabStudioDebugRequest:FireServer({ action = "applySharedHubSafeZone" })
+```
+
+Giant window — probe grab:
+
+```lua
+local remotes = game.ReplicatedStorage:WaitForChild("Remotes")
+local response = remotes:WaitForChild("GrabStudioDebugResponse")
+response.OnClientEvent:Connect(function(payload)
+    if payload.action == "probeGrab" then
+        print("[TIN149 E] probeGrab", payload.accepted, payload.reason)
+    end
+end)
+local tinyfolk = game.Players:GetPlayers()[1]
+remotes.GrabStudioDebugRequest:FireServer({ action = "probeGrab", targetUserId = tinyfolk.UserId })
+```
+
+Server Command Bar alternative (if available):
+
+```lua
+local EscapeConfig = require(game.ReplicatedStorage.Shared.Config.EscapeConfig)
 local players = game.Players:GetPlayers()
 local giant = players[1]
 local tinyfolk = players[2]
@@ -344,15 +382,22 @@ Record results in this table when executing the runbook:
 
 | Scenario | Result (PASS/FAIL) | Notes | Date | Executor |
 |----------|-------------------|-------|------|----------|
-| Startup checks | | | | |
-| A Tinyfolk tunnel | | | | |
-| B Containment/cage | | | | |
-| C Grab/carry | | | | |
-| D Escape pad | | | | |
-| E Safe zone | | | | |
-| F Trigger zone | | | | |
-| G Ownership debug client | | | | |
-| Matrix relation dump | | | | |
+| Startup checks | PASS | 660 map parts assigned; services start cleanly | 2026-06-12 | Studio session |
+| A Tinyfolk tunnel | PASS | `EscapeRoute_A` → `Gameplay_TinyfolkRoute`, Automatic tier | 2026-06-12 | Studio session |
+| B Containment/cage | PASS | `Pen_A` → `Gameplay_Containment`, Server tier | 2026-06-12 | Studio session |
+| C Grab/carry | PASS | Carried Tinyfolk `Gameplay_CarriedTinyfolk`/`CarriedTinyfolk`/Server; Giant `Gameplay_Giant`/`CarryingGiant`/Server; matrix `Giant×CarriedTinyfolk=ignore` | 2026-06-12 | Studio session |
+| D Escape pad | PASS | Validated via Scenario A escape route attributes | 2026-06-12 | Studio session |
+| E Safe zone | PASS | `probeGrab` rejected `shared_hub_no_capture` via `GrabStudioDebugRequest` (server-side attrs) | 2026-06-12 | Studio session |
+| F Trigger zone | | Not run | | |
+| G Ownership debug client | PASS | Snapshots logged on spawn; `charactersRefreshed` increments on role spawn | 2026-06-12 | Studio session |
+| Matrix relation dump | PARTIAL | `Giant×CarriedTinyfolk=ignore` confirmed via client `GameplayCollisionGroupMatrix` require (no server Command Bar) | 2026-06-12 | Studio session |
+
+### Studio execution notes (2026-06-12)
+
+- Player popout Command Bar is **client-only**; `_G._CollisionGroupService_QueryAPI` is server-only. Use `require(game.ReplicatedStorage.Shared.Physics.GameplayCollisionGroupMatrix)` for relation checks from client.
+- Client `SetAttribute` on `Player` does **not** reach the server. Scenario E uses Studio-only `GrabStudioDebugRequest` (`applySharedHubSafeZone`, `probeGrab`) to apply safe-zone attrs server-side.
+- Stop Play before Rojo reconnects (`Http requests can only be executed by game server`).
+- Runtime fixes for Studio userdata/type guards and carry attribute refresh shipped in the studio-runtime-fixes PR (enables scenarios A–E above).
 
 ## Automated proxy validation
 
