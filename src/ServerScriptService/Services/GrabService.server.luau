@@ -16,6 +16,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local GrabState = require(GiantRealm:WaitForChild("GrabState"))
 local CarryLoadState = require(GiantRealm:WaitForChild("CarryLoadState"))
+local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
 
 local ROLE_ATTRIBUTE = "Role"
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -302,6 +303,35 @@ local function getRoleServiceQueryApi(): any?
 		return nil
 	end
 	return queryApi
+end
+
+local function getCaptureServiceQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._CaptureService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
+local function canPerformEscapeAction(action: string): (boolean, string?)
+	local captureApi = getCaptureServiceQueryApi()
+	if captureApi == nil or type(captureApi.CanTargetPerformEscapeAction) ~= "function" then
+		return true, nil
+	end
+
+	local ok, allowed = pcall(captureApi.CanTargetPerformEscapeAction, action)
+	if not ok then
+		return false, "capture_query_fault"
+	end
+	if allowed ~= true then
+		return false, "escape_action_blocked"
+	end
+
+	return true, nil
 end
 
 local function isTargetCarryCompatible(target: Player): (boolean, string?)
@@ -828,6 +858,20 @@ local function requestCounterplay(player: Player, nowOverride: number?): any
 	local giantUserId = heldByTargetUserId[player.UserId]
 	if giantUserId == nil then
 		return { accepted = false, reason = "not_carried", snapshot = getCarriedSnapshot(player.UserId) }
+	end
+
+	local counterplayAllowed, counterplayReason =
+		canPerformEscapeAction(CapturePersistenceRules.EscapeActions.counterplay)
+	if counterplayAllowed ~= true then
+		local snapshot = getCarriedSnapshot(player.UserId)
+		setCarriedAttributes(player, snapshot)
+		local giant = getPlayerByUserId(giantUserId)
+		setGiantCarriedAttributes(giant, snapshot)
+		return {
+			accepted = false,
+			reason = counterplayReason or "escape_action_blocked",
+			snapshot = snapshot,
+		}
 	end
 
 	local state = getOrCreateCarriedState(player.UserId)

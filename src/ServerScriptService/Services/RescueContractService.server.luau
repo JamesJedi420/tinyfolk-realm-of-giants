@@ -13,6 +13,7 @@ local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
+local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
 local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
 	else (require :: any)("./AdmissionQueueProducer")
@@ -349,6 +350,23 @@ local function getCaptureServiceQueryApi(): any?
 	end
 
 	return queryApi
+end
+
+local function canPerformEscapeAction(action: string): (boolean, string?)
+	local captureApi = getCaptureServiceQueryApi()
+	if captureApi == nil or type(captureApi.CanTargetPerformEscapeAction) ~= "function" then
+		return true, nil
+	end
+
+	local ok, allowed = pcall(captureApi.CanTargetPerformEscapeAction, action)
+	if not ok then
+		return false, "capture_query_fault"
+	end
+	if allowed ~= true then
+		return false, "escape_action_blocked"
+	end
+
+	return true, nil
 end
 
 local function getRescueHandoffQueryApi(): any?
@@ -1015,6 +1033,15 @@ local function requestRescueContract(rescuer: Player, targetUserId: any, at: num
 		return { accepted = false, reason = "rescuer_interaction_restricted" }
 	end
 
+	local rescueActionAllowed, rescueActionReason =
+		canPerformEscapeAction(CapturePersistenceRules.EscapeActions.rescue_contract)
+	if rescueActionAllowed ~= true then
+		markRejectedRequest(rescuer.UserId, resolvedNow)
+		setRescueLastReason(rescuer, rescueActionReason or "escape_action_blocked")
+		setRescueLastReason(target, rescueActionReason or "escape_action_blocked")
+		return { accepted = false, reason = rescueActionReason or "escape_action_blocked" }
+	end
+
 	local accelerationActive = isRescueAccelerationActive(rescuer, resolvedNow)
 	local requestInput: any = {
 		now = resolvedNow,
@@ -1099,6 +1126,15 @@ local function completeRescueContract(rescuer: Player, targetUserId: any, at: nu
 
 	if type(targetUserId) ~= "number" then
 		return { accepted = false, reason = "target_user_id_invalid" }
+	end
+
+	local rescueActionAllowed, rescueActionReason =
+		canPerformEscapeAction(CapturePersistenceRules.EscapeActions.rescue_contract)
+	if rescueActionAllowed ~= true then
+		local target = getPlayerByUserId(targetUserId)
+		setRescueLastReason(rescuer, rescueActionReason or "escape_action_blocked")
+		setRescueLastReason(target, rescueActionReason or "escape_action_blocked")
+		return { accepted = false, reason = rescueActionReason or "escape_action_blocked" }
 	end
 
 	local transition = RescueContractState.ResolveComplete(state, {

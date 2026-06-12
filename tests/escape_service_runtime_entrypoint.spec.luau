@@ -267,6 +267,8 @@ local movementHookFault = false
 local remoteBarrierSnapshot: any = nil
 local memoryStoreValuesByMap: { [string]: { [string]: any } } = {}
 local captureCustodyEndRequests: { any } = {}
+local escapeActionAllowed = true
+local captureQueryFault = false
 globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		if roleQueryFault == true then
@@ -336,6 +338,12 @@ globalEnv._CaptureService_QueryAPI = {
 			operationId = operationId,
 		})
 		return { accepted = true, reason = endReason }
+	end,
+	CanTargetPerformEscapeAction = function(_action: string): boolean
+		if captureQueryFault == true then
+			error("capture query fault")
+		end
+		return escapeActionAllowed == true
 	end,
 }
 globalEnv._MemoryStoreAdapter_QueryAPI = {
@@ -423,6 +431,8 @@ local function resetRouteDefaults()
 	movementHookFault = false
 	remoteBarrierSnapshot = nil
 	captureCustodyEndRequests = {}
+	escapeActionAllowed = true
+	captureQueryFault = false
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
@@ -1009,6 +1019,26 @@ do
 	local grabFaultAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 	assertEqual(grabFaultAttempt.accepted, false, "grab query error does not crash escape attempt")
 	assertEqual(grabFaultAttempt.reason, "grab_query_fault", "grab query fault reason")
+end
+
+do
+	resetRouteDefaults()
+	routeAttributes.FinalExitManaged = false
+	escapeActionAllowed = false
+	local tinyfolk = MockPlayer.new(83, "BlockedEscapeActionTinyfolk", { role = "Tinyfolk" })
+	local blockedAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(blockedAttempt.accepted, false, "blocked escape action rejects route escape")
+	assertEqual(blockedAttempt.reason, "escape_action_blocked", "blocked escape action reason")
+end
+
+do
+	resetRouteDefaults()
+	captureQueryFault = true
+	routeAttributes.FinalExitManaged = false
+	local tinyfolk = MockPlayer.new(84, "FaultyCaptureTinyfolk", { role = "Tinyfolk" })
+	local captureFaultAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
+	assertEqual(captureFaultAttempt.accepted, false, "capture query error does not crash escape attempt")
+	assertEqual(captureFaultAttempt.reason, "capture_query_fault", "capture query fault reason")
 end
 
 do
