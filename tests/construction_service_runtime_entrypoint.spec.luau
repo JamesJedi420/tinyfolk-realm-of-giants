@@ -189,6 +189,11 @@ sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
 sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
+
+local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
+giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
@@ -270,9 +275,24 @@ _G._DistrictPlacementService_QueryAPI = {
 	end,
 }
 
+local objectiveCompletionCalls: { any } = {}
+_G._RealmObjectiveService_QueryAPI = {
+	RecordObjectiveCompletion = function(siteId: string, completedByUserId: number?, at: number?): any
+		table.insert(objectiveCompletionCalls, {
+			siteId = siteId,
+			completedByUserId = completedByUserId,
+			at = at,
+		})
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+
 local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
 -- String path stored directly to avoid child.Parent = parent on a string value
 scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
+scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
+scriptParent._Children["RealmObjectiveCompletionCaller"] =
+	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
 script = {
 	Parent = scriptParent,
 } :: any
@@ -507,6 +527,7 @@ assertTrue(sawSiteEntry, "snapshot-all debug: site entry still present in snapsh
 print("construction_service_runtime_entrypoint: district debug-surface slice checks passed")
 
 -- TIN-153 phase 1: construction contextual task begin/cancel/complete slice.
+local objectiveCompletionCallsBeforeTask = #objectiveCompletionCalls
 local taskBuilder = makeAlivePlayer(9401, Vector3.new(16, 0, 10))
 buildRemote:FireServer(taskBuilder, {
 	siteId = "ConstructionSite_B",
@@ -582,6 +603,26 @@ assertEqual(
 	taskBuilder:GetAttribute("ConstructionTaskObjectiveState"),
 	"completed",
 	"task complete sets completed objective state"
+)
+assertEqual(
+	#objectiveCompletionCalls,
+	objectiveCompletionCallsBeforeTask + 1,
+	"contextual task completion records realm objective once"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].siteId,
+	"ConstructionSite_B",
+	"contextual task completion maps construction site id"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].completedByUserId,
+	9401,
+	"contextual task completion forwards completer user id"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].at,
+	204,
+	"contextual task completion forwards completion timestamp"
 )
 
 -- TIN-154-prep: disruption and blocked state transitions through service task modes.

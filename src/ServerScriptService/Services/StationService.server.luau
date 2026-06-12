@@ -19,6 +19,7 @@ local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("Con
 local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local ResourceFlowState = require(script.Parent:WaitForChild("ResourceFlowState"))
 local ObjectiveSkillXpProducer = require(script.Parent:WaitForChild("ObjectiveSkillXpProducer"))
+local RealmObjectiveCompletionCaller = require(script.Parent:WaitForChild("RealmObjectiveCompletionCaller"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local ACTIVATE_REMOTE_NAME = "StationActivateRequest"
@@ -948,6 +949,9 @@ stationActivateRequestRemote.OnServerEvent:Connect(function(player: Player, payl
 				rejectActivate(player, completeReason :: string)
 				return
 			end
+
+			local completionAt = if type(requestNow) == "number" then requestNow else os.clock()
+			RealmObjectiveCompletionCaller.RecordContextualTaskCompletion(stationIdValue, player.UserId, completionAt)
 			return
 		end
 

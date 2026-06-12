@@ -228,6 +228,8 @@ giantRealmFolder._Children["GiantRealmResourceState"] =
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
 giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"
@@ -298,9 +300,23 @@ end
 
 game = fakeGame
 
+local objectiveCompletionCalls: { any } = {}
+_G._RealmObjectiveService_QueryAPI = {
+	RecordObjectiveCompletion = function(siteId: string, completedByUserId: number?, at: number?): any
+		table.insert(objectiveCompletionCalls, {
+			siteId = siteId,
+			completedByUserId = completedByUserId,
+			at = at,
+		})
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+
 local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Services")
 scriptParent._Children["GiantEssenceSession"] = "../../ServerScriptService/Services/GiantEssenceSession"
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
+scriptParent._Children["RealmObjectiveCompletionCaller"] =
+	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
 script = {
 	Parent = scriptParent,
 } :: any
@@ -476,6 +492,7 @@ assertEqual(
 	"legacy string payload assigns only without passive activation"
 )
 
+local objectiveCompletionCallsBeforeTask = #objectiveCompletionCalls
 globalEnv._ShrineService_TaskState["Shrine_A"] =
 	require("../src/ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic").New()
 activateRemote:FireServer(taskPlayer, {
@@ -526,6 +543,22 @@ assertEqual(shrineStateById["Shrine_A"].isActive, false, "task complete generate
 assertTrue(shrineStateById["Shrine_A"].essenceTotal > 0, "task complete generates bounded essence output")
 assertEqual(taskPlayer:GetAttribute("ShrineTaskLastReason"), "completed", "task complete sets completed reason")
 assertEqual(taskPlayer:GetAttribute("ShrineTaskObjectiveState"), "completed", "task complete sets completed state")
+assertEqual(
+	#objectiveCompletionCalls,
+	objectiveCompletionCallsBeforeTask + 1,
+	"contextual task completion records realm objective once"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].siteId,
+	"ObjectiveSite_Shrine",
+	"shrine contextual task maps to registered objective site"
+)
+assertEqual(
+	objectiveCompletionCalls[#objectiveCompletionCalls].completedByUserId,
+	7202,
+	"shrine contextual task completion forwards completer user id"
+)
+assertEqual(objectiveCompletionCalls[#objectiveCompletionCalls].at, 204, "shrine completion forwards timestamp")
 
 activateRemote:FireServer(taskPlayer, {
 	shrineId = "Shrine_A",
