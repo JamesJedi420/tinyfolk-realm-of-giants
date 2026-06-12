@@ -17,19 +17,21 @@ local ReputationState = if script ~= nil and script.Parent ~= nil
 			:WaitForChild("ReputationState")
 	)
 	else require("../../ReplicatedStorage/Shared/Reputation/ReputationState")
+local CapturePersistenceRules = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("CapturePersistenceRules")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules")
 
 local DEFAULT_PAIR_RETENTION_SECONDS = 300
 local CONTAINMENT_REWARD_SKILL_ID = "custody_stewardship"
 
-local VALID_END_REASONS = {
-	released = true,
-	rescued = true,
-	escaped = true,
-	timeout = true,
-	logout = true,
-	safe_return = true,
-	starvation = true,
-}
+local function isValidEndReason(endReason: any): boolean
+	return CapturePersistenceRules.ValidateCustodyEndReason(endReason).accepted == true
+end
 
 local PAIR_MULTIPLIERS = { 1, 0.5, 0.25 }
 
@@ -119,7 +121,7 @@ local function makeOperationId(input: any): string?
 		return nil
 	end
 	local endReason = nonEmptyString(input.endReason)
-	if endReason == nil or VALID_END_REASONS[endReason] ~= true then
+	if endReason == nil or not isValidEndReason(endReason) then
 		return nil
 	end
 	if not isFiniteNumber(input.captureStartedAt) or input.captureStartedAt < 0 then
@@ -450,7 +452,7 @@ function ContainmentRewardResolver.Create(deps: any?): any
 			return { accepted = false, reason = "target_user_id_invalid" }
 		end
 		local endReason = nonEmptyString(input.endReason)
-		if endReason == nil or VALID_END_REASONS[endReason] ~= true then
+		if not isValidEndReason(endReason) then
 			return { accepted = false, reason = "end_reason_invalid" }
 		end
 		local captureStartedAt = input.captureStartedAt

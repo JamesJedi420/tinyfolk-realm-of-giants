@@ -10,6 +10,7 @@ local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
+local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local ContainmentRewardResolver = if script ~= nil and script.Parent ~= nil
@@ -163,18 +164,8 @@ local function getContainmentRewardResolver(): any?
 	return containmentRewardResolver
 end
 
-local VALID_CUSTODY_END_REASONS = {
-	released = true,
-	rescued = true,
-	escaped = true,
-	timeout = true,
-	logout = true,
-	safe_return = true,
-	starvation = true,
-}
-
 local function isValidCustodyEndReason(endReason: any): boolean
-	return type(endReason) == "string" and VALID_CUSTODY_END_REASONS[endReason] == true
+	return CapturePersistenceRules.ValidateCustodyEndReason(endReason).accepted == true
 end
 local function getDownedState(target: Player): boolean
 	local roleQueryApi = getRoleServiceQueryApi()
@@ -346,9 +337,11 @@ end
 
 local function pruneExpiredCaptures(at: number)
 	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
-		if type(record.expiresAt) == "number" and record.expiresAt <= at then
-			resolveContainmentRewardForRecord(record, "timeout", record.expiresAt, nil)
-			projectCustodyEndReason(record, "timeout")
+		local timeout = CapturePersistenceRules.ResolveTimeout(record, at)
+		if timeout.accepted == true and timeout.shouldEnd == true then
+			local endReason = timeout.endReason or CapturePersistenceRules.CustodyEndReasons.timeout
+			resolveContainmentRewardForRecord(record, endReason, record.expiresAt, nil)
+			projectCustodyEndReason(record, endReason)
 		end
 	end
 	state = CaptureState.PruneExpired(state, at)
@@ -532,6 +525,21 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		maxConcurrentCapturesPerCustodian = resolveMaxConcurrentCapturesPerCustodian(),
 	})
 
+	if transition.accepted and transition.record ~= nil then
+		local recordValidation = CapturePersistenceRules.ValidateCaptureRecord(transition.record, resolvedNow)
+		if recordValidation.accepted ~= true then
+			setCaptureLastReason(custodian, recordValidation.reason)
+			setCaptureLastReason(target, recordValidation.reason)
+			markRejectedRequest(custodian.UserId, resolvedNow)
+			applyCaptureAttributesFromState()
+			return {
+				accepted = false,
+				reason = recordValidation.reason,
+				record = nil,
+			}
+		end
+	end
+
 	state = transition.state
 	setCaptureLastReason(custodian, transition.reason)
 	setCaptureLastReason(target, transition.reason)
@@ -627,10 +635,15 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	local resolvedNow = now()
-	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
-		if record.custodianUserId == player.UserId or record.targetUserId == player.UserId then
-			resolveContainmentRewardForRecord(record, "logout", resolvedNow, nil)
-			projectCustodyEndReason(record, "logout")
+	local logoutPlan = CapturePersistenceRules.ResolveLogout({
+		userId = player.UserId,
+		records = CaptureState.GetAllCaptures(state),
+	})
+	if logoutPlan.accepted == true and type(logoutPlan.recordsToClear) == "table" then
+		local endReason = logoutPlan.endReason or CapturePersistenceRules.CustodyEndReasons.logout
+		for _, record in ipairs(logoutPlan.recordsToClear) do
+			resolveContainmentRewardForRecord(record, endReason, resolvedNow, nil)
+			projectCustodyEndReason(record, endReason)
 		end
 	end
 	lastRequestAtByUserId[player.UserId] = nil
@@ -671,6 +684,25 @@ _G._CaptureService_QueryAPI = {
 	end,
 	ReleaseCapture = function(custodianUserId: number, targetUserId: number, at: number?): any
 		return releaseCapture(custodianUserId, targetUserId, at)
+	end,
+	ValidateCustodyEndReason = function(endReason: string): any
+		return CapturePersistenceRules.ValidateCustodyEndReason(endReason)
+	end,
+	ValidateCaptureRecord = function(record: any, at: number?): any
+		local resolvedNow = if type(at) == "number" then at else now()
+		return CapturePersistenceRules.ValidateCaptureRecord(record, resolvedNow)
+	end,
+	CanTargetPerformEscapeAction = function(action: string): boolean
+		return CapturePersistenceRules.CanTargetPerformEscapeAction(action)
+	end,
+	ResolveReconnectCaptureRestore = function(input: any?): any
+		return CapturePersistenceRules.ResolveReconnectRestore(input)
+	end,
+	ResolveProfileCaptureHydration = function(input: any): any
+		return CapturePersistenceRules.ResolveProfileHydration(input)
+	end,
+	GetCapturePersistenceRules = function(): any
+		return CapturePersistenceRules
 	end,
 	ResetForTests = function()
 		state = CaptureState.NewState()
