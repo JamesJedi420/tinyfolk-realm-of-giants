@@ -67,6 +67,11 @@ addChild(
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
+addChild(
+	giantRealmFolder,
+	"CapturePersistenceRules",
+	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
+)
 addChild(giantRealmFolder, "PenRationingState", "../../ReplicatedStorage/Shared/GiantRealm/PenRationingState")
 addChild(
 	giantRealmFolder,
@@ -418,5 +423,21 @@ moraleByCustodian[2101] = 50
 local sureMorale = captureApi.RequestCapture(2101, 2102, 60.0)
 assertTrue(sureMorale.accepted == true, "sure threshold morale captures")
 assertEqual(sureMorale.reason, "accepted", "sure threshold morale accepted reason")
+
+local prohibitedEnd = captureApi.ValidateCustodyEndReason("sold")
+assertFalse(prohibitedEnd.accepted == true, "prohibited custody end rejected")
+assertEqual(prohibitedEnd.reason, "end_reason_prohibited", "prohibited custody end reason")
+
+local validEnd = captureApi.ValidateCustodyEndReason("escaped")
+assertTrue(validEnd.accepted == true, "valid custody end accepted")
+
+assertTrue(captureApi.CanTargetPerformEscapeAction("escape_route"), "escape route action allowed")
+assertFalse(captureApi.CanTargetPerformEscapeAction("account_lock"), "account lock action blocked")
+
+local reconnect = captureApi.ResolveReconnectCaptureRestore(nil)
+assertFalse(reconnect.restoreCapture == true, "reconnect does not restore capture")
+
+local hydration = captureApi.ResolveProfileCaptureHydration({ profileCaptureState = { targetUserId = 2102 } })
+assertEqual(hydration.action, "clear_capture_runtime", "profile capture hydration clears")
 
 print("capture_service_runtime_entrypoint: all checks passed")
