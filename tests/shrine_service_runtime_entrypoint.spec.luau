@@ -230,6 +230,8 @@ giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"

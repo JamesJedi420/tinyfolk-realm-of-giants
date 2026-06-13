@@ -228,6 +228,8 @@ giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
