@@ -215,6 +215,15 @@ globalEnv._RoleService_QueryAPI = {
 		end
 		return false
 	end,
+	ReleaseDownedAfterRescue = function(userId: number): boolean
+		for _, player in ipairs(playersList) do
+			if player.UserId == userId then
+				player:SetAttribute("DownedIsDowned", false)
+				return true
+			end
+		end
+		return false
+	end,
 	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
 		if interactionName ~= "rescueContractRequest" then
 			return true

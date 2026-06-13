@@ -239,6 +239,16 @@ local function getDownedState(target: Player): boolean
 	return target:GetAttribute("DownedIsDowned") == true
 end
 
+local function releaseDownedStateAfterRescue(player: Player)
+	local roleQueryApi = getRoleServiceQueryApi()
+	if roleQueryApi ~= nil and type(roleQueryApi.ReleaseDownedAfterRescue) == "function" then
+		roleQueryApi.ReleaseDownedAfterRescue(player.UserId)
+		return
+	end
+
+	player:SetAttribute("DownedIsDowned", false)
+end
+
 local function evaluatePostRescueProtection(player: Player, at: number, breakingAction: string?): any
 	return PostRescueProtectionState.Evaluate({
 		protected = player:GetAttribute(postRescueProtectedAttributeName),
@@ -323,6 +333,7 @@ local function grantPostRescueProtection(player: Player?, at: number)
 
 	player:SetAttribute(postRescueProtectedAttributeName, true)
 	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, at + durationSeconds)
+	releaseDownedStateAfterRescue(player)
 	applyPostRescueMovementBoost(player)
 end
 
