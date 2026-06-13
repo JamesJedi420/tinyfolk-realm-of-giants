@@ -24,6 +24,11 @@ DefensivePropConfig.ObstacleDurationSeconds = 12
 DefensivePropConfig.BreakDurationSeconds = 2
 DefensivePropConfig.ResetDurationSeconds = 6
 
+DefensivePropConfig.BarrierContactRadiusStuds = 8
+DefensivePropConfig.BarrierContactStaggerSeconds = 0.75
+DefensivePropConfig.BarrierContactCooldownSeconds = 1.5
+DefensivePropConfig.GiantBarrierContactScanIntervalSeconds = 0.25
+
 DefensivePropConfig.PropTypeAttribute = "DefensivePropType"
 DefensivePropConfig.ZoneIdAttribute = "DefensivePropZoneId"
 DefensivePropConfig.EnabledAttribute = "DefensivePropEnabled"
@@ -42,6 +47,9 @@ DefensivePropConfig.Attributes = {
 	BrokenByUserId = "DefensivePropBrokenByUserId",
 	BrokenAt = "DefensivePropBrokenAt",
 	ResetEndsAt = "DefensivePropResetEndsAt",
+	GiantBarrierStaggerActive = "GiantBarrierStaggerActive",
+	GiantBarrierStaggerUntil = "GiantBarrierStaggerUntil",
+	GiantBarrierStaggerPropId = "GiantBarrierStaggerPropId",
 }
 
 DefensivePropConfig.PropTypes = {

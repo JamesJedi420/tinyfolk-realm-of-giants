@@ -270,10 +270,16 @@ assertTrue(
 	type(statusQueryApi.ClearConditionForUserId) == "function",
 	"status query API exposes ClearConditionForUserId"
 )
+assertTrue(type(statusQueryApi.SetConditionForUserId) == "function", "status query API exposes SetConditionForUserId")
 trapShouldTrigger = false
 local clearedSnapshot = statusQueryApi.ClearConditionForUserId(testPlayer.UserId, "stun", 252)
 assertTrue(clearedSnapshot ~= nil, "clear condition by user id returns snapshot")
 assertEqual(clearedSnapshot.stunActive, false, "clear condition by user id clears stun")
+
+local setSnapshot = statusQueryApi.SetConditionForUserId(testPlayer.UserId, "stun", 1.5, 253)
+assertTrue(setSnapshot ~= nil, "set condition by user id returns snapshot")
+assertTrue(setSnapshot.stunActive, "set condition by user id applies stun")
+assertTrue(setSnapshot.stunUntil > 253, "set condition by user id sets stun duration")
 
 assertEqual(
 	testPlayer:GetAttribute(attributes.RaidHudThreatStage),

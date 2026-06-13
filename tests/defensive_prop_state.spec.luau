@@ -74,6 +74,42 @@ end
 
 do
 	local record = newRecord()
+	assertFalse(
+		select(1, DefensivePropState.CanApplyBarrierContact(DefensivePropConfig, record, 10, nil)),
+		"ready prop rejects barrier contact"
+	)
+
+	local drop = DefensivePropState.CreateDrop(DefensivePropConfig, record, 4201, 100)
+	assertFalse(
+		select(1, DefensivePropState.CanApplyBarrierContact(DefensivePropConfig, drop.record, 100.5, nil)),
+		"startup phase rejects barrier contact"
+	)
+	assertTrue(
+		select(1, DefensivePropState.CanApplyBarrierContact(DefensivePropConfig, drop.record, 102, nil)),
+		"blocked phase accepts barrier contact"
+	)
+
+	local stagger = DefensivePropState.ApplyBarrierContact(DefensivePropConfig, drop.record, 102, nil)
+	assertTrue(stagger.accepted, "barrier contact stagger accepts during blocked phase")
+	assertEqual(stagger.reason, "barrier_contact_stagger", "stagger reason without break")
+	assertEqual(stagger.staggerSeconds, 0.75, "stagger duration from config")
+
+	local cooldown = DefensivePropState.ApplyBarrierContact(DefensivePropConfig, drop.record, 102.5, 102)
+	assertFalse(cooldown.accepted, "barrier contact respects cooldown")
+	assertEqual(cooldown.reason, "barrier_contact_cooldown", "cooldown reason")
+
+	local breakDrop = DefensivePropState.CreateDrop(DefensivePropConfig, newRecord(), 4201, 110)
+	local breakStart = DefensivePropState.StartBreak(DefensivePropConfig, breakDrop.record, 9001, 112)
+	assertTrue(breakStart.accepted, "break start for interruption test")
+	local interrupted = DefensivePropState.ApplyBarrierContact(DefensivePropConfig, breakStart.record, 112.5, nil)
+	assertTrue(interrupted.accepted, "barrier contact accepts during break")
+	assertTrue(interrupted.breakInterrupted, "barrier contact interrupts break")
+	assertEqual(interrupted.reason, "barrier_contact_break_interrupted", "break interruption reason")
+	assertFalse(interrupted.snapshot.breakInProgress, "break progress cleared after interruption")
+end
+
+do
+	local record = newRecord()
 	record.enabled = false
 	assertEqual(
 		DefensivePropState.ResolveStatus(DefensivePropConfig, record, 10),
