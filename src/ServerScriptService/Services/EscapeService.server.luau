@@ -2470,6 +2470,47 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return { accepted = false, reason = "rescue_entry_route_missing" }
 	end
 
+	function service.applyCaptivitySafeReturn(targetUserId: any, at: any, returnReason: any): any
+		if type(targetUserId) ~= "number" then
+			return { accepted = false, reason = "target_user_id_invalid" }
+		end
+
+		local resolvedAt = if type(at) == "number" then at else now()
+		local resolvedReason = if type(returnReason) == "string" then returnReason else "safe_return"
+		local player = getPlayerByUserId(targetUserId)
+		if player == nil then
+			return { accepted = false, reason = "target_not_found" }
+		end
+
+		if type(player.SetAttribute) == "function" then
+			player:SetAttribute("CaptivitySafeReturnPending", false)
+			player:SetAttribute("CaptivitySafeReturnReason", resolvedReason)
+			player:SetAttribute("CaptivitySafeReturnAt", resolvedAt)
+		end
+
+		local relocated = relocatePlayerToTinyfolkReturn(player)
+		if relocated then
+			local realmOwnerUserId = resolveActiveRealmOwnerUserId()
+			recordSafeLocationReturn(player, {
+				returnPointName = EscapeConfig.TinyfolkReturnPointName,
+				returnedAt = resolvedAt,
+				returnReason = resolvedReason,
+				realmId = if type(realmOwnerUserId) == "number"
+					then string.format("giant_realm_%d", realmOwnerUserId)
+					else nil,
+				realmOwnerUserId = realmOwnerUserId,
+				sourceId = "captivity_timeout",
+			})
+		end
+
+		return {
+			accepted = relocated,
+			reason = if relocated then "safe_return_applied" else "safe_return_relocate_failed",
+			returnReason = resolvedReason,
+			returnedAt = resolvedAt,
+		}
+	end
+
 	function service.RefreshFinalExitStateForTests(routeId: any): any
 		return service.getFinalExitSnapshot(routeId)
 	end
@@ -2790,6 +2831,9 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		GetEscapeRequestCooldownSeconds = function(userId: number, at: number?): number
 			local resolvedAt = if type(at) == "number" then at else now()
 			return getEscapeRequestCooldownSeconds(userId, resolvedAt)
+		end,
+		ApplyCaptivitySafeReturn = function(targetUserId: number, at: number?, returnReason: string?): any
+			return service.applyCaptivitySafeReturn(targetUserId, at, returnReason)
 		end,
 	}
 

@@ -15,6 +15,8 @@ CaptureConfig.CustodyWindowSeconds = 8
 
 -- Custody timeout: prevent indefinite captivity beyond custody window
 CaptureConfig.MaxCustodyDurationSeconds = 12
+CaptureConfig.MaxCapturedDurationSeconds = 12
+CaptureConfig.MaxContainedDurationSeconds = 12
 
 -- Reward anti-farming: repeated Giant/Tinyfolk pair rewards diminish within this window.
 CaptureConfig.ContainmentRewardPairCooldownSeconds = 300

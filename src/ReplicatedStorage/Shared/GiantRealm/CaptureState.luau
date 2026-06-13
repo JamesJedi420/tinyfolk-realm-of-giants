@@ -2,11 +2,18 @@
 
 local CaptureState = {}
 
+local CaptivityDurationState = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("CaptivityDurationState"))
+	else (require :: any)("./CaptivityDurationState")
+
 export type CaptureRecord = {
 	custodianUserId: number,
 	targetUserId: number,
 	startedAt: number,
 	expiresAt: number,
+	captivityAnchorAt: number?,
+	containmentPhase: string?,
+	containedAt: number?,
 }
 
 export type State = {
@@ -95,6 +102,9 @@ local function cloneState(state: State): State
 				targetUserId = record.targetUserId,
 				startedAt = record.startedAt,
 				expiresAt = record.expiresAt,
+				captivityAnchorAt = record.captivityAnchorAt,
+				containmentPhase = record.containmentPhase,
+				containedAt = record.containedAt,
 			}
 		end
 	end
@@ -121,7 +131,7 @@ local function pruneExpiredInPlace(nextState: State, now: number)
 
 	for targetUserId, record in pairs(nextState.captureByTarget) do
 		if record ~= nil then
-			if record.expiresAt <= now then
+			if CaptivityDurationState.IsRecordExpired(record, now, nil) then
 				table.insert(expiredTargets, targetUserId)
 			end
 		end
@@ -232,6 +242,9 @@ function CaptureState.ResolveRequest(state: State, input: RequestInput): Transit
 		targetUserId = input.targetUserId,
 		startedAt = input.now,
 		expiresAt = input.now + custodyWindowSeconds,
+		captivityAnchorAt = input.now,
+		containmentPhase = CaptivityDurationState.Phases.captured,
+		containedAt = nil,
 	}
 
 	nextState.captureByTarget[input.targetUserId] = record
@@ -301,6 +314,9 @@ function CaptureState.GetAllCaptures(state: State): { CaptureRecord }
 				targetUserId = record.targetUserId,
 				startedAt = record.startedAt,
 				expiresAt = record.expiresAt,
+				captivityAnchorAt = record.captivityAnchorAt,
+				containmentPhase = record.containmentPhase,
+				containedAt = record.containedAt,
 			})
 		end
 	end
@@ -335,6 +351,102 @@ function CaptureState.RemovePlayer(state: State, userId: number): State
 	end
 
 	return nextState
+end
+
+function CaptureState.ResolvePromoteToContained(
+	state: State,
+	input: { now: number, targetUserId: number }
+): TransitionResult
+	local nextState = cloneState(state)
+
+	if not validNow(input.now) then
+		nextState.lastReason = "invalid_now"
+		return { accepted = false, reason = "invalid_now", state = nextState, record = nil }
+	end
+
+	if not validUserId(input.targetUserId) then
+		nextState.lastReason = "invalid_target_user_id"
+		return { accepted = false, reason = "invalid_target_user_id", state = nextState, record = nil }
+	end
+
+	pruneExpiredInPlace(nextState, input.now)
+
+	local record = nextState.captureByTarget[input.targetUserId]
+	if record == nil then
+		nextState.lastReason = "capture_missing"
+		return { accepted = false, reason = "capture_missing", state = nextState, record = nil }
+	end
+
+	if record.containmentPhase == CaptivityDurationState.Phases.contained then
+		nextState.lastReason = "already_contained"
+		return { accepted = false, reason = "already_contained", state = nextState, record = record }
+	end
+
+	local updatedRecord: CaptureRecord = {
+		custodianUserId = record.custodianUserId,
+		targetUserId = record.targetUserId,
+		startedAt = record.startedAt,
+		expiresAt = record.expiresAt,
+		captivityAnchorAt = record.captivityAnchorAt or record.startedAt,
+		containmentPhase = CaptivityDurationState.Phases.contained,
+		containedAt = input.now,
+	}
+
+	nextState.captureByTarget[input.targetUserId] = updatedRecord
+	nextState.lastReason = "contained"
+
+	return {
+		accepted = true,
+		reason = "contained",
+		state = nextState,
+		record = updatedRecord,
+	}
+end
+
+function CaptureState.ResolveTransferCustody(
+	state: State,
+	input: { now: number, targetUserId: number, newCustodianUserId: number }
+): TransitionResult
+	local nextState = cloneState(state)
+
+	if not validNow(input.now) then
+		nextState.lastReason = "invalid_now"
+		return { accepted = false, reason = "invalid_now", state = nextState, record = nil }
+	end
+
+	if not validUserId(input.targetUserId) then
+		nextState.lastReason = "invalid_target_user_id"
+		return { accepted = false, reason = "invalid_target_user_id", state = nextState, record = nil }
+	end
+
+	pruneExpiredInPlace(nextState, input.now)
+
+	local record = nextState.captureByTarget[input.targetUserId]
+	if record == nil then
+		nextState.lastReason = "capture_missing"
+		return { accepted = false, reason = "capture_missing", state = nextState, record = nil }
+	end
+
+	local transfer = CaptivityDurationState.ResolveTransfer({
+		record = record,
+		newCustodianUserId = input.newCustodianUserId,
+		now = input.now,
+	}, nil)
+	if transfer.accepted ~= true or transfer.record == nil then
+		nextState.lastReason = transfer.reason
+		return { accepted = false, reason = transfer.reason, state = nextState, record = nil }
+	end
+
+	nextState.captureByTarget[input.targetUserId] = transfer.record
+	nextState.custodianByTarget[input.targetUserId] = input.newCustodianUserId
+	nextState.lastReason = "custody_transferred"
+
+	return {
+		accepted = true,
+		reason = "custody_transferred",
+		state = nextState,
+		record = transfer.record,
+	}
 end
 
 return CaptureState
