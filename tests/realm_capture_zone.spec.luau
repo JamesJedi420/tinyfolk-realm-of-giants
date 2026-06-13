@@ -25,6 +25,7 @@ end
 local config: CaptureZoneConfig = {
 	minimumSpawnSeparationStuds = 70,
 	minimumEscapeSeparationStuds = 80,
+	minimumGiantRouteSeparationStuds = 5,
 	minimumCaptureRadiusStuds = 8,
 	maximumCaptureRadiusStuds = 25,
 	minimumCaptureZoneGapStuds = 5,
@@ -1402,4 +1403,44 @@ do
 	assert(reasonContains(result.reason, "unsupported zone type"), "Block 82: reason should mention unsupported type")
 end
 
-print("✓ realm_capture_zone.spec.luau: all 82 blocks passed")
+-- Block 83: Vacuous pass when giantRoutes is empty
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 50, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	local result = RealmCaptureZoneValidator.captureZoneGiantRouteSeparation(descriptor, config)
+	assert(result.passed == true, "Block 83: Should vacuously pass with empty giantRoutes")
+end
+
+-- Block 84: Valid giant-route separation passes
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 50, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	descriptor.giantRoutes = {
+		{ name = "GiantRoute_PlazaToHearth", position = { x = 0, y = 0, z = 0 }, widthStuds = 18 },
+	}
+	local result = RealmCaptureZoneValidator.captureZoneGiantRouteSeparation(descriptor, config)
+	assert(result.passed == true, "Block 84: Should pass with sufficient giant-route separation")
+end
+
+-- Block 85: Invalid giant-route separation fails
+do
+	local descriptor = makeDescriptor({
+		{ name = "GiantCaptureZone_A", position = { x = 20, y = 0, z = 0 }, radius = 15, tag = "GiantCapture" },
+	}, {
+		{ name = "TinyfolkSpawn", position = { x = 0, y = 0, z = 0 } },
+	})
+	descriptor.giantRoutes = {
+		{ name = "GiantRoute_PlazaToHearth", position = { x = 0, y = 0, z = 0 }, widthStuds = 18 },
+	}
+	local result = RealmCaptureZoneValidator.captureZoneGiantRouteSeparation(descriptor, config)
+	assert(result.passed == false, "Block 85: Should fail when giant route is too close to capture zone")
+	assert(reasonContains(result.reason, "giant route"), "Block 85: reason should mention giant route")
+end
+
+print("✓ realm_capture_zone.spec.luau: all 85 blocks passed")

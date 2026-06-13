@@ -537,6 +537,38 @@ end
 
 do
 	resetRouteDefaults()
+	globalEnv._GiantBuildModeService_QueryAPI = {
+		GetGiantMacroRouteAccess = function(player: any, routeId: string): any
+			if routeId ~= "GiantRoute_PlazaToHearth" then
+				return { accepted = false, reason = "route_not_found" }
+			end
+			local role = if player ~= nil and type(player.GetAttribute) == "function"
+				then player:GetAttribute("Role")
+				else nil
+			if role ~= "Giant" then
+				return { accepted = false, reason = "requester_not_giant", routeId = routeId, giantOnly = true }
+			end
+			return { accepted = true, reason = "accepted", routeId = routeId, giantOnly = true, isEnabled = true }
+		end,
+	}
+
+	local giant = MockPlayer.new(64, "MacroRouteGiant", { role = "Giant" })
+	local tinyfolk = MockPlayer.new(65, "MacroRouteTinyfolk", { role = "Tinyfolk" })
+	local giantAccess = EscapeService.getRouteAccess(giant, "GiantRoute_PlazaToHearth")
+	assertEqual(giantAccess.accepted, true, "escape service delegates giant macro route access for giants")
+	assertEqual(giantAccess.reason, "accepted", "escape service giant macro route accepted reason")
+
+	local tinyfolkAccess = EscapeService.getRouteAccess(tinyfolk, "GiantRoute_PlazaToHearth")
+	assertEqual(tinyfolkAccess.accepted, false, "escape service delegates giant macro route rejection for tinyfolk")
+	assertEqual(tinyfolkAccess.reason, "requester_not_giant", "escape service giant macro route tinyfolk reason")
+
+	local missing = EscapeService.getRouteAccess(giant, "GiantRoute_Missing")
+	assertEqual(missing.accepted, false, "escape service giant macro route missing rejects")
+	assertEqual(missing.reason, "route_not_found", "escape service giant macro route missing reason")
+end
+
+do
+	resetRouteDefaults()
 	routeAttributes.FinalExitManaged = false
 	routeAttributes.RouteEnabled = true
 	local giant = MockPlayer.new(62, "BlockingAccessGiant", { role = "Giant" })

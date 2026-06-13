@@ -1,0 +1,177 @@
+{
+  "className": "Folder",
+  "properties": {
+    "Tags": [
+      "GameplayTag_GiantRoute"
+    ]
+  },
+  "attributes": {
+    "CanonicalGiantMacroNavigation": true,
+    "MirrorsVisualLayer": "Workspace.Map.GiantRoads"
+  },
+  "children": [
+    {
+      "name": "GiantRoute_PlazaToHearth",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.86,
+          0.7,
+          0.43
+        ],
+        "Size": [
+          18,
+          0.45,
+          72
+        ],
+        "Position": [
+          0,
+          0.38,
+          -36
+        ],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ToControlStation",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.86,
+          0.7,
+          0.43
+        ],
+        "Size": [
+          18,
+          0.45,
+          82
+        ],
+        "Orientation": [
+          0,
+          -86,
+          0
+        ],
+        "Position": [
+          40,
+          0.2,
+          4
+        ],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ApproachGranaryDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.86,
+          0.7,
+          0.43
+        ],
+        "Size": [
+          18,
+          0.45,
+          28
+        ],
+        "Orientation": [
+          0,
+          8,
+          0
+        ],
+        "Position": [
+          -65,
+          0.34,
+          68
+        ],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ApproachControlStation",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.86,
+          0.7,
+          0.43
+        ],
+        "Size": [
+          18,
+          0.45,
+          24
+        ],
+        "Orientation": [
+          0,
+          -82,
+          0
+        ],
+        "Position": [
+          70,
+          0.34,
+          5
+        ],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    }
+  ]
+}
