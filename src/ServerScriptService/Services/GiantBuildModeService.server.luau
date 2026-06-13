@@ -12,6 +12,8 @@ local GiantRealmResourceState: any
 local GiantRealmTreasuryPresentation: any
 local GiantRealmTreasuryConfig: any
 local RoleConfig: any
+local EscapeConfig: any
+local GiantMacroRouteAccess: any
 local ResourceFlowState: any
 local SnareTrapConfig: any
 local SnareTrapState: any
@@ -44,6 +46,7 @@ local lastRequestAtByUserId: { [number]: number? } = {}
 local lastSnareTrapPlacementAtByUserId: { [number]: number? } = {}
 local snareTrapSequence = 0
 local realmOwnerUserId: number? = nil
+local giantMacroRouteById: { [string]: any } = {}
 local globalEnv: any = getfenv()
 local DEFENSE_HISTORY_ESCAPE_LIMIT = 50
 local spendStructureCost: (
@@ -122,6 +125,8 @@ local function resolveDependencies()
 	GiantRealmTreasuryPresentation = requireChildModule(giantRealm, "GiantRealmTreasuryPresentation")
 	GiantRealmTreasuryConfig = requireChildModule(config, "GiantRealmTreasuryConfig")
 	RoleConfig = requireChildModule(config, "RoleConfig")
+	EscapeConfig = requireChildModule(config, "EscapeConfig")
+	GiantMacroRouteAccess = requireChildModule(giantRealm, "GiantMacroRouteAccess")
 	SnareTrapState = requireChildModule(giantRealm, "SnareTrapState")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
@@ -133,6 +138,170 @@ if not dependenciesReady then
 end
 
 debugLog("Dependency resolution complete")
+
+local GIANT_ROUTES_FOLDER_PATH = EscapeConfig.GiantRoutesFolderPath
+local ROUTE_ENABLED_ATTRIBUTE = EscapeConfig.RouteEnabledAttribute
+
+local function findGiantRoutesRoot(): any?
+	if Workspace == nil then
+		return nil
+	end
+
+	local current: any = Workspace
+	for _, childName in GIANT_ROUTES_FOLDER_PATH do
+		if type(current.FindFirstChild) ~= "function" then
+			return nil
+		end
+		local nextNode = current:FindFirstChild(childName)
+		if not nextNode then
+			return nil
+		end
+		current = nextNode
+	end
+
+	return current
+end
+
+local function shouldTrackGiantMacroRoutePart(part: any): boolean
+	if type(part.Name) ~= "string" then
+		return false
+	end
+	if part:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true then
+		return true
+	end
+	local prefix = EscapeConfig.GiantMacroRouteNamePrefix
+	if type(prefix) == "string" and prefix ~= "" then
+		return string.match(part.Name, "^" .. prefix) ~= nil
+	end
+	return false
+end
+
+local function registerGiantMacroRoutePart(part: any)
+	local routeId = part.Name
+	if giantMacroRouteById[routeId] == part then
+		return
+	end
+	if giantMacroRouteById[routeId] ~= nil then
+		debugWarn(string.format("Duplicate giant macro route id ignored: %s", routeId))
+		return
+	end
+
+	giantMacroRouteById[routeId] = part
+
+	if part:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == nil then
+		part:SetAttribute(EscapeConfig.GiantOnlyRouteAttribute, true)
+	end
+	if part:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == nil then
+		part:SetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute, false)
+	end
+	if part:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) == nil then
+		part:SetAttribute(ROUTE_ENABLED_ATTRIBUTE, true)
+	end
+	if part:GetAttribute(EscapeConfig.RouteTypeAttribute) == nil then
+		part:SetAttribute(EscapeConfig.RouteTypeAttribute, EscapeConfig.GiantMacroRouteKindValue)
+	end
+	if part:GetAttribute(EscapeConfig.GiantMacroRouteKindAttribute) == nil then
+		part:SetAttribute(EscapeConfig.GiantMacroRouteKindAttribute, EscapeConfig.GiantMacroRouteKindValue)
+	end
+end
+
+local function registerGiantMacroRoutesFromWorkspace()
+	local routesRoot = findGiantRoutesRoot()
+	if routesRoot == nil then
+		return
+	end
+
+	if type(routesRoot.GetDescendants) ~= "function" then
+		return
+	end
+
+	for _, descendant in routesRoot:GetDescendants() do
+		if descendant:IsA("BasePart") and shouldTrackGiantMacroRoutePart(descendant) then
+			registerGiantMacroRoutePart(descendant)
+		end
+	end
+end
+
+local function resolveGiantMacroRoutePart(routeId: string): any?
+	local routePart = giantMacroRouteById[routeId]
+	if routePart == nil then
+		return nil
+	end
+
+	local current: any = routePart
+	while current ~= nil do
+		if current == Workspace then
+			return routePart
+		end
+		current = current.Parent
+	end
+
+	giantMacroRouteById[routeId] = nil
+	return nil
+end
+
+local function getPlayerRole(player: any): string?
+	if player == nil or type(player.GetAttribute) ~= "function" then
+		return nil
+	end
+	local role = player:GetAttribute("Role")
+	return if type(role) == "string" then role else nil
+end
+
+local function buildGiantMacroRouteAccessPayload(routeId: string, routePart: any, player: any?): any
+	local role = getPlayerRole(player)
+	local giantOnly = routePart:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true
+	local tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true
+	local isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false
+	local access = GiantMacroRouteAccess.EvaluateGiantMacroRouteAccess({
+		role = role,
+		giantOnly = giantOnly,
+		tinyfolkOnly = tinyfolkOnly,
+		isEnabled = isEnabled,
+	})
+
+	return {
+		accepted = access.accepted,
+		reason = access.reason,
+		routeId = routeId,
+		role = role,
+		giantOnly = giantOnly,
+		tinyfolkOnly = tinyfolkOnly,
+		isEnabled = isEnabled,
+		widthStuds = routePart:GetAttribute(EscapeConfig.GiantMacroRouteWidthAttribute),
+		routeKind = routePart:GetAttribute(EscapeConfig.GiantMacroRouteKindAttribute),
+	}
+end
+
+local function GetGiantMacroRouteAccess(player: any, routeId: any): any
+	if type(routeId) ~= "string" then
+		return { accepted = false, reason = "route_id_invalid" }
+	end
+
+	registerGiantMacroRoutesFromWorkspace()
+	local routePart = resolveGiantMacroRoutePart(routeId)
+	if routePart == nil then
+		return { accepted = false, reason = "route_not_found" }
+	end
+
+	return buildGiantMacroRouteAccessPayload(routeId, routePart, player)
+end
+
+local function GetRegisteredGiantMacroRouteIds(): { string }
+	registerGiantMacroRoutesFromWorkspace()
+	local routeIds = {}
+	for routeId in giantMacroRouteById do
+		table.insert(routeIds, routeId)
+	end
+	table.sort(routeIds)
+	return routeIds
+end
+
+local function ResetGiantMacroRoutesForTests()
+	giantMacroRouteById = {}
+end
+
+registerGiantMacroRoutesFromWorkspace()
 
 local function ensureRemotesFolder(): Folder
 	local existing = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
@@ -533,7 +702,14 @@ local function getSnareTrapPlacementAnchors(): { any }
 		return anchors
 	end
 
-	for _, folderName in ipairs({ "Objectives", "EscapeRoutes", "Spawns", "CaptureZones", "RescueEntryRoutes" }) do
+	for _, folderName in ipairs({
+		"Objectives",
+		"EscapeRoutes",
+		"GiantRoutes",
+		"Spawns",
+		"CaptureZones",
+		"RescueEntryRoutes",
+	}) do
 		local folder = mapFolder:FindFirstChild(folderName)
 		if folder ~= nil then
 			collectBaseParts(folder, anchors)
@@ -554,6 +730,9 @@ local function snareTrapProtectedReason(anchor: any): string
 	end
 	if string.find(name, "Capture", 1, true) ~= nil or string.find(parentName, "CaptureZones", 1, true) ~= nil then
 		return "snare_trap_near_capture_zone"
+	end
+	if string.find(name, "GiantRoute", 1, true) ~= nil or string.find(parentName, "GiantRoutes", 1, true) ~= nil then
+		return "snare_trap_near_giant_route"
 	end
 	if string.find(name, "Rescue", 1, true) ~= nil or string.find(parentName, "RescueEntryRoutes", 1, true) ~= nil then
 		return "snare_trap_near_rescue_entry"
@@ -2129,6 +2308,9 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	RollbackWorksiteUpgradeSpend = RollbackWorksiteUpgradeSpend,
 	BuildSaveSnapshot = BuildSaveSnapshot,
 	ApplySaveSnapshot = ApplySaveSnapshot,
+	GetGiantMacroRouteAccess = GetGiantMacroRouteAccess,
+	GetRegisteredGiantMacroRouteIds = GetRegisteredGiantMacroRouteIds,
+	ResetGiantMacroRoutesForTests = ResetGiantMacroRoutesForTests,
 }
 
 globalEnv._GiantBuildModeService_Registry = placedStructureById

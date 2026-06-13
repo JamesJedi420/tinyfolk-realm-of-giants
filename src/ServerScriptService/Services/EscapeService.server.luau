@@ -133,6 +133,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"PlayerCreatedRouteState",
 		"../../ReplicatedStorage/Shared/GiantRealm/PlayerCreatedRouteState"
 	)
+	local GiantMacroRouteAccess = resolveDependency(
+		GiantRealm,
+		"GiantMacroRouteAccess",
+		"../../ReplicatedStorage/Shared/GiantRealm/GiantMacroRouteAccess"
+	)
 	local EscapeOutcomeResolverModule: any = nil
 	if options ~= nil and type(options.escapeOutcomeResolverModule) == "table" then
 		EscapeOutcomeResolverModule = options.escapeOutcomeResolverModule
@@ -1379,17 +1384,51 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return if type(role) == "string" then role else nil
 	end
 
+	local function getGiantBuildModeQueryApi(): any?
+		local globalValue: any = globalEnv
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._GiantBuildModeService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
 	local function buildRouteAccessPayload(routeId: string, routePart: BasePart, player: any?): any
 		local role = getPlayerRole(player)
+		local giantOnly = routePart:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true
 		local tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true
-		if role ~= RoleConfig.Roles.Tinyfolk then
+		local sharedAccessParams = {
+			role = role,
+			giantOnly = giantOnly,
+			tinyfolkOnly = tinyfolkOnly,
+			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false,
+		}
+
+		if giantOnly then
+			local giantAccess = GiantMacroRouteAccess.EvaluateGiantMacroRouteAccess(sharedAccessParams)
+			return {
+				accepted = giantAccess.accepted,
+				reason = giantAccess.reason,
+				routeId = routeId,
+				role = role,
+				giantOnly = true,
+				tinyfolkOnly = tinyfolkOnly,
+				isEnabled = sharedAccessParams.isEnabled,
+			}
+		end
+
+		local tinyfolkRoleGate = GiantMacroRouteAccess.EvaluateTinyfolkEscapeRouteAccess(sharedAccessParams)
+		if tinyfolkRoleGate.accepted ~= true then
 			return {
 				accepted = false,
-				reason = "requester_not_tinyfolk",
+				reason = tinyfolkRoleGate.reason,
 				routeId = routeId,
 				role = role,
 				tinyfolkOnly = tinyfolkOnly,
-				isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false,
+				isEnabled = sharedAccessParams.isEnabled,
 				blockState = routePart:GetAttribute(EscapeConfig.TraversalGapBlockStateAttribute),
 				blockExempt = routeHasBlockExemption(routePart),
 				finalExitPhase = routePart:GetAttribute(EscapeConfig.FinalExitPhaseAttribute),
@@ -2251,10 +2290,21 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return { accepted = false, reason = "route_id_invalid" }
 		end
 		local routePart = resolveRoutePart(routeId)
-		if routePart == nil then
-			return { accepted = false, reason = "route_not_found" }
+		if routePart ~= nil then
+			return buildRouteAccessPayload(routeId, routePart, player)
 		end
-		return buildRouteAccessPayload(routeId, routePart, player)
+
+		local giantBuildModeQueryApi = getGiantBuildModeQueryApi()
+		if giantBuildModeQueryApi ~= nil and type(giantBuildModeQueryApi.GetGiantMacroRouteAccess) == "function" then
+			local ok, giantAccess = pcall(function()
+				return giantBuildModeQueryApi.GetGiantMacroRouteAccess(player, routeId)
+			end)
+			if ok and type(giantAccess) == "table" then
+				return giantAccess
+			end
+		end
+
+		return { accepted = false, reason = "route_not_found" }
 	end
 
 	function service.getObjectiveSafeRouteMetadata(routeId: any?): any

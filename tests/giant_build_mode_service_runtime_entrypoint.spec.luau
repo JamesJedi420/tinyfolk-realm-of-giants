@@ -67,6 +67,18 @@ local function makeNode(name: string, className: string?, fullName: string?)
 		return children
 	end
 
+	function node.GetDescendants(self: any): { any }
+		local descendants: { any } = {}
+		local function walk(nodeToWalk: any)
+			for _, child in pairs(nodeToWalk._Children) do
+				table.insert(descendants, child)
+				walk(child)
+			end
+		end
+		walk(self)
+		return descendants
+	end
+
 	function node.SetAttribute(self: any, attributeName: string, value: any)
 		self._Attributes[attributeName] = value
 	end
@@ -122,6 +134,7 @@ configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Share
 configFolder._Children["SnareTrapConfig"] = "../../ReplicatedStorage/Shared/Config/SnareTrapConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
+configFolder._Children["EscapeConfig"] = "../../ReplicatedStorage/Shared/Config/EscapeConfig"
 configFolder._Children["GiantRealmTreasuryConfig"] = "../../ReplicatedStorage/Shared/Config/GiantRealmTreasuryConfig"
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
@@ -131,6 +144,7 @@ giantRealmFolder._Children["GiantRealmResourceState"] =
 giantRealmFolder._Children["GiantRealmTreasuryPresentation"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmTreasuryPresentation"
 giantRealmFolder._Children["SnareTrapState"] = "../../ReplicatedStorage/Shared/GiantRealm/SnareTrapState"
+giantRealmFolder._Children["GiantMacroRouteAccess"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantMacroRouteAccess"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -155,6 +169,16 @@ local escapeRoute = makeNode("EscapeRoute_A", "BasePart", "Workspace.Map.EscapeR
 escapeRoute.Position = { x = 100, y = 0, z = 100 }
 addChild(escapeRoutesFolder, "EscapeRoute_A", escapeRoute)
 addChild(mapFolder, "EscapeRoutes", escapeRoutesFolder)
+
+local giantRoutesFolder = makeNode("GiantRoutes", "Folder", "Workspace.Map.GiantRoutes")
+local giantMacroRoute =
+	makeNode("GiantRoute_PlazaToHearth", "BasePart", "Workspace.Map.GiantRoutes.GiantRoute_PlazaToHearth")
+giantMacroRoute.Position = { x = 0, y = 0.38, z = -36 }
+giantMacroRoute:SetAttribute("GiantOnlyRoute", true)
+giantMacroRoute:SetAttribute("RouteEnabled", true)
+giantMacroRoute:SetAttribute("WidthStuds", 18)
+addChild(giantRoutesFolder, "GiantRoute_PlazaToHearth", giantMacroRoute)
+addChild(mapFolder, "GiantRoutes", giantRoutesFolder)
 
 local playerAddedConnections: { (any) -> () } = {}
 local playerRemovingConnections: { (any) -> () } = {}
@@ -489,6 +513,34 @@ assertEqual(
 	"config structure catalog module name matches giant structure catalog"
 )
 assertTrue(type(GiantStructureCatalog.GiantStructure_Runtime_A) == "table", "catalog exposes runtime structure A")
+
+do
+	local queryApi = globalEnv._GiantBuildModeService_QueryAPI
+	assertTrue(type(queryApi.GetGiantMacroRouteAccess) == "function", "query api exposes giant macro route access")
+	assertTrue(type(queryApi.GetRegisteredGiantMacroRouteIds) == "function", "query api exposes giant macro route ids")
+
+	local routeIds = queryApi.GetRegisteredGiantMacroRouteIds()
+	assertTrue(#routeIds >= 1, "registers authored giant macro routes from workspace")
+	assertEqual(routeIds[1], "GiantRoute_PlazaToHearth", "registers plaza macro route id")
+
+	local giant = makeAlivePlayer(8801, "Giant")
+	local tinyfolk = makeAlivePlayer(8802, "Tinyfolk")
+	local giantAccess = queryApi.GetGiantMacroRouteAccess(giant, "GiantRoute_PlazaToHearth")
+	assertEqual(giantAccess.accepted, true, "giant macro route access accepts giant requester")
+	assertEqual(giantAccess.reason, "accepted", "giant macro route access accepted reason")
+	assertEqual(giantAccess.giantOnly, true, "giant macro route access projects giant-only metadata")
+
+	local tinyfolkAccess = queryApi.GetGiantMacroRouteAccess(tinyfolk, "GiantRoute_PlazaToHearth")
+	assertEqual(tinyfolkAccess.accepted, false, "giant macro route access rejects tinyfolk requester")
+	assertEqual(tinyfolkAccess.reason, "requester_not_giant", "giant macro route tinyfolk rejection reason")
+
+	giantMacroRoute:SetAttribute("RouteEnabled", false)
+	local disabledAccess = queryApi.GetGiantMacroRouteAccess(giant, "GiantRoute_PlazaToHearth")
+	assertEqual(disabledAccess.accepted, false, "disabled giant macro route rejects access")
+	assertEqual(disabledAccess.reason, "route_disabled", "disabled giant macro route reason")
+	giantMacroRoute:SetAttribute("RouteEnabled", true)
+end
+
 assertEqual(
 	GiantStructureCatalog.GiantStructure_Runtime_A.displayName,
 	"Runtime Test Structure A",

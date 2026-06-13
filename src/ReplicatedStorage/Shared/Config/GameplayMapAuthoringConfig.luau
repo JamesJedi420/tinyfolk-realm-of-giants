@@ -57,6 +57,10 @@ GameplayMapAuthoringConfig.RequiredTaggedRoots = {
 		tag = GameplayMapAuthoringConfig.Tags.TriggerZone,
 	},
 	{
+		layoutPath = "src/Workspace/Map/GiantRoutes/Layout.model.json",
+		tag = GameplayMapAuthoringConfig.Tags.GiantRoute,
+	},
+	{
 		layoutPath = "src/Workspace/Map/Stations/Granary/Layout.model.json",
 		childName = "GiantLoadingFace",
 		tag = GameplayMapAuthoringConfig.Tags.Door,

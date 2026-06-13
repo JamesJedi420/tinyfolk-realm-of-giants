@@ -26,9 +26,16 @@ export type NamedZone = {
 	tag: string,
 }
 
+export type NamedGiantRoute = {
+	name: string,
+	position: Vector3Data,
+	widthStuds: number?,
+}
+
 export type RealmDescriptor = {
 	spawns: { NamedPart },
 	escapeRoutes: { NamedPart },
+	giantRoutes: { NamedGiantRoute }?,
 	returnPoints: { NamedPart },
 	stations: { NamedPart },
 	constructionSites: { NamedPart },
@@ -51,6 +58,7 @@ export type CheckResult = {
 export type CaptureZoneConfig = {
 	minimumSpawnSeparationStuds: number,
 	minimumEscapeSeparationStuds: number,
+	minimumGiantRouteSeparationStuds: number,
 	minimumCaptureRadiusStuds: number,
 	maximumCaptureRadiusStuds: number,
 	minimumCaptureZoneGapStuds: number,
@@ -500,6 +508,64 @@ local function captureZoneTotalCap(descriptor: RealmDescriptor, config: CaptureZ
 	}
 end
 
+local function resolveGiantRouteWidthStuds(route: NamedGiantRoute): number
+	if type(route.widthStuds) == "number" and route.widthStuds > 0 then
+		return route.widthStuds
+	end
+	return 0
+end
+
+local function captureZoneGiantRouteSeparation(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
+	if #descriptor.captureZones == 0 then
+		return {
+			id = "capture_zone_giant_route_separation",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	local giantRoutes = descriptor.giantRoutes
+	if type(giantRoutes) ~= "table" or #giantRoutes == 0 then
+		return {
+			id = "capture_zone_giant_route_separation",
+			passed = true,
+			reason = nil,
+		}
+	end
+
+	for _, captureZone in ipairs(descriptor.captureZones) do
+		if captureZone.tag ~= "GiantCapture" then
+			continue
+		end
+		for _, giantRoute in ipairs(giantRoutes) do
+			local routeHalfWidth = resolveGiantRouteWidthStuds(giantRoute) * 0.5
+			local minimumClearance = captureZone.radius + routeHalfWidth + config.minimumGiantRouteSeparationStuds
+			local d = distance(captureZone.position, giantRoute.position)
+			if d < minimumClearance then
+				return {
+					id = "capture_zone_giant_route_separation",
+					passed = false,
+					reason = "Capture zone '"
+						.. captureZone.name
+						.. "' is "
+						.. string.format("%.1f", d)
+						.. " studs from giant route '"
+						.. giantRoute.name
+						.. "' (minimum: "
+						.. string.format("%.1f", minimumClearance)
+						.. " studs)",
+				}
+			end
+		end
+	end
+
+	return {
+		id = "capture_zone_giant_route_separation",
+		passed = true,
+		reason = nil,
+	}
+end
+
 local function captureZoneProtectedZoneClearance(descriptor: RealmDescriptor, config: CaptureZoneConfig): CheckResult
 	if #descriptor.captureZones == 0 then
 		return {
@@ -585,6 +651,7 @@ end
 return {
 	captureZoneSpawnSeparation = captureZoneSpawnSeparation,
 	captureZoneEscapeSeparation = captureZoneEscapeSeparation,
+	captureZoneGiantRouteSeparation = captureZoneGiantRouteSeparation,
 	captureZoneRadiusBounds = captureZoneRadiusBounds,
 	captureZoneSpawnPerimeterClearance = captureZoneSpawnPerimeterClearance,
 	captureZoneEscapePerimeterClearance = captureZoneEscapePerimeterClearance,
