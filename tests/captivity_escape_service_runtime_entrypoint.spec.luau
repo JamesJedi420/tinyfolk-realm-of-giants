@@ -163,6 +163,11 @@ function fakeGame:GetService(serviceName: string): any
 	if serviceName == "Workspace" then
 		return workspace
 	end
+	if serviceName == "RunService" then
+		return {
+			Heartbeat = makeSignal(),
+		}
+	end
 	error("unsupported service " .. serviceName)
 	return nil
 end
