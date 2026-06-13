@@ -131,6 +131,14 @@ do
 		CapturePersistenceRules.CanTargetPerformEscapeAction(CapturePersistenceRules.EscapeActions.rescue_contract),
 		"rescue allowed"
 	)
+	assertTrue(
+		CapturePersistenceRules.CanTargetPerformEscapeAction(CapturePersistenceRules.EscapeActions.struggle),
+		"struggle allowed"
+	)
+	assertTrue(
+		CapturePersistenceRules.CanTargetPerformEscapeAction(CapturePersistenceRules.EscapeActions.ally_rescue_assist),
+		"ally assist allowed"
+	)
 	assertFalse(CapturePersistenceRules.CanTargetPerformEscapeAction("delete_account"), "delete account blocked")
 end
 
