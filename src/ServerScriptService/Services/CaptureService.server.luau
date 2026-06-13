@@ -11,6 +11,7 @@ local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
+local DisconnectResolutionState = require(GiantRealm:WaitForChild("DisconnectResolutionState"))
 local CaptivityDurationState = require(GiantRealm:WaitForChild("CaptivityDurationState"))
 local PostRescueProtectionState = require(GiantRealm:WaitForChild("PostRescueProtectionState"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
@@ -30,6 +31,9 @@ local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= ni
 local CaptivitySafeReturnCaller = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("CaptivitySafeReturnCaller"))
 	else (require :: any)("./CaptivitySafeReturnCaller")
+local DisconnectSafeReturnCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("DisconnectSafeReturnCaller"))
+	else (require :: any)("./DisconnectSafeReturnCaller")
 
 local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
@@ -726,7 +730,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	local resolvedNow = now()
-	local logoutPlan = CapturePersistenceRules.ResolveLogout({
+	local logoutPlan = DisconnectResolutionState.ResolveLogout({
 		userId = player.UserId,
 		records = CaptureState.GetAllCaptures(state),
 	})
@@ -737,6 +741,25 @@ Players.PlayerRemoving:Connect(function(player: Player)
 			projectCustodyEndReason(record, endReason)
 		end
 	end
+
+	if logoutPlan.accepted == true and logoutPlan.persistReturnPendingForDisconnectingUser == true then
+		DisconnectSafeReturnCaller.PersistDisconnectReturnPending(player.UserId, resolvedNow, {
+			sourceId = "capture_disconnect",
+		})
+	end
+
+	if logoutPlan.accepted == true and type(logoutPlan.targetsToSafeReturn) == "table" then
+		for _, targetUserId in ipairs(logoutPlan.targetsToSafeReturn) do
+			if getPlayerByUserId(targetUserId) ~= nil then
+				DisconnectSafeReturnCaller.ApplyOnlineSafeReturn(
+					targetUserId,
+					resolvedNow,
+					CapturePersistenceRules.CustodyEndReasons.safe_return
+				)
+			end
+		end
+	end
+
 	lastRequestAtByUserId[player.UserId] = nil
 	lastRejectedRequestAtByUserId[player.UserId] = nil
 	clearAntiGuardingHistoryForUser(player.UserId)

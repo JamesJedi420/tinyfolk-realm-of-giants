@@ -75,6 +75,11 @@ addChild(
 )
 addChild(
 	giantRealmFolder,
+	"DisconnectResolutionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/DisconnectResolutionState"
+)
+addChild(
+	giantRealmFolder,
 	"PostRescueProtectionState",
 	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 )
@@ -117,6 +122,27 @@ game = fakeGame
 
 local scoreEvents: { any } = {}
 local safeReturnCalls: { any } = {}
+local profilePersistCalls: { any } = {}
+_G._ProfilePersistenceGateway_QueryAPI = {
+	UpdateLoadedPlayerProfileData = function(player: any, updater: any): any
+		local currentData = {}
+		local updateOk, newData = pcall(updater, currentData)
+		if not updateOk or type(newData) ~= "table" then
+			return {
+				ok = false,
+				reason = "profile_update_failed",
+			}
+		end
+		table.insert(profilePersistCalls, {
+			userId = player.UserId,
+			data = newData,
+		})
+		return {
+			ok = true,
+			data = newData,
+		}
+	end,
+}
 _G._ScoreService_QueryAPI = {
 	RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
 		table.insert(scoreEvents, {
@@ -200,6 +226,7 @@ local function resetState()
 	captureApi.ResetForTests()
 	scoreEvents = {}
 	safeReturnCalls = {}
+	profilePersistCalls = {}
 	setRole(giant, "Giant")
 	setRole(giantB, "Giant")
 	setRole(tinyfolk, "Tinyfolk")
@@ -356,6 +383,23 @@ local afterRemove = captureApi.GetTargetCapture(2102, 1.1)
 assertTrue(afterRemove == nil, "player removing clears active capture")
 assertEqual(#scoreEvents, 2, "player removing emits terminal containment score")
 assertEqual(scoreEvents[2].metadata.endReason, "logout", "player removing containment metadata reason")
+assertEqual(#safeReturnCalls, 1, "custodian removing safe-returns online captured target")
+assertEqual(safeReturnCalls[1].targetUserId, 2102, "custodian removing safe return target")
+
+resetState()
+captureApi.RequestCapture(2101, 2102, 1.0)
+profilePersistCalls = {}
+playersService.PlayerRemoving:Fire(targetA)
+local targetDisconnectPersist: any = nil
+for _, call in ipairs(profilePersistCalls) do
+	if call.userId == 2102 and type(call.data) == "table" and type(call.data.safeLocation) == "table" then
+		targetDisconnectPersist = call
+	end
+end
+assertTrue(targetDisconnectPersist ~= nil, "captured target disconnect persists return pending")
+assertEqual(targetDisconnectPersist.data.safeLocation.returnReason, "logout", "return pending logout reason")
+local afterTargetRemove = captureApi.GetTargetCapture(2102, 1.1)
+assertTrue(afterTargetRemove == nil, "target disconnect clears active capture")
 
 resetState()
 setDowned(targetA, false)

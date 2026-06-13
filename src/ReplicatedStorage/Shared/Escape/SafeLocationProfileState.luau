@@ -30,6 +30,7 @@ export type PersistResult = {
 local validReturnReasonSet: { [string]: boolean } = {
 	escape_success = true,
 	safe_return = true,
+	logout = true,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -232,6 +233,16 @@ function SafeLocationProfileState.ApplySafeReturn(profileData: any, input: any):
 	}
 
 	nextProfile[PROFILE_KEY] = buildPersistedSnapshot(snapshot)
+	return {
+		accepted = true,
+		reason = "accepted",
+		profileData = nextProfile,
+	}
+end
+
+function SafeLocationProfileState.ClearSafeLocation(profileData: any): PersistResult
+	local nextProfile = if type(profileData) == "table" then cloneTable(profileData) else {}
+	nextProfile[PROFILE_KEY] = nil
 	return {
 		accepted = true,
 		reason = "accepted",
