@@ -39,9 +39,6 @@ function GiantMacroRouteAccess.EvaluateTinyfolkEscapeRouteAccess(params: AccessP
 	if params.role ~= "Tinyfolk" then
 		return { accepted = false, reason = "requester_not_tinyfolk" }
 	end
-	if params.isEnabled ~= true then
-		return { accepted = false, reason = "route_disabled" }
-	end
 	return { accepted = true, reason = "accepted" }
 end
 

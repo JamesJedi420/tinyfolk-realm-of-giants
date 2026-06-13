@@ -1400,12 +1400,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local role = getPlayerRole(player)
 		local giantOnly = routePart:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true
 		local tinyfolkOnly = routePart:GetAttribute(EscapeConfig.TinyfolkOnlyRouteAttribute) == true
-		local isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false
 		local sharedAccessParams = {
 			role = role,
 			giantOnly = giantOnly,
 			tinyfolkOnly = tinyfolkOnly,
-			isEnabled = isEnabled,
+			isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false,
 		}
 
 		if giantOnly then
@@ -1417,7 +1416,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				role = role,
 				giantOnly = true,
 				tinyfolkOnly = tinyfolkOnly,
-				isEnabled = isEnabled,
+				isEnabled = sharedAccessParams.isEnabled,
 			}
 		end
 
@@ -1429,7 +1428,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				routeId = routeId,
 				role = role,
 				tinyfolkOnly = tinyfolkOnly,
-				isEnabled = isEnabled,
+				isEnabled = sharedAccessParams.isEnabled,
 				blockState = routePart:GetAttribute(EscapeConfig.TraversalGapBlockStateAttribute),
 				blockExempt = routeHasBlockExemption(routePart),
 				finalExitPhase = routePart:GetAttribute(EscapeConfig.FinalExitPhaseAttribute),
@@ -1444,6 +1443,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if isFinalExitManaged(routePart) then
 			finalExitSnapshot = refreshFinalExitState(routeId, routePart)
 		end
+		local isEnabled = routePart:GetAttribute(ROUTE_ENABLED_ATTRIBUTE) ~= false
 		local snapshot = getBlockSnapshot(routeId, routePart)
 		local isBlocked = snapshot.state == TraversalGapBlockState.States.Active
 			and not routeHasBlockExemption(routePart)
