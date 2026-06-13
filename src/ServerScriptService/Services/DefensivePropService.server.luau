@@ -49,16 +49,15 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 	local Shared = if ReplicatedStorage ~= nil and type(ReplicatedStorage.WaitForChild) == "function"
 		then ReplicatedStorage:WaitForChild("Shared")
 		else nil
-	local Config = if Shared ~= nil and type(Shared.WaitForChild) == "function" then Shared:WaitForChild("Config") else nil
+	local Config = if Shared ~= nil and type(Shared.WaitForChild) == "function"
+		then Shared:WaitForChild("Config")
+		else nil
 	local GiantRealm = if Shared ~= nil and type(Shared.WaitForChild) == "function"
 		then Shared:WaitForChild("GiantRealm")
 		else nil
 
-	local DefensivePropConfig = resolveDependency(
-		Config,
-		"DefensivePropConfig",
-		"../../ReplicatedStorage/Shared/Config/DefensivePropConfig"
-	)
+	local DefensivePropConfig =
+		resolveDependency(Config, "DefensivePropConfig", "../../ReplicatedStorage/Shared/Config/DefensivePropConfig")
 	local RoleConfig = resolveDependency(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 	local EscapeConfig = resolveDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
 	local DefensivePropState = resolveDependency(
@@ -404,12 +403,7 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		pcall(eventLog.RecordEvent, "defensive_prop", message, "info", now(), metadata)
 	end
 
-	local function validatePropPlayer(
-		player: any,
-		propId: any,
-		expectedRole: string,
-		rangeStuds: number
-	): any
+	local function validatePropPlayer(player: any, propId: any, expectedRole: string, rangeStuds: number): any
 		if type(propId) ~= "string" or propId == "" then
 			return { accepted = false, reason = "prop_id_invalid" }
 		end
@@ -472,12 +466,8 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 	local service: any = {}
 
 	function service.requestDrop(player: any, propId: any): any
-		local validation = validatePropPlayer(
-			player,
-			propId,
-			RoleConfig.Roles.Tinyfolk,
-			DefensivePropConfig.DropInteractionRangeStuds
-		)
+		local validation =
+			validatePropPlayer(player, propId, RoleConfig.Roles.Tinyfolk, DefensivePropConfig.DropInteractionRangeStuds)
 		if validation.accepted ~= true then
 			return validation
 		end
@@ -492,19 +482,9 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		end
 
 		local record = validation.record
-		local activeCount = DefensivePropState.CountActiveForUser(
-			DefensivePropConfig,
-			propRecordById,
-			player.UserId,
-			currentTime
-		)
-		local canDrop = DefensivePropState.CanDrop(
-			DefensivePropConfig,
-			record,
-			player.UserId,
-			currentTime,
-			activeCount
-		)
+		local activeCount =
+			DefensivePropState.CountActiveForUser(DefensivePropConfig, propRecordById, player.UserId, currentTime)
+		local canDrop = DefensivePropState.CanDrop(DefensivePropConfig, record, player.UserId, currentTime, activeCount)
 		if canDrop.accepted ~= true then
 			return {
 				accepted = false,
@@ -535,12 +515,8 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 	end
 
 	function service.requestStartBreak(player: any, propId: any): any
-		local validation = validatePropPlayer(
-			player,
-			propId,
-			RoleConfig.Roles.Giant,
-			DefensivePropConfig.BreakInteractionRangeStuds
-		)
+		local validation =
+			validatePropPlayer(player, propId, RoleConfig.Roles.Giant, DefensivePropConfig.BreakInteractionRangeStuds)
 		if validation.accepted ~= true then
 			return validation
 		end
@@ -574,18 +550,13 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 	end
 
 	function service.requestCompleteBreak(player: any, propId: any): any
-		local validation = validatePropPlayer(
-			player,
-			propId,
-			RoleConfig.Roles.Giant,
-			DefensivePropConfig.BreakInteractionRangeStuds
-		)
+		local validation =
+			validatePropPlayer(player, propId, RoleConfig.Roles.Giant, DefensivePropConfig.BreakInteractionRangeStuds)
 		if validation.accepted ~= true then
 			return validation
 		end
 
-		local result =
-			DefensivePropState.CompleteBreak(DefensivePropConfig, validation.record, player.UserId, now())
+		local result = DefensivePropState.CompleteBreak(DefensivePropConfig, validation.record, player.UserId, now())
 		if result.accepted == true and result.record ~= nil then
 			propRecordById[propId] = result.record
 			applyPropAttributes(propId)
@@ -641,7 +612,10 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 			return
 		end
 		local remote = remotes:FindFirstChild(REQUEST_REMOTE_NAME)
-		if remote == nil or type(remote.OnServerEvent) == "table" and type(remote.OnServerEvent.Connect) ~= "function" then
+		if
+			remote == nil
+			or type(remote.OnServerEvent) == "table" and type(remote.OnServerEvent.Connect) ~= "function"
+		then
 			return
 		end
 		remote.OnServerEvent:Connect(function(player: any, payload: any)

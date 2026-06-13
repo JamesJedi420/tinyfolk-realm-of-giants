@@ -83,12 +83,7 @@ local function cloneRecord(record: PropRecord): PropRecord
 	}
 end
 
-function DefensivePropState.NewRecord(
-	propId: string,
-	propType: string,
-	zoneId: string,
-	enabled: boolean
-): PropRecord
+function DefensivePropState.NewRecord(propId: string, propType: string, zoneId: string, enabled: boolean): PropRecord
 	return {
 		propId = propId,
 		propType = propType,
@@ -262,7 +257,12 @@ function DefensivePropState.CanDrop(
 	record = resolvedRecord
 	local status = DefensivePropState.ResolveStatus(config, record, now)
 	if status ~= config.Status.Ready then
-		return { accepted = false, reason = "prop_not_ready", record = record, snapshot = DefensivePropState.Snapshot(config, record, now) }
+		return {
+			accepted = false,
+			reason = "prop_not_ready",
+			record = record,
+			snapshot = DefensivePropState.Snapshot(config, record, now),
+		}
 	end
 
 	if type(droppedByUserId) ~= "number" then
@@ -391,10 +391,19 @@ function DefensivePropState.CompleteBreak(config: Config, record: PropRecord?, b
 	}
 end
 
-function DefensivePropState.CountActiveForUser(config: Config, recordsByPropId: { [string]: PropRecord? }, userId: number, now: number): number
+function DefensivePropState.CountActiveForUser(
+	config: Config,
+	recordsByPropId: { [string]: PropRecord? },
+	userId: number,
+	now: number
+): number
 	local count = 0
 	for _, record in pairs(recordsByPropId) do
-		if record ~= nil and record.droppedByUserId == userId and DefensivePropState.IsActiveObstacle(config, record, now) then
+		if
+			record ~= nil
+			and record.droppedByUserId == userId
+			and DefensivePropState.IsActiveObstacle(config, record, now)
+		then
 			count += 1
 		end
 	end
