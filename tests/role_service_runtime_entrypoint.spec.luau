@@ -791,8 +791,7 @@ end
 function reconnectCharacter:WaitForChild(childName: string, _timeout: number?): any
 	return self:FindFirstChild(childName)
 end
-function reconnectCharacter:ScaleTo(_scale: number)
-end
+function reconnectCharacter:ScaleTo(_scale: number) end
 function reconnectCharacter:PivotTo(targetPivot: any)
 	reconnectPivot = targetPivot
 end
