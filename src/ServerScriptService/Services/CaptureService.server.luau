@@ -11,6 +11,7 @@ local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
+local CaptivityDurationState = require(GiantRealm:WaitForChild("CaptivityDurationState"))
 local PostRescueProtectionState = require(GiantRealm:WaitForChild("PostRescueProtectionState"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
@@ -26,6 +27,9 @@ local MemoryStoreStructurePolicy = if script ~= nil and script.Parent ~= nil
 local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("QueueProcessingIdempotencyStore"))
 	else (require :: any)("./QueueProcessingIdempotencyStore")
+local CaptivitySafeReturnCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("CaptivitySafeReturnCaller"))
+	else (require :: any)("./CaptivitySafeReturnCaller")
 
 local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
@@ -346,13 +350,26 @@ local function projectCustodyEndReason(record: any, endReason: string)
 	setCaptureLastReason(getPlayerByUserId(record.targetUserId), endReason)
 end
 
+local function applyCaptivitySafeReturnFallback(record: any, at: number, returnReason: string)
+	local target = getPlayerByUserId(record.targetUserId)
+	if target ~= nil then
+		target:SetAttribute("CaptivitySafeReturnPending", true)
+		target:SetAttribute("CaptivitySafeReturnReason", returnReason)
+		target:SetAttribute("CaptivitySafeReturnAt", at)
+	end
+
+	CaptivitySafeReturnCaller.Apply(record.targetUserId, at, returnReason)
+end
+
 local function pruneExpiredCaptures(at: number)
 	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
-		local timeout = CapturePersistenceRules.ResolveTimeout(record, at)
+		local timeout = CaptivityDurationState.ResolveTimeout(record, at, CaptureConfig)
 		if timeout.accepted == true and timeout.shouldEnd == true then
-			local endReason = timeout.endReason or CapturePersistenceRules.CustodyEndReasons.timeout
+			local endReason = timeout.custodyEndReason or CapturePersistenceRules.CustodyEndReasons.timeout
 			resolveContainmentRewardForRecord(record, endReason, record.expiresAt, nil)
 			projectCustodyEndReason(record, endReason)
+			local fallbackReason = timeout.fallbackEndReason or CapturePersistenceRules.CustodyEndReasons.safe_return
+			applyCaptivitySafeReturnFallback(record, at, fallbackReason)
 		end
 	end
 	state = CaptureState.PruneExpired(state, at)
@@ -549,6 +566,18 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 				record = nil,
 			}
 		end
+		local captivityValidation = CaptivityDurationState.ValidateRecordBounds(transition.record, CaptureConfig)
+		if captivityValidation.accepted ~= true then
+			setCaptureLastReason(custodian, captivityValidation.reason)
+			setCaptureLastReason(target, captivityValidation.reason)
+			markRejectedRequest(custodian.UserId, resolvedNow)
+			applyCaptureAttributesFromState()
+			return {
+				accepted = false,
+				reason = captivityValidation.reason,
+				record = nil,
+			}
+		end
 	end
 
 	state = transition.state
@@ -644,6 +673,57 @@ local function releaseCapture(custodianUserId: any, targetUserId: any, at: numbe
 	return resolveCustodyEnd(targetUserId, "released", at, nil)
 end
 
+local function promoteTargetToContained(targetUserId: any, at: number?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredCaptures(resolvedNow)
+	if type(targetUserId) ~= "number" then
+		return { accepted = false, reason = "target_user_id_invalid" }
+	end
+
+	local transition = CaptureState.ResolvePromoteToContained(state, {
+		now = resolvedNow,
+		targetUserId = targetUserId,
+	})
+	state = transition.state
+	applyCaptureAttributesFromState()
+	return {
+		accepted = transition.accepted,
+		reason = transition.reason,
+		record = transition.record,
+	}
+end
+
+local function transferTargetCustody(targetUserId: any, newCustodianUserId: any, at: number?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	pruneExpiredCaptures(resolvedNow)
+	if type(targetUserId) ~= "number" then
+		return { accepted = false, reason = "target_user_id_invalid" }
+	end
+	if type(newCustodianUserId) ~= "number" then
+		return { accepted = false, reason = "custodian_user_id_invalid" }
+	end
+
+	local transition = CaptureState.ResolveTransferCustody(state, {
+		now = resolvedNow,
+		targetUserId = targetUserId,
+		newCustodianUserId = newCustodianUserId,
+	})
+	if transition.accepted ~= true or transition.record == nil then
+		return {
+			accepted = false,
+			reason = transition.reason,
+		}
+	end
+
+	state = transition.state
+	applyCaptureAttributesFromState()
+	return {
+		accepted = true,
+		reason = transition.reason,
+		record = transition.record,
+	}
+end
+
 Players.PlayerRemoving:Connect(function(player: Player)
 	local resolvedNow = now()
 	local logoutPlan = CapturePersistenceRules.ResolveLogout({
@@ -714,6 +794,15 @@ _G._CaptureService_QueryAPI = {
 	end,
 	GetCapturePersistenceRules = function(): any
 		return CapturePersistenceRules
+	end,
+	GetCaptivityDurationRules = function(): any
+		return CaptivityDurationState
+	end,
+	PromoteTargetToContained = function(targetUserId: number, at: number?): any
+		return promoteTargetToContained(targetUserId, at)
+	end,
+	TransferTargetCustody = function(targetUserId: number, newCustodianUserId: number, at: number?): any
+		return transferTargetCustody(targetUserId, newCustodianUserId, at)
 	end,
 	ResetForTests = function()
 		state = CaptureState.NewState()

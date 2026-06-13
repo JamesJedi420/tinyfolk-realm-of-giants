@@ -373,6 +373,64 @@ test("GetTargetCapture returns active capture", function()
 	if record then
 		assert(record.custodianUserId == 1, "custodian user id mismatch")
 		assert(record.targetUserId == 2, "target user id mismatch")
+		assert(record.captivityAnchorAt == 1, "captivity anchor set on capture")
+	end
+end)
+
+test("ResolveTransferCustody preserves captivity anchor", function()
+	local state = resetState()
+
+	local acceptResult = CaptureState.ResolveRequest(state, {
+		now = 1,
+		custodianUserId = 1,
+		targetUserId = 2,
+		custodianRole = "Giant",
+		targetRole = "Tinyfolk",
+		custodianAlive = true,
+		targetDowned = true,
+		inRange = true,
+		custodyWindowSeconds = 8,
+	})
+
+	local transferResult = CaptureState.ResolveTransferCustody(acceptResult.state, {
+		now = 3,
+		targetUserId = 2,
+		newCustodianUserId = 3,
+	})
+	assert(transferResult.accepted == true, "transfer should succeed")
+	assert(transferResult.record ~= nil, "transfer should return record")
+	if transferResult.record then
+		assert(transferResult.record.custodianUserId == 3, "custodian should update")
+		assert(transferResult.record.startedAt == 1, "startedAt should remain anchored")
+		assert(transferResult.record.captivityAnchorAt == 1, "captivity anchor should remain anchored")
+	end
+end)
+
+test("ResolvePromoteToContained marks contained phase without resetting anchor", function()
+	local state = resetState()
+
+	local acceptResult = CaptureState.ResolveRequest(state, {
+		now = 1,
+		custodianUserId = 1,
+		targetUserId = 2,
+		custodianRole = "Giant",
+		targetRole = "Tinyfolk",
+		custodianAlive = true,
+		targetDowned = true,
+		inRange = true,
+		custodyWindowSeconds = 8,
+	})
+
+	local promoteResult = CaptureState.ResolvePromoteToContained(acceptResult.state, {
+		now = 4,
+		targetUserId = 2,
+	})
+	assert(promoteResult.accepted == true, "promote should succeed")
+	assert(promoteResult.record ~= nil, "promote should return record")
+	if promoteResult.record then
+		assert(promoteResult.record.containmentPhase == "contained", "phase should be contained")
+		assert(promoteResult.record.containedAt == 4, "containedAt should be set")
+		assert(promoteResult.record.captivityAnchorAt == 1, "captivity anchor should remain anchored")
 	end
 end)
 

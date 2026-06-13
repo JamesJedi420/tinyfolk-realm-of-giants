@@ -67,6 +67,7 @@ addChild(
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "CaptureState", "../../ReplicatedStorage/Shared/GiantRealm/CaptureState")
+addChild(giantRealmFolder, "CaptivityDurationState", "../../ReplicatedStorage/Shared/GiantRealm/CaptivityDurationState")
 addChild(
 	giantRealmFolder,
 	"CapturePersistenceRules",
@@ -115,6 +116,7 @@ end
 game = fakeGame
 
 local scoreEvents: { any } = {}
+local safeReturnCalls: { any } = {}
 _G._ScoreService_QueryAPI = {
 	RequestScoreEvent = function(userId: number, eventId: string, at: number, metadata: any): any
 		table.insert(scoreEvents, {
@@ -127,6 +129,21 @@ _G._ScoreService_QueryAPI = {
 			accepted = true,
 			reason = "accepted",
 			awardedPoints = 50,
+		}
+	end,
+}
+
+_G._EscapeService_QueryAPI = {
+	ApplyCaptivitySafeReturn = function(targetUserId: number, at: number?, returnReason: string?): any
+		table.insert(safeReturnCalls, {
+			targetUserId = targetUserId,
+			at = at,
+			returnReason = returnReason,
+		})
+		return {
+			accepted = true,
+			reason = "safe_return_applied",
+			returnReason = returnReason,
 		}
 	end,
 }
@@ -182,6 +199,7 @@ end
 local function resetState()
 	captureApi.ResetForTests()
 	scoreEvents = {}
+	safeReturnCalls = {}
 	setRole(giant, "Giant")
 	setRole(giantB, "Giant")
 	setRole(tinyfolk, "Tinyfolk")
@@ -444,5 +462,34 @@ assertFalse(reconnect.restoreCapture == true, "reconnect does not restore captur
 
 local hydration = captureApi.ResolveProfileCaptureHydration({ profileCaptureState = { targetUserId = 2102 } })
 assertEqual(hydration.action, "clear_capture_runtime", "profile capture hydration clears")
+
+resetState()
+local timeoutCapture = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(timeoutCapture.accepted == true, "timeout capture accepted")
+captureApi.GetTargetCapture(2102, 9.0)
+assertEqual(#safeReturnCalls, 1, "timeout triggers safe return fallback")
+assertEqual(safeReturnCalls[1].targetUserId, 2102, "safe return targets captured tinyfolk")
+assertEqual(safeReturnCalls[1].returnReason, "safe_return", "safe return reason")
+
+resetState()
+local transferBaseline = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(transferBaseline.accepted == true, "transfer baseline accepted")
+local transferred = captureApi.TransferTargetCustody(2102, 2105, 2.0)
+assertTrue(transferred.accepted == true, "custody transfer accepted")
+assertEqual(transferred.record.custodianUserId, 2105, "transfer updates custodian")
+assertEqual(transferred.record.startedAt, 1.0, "transfer preserves capture start")
+assertEqual(transferred.record.captivityAnchorAt, 1.0, "transfer preserves captivity anchor")
+local stillActive = captureApi.GetTargetCapture(2102, 7.0)
+assertTrue(stillActive ~= nil, "transfer does not clear active capture before expiry")
+assertEqual(stillActive.custodianUserId, 2105, "active capture reflects transferred custodian")
+
+resetState()
+local containedBaseline = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(containedBaseline.accepted == true, "contained baseline accepted")
+local promoted = captureApi.PromoteTargetToContained(2102, 2.0)
+assertTrue(promoted.accepted == true, "promote to contained accepted")
+assertEqual(promoted.record.containmentPhase, "contained", "promoted record phase")
+assertEqual(promoted.record.containedAt, 2.0, "promoted containedAt set")
+assertEqual(promoted.record.captivityAnchorAt, 1.0, "promote preserves captivity anchor")
 
 print("capture_service_runtime_entrypoint: all checks passed")
