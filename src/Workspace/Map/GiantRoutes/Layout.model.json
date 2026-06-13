@@ -20,21 +20,113 @@
         "CanQuery": true,
         "Transparency": 0.94,
         "Material": "SmoothPlastic",
-        "Color": [
-          0.86,
-          0.7,
-          0.43
-        ],
-        "Size": [
-          18,
-          0.45,
-          72
-        ],
-        "Position": [
-          0,
-          0.38,
-          -36
-        ],
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 72],
+        "Position": [0, 0.38, -36],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_PlazaToWorkYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 101],
+        "Orientation": [0, 65, 0],
+        "Position": [-46, 0.38, -21],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_PlazaToStoneDistrict",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 89],
+        "Orientation": [0, -61, 0],
+        "Position": [39, 0.38, -21.5],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_PlazaToEconomyYard",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 84],
+        "Orientation": [0, -49, 0],
+        "Position": [-31.5, 0.38, 27.5],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_PlazaToShrineField",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 74],
+        "Orientation": [0, 48, 0],
+        "Position": [27.5, 0.38, 25],
         "Locked": true,
         "CastShadow": false
       },
@@ -57,26 +149,36 @@
         "CanQuery": true,
         "Transparency": 0.94,
         "Material": "SmoothPlastic",
-        "Color": [
-          0.86,
-          0.7,
-          0.43
-        ],
-        "Size": [
-          18,
-          0.45,
-          82
-        ],
-        "Orientation": [
-          0,
-          -86,
-          0
-        ],
-        "Position": [
-          40,
-          0.2,
-          4
-        ],
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 82],
+        "Orientation": [0, -86, 0],
+        "Position": [40, 0.2, 4],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_PlazaToTradeDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 130],
+        "Orientation": [0, 52, 0],
+        "Position": [51.5, 0.38, 40],
         "Locked": true,
         "CastShadow": false
       },
@@ -99,26 +201,61 @@
         "CanQuery": true,
         "Transparency": 0.94,
         "Material": "SmoothPlastic",
-        "Color": [
-          0.86,
-          0.7,
-          0.43
-        ],
-        "Size": [
-          18,
-          0.45,
-          28
-        ],
-        "Orientation": [
-          0,
-          8,
-          0
-        ],
-        "Position": [
-          -65,
-          0.34,
-          68
-        ],
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 28],
+        "Orientation": [0, 8, 0],
+        "Position": [-65, 0.34, 68],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ApproachWarehouseDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 20],
+        "Position": [-39, 0.34, 45],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ApproachShrineRing",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 30],
+        "Orientation": [0, -18, 0],
+        "Position": [42, 0.34, 52],
         "Locked": true,
         "CastShadow": false
       },
@@ -141,26 +278,35 @@
         "CanQuery": true,
         "Transparency": 0.94,
         "Material": "SmoothPlastic",
-        "Color": [
-          0.86,
-          0.7,
-          0.43
-        ],
-        "Size": [
-          18,
-          0.45,
-          24
-        ],
-        "Orientation": [
-          0,
-          -82,
-          0
-        ],
-        "Position": [
-          70,
-          0.34,
-          5
-        ],
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 24],
+        "Orientation": [0, -82, 0],
+        "Position": [70, 0.34, 5],
+        "Locked": true,
+        "CastShadow": false
+      },
+      "attributes": {
+        "GiantOnlyRoute": true,
+        "TinyfolkOnlyRoute": false,
+        "RouteEnabled": true,
+        "RouteType": "GiantMacro",
+        "RoadKind": "GiantMacro",
+        "WidthStuds": 18
+      }
+    },
+    {
+      "name": "GiantRoute_ApproachTradeDock",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": true,
+        "CanQuery": true,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [0.86, 0.7, 0.43],
+        "Size": [18, 0.45, 28],
+        "Position": [103, 0.38, 82],
         "Locked": true,
         "CastShadow": false
       },
