@@ -8,12 +8,14 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig"))
+local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local RescueContractState = require(GiantRealm:WaitForChild("RescueContractState"))
 local RescueContractQueueState = require(GiantRealm:WaitForChild("RescueContractQueueState"))
 local GiantRealmSaveSchema = require(GiantRealm:WaitForChild("GiantRealmSaveSchema"))
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
+local PostRescueProtectionState = require(GiantRealm:WaitForChild("PostRescueProtectionState"))
 local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
 	else (require :: any)("./AdmissionQueueProducer")
@@ -43,6 +45,7 @@ local rescueQueueState = RescueContractQueueState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 local lastRejectedRequestAtByUserId: { [number]: number? } = {}
 local rescueAccelerationExpiresAtByUserId: { [number]: number? } = {}
+local postRescueRestoreWalkSpeedByUserId: { [number]: number? } = {}
 local nextQueueSequence = 0
 local rescueQueueIdempotencyStore: any = nil
 local admissionIngressDiagnostics = {
@@ -63,6 +66,8 @@ local postRescueProtectedAttributeName = RescueContractConfig.StateAttributes.Po
 	or "PostRescueProtected"
 local postRescueProtectionExpiresAtAttributeName = RescueContractConfig.StateAttributes.PostRescueProtectionExpiresAt
 	or "PostRescueProtectionExpiresAt"
+local postRescueMovementSpeedMultiplierAttributeName = RescueContractConfig.StateAttributes.PostRescueMovementSpeedMultiplier
+	or "PostRescueMovementSpeedMultiplier"
 local rescueAccelerationActiveAttributeName = RescueContractConfig.StateAttributes.RescueAccelerationActive
 	or "RescueAccelerationActive"
 local rescueAccelerationExpiresAtAttributeName = RescueContractConfig.StateAttributes.RescueAccelerationExpiresAt
@@ -70,15 +75,6 @@ local rescueAccelerationExpiresAtAttributeName = RescueContractConfig.StateAttri
 
 local function now(): number
 	return os.clock()
-end
-
-local function clearPostRescueProtection(player: Player?)
-	if player == nil then
-		return
-	end
-
-	player:SetAttribute(postRescueProtectedAttributeName, false)
-	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, nil)
 end
 
 local function clearRescueAcceleration(player: Player?)
@@ -139,32 +135,6 @@ local function isRescueAccelerationActive(player: Player, at: number): boolean
 	player:SetAttribute(rescueAccelerationActiveAttributeName, true)
 	player:SetAttribute(rescueAccelerationExpiresAtAttributeName, expiresAt)
 	return true
-end
-
-local function grantPostRescueProtection(player: Player?, at: number)
-	if player == nil then
-		return
-	end
-
-	local durationSeconds = RescueContractConfig.PostRescueProtectionSeconds
-	if type(durationSeconds) ~= "number" or durationSeconds <= 0 then
-		clearPostRescueProtection(player)
-		return
-	end
-
-	player:SetAttribute(postRescueProtectedAttributeName, true)
-	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, at + durationSeconds)
-end
-
-local function pruneExpiredPostRescueProtection(at: number)
-	for _, player in Players:GetPlayers() do
-		if player:GetAttribute(postRescueProtectedAttributeName) == true then
-			local expiresAt = player:GetAttribute(postRescueProtectionExpiresAtAttributeName)
-			if type(expiresAt) ~= "number" or expiresAt <= at then
-				clearPostRescueProtection(player)
-			end
-		end
-	end
 end
 
 local function ensureRemotesFolder(): Folder
@@ -250,6 +220,129 @@ local function getRoleServiceQueryApi(): any?
 	end
 
 	return queryApi
+end
+
+local function getTinyfolkBaseWalkSpeed(): number
+	local tinyfolkBase: any = RoleConfig.HumanoidBaseByRole[RoleConfig.Roles.Tinyfolk]
+	if type(tinyfolkBase) == "table" and type(tinyfolkBase.walkSpeed) == "number" then
+		return (tinyfolkBase :: any).walkSpeed
+	end
+	return 16
+end
+
+local function getDownedState(target: Player): boolean
+	local roleQueryApi = getRoleServiceQueryApi()
+	if roleQueryApi ~= nil and type(roleQueryApi.IsPlayerDowned) == "function" then
+		return roleQueryApi.IsPlayerDowned(target.UserId) == true
+	end
+
+	return target:GetAttribute("DownedIsDowned") == true
+end
+
+local function releaseDownedStateAfterRescue(player: Player)
+	local roleQueryApi = getRoleServiceQueryApi()
+	if roleQueryApi ~= nil and type(roleQueryApi.ReleaseDownedAfterRescue) == "function" then
+		roleQueryApi.ReleaseDownedAfterRescue(player.UserId)
+		return
+	end
+
+	player:SetAttribute("DownedIsDowned", false)
+end
+
+local function evaluatePostRescueProtection(player: Player, at: number, breakingAction: string?): any
+	return PostRescueProtectionState.Evaluate({
+		protected = player:GetAttribute(postRescueProtectedAttributeName),
+		expiresAt = player:GetAttribute(postRescueProtectionExpiresAtAttributeName),
+		at = at,
+		isDowned = getDownedState(player),
+		breakingAction = breakingAction,
+	})
+end
+
+local function restorePostRescueWalkSpeed(player: Player)
+	local humanoid = getHumanoid(player)
+	local restoreWalkSpeed = postRescueRestoreWalkSpeedByUserId[player.UserId]
+	if humanoid ~= nil and type(restoreWalkSpeed) == "number" then
+		humanoid.WalkSpeed = restoreWalkSpeed
+	end
+	postRescueRestoreWalkSpeedByUserId[player.UserId] = nil
+end
+
+local function applyPostRescueMovementBoost(player: Player)
+	local humanoid = getHumanoid(player)
+	if humanoid == nil then
+		return
+	end
+
+	local multiplier = PostRescueProtectionState.GetMovementSpeedMultiplier(RescueContractConfig)
+	if postRescueRestoreWalkSpeedByUserId[player.UserId] == nil then
+		local restoreWalkSpeed = humanoid.WalkSpeed
+		if restoreWalkSpeed <= 0 then
+			restoreWalkSpeed = getTinyfolkBaseWalkSpeed()
+		end
+		postRescueRestoreWalkSpeedByUserId[player.UserId] = restoreWalkSpeed
+	end
+
+	humanoid.WalkSpeed = (postRescueRestoreWalkSpeedByUserId[player.UserId] :: number) * multiplier
+	player:SetAttribute(postRescueMovementSpeedMultiplierAttributeName, multiplier)
+end
+
+local function clearPostRescueProtection(player: Player?)
+	if player == nil then
+		return
+	end
+
+	restorePostRescueWalkSpeed(player)
+	player:SetAttribute(postRescueProtectedAttributeName, false)
+	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, nil)
+	player:SetAttribute(postRescueMovementSpeedMultiplierAttributeName, nil)
+end
+
+local function cancelPostRescueProtection(player: Player?, breakingAction: string?, at: number): boolean
+	if player == nil then
+		return false
+	end
+
+	local evaluation = evaluatePostRescueProtection(player, at, breakingAction)
+	if evaluation.shouldClear ~= true then
+		return false
+	end
+
+	clearPostRescueProtection(player)
+	return true
+end
+
+local function isPostRescueProtected(player: Player, at: number): boolean
+	local evaluation = evaluatePostRescueProtection(player, at, nil)
+	if evaluation.shouldClear == true then
+		clearPostRescueProtection(player)
+	end
+	return evaluation.active == true
+end
+
+local function grantPostRescueProtection(player: Player?, at: number)
+	if player == nil then
+		return
+	end
+
+	local durationSeconds = RescueContractConfig.PostRescueProtectionSeconds
+	if type(durationSeconds) ~= "number" or durationSeconds <= 0 then
+		clearPostRescueProtection(player)
+		return
+	end
+
+	player:SetAttribute(postRescueProtectedAttributeName, true)
+	player:SetAttribute(postRescueProtectionExpiresAtAttributeName, at + durationSeconds)
+	releaseDownedStateAfterRescue(player)
+	applyPostRescueMovementBoost(player)
+end
+
+local function pruneExpiredPostRescueProtection(at: number)
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute(postRescueProtectedAttributeName) == true then
+			isPostRescueProtected(player, at)
+		end
+	end
 end
 
 local function getGrabServiceQueryApi(): any?
@@ -684,15 +777,6 @@ end
 
 local function markRejectedRequest(userId: number, at: number)
 	lastRejectedRequestAtByUserId[userId] = at
-end
-
-local function getDownedState(target: Player): boolean
-	local roleQueryApi = getRoleServiceQueryApi()
-	if roleQueryApi ~= nil and type(roleQueryApi.IsPlayerDowned) == "function" then
-		return roleQueryApi.IsPlayerDowned(target.UserId) == true
-	end
-
-	return target:GetAttribute("DownedIsDowned") == true
 end
 
 local function isRescuerInteractionRestricted(rescuer: Player): boolean
@@ -1563,6 +1647,22 @@ globalEnv._RescueContractService_QueryAPI = {
 	ApplyPersistenceState = function(persistedState: any): (boolean, string?)
 		return applyPersistenceState(persistedState)
 	end,
+	IsTargetPostRescueProtected = function(targetUserId: number, at: number?): boolean
+		local resolvedAt = if type(at) == "number" then at else now()
+		local target = getPlayerByUserId(targetUserId)
+		if target == nil then
+			return false
+		end
+		return isPostRescueProtected(target, resolvedAt)
+	end,
+	CancelPostRescueProtection = function(targetUserId: number, breakingAction: string?, at: number?): boolean
+		local resolvedAt = if type(at) == "number" then at else now()
+		local target = getPlayerByUserId(targetUserId)
+		if target == nil then
+			return false
+		end
+		return cancelPostRescueProtection(target, breakingAction, resolvedAt)
+	end,
 	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
 		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
 	end,
@@ -1606,6 +1706,7 @@ globalEnv._RescueContractService_QueryAPI = {
 			clearRescueAcceleration(player)
 			clearPostRescueProtection(player)
 		end
+		postRescueRestoreWalkSpeedByUserId = {}
 		applyContractAttributesFromState()
 	end,
 }

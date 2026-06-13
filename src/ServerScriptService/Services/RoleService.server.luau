@@ -1020,6 +1020,18 @@ function RoleService.selfRecoverDowned(userId: number, progressDelta: number, no
 	return result.accepted == true
 end
 
+function RoleService.releaseDownedAfterRescue(userId: number): boolean
+	local player = getPlayerByUserId(userId)
+	if not player then
+		return false
+	end
+
+	local nowSeconds = downedNow()
+	downedStates[userId] = DownedState.New(nowSeconds)
+	setDownedAttributes(player, DownedState.Snapshot(downedStates[userId]))
+	return true
+end
+
 function RoleService.isDowned(userId: number): boolean
 	local state = downedStates[userId]
 	if state == nil then
@@ -1057,6 +1069,9 @@ _G._RoleService_QueryAPI = {
 	end,
 	IsPlayerDowned = function(userId: number): boolean
 		return RoleService.isDowned(userId)
+	end,
+	ReleaseDownedAfterRescue = function(userId: number): boolean
+		return RoleService.releaseDownedAfterRescue(userId)
 	end,
 	CanPlayerPerformInteraction = function(userId: number, interactionName: string): boolean
 		return RoleService.canPerformInteraction(userId, interactionName)

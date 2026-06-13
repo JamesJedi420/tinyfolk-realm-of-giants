@@ -228,6 +228,8 @@ giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
@@ -309,6 +311,8 @@ scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Service
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
 scriptParent._Children["RealmObjectiveCompletionCaller"] =
 	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
+scriptParent._Children["PostRescueProtectionCancellationCaller"] =
+	"../../ServerScriptService/Services/PostRescueProtectionCancellationCaller"
 script = {
 	Parent = scriptParent,
 } :: any

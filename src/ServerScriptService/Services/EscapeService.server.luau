@@ -123,6 +123,11 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"CapturePersistenceRules",
 		"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 	)
+	local PostRescueProtectionState = resolveDependency(
+		GiantRealm,
+		"PostRescueProtectionState",
+		"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+	)
 	local PlayerCreatedRouteState = resolveDependency(
 		GiantRealm,
 		"PlayerCreatedRouteState",
@@ -265,19 +270,6 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		remote.Parent = parentFolder
 		debugLog(string.format("Created ReplicatedStorage.Remotes.%s", remoteName))
 		return remote
-	end
-
-	local function isCoolingDown(userId: number): boolean
-		local last = lastRequestAtByUserId[userId]
-		if last == nil then
-			return false
-		end
-
-		return (os.clock() - last) < EscapeConfig.RequestCooldownSeconds
-	end
-
-	local function markRequest(userId: number)
-		lastRequestAtByUserId[userId] = os.clock()
 	end
 
 	local function now(): number
@@ -751,6 +743,46 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 			return nil
 		end
 		return queryApi
+	end
+
+	local function getRescueContractQueryApi(): any?
+		local globalValue: any = globalEnv
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._RescueContractService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
+	local function getEscapeRequestCooldownSeconds(userId: number, at: number): number
+		local baseCooldown = EscapeConfig.RequestCooldownSeconds
+		local rescueApi = getRescueContractQueryApi()
+		if rescueApi ~= nil and type(rescueApi.IsTargetPostRescueProtected) == "function" then
+			local ok, isProtected = pcall(function()
+				return rescueApi.IsTargetPostRescueProtected(userId, at)
+			end)
+			if ok and isProtected == true then
+				return baseCooldown * PostRescueProtectionState.GetEscapeCooldownMultiplier(RescueContractConfig)
+			end
+		end
+		return baseCooldown
+	end
+
+	local function isCoolingDown(userId: number): boolean
+		local last = lastRequestAtByUserId[userId]
+		if last == nil then
+			return false
+		end
+
+		local currentAt = now()
+		return (currentAt - last) < getEscapeRequestCooldownSeconds(userId, currentAt)
+	end
+
+	local function markRequest(userId: number)
+		lastRequestAtByUserId[userId] = now()
 	end
 
 	local function getObjectiveServiceQueryApi(): any?
@@ -2754,6 +2786,10 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		end,
 		ResolveRescueEntryRoute = function(targetUserId: number, targetRealmOwnerUserId: number): any
 			return service.resolveRescueEntryRoute(targetUserId, targetRealmOwnerUserId)
+		end,
+		GetEscapeRequestCooldownSeconds = function(userId: number, at: number?): number
+			local resolvedAt = if type(at) == "number" then at else now()
+			return getEscapeRequestCooldownSeconds(userId, resolvedAt)
 		end,
 	}
 

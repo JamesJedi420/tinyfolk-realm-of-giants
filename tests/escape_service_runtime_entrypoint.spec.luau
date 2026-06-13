@@ -269,6 +269,7 @@ local memoryStoreValuesByMap: { [string]: { [string]: any } } = {}
 local captureCustodyEndRequests: { any } = {}
 local escapeActionAllowed = true
 local captureQueryFault = false
+local postRescueProtectedUserIds: { [number]: boolean } = {}
 globalEnv._RoleService_QueryAPI = {
 	IsPlayerDowned = function(userId: number): boolean
 		if roleQueryFault == true then
@@ -344,6 +345,11 @@ globalEnv._CaptureService_QueryAPI = {
 			error("capture query fault")
 		end
 		return escapeActionAllowed == true
+	end,
+}
+globalEnv._RescueContractService_QueryAPI = {
+	IsTargetPostRescueProtected = function(userId: number, _at: number): boolean
+		return postRescueProtectedUserIds[userId] == true
 	end,
 }
 globalEnv._MemoryStoreAdapter_QueryAPI = {
@@ -433,6 +439,7 @@ local function resetRouteDefaults()
 	captureCustodyEndRequests = {}
 	escapeActionAllowed = true
 	captureQueryFault = false
+	postRescueProtectedUserIds = {}
 	EscapeService.ResetTraversalGapBlocksForTests()
 	EscapeService.ResetEscapeAttemptStateForTests()
 	EscapeService.ResetFinalExitForTests()
@@ -1039,6 +1046,16 @@ do
 	local captureFaultAttempt = EscapeService.requestEscapeAttempt(tinyfolk, "EscapeRoute_A")
 	assertEqual(captureFaultAttempt.accepted, false, "capture query error does not crash escape attempt")
 	assertEqual(captureFaultAttempt.reason, "capture_query_fault", "capture query fault reason")
+end
+
+do
+	resetRouteDefaults()
+	postRescueProtectedUserIds[85] = true
+	local baseCooldown = globalEnv._EscapeService_QueryAPI.GetEscapeRequestCooldownSeconds(85, 100)
+	postRescueProtectedUserIds[85] = nil
+	local normalCooldown = globalEnv._EscapeService_QueryAPI.GetEscapeRequestCooldownSeconds(85, 100)
+	assertTrue(baseCooldown < normalCooldown, "post-rescue protection reduces escape request cooldown")
+	assertEqual(baseCooldown, normalCooldown * 0.5, "post-rescue protection uses configured cooldown multiplier")
 end
 
 do

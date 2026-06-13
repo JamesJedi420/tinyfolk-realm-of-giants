@@ -7,6 +7,8 @@ RescueContractConfig.RejectRequestCooldownSeconds = 0.05
 RescueContractConfig.RescueWindowSeconds = 12
 RescueContractConfig.TriggerRadiusStuds = 14
 RescueContractConfig.PostRescueProtectionSeconds = 4
+RescueContractConfig.PostRescueMovementSpeedMultiplier = 1.15
+RescueContractConfig.PostRescueEscapeCooldownMultiplier = 0.5
 RescueContractConfig.RescueAccelerationDurationSeconds = 20
 RescueContractConfig.RescueAccelerationWindowBonusSeconds = 3
 RescueContractConfig.TargetRealmOwnerUserIdAttribute = "GiantRealmOwnerUserId"
@@ -27,6 +29,7 @@ RescueContractConfig.StateAttributes = {
 	RescueLastReason = "RescueContractLastReason",
 	PostRescueProtected = "PostRescueProtected",
 	PostRescueProtectionExpiresAt = "PostRescueProtectionExpiresAt",
+	PostRescueMovementSpeedMultiplier = "PostRescueMovementSpeedMultiplier",
 	RescueAccelerationActive = "RescueAccelerationActive",
 	RescueAccelerationExpiresAt = "RescueAccelerationExpiresAt",
 }

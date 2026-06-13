@@ -125,6 +125,11 @@ addChild(
 	"CapturePersistenceRules",
 	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 )
+addChild(
+	giantRealmFolder,
+	"PostRescueProtectionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)

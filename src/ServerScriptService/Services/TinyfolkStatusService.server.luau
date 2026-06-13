@@ -242,6 +242,7 @@ local HUD_SOURCE_ATTRIBUTES = {
 	"RescueContractLastReason",
 	"PostRescueProtected",
 	"PostRescueProtectionExpiresAt",
+	"PostRescueMovementSpeedMultiplier",
 	"RescueAccelerationActive",
 	"RescueAccelerationExpiresAt",
 	"ScoreLastFeedbackKey",

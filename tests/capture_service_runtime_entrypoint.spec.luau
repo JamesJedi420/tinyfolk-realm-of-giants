@@ -72,6 +72,11 @@ addChild(
 	"CapturePersistenceRules",
 	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 )
+addChild(
+	giantRealmFolder,
+	"PostRescueProtectionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+)
 addChild(giantRealmFolder, "PenRationingState", "../../ReplicatedStorage/Shared/GiantRealm/PenRationingState")
 addChild(
 	giantRealmFolder,

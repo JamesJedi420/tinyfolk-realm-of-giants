@@ -230,6 +230,8 @@ giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"
@@ -317,6 +319,8 @@ scriptParent._Children["GiantEssenceSession"] = "../../ServerScriptService/Servi
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
 scriptParent._Children["RealmObjectiveCompletionCaller"] =
 	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
+scriptParent._Children["PostRescueProtectionCancellationCaller"] =
+	"../../ServerScriptService/Services/PostRescueProtectionCancellationCaller"
 script = {
 	Parent = scriptParent,
 } :: any
