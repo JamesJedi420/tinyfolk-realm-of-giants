@@ -299,6 +299,25 @@ function CaptivityEscapeProgressState.ResolveSuppression(state: ProgressState, n
 	}
 end
 
+function CaptivityEscapeProgressState.ResolveAntiGuardingCounterplay(state: ProgressState, now: any): Result
+	local nextState = cloneState(state)
+	local at = finiteNonNegative(now, 0)
+	nextState.suppressed = false
+	nextState.progress = nextState.required
+	nextState.lastProgressAt = at
+	nextState.struggleCooldownEndsAt = nil
+	nextState.assistCooldownEndsAt = nil
+	nextState.lastReason = "anti_guarding_counterplay"
+	local snapshot = CaptivityEscapeProgressState.Snapshot(nextState)
+	return {
+		accepted = true,
+		reason = "anti_guarding_counterplay",
+		state = nextState,
+		snapshot = snapshot,
+		completed = snapshot.isReady == true,
+	}
+end
+
 function CaptivityEscapeProgressState.ResolveReset(state: ProgressState, now: any, reason: string?): Result
 	local nextState = cloneState(state)
 	local resolvedReason = if type(reason) == "string" then reason else "progress_reset"

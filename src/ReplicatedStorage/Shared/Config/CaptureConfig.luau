@@ -34,6 +34,13 @@ CaptureConfig.StruggleAllyProgressBonusPerAlly = 1
 CaptureConfig.ContainmentZoneNamePrefix = "GiantCaptureZone_"
 CaptureConfig.ContainmentZoneFolderPath = { "Map", "CaptureZones" }
 
+-- Anti-guarding containment pressure (TIN-151)
+CaptureConfig.AntiGuardingGraceWindowSeconds = 3
+CaptureConfig.AntiGuardingProximityRadiusStuds = 10
+CaptureConfig.AntiGuardingPressureFillSeconds = 6
+CaptureConfig.AntiGuardingPressureDecayPerSecond = 0.2
+CaptureConfig.AntiGuardingCounterplayOutcome = "escape_progress_release"
+
 -- State attributes
 CaptureConfig.StateAttributes = {
 	CaptureActive = "CaptureActive",
@@ -44,6 +51,9 @@ CaptureConfig.StateAttributes = {
 	CaptivityEscapeProgressRequired = "CaptivityEscapeProgressRequired",
 	CaptivityEscapeSuppressed = "CaptivityEscapeSuppressed",
 	CaptivityEscapeLastReason = "CaptivityEscapeLastReason",
+	AntiGuardingPressure = "AntiGuardingPressure",
+	AntiGuardingPressurePhase = "AntiGuardingPressurePhase",
+	AntiGuardingCounterplayReady = "AntiGuardingCounterplayReady",
 }
 
 return CaptureConfig
