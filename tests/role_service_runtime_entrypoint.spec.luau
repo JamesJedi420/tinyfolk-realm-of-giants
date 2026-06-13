@@ -184,6 +184,7 @@ addChild(remotesFolder, "RoleDebugStateResponse", roleDebugResponseRemote)
 
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
+addChild(configFolder, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
@@ -195,7 +196,24 @@ addChild(replicatedStorage, "Remotes", remotesFolder)
 local workspaceService = makeNode("Workspace", "Workspace", "Workspace")
 local mapFolder = makeNode("Map", "Folder", "Workspace.Map")
 local spawnsFolder = makeNode("Spawns", "Folder", "Workspace.Map.Spawns")
+local tinyfolkWorldFolder = makeNode("TinyfolkWorld", "Folder", "Workspace.Map.TinyfolkWorld")
+local tinyfolkReturnPoint: any = {
+	Name = "TinyfolkReturnPoint",
+	ClassName = "Part",
+	CFrame = {
+		Position = {
+			X = 42,
+			Y = 5,
+			Z = 17,
+		},
+	},
+}
+function tinyfolkReturnPoint:IsA(expectedClass: string): boolean
+	return expectedClass == "BasePart" or expectedClass == "Part"
+end
 addChild(mapFolder, "Spawns", spawnsFolder)
+addChild(mapFolder, "TinyfolkWorld", tinyfolkWorldFolder)
+addChild(tinyfolkWorldFolder, "TinyfolkReturnPoint", tinyfolkReturnPoint)
 addChild(workspaceService, "Map", mapFolder)
 
 local playerStoredGiant = makePlayer(1001)
@@ -208,6 +226,7 @@ local playerRealmLoadFail = makePlayer(2003)
 local playerRealmSaveFail = makePlayer(2004)
 local playerOwnershipBlocked = makePlayer(2005)
 local playerLoadFailureFallback = makePlayer(2006)
+local playerReconnectSafe = makePlayer(3001)
 
 local playersList = {
 	playerStoredGiant,
@@ -220,6 +239,7 @@ local playersList = {
 	playerRealmSaveFail,
 	playerOwnershipBlocked,
 	playerLoadFailureFallback,
+	playerReconnectSafe,
 }
 
 local playerAdded = makeSignal()
@@ -285,6 +305,7 @@ local ownershipReadyByUserId: { [number]: boolean } = {
 	[2003] = true,
 	[2004] = true,
 	[2005] = true,
+	[3001] = true,
 }
 local loadFailureRouteByUserId: { [number]: string? } = {}
 local ownershipCallbacksByUserId: { [number]: { (boolean, string?) -> () } } = {}
@@ -380,6 +401,15 @@ local profileDataByUserId: { [number]: any } = {
 	[2005] = {
 		schemaVersion = 1,
 		userId = 2005,
+	},
+	[3001] = {
+		schemaVersion = 1,
+		userId = 3001,
+		safeLocation = {
+			returnPointName = "TinyfolkReturnPoint",
+			returnedAt = 5,
+			returnReason = "logout",
+		},
 	},
 }
 
@@ -726,6 +756,52 @@ assertEqual(playerNoStored:GetAttribute("DownedIsDowned"), false, "expired downe
 playerStoredGiant:SetAttribute("Role", RoleConfig.Roles.Giant)
 local giantDownRejected = roleServiceQueryApi.SetDowned(playerStoredGiant.UserId, 30, "runtime_test_invalid_role")
 assertEqual(giantDownRejected, false, "non-Tinyfolk cannot enter downed state")
+
+local reconnectPivot: any = nil
+local reconnectRoot: any = {
+	Name = "HumanoidRootPart",
+	ClassName = "Part",
+}
+function reconnectRoot:IsA(expectedClass: string): boolean
+	return expectedClass == "BasePart" or expectedClass == "Part"
+end
+local reconnectCharacter: any = {
+	Name = "ReconnectCharacter",
+	ClassName = "Model",
+}
+function reconnectCharacter:FindFirstChildOfClass(className: string): any
+	if className == "Humanoid" then
+		return {
+			Health = 100,
+			Died = {
+				Connect = function(_self: any, _callback: () -> ())
+					return {}
+				end,
+			},
+		}
+	end
+	return nil
+end
+function reconnectCharacter:FindFirstChild(childName: string): any
+	if childName == "HumanoidRootPart" then
+		return reconnectRoot
+	end
+	return nil
+end
+function reconnectCharacter:WaitForChild(childName: string, _timeout: number?): any
+	return self:FindFirstChild(childName)
+end
+function reconnectCharacter:ScaleTo(_scale: number)
+end
+function reconnectCharacter:PivotTo(targetPivot: any)
+	reconnectPivot = targetPivot
+end
+playerReconnectSafe:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
+playerReconnectSafe.Character = reconnectCharacter
+playerReconnectSafe.CharacterAdded:Fire(reconnectCharacter)
+assertTrue(reconnectPivot ~= nil, "reconnect safe location pivots character")
+assertEqual(reconnectPivot, tinyfolkReturnPoint.CFrame, "reconnect safe location uses return point pivot")
+assertTrue(profileDataByUserId[3001].safeLocation == nil, "reconnect safe location clears persisted snapshot")
 
 print("role_service_runtime_entrypoint: all checks passed")
 

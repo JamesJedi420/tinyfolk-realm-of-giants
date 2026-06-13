@@ -31,6 +31,16 @@ local SafeZonePolicy =
 	requireDependency(giantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
 local DownedState =
 	requireDependency(giantRealm, "DownedState", "../../ReplicatedStorage/Shared/GiantRealm/DownedState")
+local DisconnectResolutionState = requireDependency(
+	giantRealm,
+	"DisconnectResolutionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/DisconnectResolutionState"
+)
+local SafeLocationProfileState = requireDependency(
+	Shared:FindFirstChild("Escape"),
+	"SafeLocationProfileState",
+	"../../ReplicatedStorage/Shared/Escape/SafeLocationProfileState"
+)
 local ProfilePersistenceGateway = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ProfilePersistenceGateway"))
 	else (require :: any)("./ProfilePersistenceGateway")
@@ -602,6 +612,114 @@ local function findSpawnForRole(roleName: string): BasePart?
 	return nil
 end
 
+local function findTinyfolkReturnPoint(): BasePart?
+	local current: Instance = Workspace
+	for _, childName in EscapeConfig.TinyfolkWorldFolderPath do
+		local nextNode = current:FindFirstChild(childName)
+		if nextNode == nil then
+			return nil
+		end
+		current = nextNode
+	end
+
+	local returnPoint = current:FindFirstChild(EscapeConfig.TinyfolkReturnPointName)
+	if returnPoint and returnPoint:IsA("BasePart") then
+		return returnPoint
+	end
+
+	return nil
+end
+
+local function resolveReturnPointPivot(returnPoint: BasePart): CFrame?
+	return returnPoint.CFrame
+end
+
+local function clearReconnectSessionRuntime(userId: number)
+	local globalValue: any = _G
+	local captureApi = if type(globalValue) == "table" then globalValue._CaptureService_QueryAPI else nil
+	if type(captureApi) == "table" and type(captureApi.ResolveReconnectCaptureRestore) == "function" then
+		captureApi.ResolveReconnectCaptureRestore({
+			restoreCaptureRequested = true,
+		})
+	end
+
+	applyDownedReconnectRouting(userId, {
+		phase = "none",
+		hasSessionRuntime = false,
+	})
+end
+
+local function tryPlaceCharacterAtReconnectSafeLocation(player: Player, character: Instance): boolean
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(player)
+	if not profileResult.ok or type(profileResult.data) ~= "table" then
+		return false
+	end
+
+	local hasSafeLocation = SafeLocationProfileState.HasPersistedState(profileResult.data)
+	local reconnectPlan = DisconnectResolutionState.ResolveReconnect({
+		hasSafeLocation = hasSafeLocation,
+	})
+	if reconnectPlan.action ~= DisconnectResolutionState.Actions.spawn_safe_location then
+		return false
+	end
+
+	local snapshot = SafeLocationProfileState.GetLocation(profileResult.data)
+	if snapshot == nil then
+		return false
+	end
+
+	local returnPoint = findTinyfolkReturnPoint()
+	if returnPoint == nil then
+		debugWarn(
+			string.format(
+				"Reconnect safe location missing return point userId=%d reason=%s",
+				player.UserId,
+				tostring(snapshot.returnReason)
+			)
+		)
+		return false
+	end
+
+	local characterAny: any = character
+	local root = characterAny:FindFirstChild("HumanoidRootPart") or characterAny:WaitForChild("HumanoidRootPart", 5)
+	if not root or not root:IsA("BasePart") then
+		debugWarn(string.format("Reconnect safe location missing root userId=%d", player.UserId))
+		return false
+	end
+
+	characterAny:PivotTo(resolveReturnPointPivot(returnPoint))
+	local cleared = ProfilePersistenceGateway.UpdateLoadedPlayerProfileData(player, function(currentData: any): any
+		if type(currentData) ~= "table" then
+			return nil, "profile_data_invalid"
+		end
+		local clearResult = SafeLocationProfileState.ClearSafeLocation(currentData)
+		return clearResult.profileData
+	end)
+	if not cleared.ok then
+		debugWarn(
+			string.format(
+				"Reconnect safe location clear failed userId=%d reason=%s",
+				player.UserId,
+				tostring(cleared.reason)
+			)
+		)
+	end
+
+	if reconnectPlan.clearSessionRuntime == true then
+		clearReconnectSessionRuntime(player.UserId)
+	end
+
+	debugLog(
+		string.format(
+			"Placed %s at reconnect safe location point=%s reason=%s",
+			player.Name,
+			snapshot.returnPointName,
+			snapshot.returnReason
+		)
+	)
+	return true
+end
+
 local function placeCharacterAtRoleSpawn(player: Player, character: Instance)
 	local roleName = getRoleOrDefault(player)
 	local spawnLocation = findSpawnForRole(roleName)
@@ -856,7 +974,9 @@ local function setupPlayer(player: Player)
 	playerAny.CharacterAdded:Connect(function(character: Instance)
 		ensureRoleForLockedPlayer(player)
 		applyScaleToCharacter(player, character)
-		placeCharacterAtRoleSpawn(player, character)
+		if not tryPlaceCharacterAtReconnectSafeLocation(player, character) then
+			placeCharacterAtRoleSpawn(player, character)
+		end
 
 		local characterAny: any = character
 		local humanoid = characterAny:FindFirstChildOfClass("Humanoid") or characterAny:WaitForChild("Humanoid", 5)

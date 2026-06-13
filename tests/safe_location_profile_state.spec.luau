@@ -147,4 +147,17 @@ do
 	)
 end
 
+do
+	local applied = SafeLocationProfileState.ApplySafeReturn({}, makeValidInput("logout"))
+	assertTrue(applied.accepted, "logout return reason accepted")
+	assertEqual(applied.profileData.safeLocation.returnReason, "logout", "logout return reason persisted")
+end
+
+do
+	local applied = SafeLocationProfileState.ApplySafeReturn({}, makeValidInput("safe_return"))
+	local cleared = SafeLocationProfileState.ClearSafeLocation(applied.profileData)
+	assertTrue(cleared.accepted, "clear safe location accepted")
+	assertFalse(SafeLocationProfileState.HasPersistedState(cleared.profileData), "clear removes safe location")
+end
+
 print("safe_location_profile_state: all checks passed")
