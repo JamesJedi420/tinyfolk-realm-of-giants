@@ -3,6 +3,16 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local RunService: any = nil
+do
+	local ok, service = pcall(function()
+		return game:GetService("RunService")
+	end)
+	if ok then
+		RunService = service
+	end
+end
+
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
@@ -23,6 +33,8 @@ local globalEnv: any = getfenv()
 local progressByTargetUserId: { [number]: any? } = {}
 local lastStruggleRequestAtByUserId: { [number]: number? } = {}
 local lastAssistRequestAtByUserId: { [number]: number? } = {}
+local lastContainmentScanAt = 0
+local CONTAINMENT_SCAN_INTERVAL_SECONDS = 0.5
 
 local function now(): number
 	return os.clock()
@@ -540,6 +552,26 @@ local function getProgressSnapshot(targetUserId: number, at: number?): any?
 	return CaptivityEscapeProgressState.Snapshot(state)
 end
 
+local function refreshContainmentSuppressionForActiveCaptures(at: number)
+	local captureApi = getCaptureServiceQueryApi()
+	if captureApi == nil or type(captureApi.GetAllCaptures) ~= "function" then
+		return
+	end
+
+	local ok, captures = pcall(captureApi.GetAllCaptures, at)
+	if not ok or type(captures) ~= "table" then
+		return
+	end
+
+	for _, record in ipairs(captures) do
+		if type(record) == "table" and type(record.targetUserId) == "number" then
+			if record.containmentPhase ~= CaptivityDurationState.Phases.contained then
+				tryApplyContainmentSuppression(record.targetUserId, at)
+			end
+		end
+	end
+end
+
 local remotesFolder = ensureRemotesFolder()
 local struggleRemote = ensureRemoteEvent(remotesFolder, STRUGGLE_REMOTE_NAME)
 local allyAssistRemote = ensureRemoteEvent(remotesFolder, ALLY_ASSIST_REMOTE_NAME)
@@ -562,6 +594,21 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	lastStruggleRequestAtByUserId[player.UserId] = nil
 	lastAssistRequestAtByUserId[player.UserId] = nil
 end)
+
+if
+	type(RunService) == "table"
+	and type(RunService.Heartbeat) == "table"
+	and type(RunService.Heartbeat.Connect) == "function"
+then
+	RunService.Heartbeat:Connect(function()
+		local at = now()
+		if at - lastContainmentScanAt < CONTAINMENT_SCAN_INTERVAL_SECONDS then
+			return
+		end
+		lastContainmentScanAt = at
+		refreshContainmentSuppressionForActiveCaptures(at)
+	end)
+end
 
 _G._CaptivityEscapeService_QueryAPI = {
 	RequestStruggle = function(targetUserId: number, at: number?): any
