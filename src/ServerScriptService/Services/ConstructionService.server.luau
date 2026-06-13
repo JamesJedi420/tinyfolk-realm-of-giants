@@ -11,6 +11,7 @@ local ContextualTaskProgressLogic: any
 local TaskQteTimingLogic: any
 local ObjectiveSkillXpProducer: any
 local RealmObjectiveCompletionCaller: any
+local PostRescueProtectionCancellationCaller: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 local BUILD_REMOTE_NAME = "ConstructionBuildRequest"
@@ -115,6 +116,7 @@ local function resolveDependencies()
 	TaskQteTimingLogic = requireChildModule(construction, "TaskQteTimingLogic")
 	ObjectiveSkillXpProducer = requireChildModule(script.Parent, "ObjectiveSkillXpProducer")
 	RealmObjectiveCompletionCaller = requireChildModule(script.Parent, "RealmObjectiveCompletionCaller")
+	PostRescueProtectionCancellationCaller = requireChildModule(script.Parent, "PostRescueProtectionCancellationCaller")
 end
 
 local dependenciesReady, dependencyError = pcall(resolveDependencies)
@@ -756,6 +758,7 @@ buildRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	if requestMode == "complete" then
 		local completionAt = if type(requestNow) == "number" then requestNow else os.clock()
 		RealmObjectiveCompletionCaller.RecordContextualTaskCompletion(siteId, player.UserId, completionAt)
+		PostRescueProtectionCancellationCaller.RecordObjectiveTaskCompletion(player.UserId, completionAt)
 	end
 
 	logBuildOutcome("accepted", player, siteId, nil)

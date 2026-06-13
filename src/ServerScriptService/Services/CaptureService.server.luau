@@ -11,6 +11,7 @@ local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local CaptureState = require(GiantRealm:WaitForChild("CaptureState"))
 local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
+local PostRescueProtectionState = require(GiantRealm:WaitForChild("PostRescueProtectionState"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local ContainmentRewardResolver = if script ~= nil and script.Parent ~= nil
@@ -176,34 +177,44 @@ local function getDownedState(target: Player): boolean
 	return target:GetAttribute("DownedIsDowned") == true
 end
 
+local function getRescueContractQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+
+	local queryApi = globalValue._RescueContractService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+
+	return queryApi
+end
+
 local function clearPostRescueProtection(target: Player)
 	target:SetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE, false)
 	target:SetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE, nil)
+	target:SetAttribute("PostRescueMovementSpeedMultiplier", nil)
 end
 
 local function isPostRescueProtected(target: Player, at: number): boolean
-	if target:GetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE) ~= true then
-		return false
+	local rescueApi = getRescueContractQueryApi()
+	if rescueApi ~= nil and type(rescueApi.IsTargetPostRescueProtected) == "function" then
+		return rescueApi.IsTargetPostRescueProtected(target.UserId, at) == true
 	end
 
-	-- Phase 3 bounded cancellation: once target is downed again, protection ends.
-	if getDownedState(target) then
+	local evaluation = PostRescueProtectionState.Evaluate({
+		protected = target:GetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE),
+		expiresAt = target:GetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE),
+		at = at,
+		isDowned = getDownedState(target),
+		breakingAction = nil,
+	})
+	if evaluation.shouldClear == true then
 		clearPostRescueProtection(target)
-		return false
 	end
 
-	local expiresAt = target:GetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE)
-	if type(expiresAt) ~= "number" then
-		clearPostRescueProtection(target)
-		return false
-	end
-
-	if expiresAt <= at then
-		clearPostRescueProtection(target)
-		return false
-	end
-
-	return true
+	return evaluation.active == true
 end
 
 local function isInRange(custodian: Player, target: Player): boolean

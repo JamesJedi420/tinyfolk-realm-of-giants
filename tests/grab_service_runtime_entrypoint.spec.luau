@@ -105,6 +105,11 @@ addChild(
 	"CapturePersistenceRules",
 	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 )
+addChild(
+	giantRealmFolder,
+	"PostRescueProtectionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -361,6 +366,19 @@ do
 	local faulted = grabApi.RequestCounterplay(carriedTarget.UserId, 211)
 	assertFalse(faulted.accepted, "capture query fault rejects counterplay")
 	assertEqual(faulted.reason, "capture_query_fault", "capture query fault counterplay reason")
+end
+
+do
+	local carrierGiant = MockPlayer.new(14, "ProtectedTargetCarrierGiant", { role = "Giant", positionZ = 0 })
+	local protectedTarget = MockPlayer.new(15, "ProtectedTinyfolk", { role = "Tinyfolk", positionZ = 4 })
+	table.insert(playersList, carrierGiant)
+	table.insert(playersList, protectedTarget)
+	protectedTarget:SetAttribute("PostRescueProtected", true)
+	protectedTarget:SetAttribute("PostRescueProtectionExpiresAt", 220)
+
+	local rejected = grabApi.RequestGrab(carrierGiant.UserId, protectedTarget.UserId, 215)
+	assertFalse(rejected.accepted, "post-rescue protected target rejects grab")
+	assertEqual(rejected.reason, "target_post_rescue_protected", "post-rescue protected grab reason")
 end
 
 print("grab_service_runtime_entrypoint: all checks passed")

@@ -16,6 +16,8 @@ local ContextualTaskProgressLogic = require(ConstructionFolder:WaitForChild("Con
 local TaskQteTimingLogic = require(ConstructionFolder:WaitForChild("TaskQteTimingLogic"))
 local ObjectiveSkillXpProducer = require(script.Parent:WaitForChild("ObjectiveSkillXpProducer"))
 local RealmObjectiveCompletionCaller = require(script.Parent:WaitForChild("RealmObjectiveCompletionCaller"))
+local PostRescueProtectionCancellationCaller =
+	require(script.Parent:WaitForChild("PostRescueProtectionCancellationCaller"))
 local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSession"))
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
@@ -931,6 +933,7 @@ shrineActivateRequestRemote.OnServerEvent:Connect(function(player: Player, paylo
 
 			local completionAt = if type(requestNow) == "number" then requestNow else os.clock()
 			RealmObjectiveCompletionCaller.RecordContextualTaskCompletion(shrineIdValue, player.UserId, completionAt)
+			PostRescueProtectionCancellationCaller.RecordObjectiveTaskCompletion(player.UserId, completionAt)
 			return
 		end
 

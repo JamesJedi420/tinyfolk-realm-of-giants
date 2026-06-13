@@ -122,6 +122,11 @@ addChild(
 	"CapturePersistenceRules",
 	"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 )
+addChild(
+	giantRealmFolder,
+	"PostRescueProtectionState",
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+)
 
 local sharedFolder = makeNode("Shared", "Folder")
 addChild(sharedFolder, "Config", configFolder)
@@ -1045,6 +1050,11 @@ do
 		type(target:GetAttribute("PostRescueProtectionExpiresAt")) == "number",
 		"completion sets post-rescue protection expiry"
 	)
+	assertEqual(
+		target:GetAttribute("PostRescueMovementSpeedMultiplier"),
+		1.15,
+		"completion grants post-rescue movement multiplier attribute"
+	)
 	assertTrue(rescuer:GetAttribute("RescueAccelerationActive") == true, "completion grants rescuer acceleration")
 	assertTrue(
 		type(rescuer:GetAttribute("RescueAccelerationExpiresAt")) == "number",
@@ -1060,6 +1070,22 @@ do
 	assertEqual(captureCustodyEndRequests[1].targetUserId, target.UserId, "completion custody end target")
 	assertEqual(captureCustodyEndRequests[1].endReason, "rescued", "completion custody end reason")
 	assertEqual(captureCustodyEndRequests[1].at, 401, "completion custody end timestamp")
+end
+
+do
+	resetState()
+	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 410)
+	assertTrue(accepted.accepted, "request accepted before protection cancel test")
+	local completed = rescueApi.CompleteRescueContract(rescuer.UserId, target.UserId, 411)
+	assertTrue(completed.accepted, "completion accepted before protection cancel test")
+	assertTrue(rescueApi.IsTargetPostRescueProtected(target.UserId, 411), "protection active before cancel")
+	local canceled = rescueApi.CancelPostRescueProtection(target.UserId, "objective_task_complete", 412)
+	assertTrue(canceled, "objective-task cancel clears protection")
+	assertFalse(rescueApi.IsTargetPostRescueProtected(target.UserId, 412), "protection inactive after cancel")
+	assertTrue(
+		target:GetAttribute("PostRescueMovementSpeedMultiplier") == nil,
+		"movement multiplier cleared after cancel"
+	)
 end
 
 do

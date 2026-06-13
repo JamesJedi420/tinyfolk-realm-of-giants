@@ -17,6 +17,7 @@ local SafeZonePolicy = require(GiantRealm:WaitForChild("SafeZonePolicy"))
 local GrabState = require(GiantRealm:WaitForChild("GrabState"))
 local CarryLoadState = require(GiantRealm:WaitForChild("CarryLoadState"))
 local CapturePersistenceRules = require(GiantRealm:WaitForChild("CapturePersistenceRules"))
+local PostRescueProtectionState = require(GiantRealm:WaitForChild("PostRescueProtectionState"))
 
 local ROLE_ATTRIBUTE = "Role"
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -332,6 +333,37 @@ local function canPerformEscapeAction(action: string): (boolean, string?)
 	end
 
 	return true, nil
+end
+
+local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
+local POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE = "PostRescueProtectionExpiresAt"
+
+local function getRescueContractQueryApi(): any?
+	local globalValue: any = _G
+	if type(globalValue) ~= "table" then
+		return nil
+	end
+	local queryApi = globalValue._RescueContractService_QueryAPI
+	if type(queryApi) ~= "table" then
+		return nil
+	end
+	return queryApi
+end
+
+local function isTargetPostRescueProtected(target: Player, at: number): boolean
+	local rescueApi = getRescueContractQueryApi()
+	if rescueApi ~= nil and type(rescueApi.IsTargetPostRescueProtected) == "function" then
+		return rescueApi.IsTargetPostRescueProtected(target.UserId, at) == true
+	end
+
+	local evaluation = PostRescueProtectionState.Evaluate({
+		protected = target:GetAttribute(POST_RESCUE_PROTECTED_ATTRIBUTE),
+		expiresAt = target:GetAttribute(POST_RESCUE_PROTECTION_EXPIRES_AT_ATTRIBUTE),
+		at = at,
+		isDowned = target:GetAttribute("DownedIsDowned") == true,
+		breakingAction = nil,
+	})
+	return evaluation.active == true
 end
 
 local function isTargetCarryCompatible(target: Player): (boolean, string?)
@@ -802,6 +834,10 @@ local function requestGrab(player: Player, targetUserIdPayload: unknown, nowOver
 	end
 
 	local at = requestTime
+	if isTargetPostRescueProtected(target, at) then
+		return { accepted = false, reason = "target_post_rescue_protected" }
+	end
+
 	local safeZoneDecision = evaluateTargetSafeZone(target, at)
 	if safeZoneDecision.protected == true then
 		return { accepted = false, reason = tostring(safeZoneDecision.reason or "target_in_safe_zone") }

@@ -193,6 +193,8 @@ sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
 addChild(sharedFolder, "GiantRealm", giantRealmFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
@@ -293,6 +295,20 @@ scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Service
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
 scriptParent._Children["RealmObjectiveCompletionCaller"] =
 	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
+scriptParent._Children["PostRescueProtectionCancellationCaller"] =
+	"../../ServerScriptService/Services/PostRescueProtectionCancellationCaller"
+
+local postRescueProtectionCancelCalls: { any } = {}
+_G._RescueContractService_QueryAPI = {
+	CancelPostRescueProtection = function(userId: number, breakingAction: string?, at: number?): boolean
+		table.insert(postRescueProtectionCancelCalls, {
+			userId = userId,
+			breakingAction = breakingAction,
+			at = at,
+		})
+		return true
+	end,
+}
 script = {
 	Parent = scriptParent,
 } :: any
@@ -623,6 +639,17 @@ assertEqual(
 	objectiveCompletionCalls[#objectiveCompletionCalls].at,
 	204,
 	"contextual task completion forwards completion timestamp"
+)
+assertEqual(#postRescueProtectionCancelCalls, 1, "contextual task completion cancels post-rescue protection once")
+assertEqual(
+	postRescueProtectionCancelCalls[1].userId,
+	9401,
+	"contextual task completion forwards protection cancel user id"
+)
+assertEqual(
+	postRescueProtectionCancelCalls[1].breakingAction,
+	"objective_task_complete",
+	"contextual task completion uses objective breaking action"
 )
 
 -- TIN-154-prep: disruption and blocked state transitions through service task modes.
