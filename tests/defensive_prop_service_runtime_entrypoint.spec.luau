@@ -199,11 +199,52 @@ do
 	assertTrue(startBreak.accepted, "Giant break start accepts")
 	assertTrue(startBreak.snapshot.breakInProgress, "break start marks in-progress window")
 
+	local barrierContact = DefensivePropService.resolveGiantBarrierContact(giant.UserId, { x = 0, y = 0, z = 0 })
+	assertTrue(barrierContact.accepted, "Giant barrier contact accepts during blocked phase")
+	assertTrue(barrierContact.breakInterrupted, "barrier contact interrupts active break")
+	assertEqual(barrierContact.reason, "barrier_contact_break_interrupted", "barrier contact interruption reason")
+	assertEqual(barrierContact.staggerSeconds, 0.75, "barrier contact stagger duration")
+
+	local cooledContact = DefensivePropService.resolveGiantBarrierContact(giant.UserId, { x = 0, y = 0, z = 0 })
+	assertFalse(cooledContact.accepted, "barrier contact cooldown rejects immediate retrigger")
+	assertEqual(cooledContact.reason, "barrier_contact_cooldown", "cooldown reason")
+
+	currentTime = 105
+	local complete = DefensivePropService.requestCompleteBreak(giant, "DefensiveProp_A")
+	assertFalse(complete.accepted, "interrupted break cannot complete without restart")
+	assertEqual(complete.reason, "break_not_started", "interrupted break completion reason")
+end
+
+do
+	DefensivePropService.ResetForTests()
+	currentTime = 300
+	DefensivePropService.requestDrop(tinyfolk, "DefensiveProp_A")
+	currentTime = 302
+
+	local staggerContact = DefensivePropService.resolveGiantBarrierContact(giant.UserId, { x = 0, y = 0, z = 0 })
+	assertTrue(staggerContact.accepted, "Giant barrier stagger accepts without break")
+	assertEqual(staggerContact.reason, "barrier_contact_stagger", "stagger-only contact reason")
+	assertFalse(staggerContact.breakInterrupted, "stagger-only contact does not interrupt break")
+
+	local outOfRange = DefensivePropService.resolveGiantBarrierContact(giant.UserId, { x = 100, y = 0, z = 100 })
+	assertFalse(outOfRange.accepted, "out-of-range giant does not trigger barrier contact")
+	assertEqual(outOfRange.reason, "barrier_contact_not_in_range", "out-of-range reason")
+end
+
+do
+	DefensivePropService.ResetForTests()
+	currentTime = 400
+	DefensivePropService.requestDrop(tinyfolk, "DefensiveProp_A")
+	currentTime = 402
+	local startBreak = DefensivePropService.requestStartBreak(giant, "DefensiveProp_A")
+	assertTrue(startBreak.accepted, "Giant break start accepts for completion flow")
+	assertTrue(startBreak.snapshot.breakInProgress, "break start marks in-progress window")
+
 	local earlyComplete = DefensivePropService.requestCompleteBreak(giant, "DefensiveProp_A")
 	assertFalse(earlyComplete.accepted, "early break completion rejects")
 	assertEqual(earlyComplete.reason, "break_in_progress", "early break reason")
 
-	currentTime = 105
+	currentTime = 404
 	local complete = DefensivePropService.requestCompleteBreak(giant, "DefensiveProp_A")
 	assertTrue(complete.accepted, "completed break accepts")
 	assertEqual(complete.snapshot.state, "Broken", "completed break projects Broken")

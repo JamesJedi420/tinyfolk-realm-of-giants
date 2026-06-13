@@ -83,7 +83,9 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 	local propRecordById: { [string]: any? } = {}
 	local lastDropRequestAtByUserId: { [number]: number? } = {}
 	local lastBreakRequestAtByUserId: { [number]: number? } = {}
+	local lastBarrierContactAtByUserIdByPropId: { [string]: { [number]: number? } } = {}
 	local scheduledTasks: { thread? } = {}
+	local lastGiantBarrierContactScanAt = 0
 
 	local function getNestedRoot(folderPath: { string }): any
 		if Workspace == nil or type(Workspace.FindFirstChild) ~= "function" then
@@ -440,6 +442,137 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		return { accepted = true, reason = "accepted", propPart = propPart, record = refreshPropRecord(propId) }
 	end
 
+	local function getBarrierContactCooldown(propId: string, userId: number): number?
+		local byUserId = lastBarrierContactAtByUserIdByPropId[propId]
+		if type(byUserId) ~= "table" then
+			return nil
+		end
+		return byUserId[userId]
+	end
+
+	local function markBarrierContact(propId: string, userId: number, at: number)
+		local byUserId = lastBarrierContactAtByUserIdByPropId[propId]
+		if type(byUserId) ~= "table" then
+			byUserId = {}
+			lastBarrierContactAtByUserIdByPropId[propId] = byUserId
+		end
+		byUserId[userId] = at
+	end
+
+	local function applyGiantBarrierStaggerAttributes(
+		player: any,
+		propId: string,
+		staggerUntil: number,
+		currentTime: number
+	)
+		if player == nil or type(player.SetAttribute) ~= "function" then
+			return
+		end
+		local attrs = DefensivePropConfig.Attributes
+		player:SetAttribute(attrs.GiantBarrierStaggerActive, staggerUntil > currentTime)
+		player:SetAttribute(attrs.GiantBarrierStaggerUntil, staggerUntil)
+		player:SetAttribute(attrs.GiantBarrierStaggerPropId, propId)
+	end
+
+	local function resolveGiantBarrierContact(userId: number, position: any, currentTime: number): any
+		if type(userId) ~= "number" or type(position) ~= "table" then
+			return { accepted = false, reason = "barrier_contact_invalid", propId = nil }
+		end
+
+		refreshRegistries()
+		local contactRadius = DefensivePropConfig.BarrierContactRadiusStuds
+		if type(contactRadius) ~= "number" or contactRadius <= 0 then
+			return { accepted = false, reason = "barrier_contact_disabled", propId = nil }
+		end
+
+		for propId, record in pairs(propRecordById) do
+			if record ~= nil then
+				local resolved = refreshPropRecord(propId)
+				if resolved ~= nil then
+					local propPart = propPartById[propId]
+					if propPart ~= nil then
+						local distance = distanceBetween(getPosition(propPart), position)
+						if distance ~= nil and distance <= contactRadius then
+							local lastContactAt = getBarrierContactCooldown(propId, userId)
+							local result = DefensivePropState.ApplyBarrierContact(
+								DefensivePropConfig,
+								resolved,
+								currentTime,
+								lastContactAt
+							)
+							if result.accepted == true and result.record ~= nil then
+								propRecordById[propId] = result.record
+								applyPropAttributes(propId)
+								markBarrierContact(propId, userId, currentTime)
+								recordEvent("defensive prop barrier contact", {
+									propId = propId,
+									userId = userId,
+									breakInterrupted = result.breakInterrupted,
+									staggerSeconds = result.staggerSeconds,
+								})
+								return {
+									accepted = true,
+									reason = result.reason,
+									propId = propId,
+									snapshot = result.snapshot,
+									breakInterrupted = result.breakInterrupted,
+									staggerSeconds = result.staggerSeconds,
+									staggerUntil = result.staggerUntil,
+								}
+							end
+							if result.reason == "barrier_contact_cooldown" then
+								return {
+									accepted = false,
+									reason = result.reason,
+									propId = propId,
+									snapshot = result.snapshot,
+								}
+							end
+						end
+					end
+				end
+			end
+		end
+
+		return { accepted = false, reason = "barrier_contact_not_in_range", propId = nil }
+	end
+
+	local function tickGiantBarrierContacts(currentTime: number)
+		if _Players == nil or type(_Players.GetPlayers) ~= "function" then
+			return
+		end
+		local scanInterval = DefensivePropConfig.GiantBarrierContactScanIntervalSeconds
+		if type(scanInterval) == "number" and scanInterval > 0 then
+			if (currentTime - lastGiantBarrierContactScanAt) < scanInterval then
+				return
+			end
+		end
+		lastGiantBarrierContactScanAt = currentTime
+
+		for _, player in ipairs(_Players:GetPlayers()) do
+			if getRole(player) == RoleConfig.Roles.Giant and isPlayerAlive(player) then
+				local root = getHumanoidRootPart(player)
+				if root ~= nil then
+					local contactResult = resolveGiantBarrierContact(player.UserId, getPosition(root), currentTime)
+					if contactResult.accepted == true and type(contactResult.staggerUntil) == "number" then
+						applyGiantBarrierStaggerAttributes(
+							player,
+							contactResult.propId,
+							contactResult.staggerUntil,
+							currentTime
+						)
+					elseif type(player.GetAttribute) == "function" and type(player.SetAttribute) == "function" then
+						local attrs = DefensivePropConfig.Attributes
+						local staggerUntil = player:GetAttribute(attrs.GiantBarrierStaggerUntil)
+						if type(staggerUntil) == "number" and staggerUntil <= currentTime then
+							player:SetAttribute(attrs.GiantBarrierStaggerActive, false)
+						end
+					end
+				end
+			end
+		end
+	end
+
 	local function isGiantMacroRouteBlocked(routeId: string): boolean
 		refreshRegistries()
 		local routePart = giantRoutePartById[routeId]
@@ -579,6 +712,10 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		return DefensivePropState.Snapshot(DefensivePropConfig, refreshPropRecord(propId), now())
 	end
 
+	function service.resolveGiantBarrierContact(userId: number, position: any): any
+		return resolveGiantBarrierContact(userId, position, now())
+	end
+
 	function service.isGiantMacroRouteBlocked(routeId: string): boolean
 		return isGiantMacroRouteBlocked(routeId)
 	end
@@ -600,6 +737,8 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		propRecordById = {}
 		lastDropRequestAtByUserId = {}
 		lastBreakRequestAtByUserId = {}
+		lastBarrierContactAtByUserIdByPropId = {}
+		lastGiantBarrierContactScanAt = 0
 		refreshRegistries()
 	end
 
@@ -634,9 +773,27 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		end)
 	end
 
+	local function bindHeartbeat()
+		if options ~= nil and options.disableScheduling == true then
+			return
+		end
+		local RunService = getService(gameRef, "RunService")
+		if
+			RunService == nil
+			or type(RunService.Heartbeat) ~= "table"
+			or type(RunService.Heartbeat.Connect) ~= "function"
+		then
+			return
+		end
+		RunService.Heartbeat:Connect(function()
+			tickGiantBarrierContacts(now())
+		end)
+	end
+
 	local function initialize()
 		refreshRegistries()
 		bindRemote()
+		bindHeartbeat()
 	end
 
 	globalEnv._DefensivePropService_QueryAPI = {
@@ -657,6 +814,10 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		end,
 		GetGiantMacroRouteBlockReason = function(routeId: string): string?
 			return service.getGiantMacroRouteBlockReason(routeId)
+		end,
+		ResolveGiantBarrierContact = function(userId: number, position: any, at: number?): any
+			local currentTime = if type(at) == "number" then at else now()
+			return resolveGiantBarrierContact(userId, position, currentTime)
 		end,
 		ResetForTests = function()
 			service.ResetForTests()

@@ -33,5 +33,5 @@ lune run tests/defensive_prop_service_runtime_entrypoint.spec.luau
 ## Deferred
 
 - Studio drop/break interaction spot-check.
-- Stagger/interruption/rescue-relevant drop effects during active barrier contact.
+- Rescue-relevant drop side effects beyond break interruption.
 - Additional prop families beyond authored anchor catalog wiring.

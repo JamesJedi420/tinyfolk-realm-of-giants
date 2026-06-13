@@ -11,6 +11,8 @@ export type Config = {
 	ResetDurationSeconds: number,
 	DropRechargeSeconds: number,
 	MaxActivePropsPerTinyfolk: number,
+	BarrierContactStaggerSeconds: number?,
+	BarrierContactCooldownSeconds: number?,
 	PropTypes: { [string]: { displayName: string } },
 }
 
@@ -388,6 +390,70 @@ function DefensivePropState.CompleteBreak(config: Config, record: PropRecord?, b
 		reason = "accepted",
 		record = nextRecord,
 		snapshot = DefensivePropState.Snapshot(config, nextRecord, now),
+	}
+end
+
+function DefensivePropState.CanApplyBarrierContact(
+	config: Config,
+	record: PropRecord?,
+	now: number,
+	lastContactAt: number?
+): (boolean, string)
+	if record == nil then
+		return false, "prop_not_found"
+	end
+	if not validNow(now) then
+		return false, "invalid_now"
+	end
+	if DefensivePropState.ResolveStatus(config, record, now) ~= config.Status.Blocked then
+		return false, "barrier_not_active"
+	end
+	if type(lastContactAt) == "number" then
+		local cooldown = positiveNumber(config.BarrierContactCooldownSeconds, 0)
+		if cooldown > 0 and (now - lastContactAt) < cooldown then
+			return false, "barrier_contact_cooldown"
+		end
+	end
+	return true, "accepted"
+end
+
+function DefensivePropState.InterruptBreak(record: PropRecord): (PropRecord, boolean)
+	local nextRecord = cloneRecord(record)
+	local interrupted = nextRecord.breakStartedAt ~= nil and nextRecord.breakEndsAt ~= nil
+	nextRecord.breakStartedAt = nil
+	nextRecord.breakEndsAt = nil
+	return nextRecord, interrupted
+end
+
+function DefensivePropState.ApplyBarrierContact(
+	config: Config,
+	record: PropRecord,
+	now: number,
+	lastContactAt: number?
+): any
+	local canApply, reason = DefensivePropState.CanApplyBarrierContact(config, record, now, lastContactAt)
+	if not canApply then
+		return {
+			accepted = false,
+			reason = reason,
+			record = record,
+			snapshot = DefensivePropState.Snapshot(config, record, now),
+			breakInterrupted = false,
+			staggerSeconds = 0,
+		}
+	end
+
+	local nextRecord, breakInterrupted = DefensivePropState.InterruptBreak(record)
+	local staggerSeconds = positiveNumber(config.BarrierContactStaggerSeconds, 0)
+
+	return {
+		accepted = true,
+		reason = if breakInterrupted then "barrier_contact_break_interrupted" else "barrier_contact_stagger",
+		record = nextRecord,
+		snapshot = DefensivePropState.Snapshot(config, nextRecord, now),
+		breakInterrupted = breakInterrupted,
+		staggerSeconds = staggerSeconds,
+		staggerUntil = if staggerSeconds > 0 then now + staggerSeconds else now,
 	}
 end
 
