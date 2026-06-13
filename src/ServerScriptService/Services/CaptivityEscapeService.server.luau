@@ -327,6 +327,46 @@ local function resolveStruggleRelease(targetUserId: number, at: number): any?
 	return result
 end
 
+local function applyAntiGuardingCounterplay(targetUserId: number, at: number?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	local record = getTargetCaptureRecord(targetUserId, resolvedNow)
+	if record == nil then
+		clearProgressForTarget(targetUserId)
+		return { accepted = false, reason = "capture_missing" }
+	end
+	if record.containmentPhase ~= CaptivityDurationState.Phases.contained then
+		return { accepted = false, reason = "not_contained" }
+	end
+
+	local state = ensureProgressState(targetUserId, resolvedNow)
+	if state == nil then
+		state = CaptivityEscapeProgressState.NewState(CaptureConfig, resolvedNow)
+	end
+
+	local transition = CaptivityEscapeProgressState.ResolveAntiGuardingCounterplay(state, resolvedNow)
+	progressByTargetUserId[targetUserId] = transition.state
+	local target = getPlayerByUserId(targetUserId)
+	if target ~= nil then
+		applyProgressAttributes(target, transition.snapshot)
+	end
+
+	if transition.completed ~= true then
+		return {
+			accepted = false,
+			reason = "anti_guarding_counterplay_incomplete",
+			snapshot = transition.snapshot,
+		}
+	end
+
+	local release = resolveStruggleRelease(targetUserId, resolvedNow)
+	return {
+		accepted = release ~= nil and release.accepted == true,
+		reason = "anti_guarding_counterplay_release",
+		snapshot = transition.snapshot,
+		release = release,
+	}
+end
+
 local function requestStruggle(target: Player, at: number?): any
 	local resolvedNow = if type(at) == "number" then at else now()
 	refreshDecayForTarget(target.UserId, resolvedNow)
@@ -627,6 +667,9 @@ _G._CaptivityEscapeService_QueryAPI = {
 	end,
 	TryApplyContainmentSuppression = function(targetUserId: number, at: number?): any
 		return tryApplyContainmentSuppression(targetUserId, at)
+	end,
+	ApplyAntiGuardingCounterplay = function(targetUserId: number, at: number?): any
+		return applyAntiGuardingCounterplay(targetUserId, at)
 	end,
 	GetProgressSnapshot = function(targetUserId: number, at: number?): any?
 		return getProgressSnapshot(targetUserId, at)
