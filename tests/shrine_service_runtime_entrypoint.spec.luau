@@ -317,6 +317,8 @@ scriptParent._Children["GiantEssenceSession"] = "../../ServerScriptService/Servi
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
 scriptParent._Children["RealmObjectiveCompletionCaller"] =
 	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
+scriptParent._Children["PostRescueProtectionCancellationCaller"] =
+	"../../ServerScriptService/Services/PostRescueProtectionCancellationCaller"
 script = {
 	Parent = scriptParent,
 } :: any
