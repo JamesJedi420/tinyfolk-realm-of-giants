@@ -1,0 +1,27 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "DefensiveProp_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.15,
+        "Material": "Wood",
+        "Color": [0.55, 0.42, 0.28],
+        "Size": [6, 4, 2],
+        "Position": [0, 2.2, -28],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": true,
+        "Locked": true
+      },
+      "attributes": {
+        "DefensivePropType": "crate",
+        "DefensivePropZoneId": "DefensivePropZone_A",
+        "DefensivePropEnabled": true
+      }
+    }
+  ]
+}
