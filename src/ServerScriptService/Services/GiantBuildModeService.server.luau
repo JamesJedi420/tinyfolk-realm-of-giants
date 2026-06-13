@@ -248,6 +248,17 @@ local function getPlayerRole(player: any): string?
 	return if type(role) == "string" then role else nil
 end
 
+local function getDefensivePropQueryApi(): any?
+	local queryApi = rawget(globalEnv, "_DefensivePropService_QueryAPI")
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._DefensivePropService_QueryAPI) == "table" then
+		return (_G :: any)._DefensivePropService_QueryAPI
+	end
+	return nil
+end
+
 local function buildGiantMacroRouteAccessPayload(routeId: string, routePart: any, player: any?): any
 	local role = getPlayerRole(player)
 	local giantOnly = routePart:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true
@@ -259,6 +270,29 @@ local function buildGiantMacroRouteAccessPayload(routeId: string, routePart: any
 		tinyfolkOnly = tinyfolkOnly,
 		isEnabled = isEnabled,
 	})
+
+	local defensivePropQueryApi = getDefensivePropQueryApi()
+	if access.accepted == true and defensivePropQueryApi ~= nil then
+		local blockedOk, blocked = pcall(function()
+			if type(defensivePropQueryApi.IsGiantMacroRouteBlocked) == "function" then
+				return defensivePropQueryApi.IsGiantMacroRouteBlocked(routeId)
+			end
+			return false
+		end)
+		if blockedOk and blocked == true then
+			return {
+				accepted = false,
+				reason = "defensive_prop_blocked",
+				routeId = routeId,
+				role = role,
+				giantOnly = giantOnly,
+				tinyfolkOnly = tinyfolkOnly,
+				isEnabled = isEnabled,
+				widthStuds = routePart:GetAttribute(EscapeConfig.GiantMacroRouteWidthAttribute),
+				routeKind = routePart:GetAttribute(EscapeConfig.GiantMacroRouteKindAttribute),
+			}
+		end
+	end
 
 	return {
 		accepted = access.accepted,

@@ -1,0 +1,38 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "DefensivePropZone_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.97,
+        "Material": "SmoothPlastic",
+        "Color": [0.35, 0.55, 0.95],
+        "Size": [52, 1, 52],
+        "Position": [0, 0.5, -32],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": false,
+        "Locked": true
+      },
+      "children": [
+        {
+          "name": "Radius",
+          "className": "NumberValue",
+          "properties": {
+            "Value": 26
+          }
+        },
+        {
+          "name": "ZoneTag",
+          "className": "StringValue",
+          "properties": {
+            "Value": "TinyfolkDefense"
+          }
+        }
+      ]
+    }
+  ]
+}
