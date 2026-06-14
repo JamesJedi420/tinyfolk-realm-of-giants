@@ -191,6 +191,9 @@ local ContainmentStructureService =
 
 require("../src/ServerScriptService/Services/GiantBuildModeService.server")
 
+local GiantRealmSaveSchema = require("../src/ReplicatedStorage/Shared/GiantRealm/GiantRealmSaveSchema")
+local queryApi = (getfenv() :: any)._GiantBuildModeService_QueryAPI
+
 local giantPlayer = {
 	UserId = 9101,
 	Character = {
@@ -251,5 +254,56 @@ local assign = ContainmentStructureService.resolveAssignOccupantForCapture({
 	targetPosition = { x = 120, y = 2, z = 300 },
 })
 assertTrue(assign.accepted, "placed structure accepts occupant assignment")
+
+local saveRoot, saveRootReason = queryApi.BuildSaveSnapshot(giantPlayer.UserId)
+assertTrue(saveRoot ~= nil, "save snapshot includes containment placement")
+assertEqual(saveRootReason, nil, "save snapshot has no failure reason")
+if saveRoot then
+	assertEqual(#saveRoot.placedStructures, 1, "save snapshot includes one placed structure")
+	assertEqual(
+		saveRoot.placedStructures[1].structureId,
+		containmentStructureId,
+		"save snapshot preserves containment structure id"
+	)
+	assertEqual(
+		saveRoot.placedStructures[1].proposedOccupiedSpace[1].worldCenter.x,
+		120,
+		"save snapshot preserves containment placement center"
+	)
+end
+
+local replayRoot = {
+	schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
+	ownerUserId = giantPlayer.UserId,
+	placedStructures = if saveRoot then saveRoot.placedStructures else {},
+}
+
+local applyOk, applyReason = queryApi.ApplySaveSnapshot(replayRoot)
+assertTrue(applyOk, "save snapshot apply replays containment placement")
+assertEqual(applyReason, nil, "save snapshot apply has no failure reason")
+
+structuresFolder = mapFolder:FindFirstChild("ContainmentStructures")
+zonesFolder = mapFolder:FindFirstChild("ContainmentStructureZones")
+assertTrue(structuresFolder:FindFirstChild(expectedStructureId) ~= nil, "replay materializes structure part")
+assertTrue(zonesFolder:FindFirstChild(expectedZoneId) ~= nil, "replay materializes zone part")
+
+local replayCount = ContainmentStructureService.getRegisteredStructureCount()
+assertEqual(replayCount, countAfter, "replay restores containment registry count")
+
+local replaySnapshot = ContainmentStructureService.getStructureSnapshot(expectedStructureId)
+assertEqual(replaySnapshot.structureType, "cage", "replayed structure type")
+assertEqual(replaySnapshot.capacity, 2, "replayed structure capacity")
+assertEqual(replaySnapshot.zoneId, expectedZoneId, "replayed structure zone id")
+
+local replayState = queryApi.GetPlacedStructure(containmentStructureId)
+assertTrue(replayState ~= nil, "replay restores build-mode placement state")
+if replayState then
+	assertEqual(replayState.placedByUserId, giantPlayer.UserId, "replay preserves placer user id")
+	assertEqual(replayState.proposedOccupiedSpace[1].worldCenter.x, 120, "replay preserves occupied space center")
+end
+
+local giantStructuresFolder = mapFolder:FindFirstChild("GiantStructures")
+local misplacedArtifact = giantStructuresFolder and giantStructuresFolder:FindFirstChild(containmentStructureId)
+assertTrue(misplacedArtifact == nil, "replay does not materialize containment under GiantStructures")
 
 print("containment_structure_build_mode_placement: all checks passed")
