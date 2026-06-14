@@ -71,6 +71,7 @@
                          "attributes":  {
                                             "GeneratedBlockout":  true,
                                             "VisualOnly":  true,
+                                            "HiddenForScreenshots":  true,
                                             "ReferenceSlice":  "GiantMacroPlaza",
                                             "FootprintWidthStuds":  76,
                                             "FootprintDepthStuds":  64
@@ -84,7 +85,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           1,
@@ -114,6 +115,7 @@
                                             "GeneratedBlockout":  true,
                                             "VisualOnly":  true,
                                             "ReferenceSlice":  "MapFoundation",
+                                            "HiddenForScreenshots":  true,
                                             "ScreenshotSoftened":  true
                                         }
                      },
@@ -125,7 +127,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.96,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           1,
@@ -155,6 +157,7 @@
                                             "GeneratedBlockout":  true,
                                             "VisualOnly":  true,
                                             "ReferenceSlice":  "MapFoundation",
+                                            "HiddenForScreenshots":  true,
                                             "ScreenshotSoftened":  true
                                         }
                      }

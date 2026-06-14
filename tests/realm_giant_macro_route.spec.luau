@@ -349,6 +349,18 @@ do
 			error(string.format("validation camera %s should remain invisible for screenshots", cameraName))
 		end
 	end
+
+	local tinyfolkCamera = findPartByName(validationCamerasRoot, "Shot_Tinyfolk_RouteRead")
+	if tinyfolkCamera == nil then
+		error("missing validation camera anchor Shot_Tinyfolk_RouteRead")
+	end
+	local tinyfolkPosition = vec3FromProperties(tinyfolkCamera.properties)
+	local tinyfolkAttributes = tinyfolkCamera.attributes
+	if tinyfolkPosition == nil or type(tinyfolkAttributes) ~= "table" then
+		error("Shot_Tinyfolk_RouteRead missing placement metadata")
+	end
+	assertEqual(tinyfolkPosition.z <= 8, true, "tinyfolk validation camera stays south of labor bench band")
+	assertEqual(tinyfolkAttributes.LookAtZ, 8, "tinyfolk validation camera look-at stays on spawn route")
 end
 
 do

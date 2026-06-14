@@ -148,6 +148,10 @@
     {
       "name": "UpgradeBoard_RuneLightLeft",
       "className": "Part",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
       "properties": {
         "Anchored": true,
         "CanCollide": false,
@@ -174,6 +178,10 @@
     {
       "name": "UpgradeBoard_RuneLightRight",
       "className": "Part",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
       "properties": {
         "Anchored": true,
         "CanCollide": false,

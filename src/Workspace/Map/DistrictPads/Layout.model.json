@@ -1,5 +1,11 @@
 {
     "className":  "Folder",
+    "attributes":  {
+                       "HiddenForScreenshots":  true,
+                       "DoNotShip":  true,
+                       "VisualOnly":  true,
+                       "Purpose":  "District blueprint pads hidden for validation screenshots"
+                   },
     "children":  [
                      {
                          "name":  "Pad_GiantPlaza",
@@ -9,7 +15,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "WoodPlanks",
                                             "Color":  [
                                                           0.54,
@@ -54,7 +60,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.48,
@@ -90,7 +96,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "Grass",
                                             "Color":  [
                                                           0.31,
@@ -126,7 +132,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.42,
@@ -162,7 +168,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.45,
@@ -198,7 +204,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.52,
@@ -234,7 +240,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.36,
@@ -270,7 +276,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.42,
@@ -306,7 +312,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.55,
@@ -343,7 +349,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.42,
@@ -380,7 +386,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "Grass",
                                             "Color":  [
                                                           0.39,
@@ -416,7 +422,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.47,
@@ -453,7 +459,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.86,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.35,
@@ -490,7 +496,7 @@
                                             "CanCollide":  false,
                                             "CanTouch":  false,
                                             "CanQuery":  false,
-                                            "Transparency":  0.9,
+                                            "Transparency":  1,
                                             "Material":  "SmoothPlastic",
                                             "Color":  [
                                                           0.45,

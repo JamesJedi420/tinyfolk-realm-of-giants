@@ -70,14 +70,14 @@
         "Material": "SmoothPlastic",
         "Color": [0.28, 0.62, 0.92],
         "Size": [0.5, 0.5, 0.5],
-        "Position": [-112, 5, 8],
+        "Position": [-121, 3, 5],
         "Locked": true
       },
       "attributes": {
         "DoNotShip": true,
         "SelectionLocked": true,
-        "LookAtX": -102,
-        "LookAtY": 1,
+        "LookAtX": -98,
+        "LookAtY": 0.5,
         "LookAtZ": 8,
         "ScreenshotView": "tinyfolk_route_scale",
         "SuggestedFov": 70,
