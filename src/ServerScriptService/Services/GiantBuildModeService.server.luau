@@ -569,8 +569,10 @@ local function setArtifactAttribute(instance: any, attributeName: string, value:
 	end
 end
 
-local function getFirstOccupiedCenter(request: StructurePlacementRequest): { x: number, y: number, z: number }?
-	local occupiedBox = request.proposedOccupiedSpace[1]
+local function getFirstOccupiedCenter(placement: {
+	proposedOccupiedSpace: { StructureBoxInput },
+}): { x: number, y: number, z: number }?
+	local occupiedBox = placement.proposedOccupiedSpace[1]
 	if occupiedBox == nil then
 		return nil
 	end
@@ -597,19 +599,15 @@ local function applyContainmentStructureArtifactAttributes(
 	setArtifactAttribute(artifact, "PlacedAt", placedAt)
 end
 
-local function materializeContainmentStructureArtifacts(
-	request: StructurePlacementRequest,
-	placedByUserId: number,
-	placedAt: number
-)
-	local worldCenter = getFirstOccupiedCenter(request)
+local function materializeContainmentStructureArtifacts(state: AcceptedStructurePlacementState)
+	local worldCenter = getFirstOccupiedCenter(state)
 	if worldCenter == nil then
 		error("containment_placement_center_missing")
 	end
 
 	local geometry = ContainmentStructurePlacementState.BuildPlacementGeometry(
 		ContainmentStructureConfig,
-		request.structureId,
+		state.structureId,
 		worldCenter
 	)
 	if geometry == nil then
@@ -632,11 +630,16 @@ local function materializeContainmentStructureArtifacts(
 		zoneId = geometry.zoneId,
 		capacity = geometry.capacity,
 		escapeInteractionEnabled = geometry.escapeInteractionEnabled,
-		giantStructureId = request.structureId,
+		giantStructureId = state.structureId,
 	}
-	applyContainmentStructureArtifactAttributes(structureArtifact, geometryWithGiantId, placedByUserId, placedAt)
+	applyContainmentStructureArtifactAttributes(
+		structureArtifact,
+		geometryWithGiantId,
+		state.placedByUserId,
+		state.placedAt
+	)
 	setArtifactAttribute(zoneArtifact, ContainmentStructureConfig.ZoneIdAttribute, geometry.zoneId)
-	setArtifactAttribute(zoneArtifact, "GiantBuildStructureId", request.structureId)
+	setArtifactAttribute(zoneArtifact, "GiantBuildStructureId", state.structureId)
 
 	refreshContainmentStructureRegistry()
 	debugLog(
@@ -644,7 +647,7 @@ local function materializeContainmentStructureArtifacts(
 			"Materialized containment structure artifact structureId=%s zoneId=%s giantStructureId=%s",
 			geometry.structureId,
 			geometry.zoneId,
-			request.structureId
+			state.structureId
 		)
 	)
 end
@@ -717,6 +720,25 @@ local function clearGiantStructureArtifacts()
 	for _, child in ipairs(children) do
 		removeChildFolderByName(giantStructuresFolder, child.Name)
 	end
+end
+
+local function clearContainmentStructureArtifacts()
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local structuresFolder = mapFolder:FindFirstChild("ContainmentStructures")
+	if structuresFolder ~= nil and type(structuresFolder.GetChildren) == "function" then
+		for _, child in ipairs(structuresFolder:GetChildren()) do
+			removeChildPartByName(structuresFolder, child.Name)
+		end
+	end
+
+	local zonesFolder = mapFolder:FindFirstChild("ContainmentStructureZones")
+	if zonesFolder ~= nil and type(zonesFolder.GetChildren) == "function" then
+		for _, child in ipairs(zonesFolder:GetChildren()) do
+			removeChildPartByName(zonesFolder, child.Name)
+		end
+	end
+
+	refreshContainmentStructureRegistry()
 end
 
 local function clearSnareTrapArtifacts()
@@ -891,6 +913,14 @@ local function isContainmentStructure(structureId: string): boolean
 		ContainmentStructureConfig,
 		structureId
 	)
+end
+
+local function materializePlacedStructureFromSave(state: AcceptedStructurePlacementState)
+	if isContainmentStructure(state.structureId) then
+		materializeContainmentStructureArtifacts(state)
+	else
+		materializeAcceptedWorkspaceArtifact(state)
+	end
 end
 
 local function getVectorDistance(a: { x: number, y: number, z: number }, b: { x: number, y: number, z: number }): number
@@ -1264,8 +1294,8 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	elseif isContainmentStructure(request.structureId) then
 		local previousState = placedStructureById[request.structureId]
 		local appliedPlacement, placementError = pcall(function()
-			materializeContainmentStructureArtifacts(request, player.UserId, placedAt)
 			placedStructureById[request.structureId] = accepted
+			materializeContainmentStructureArtifacts(accepted)
 		end)
 
 		if not appliedPlacement then
@@ -2516,11 +2546,12 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		placedStructureById[structureId] = nil
 	end
 	clearGiantStructureArtifacts()
+	clearContainmentStructureArtifacts()
 
 	for _, record in ipairs(root.placedStructures) do
 		local state: AcceptedStructurePlacementState = GiantRealmSaveSchema.SerializePlacedStructureRecord(record)
 		placedStructureById[state.structureId] = state
-		materializeAcceptedWorkspaceArtifact(state)
+		materializePlacedStructureFromSave(state)
 	end
 
 	realmOwnerUserId = root.ownerUserId
