@@ -817,19 +817,47 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		refreshRegistries()
 	end
 
-	local function bindRemote()
+	local function ensureRemotesFolder(): any?
 		if ReplicatedStorage == nil or type(ReplicatedStorage.FindFirstChild) ~= "function" then
-			return
+			return nil
 		end
 		local remotes = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
-		if remotes == nil then
+		if remotes ~= nil then
+			return remotes
+		end
+		if type(Instance) ~= "table" or type(Instance.new) ~= "function" then
+			return nil
+		end
+		local folder = Instance.new("Folder")
+		folder.Name = REMOTES_FOLDER_NAME
+		folder.Parent = ReplicatedStorage
+		return folder
+	end
+
+	local function ensureRemoteEvent(parentFolder: any, remoteName: string): any?
+		if parentFolder == nil or type(parentFolder.FindFirstChild) ~= "function" then
+			return nil
+		end
+		local existing = parentFolder:FindFirstChild(remoteName)
+		if existing ~= nil then
+			return existing
+		end
+		if type(Instance) ~= "table" or type(Instance.new) ~= "function" then
+			return nil
+		end
+		local remote = Instance.new("RemoteEvent")
+		remote.Name = remoteName
+		remote.Parent = parentFolder
+		return remote
+	end
+
+	local function bindRemote()
+		if options ~= nil and options.disableRemotes == true then
 			return
 		end
-		local remote = remotes:FindFirstChild(REQUEST_REMOTE_NAME)
-		if
-			remote == nil
-			or type(remote.OnServerEvent) == "table" and type(remote.OnServerEvent.Connect) ~= "function"
-		then
+		local remotes = ensureRemotesFolder()
+		local remote = ensureRemoteEvent(remotes, REQUEST_REMOTE_NAME)
+		if remote == nil or type(remote.OnServerEvent) ~= "table" or type(remote.OnServerEvent.Connect) ~= "function" then
 			return
 		end
 		remote.OnServerEvent:Connect(function(player: any, payload: any)

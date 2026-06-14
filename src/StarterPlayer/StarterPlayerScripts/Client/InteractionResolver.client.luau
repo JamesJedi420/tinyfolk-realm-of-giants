@@ -18,6 +18,8 @@ local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local TinyfolkLaborUpgradeConfig = require(Config:WaitForChild("TinyfolkLaborUpgradeConfig"))
 local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
+local DefensivePropConfig = require(Config:WaitForChild("DefensivePropConfig"))
+local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
@@ -31,6 +33,7 @@ local UPGRADE_HUB_REMOTE_NAME = "VillageUpgradeHubRequest"
 local WORKSITE_UPGRADE_REMOTE_NAME = "VillageWorksiteUpgradeRequest"
 local TINYFOLK_LABOR_UPGRADE_REMOTE_NAME = "TinyfolkLaborUpgradeRequest"
 local REMOTE_CONTROL_STATION_REMOTE_NAME = "RemoteControlStationRequest"
+local DEFENSIVE_PROP_REMOTE_NAME = "DefensivePropRequest"
 
 local INTERACT_KEY = Enum.KeyCode.F
 
@@ -47,6 +50,7 @@ local upgradeHubRemote = remotesFolder:WaitForChild(UPGRADE_HUB_REMOTE_NAME) :: 
 local worksiteUpgradeRemote = remotesFolder:WaitForChild(WORKSITE_UPGRADE_REMOTE_NAME) :: RemoteEvent
 local tinyfolkLaborUpgradeRemote = remotesFolder:WaitForChild(TINYFOLK_LABOR_UPGRADE_REMOTE_NAME) :: RemoteEvent
 local remoteControlStationRemote = remotesFolder:WaitForChild(REMOTE_CONTROL_STATION_REMOTE_NAME) :: RemoteEvent
+local defensivePropRemote = remotesFolder:WaitForChild(DEFENSIVE_PROP_REMOTE_NAME) :: RemoteEvent
 
 local INTERACTION_REPEAT_BLOCK_SECONDS = 0.2
 local lastSentAtBySignature: { [string]: number } = {}
@@ -58,6 +62,8 @@ local activeShrineTaskShrineId: string? = nil
 local activeShrineTaskToken = 0
 local activeRemoteControlStationId: string? = nil
 local activeRemoteControlTaskToken = 0
+local activeDefensivePropBreakPropId: string? = nil
+local activeDefensivePropBreakToken = 0
 local activeHaulHoldToken = 0
 local activeHaulHold: {
 	action: CandidateAction,
@@ -68,6 +74,8 @@ local activeHaulHold: {
 
 type CandidateAction =
 	"escape_attempt"
+	| "defensive_prop_drop"
+	| "defensive_prop_break"
 	| "construction_build"
 	| "upgrade_board_hub"
 	| "worksite_upgrade"
@@ -89,15 +97,17 @@ type Candidate = {
 
 local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	escape_attempt = 1,
-	construction_build = 2,
-	upgrade_board_hub = 3,
-	worksite_upgrade = 3,
-	warehouse_deliver = 4,
-	granary_deliver = 4,
-	tinyfolk_labor_upgrade = 4,
-	station_pickup_or_assign = 5,
-	shrine_assign_worshipper = 6,
-	remote_control_station = 7,
+	defensive_prop_drop = 2,
+	defensive_prop_break = 2,
+	construction_build = 3,
+	upgrade_board_hub = 4,
+	worksite_upgrade = 4,
+	warehouse_deliver = 5,
+	granary_deliver = 5,
+	tinyfolk_labor_upgrade = 5,
+	station_pickup_or_assign = 6,
+	shrine_assign_worshipper = 7,
+	remote_control_station = 8,
 }
 
 local function debugLog(message: string)
@@ -138,6 +148,20 @@ end
 
 local function getPriority(action: CandidateAction): number
 	return (PRIORITY_BY_ACTION :: any)[action]
+end
+
+local function isLocalPlayerCaptureInteractionActive(): boolean
+	return localPlayer:GetAttribute(CaptureConfig.StateAttributes.CaptureActive) == true
+end
+
+local function isLocalPlayerCarriedForCounterplay(): boolean
+	local carriedState = localPlayer:GetAttribute("CarriedState")
+	return carriedState == "Carried" or carriedState == "Counterplay"
+end
+
+local function isDefensivePropBreakInProgress(part: BasePart): boolean
+	local breakEndsAt = part:GetAttribute(DefensivePropConfig.Attributes.BreakEndsAt)
+	return type(breakEndsAt) == "number" and breakEndsAt > 0
 end
 
 local function resolveUpgradeableWorksiteId(partName: string): string?
@@ -235,6 +259,56 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				mode = "attempt",
 				payload = targetId,
 			})
+		end
+
+		if startsWithPrefix(targetId, DefensivePropConfig.PropNamePrefix) then
+			local enabledAttr = part:GetAttribute(DefensivePropConfig.EnabledAttribute)
+			if enabledAttr ~= false then
+				local stateAttr = part:GetAttribute(DefensivePropConfig.Attributes.State)
+				local propState = if type(stateAttr) == "string" then stateAttr else nil
+
+				if
+					isTinyfolk
+					and not isLocalPlayerCaptureInteractionActive()
+					and not isLocalPlayerCarriedForCounterplay()
+					and propState == DefensivePropConfig.Status.Ready
+					and distance <= DefensivePropConfig.DropInteractionRangeStuds
+				then
+					pushCandidate(candidates, {
+						action = "defensive_prop_drop",
+						targetId = targetId,
+						distance = distance,
+						priority = getPriority("defensive_prop_drop"),
+						mode = "drop",
+						payload = {
+							mode = "drop",
+							propId = targetId,
+						},
+					})
+				end
+
+				if
+					isGiant
+					and (
+						propState == DefensivePropConfig.Status.Dropped
+						or propState == DefensivePropConfig.Status.Blocked
+					)
+					and not isDefensivePropBreakInProgress(part)
+					and distance <= DefensivePropConfig.BreakInteractionRangeStuds
+				then
+					pushCandidate(candidates, {
+						action = "defensive_prop_break",
+						targetId = targetId,
+						distance = distance,
+						priority = getPriority("defensive_prop_break"),
+						mode = "start_break",
+						payload = {
+							mode = "start_break",
+							propId = targetId,
+						},
+					})
+				end
+			end
 		end
 
 		if
@@ -559,6 +633,11 @@ local function fireCandidate(candidate: Candidate)
 		remoteControlStationRemote:FireServer(candidate.payload)
 		return
 	end
+
+	if candidate.action == "defensive_prop_drop" or candidate.action == "defensive_prop_break" then
+		defensivePropRemote:FireServer(candidate.payload)
+		return
+	end
 end
 
 local function cancelActiveConstructionTask(reason: string)
@@ -624,11 +703,24 @@ local function cancelActiveRemoteControlTask(reason: string)
 	debugLog(string.format("Cancelled remote control task stationId=%s reason=%s", stationId, reason))
 end
 
+local function cancelActiveDefensivePropBreakTask(reason: string)
+	if activeDefensivePropBreakPropId == nil then
+		return
+	end
+
+	local propId = activeDefensivePropBreakPropId
+	activeDefensivePropBreakPropId = nil
+	activeDefensivePropBreakToken += 1
+
+	debugLog(string.format("Cancelled defensive prop break task propId=%s reason=%s", propId, reason))
+end
+
 local function beginConstructionTask(candidate: Candidate)
 	cancelActiveConstructionTask("new_begin")
 	cancelActiveStationTask("construction_begin")
 	cancelActiveShrineTask("construction_begin")
 	cancelActiveRemoteControlTask("construction_begin")
+	cancelActiveDefensivePropBreakTask("construction_begin")
 
 	activeConstructionTaskSiteId = candidate.targetId
 	activeConstructionTaskToken += 1
@@ -673,6 +765,7 @@ local function beginStationTask(candidate: Candidate)
 	cancelActiveStationTask("new_begin")
 	cancelActiveShrineTask("station_begin")
 	cancelActiveRemoteControlTask("station_begin")
+	cancelActiveDefensivePropBreakTask("station_begin")
 
 	activeStationTaskStationId = candidate.targetId
 	activeStationTaskToken += 1
@@ -719,6 +812,7 @@ local function beginShrineTask(candidate: Candidate)
 	cancelActiveStationTask("shrine_begin")
 	cancelActiveShrineTask("new_begin")
 	cancelActiveRemoteControlTask("shrine_begin")
+	cancelActiveDefensivePropBreakTask("shrine_begin")
 
 	activeShrineTaskShrineId = candidate.targetId
 	activeShrineTaskToken += 1
@@ -764,6 +858,7 @@ local function beginRemoteControlSabotageTask(candidate: Candidate)
 	cancelActiveStationTask("remote_control_begin")
 	cancelActiveShrineTask("remote_control_begin")
 	cancelActiveRemoteControlTask("new_begin")
+	cancelActiveDefensivePropBreakTask("remote_control_begin")
 
 	activeRemoteControlStationId = candidate.targetId
 	activeRemoteControlTaskToken += 1
@@ -857,6 +952,7 @@ local function beginHaulHold(candidate: Candidate)
 	cancelActiveStationTask("haul_hold_begin")
 	cancelActiveShrineTask("haul_hold_begin")
 	cancelActiveRemoteControlTask("haul_hold_begin")
+	cancelActiveDefensivePropBreakTask("haul_hold_begin")
 	cancelActiveHaulHold("new_begin")
 
 	activeHaulHoldToken += 1
@@ -913,6 +1009,48 @@ local function beginHaulHold(candidate: Candidate)
 	end)
 end
 
+local function beginDefensivePropBreakTask(candidate: Candidate)
+	cancelActiveConstructionTask("defensive_prop_break_begin")
+	cancelActiveStationTask("defensive_prop_break_begin")
+	cancelActiveShrineTask("defensive_prop_break_begin")
+	cancelActiveRemoteControlTask("defensive_prop_break_begin")
+	cancelActiveDefensivePropBreakTask("new_begin")
+
+	activeDefensivePropBreakPropId = candidate.targetId
+	activeDefensivePropBreakToken += 1
+	local tokenAtBegin = activeDefensivePropBreakToken
+
+	defensivePropRemote:FireServer({
+		mode = "start_break",
+		propId = candidate.targetId,
+	})
+
+	debugLog(
+		string.format(
+			"Sent defensive prop break start propId=%s duration=%.2f",
+			candidate.targetId,
+			DefensivePropConfig.BreakDurationSeconds
+		)
+	)
+
+	task.delay(DefensivePropConfig.BreakDurationSeconds, function()
+		if activeDefensivePropBreakPropId ~= candidate.targetId then
+			return
+		end
+		if activeDefensivePropBreakToken ~= tokenAtBegin then
+			return
+		end
+
+		defensivePropRemote:FireServer({
+			mode = "complete_break",
+			propId = candidate.targetId,
+		})
+		activeDefensivePropBreakPropId = nil
+		activeDefensivePropBreakToken += 1
+		debugLog(string.format("Sent defensive prop break complete propId=%s", candidate.targetId))
+	end)
+end
+
 local function requestContextInteraction()
 	local root = getHumanoidRootPart(localPlayer.Character)
 	if not root then
@@ -963,6 +1101,11 @@ local function requestContextInteraction()
 		return
 	end
 
+	if resolvedWinner.action == "defensive_prop_break" and resolvedWinner.mode == "start_break" then
+		beginDefensivePropBreakTask(resolvedWinner)
+		return
+	end
+
 	if isHaulHoldCandidate(resolvedWinner) then
 		beginHaulHold(resolvedWinner)
 		return
@@ -994,6 +1137,7 @@ UserInputService.InputEnded:Connect(function(input: any, _gameProcessedEvent: bo
 	cancelActiveStationTask("input_ended")
 	cancelActiveShrineTask("input_ended")
 	cancelActiveRemoteControlTask("input_ended")
+	cancelActiveDefensivePropBreakTask("input_ended")
 	cancelActiveHaulHold("input_ended")
 end)
 
