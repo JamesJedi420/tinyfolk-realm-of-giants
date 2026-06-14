@@ -54,11 +54,7 @@ end
 local configFolder = makeNode("Config")
 addChild(configFolder, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
-addChild(
-	configFolder,
-	"ContainmentStructureConfig",
-	"../../ReplicatedStorage/Shared/Config/ContainmentStructureConfig"
-)
+addChild(configFolder, "ContainmentStructureConfig", "../../ReplicatedStorage/Shared/Config/ContainmentStructureConfig")
 
 local giantRealmFolder = makeNode("GiantRealm")
 addChild(giantRealmFolder, "CaptivityDurationState", "../../ReplicatedStorage/Shared/GiantRealm/CaptivityDurationState")
@@ -179,11 +175,9 @@ _G._CaptivityEscapeService_QueryAPI = {
 	end,
 }
 
-local ContainmentZoneInteractionService =
-	require("../src/ServerScriptService/Services/ContainmentZoneInteractionService.server")(
-		fakeGame,
-		{ disableRemotes = true }
-	)
+local ContainmentZoneInteractionService = require(
+	"../src/ServerScriptService/Services/ContainmentZoneInteractionService.server"
+)(fakeGame, { disableRemotes = true })
 
 local interactionApi = _G._ContainmentZoneInteractionService_QueryAPI
 assertTrue(type(interactionApi) == "table", "interaction query api exposed")
@@ -242,7 +236,10 @@ do
 	for step = 2, 5 do
 		lastResult = interactionApi.RequestContainedEscape(5001, step)
 	end
-	assertTrue(lastResult.completed == true or lastResult.reason == "contained_escape_completed", "contained escape completes")
+	assertTrue(
+		lastResult.completed == true or lastResult.reason == "contained_escape_completed",
+		"contained escape completes"
+	)
 	assertEqual(#custodyEndCalls, 1, "contained escape ends custody once")
 	assertEqual(custodyEndCalls[1].endReason, "released", "contained escape release reason")
 end

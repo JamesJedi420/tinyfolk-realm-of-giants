@@ -52,7 +52,8 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 		then Shared:WaitForChild("GiantRealm")
 		else nil
 
-	local CaptureConfig = resolveDependency(Config, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
+	local CaptureConfig =
+		resolveDependency(Config, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
 	local RoleConfig = resolveDependency(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 	local ContainmentStructureConfig = resolveDependency(
 		Config,
@@ -261,7 +262,8 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 			return { accepted = false, reason = "contained_escape_unavailable" }
 		end
 
-		local escapeAllowed, escapeReason = canPerformEscapeAction(CapturePersistenceRules.EscapeActions.contained_escape)
+		local escapeAllowed, escapeReason =
+			canPerformEscapeAction(CapturePersistenceRules.EscapeActions.contained_escape)
 		if escapeAllowed ~= true then
 			return { accepted = false, reason = escapeReason or "escape_action_blocked" }
 		end
@@ -272,12 +274,14 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 		end
 
 		local state = ensureEscapeProgressState(targetUserId, resolvedNow)
-		local transition = ContainmentZoneEscapeState.ResolveEscapeAction(state, resolvedNow, ContainmentStructureConfig)
+		local transition =
+			ContainmentZoneEscapeState.ResolveEscapeAction(state, resolvedNow, ContainmentStructureConfig)
 		escapeProgressByTargetUserId[targetUserId] = transition.state
 		applyEscapeProgressAttributes(target, transition.snapshot, structureId)
 
 		if transition.completed == true then
-			local release = resolveContainedRelease(targetUserId, resolvedNow, CapturePersistenceRules.CustodyEndReasons.released)
+			local release =
+				resolveContainedRelease(targetUserId, resolvedNow, CapturePersistenceRules.CustodyEndReasons.released)
 			return {
 				accepted = release ~= nil and release.accepted == true,
 				reason = if transition.completed then "contained_escape_completed" else transition.reason,
@@ -349,10 +353,13 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 		end
 
 		lastRescueRequestAtByUserId[rescuerUserId] = resolvedNow
-		local release = resolveContainedRelease(targetUserId, resolvedNow, CapturePersistenceRules.CustodyEndReasons.rescued)
+		local release =
+			resolveContainedRelease(targetUserId, resolvedNow, CapturePersistenceRules.CustodyEndReasons.rescued)
 		return {
 			accepted = release ~= nil and release.accepted == true,
-			reason = if release ~= nil and release.accepted == true then "structure_rescue_completed" else "structure_rescue_failed",
+			reason = if release ~= nil and release.accepted == true
+				then "structure_rescue_completed"
+				else "structure_rescue_failed",
 			structureId = rescueDecision.structureId,
 			release = release,
 		}
@@ -395,7 +402,9 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 			if type(eligibility) ~= "table" or eligibility.eligible ~= true then
 				return {
 					accepted = false,
-					reason = if type(eligibility) == "table" then eligibility.reason else "containment_structure_not_in_range",
+					reason = if type(eligibility) == "table"
+						then eligibility.reason
+						else "containment_structure_not_in_range",
 					skipped = type(eligibility) == "table" and eligibility.skipped == true,
 				}
 			end
@@ -489,7 +498,11 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 			end)
 		end
 
-		if Players ~= nil and type(Players.PlayerRemoving) == "table" and type(Players.PlayerRemoving.Connect) == "function" then
+		if
+			Players ~= nil
+			and type(Players.PlayerRemoving) == "table"
+			and type(Players.PlayerRemoving.Connect) == "function"
+		then
 			Players.PlayerRemoving:Connect(function(player: any)
 				clearEscapeProgressForTarget(player.UserId)
 				lastRescueRequestAtByUserId[player.UserId] = nil

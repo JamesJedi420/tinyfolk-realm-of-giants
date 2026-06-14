@@ -1,9 +1,7 @@
 --!nocheck
 
-local ContainmentZoneEscapeState =
-	require("../src/ReplicatedStorage/Shared/GiantRealm/ContainmentZoneEscapeState")
-local ContainmentStructureConfig =
-	require("../src/ReplicatedStorage/Shared/Config/ContainmentStructureConfig")
+local ContainmentZoneEscapeState = require("../src/ReplicatedStorage/Shared/GiantRealm/ContainmentZoneEscapeState")
+local ContainmentStructureConfig = require("../src/ReplicatedStorage/Shared/Config/ContainmentStructureConfig")
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
