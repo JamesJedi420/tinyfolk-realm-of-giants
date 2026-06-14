@@ -32,5 +32,6 @@ lune run tests/defensive_prop_service_runtime_entrypoint.spec.luau
 
 ## Deferred
 
-- Live Studio Play spot-check evidence (checklist at `docs/TIN-161_STUDIO_SPOTCHECK_CHECKLIST.md`).
+- Live Studio Play spot-check manual rows (runbook at `docs/TIN-161_STUDIO_SPOTCHECK_EVIDENCE_2026-06-14.md`; checklist at `docs/TIN-161_STUDIO_SPOTCHECK_CHECKLIST.md`).
+- F-key client interaction wiring for `DefensivePropRequest` (Query API is Studio-testable today).
 - Portable props and presentation polish.
