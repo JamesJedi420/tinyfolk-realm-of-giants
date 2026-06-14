@@ -397,6 +397,77 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		return nil
 	end
 
+	local function getRescueContractQueryApi(): any?
+		if type(globalEnv._RescueContractService_QueryAPI) == "table" then
+			return globalEnv._RescueContractService_QueryAPI
+		end
+		if type(_G) == "table" and type((_G :: any)._RescueContractService_QueryAPI) == "table" then
+			return (_G :: any)._RescueContractService_QueryAPI
+		end
+		return nil
+	end
+
+	local function getRoleServiceQueryApi(): any?
+		if type(globalEnv._RoleService_QueryAPI) == "table" then
+			return globalEnv._RoleService_QueryAPI
+		end
+		if type(_G) == "table" and type((_G :: any)._RoleService_QueryAPI) == "table" then
+			return (_G :: any)._RoleService_QueryAPI
+		end
+		return nil
+	end
+
+	local function buildRescueDropContext(player: any, zoneId: string, currentTime: number): any
+		local hasActiveRescueContract = false
+		local rescueApi = getRescueContractQueryApi()
+		if rescueApi ~= nil and type(rescueApi.GetRescuerContract) == "function" then
+			local contract = rescueApi.GetRescuerContract(player.UserId, currentTime)
+			hasActiveRescueContract = contract ~= nil
+		end
+
+		local downedAllyInZone = false
+		local zonePart = zonePartById[zoneId]
+		local roleApi = getRoleServiceQueryApi()
+		if zonePart ~= nil and roleApi ~= nil and _Players ~= nil and type(_Players.GetPlayers) == "function" then
+			for _, otherPlayer in ipairs(_Players:GetPlayers()) do
+				if
+					otherPlayer ~= nil
+					and type(otherPlayer.UserId) == "number"
+					and otherPlayer.UserId ~= player.UserId
+					and getRole(otherPlayer) == RoleConfig.Roles.Tinyfolk
+					and isPlayerAlive(otherPlayer)
+					and type(roleApi.IsPlayerDowned) == "function"
+					and roleApi.IsPlayerDowned(otherPlayer.UserId) == true
+				then
+					local root = getHumanoidRootPart(otherPlayer)
+					if root ~= nil and partInsideZone(root, zonePart) then
+						downedAllyInZone = true
+						break
+					end
+				end
+			end
+		end
+
+		return {
+			hasActiveRescueContract = hasActiveRescueContract,
+			downedAllyInZone = downedAllyInZone,
+		}
+	end
+
+	local function tryGrantRescueDropEffect(player: any, zoneId: string, currentTime: number): any
+		local context = buildRescueDropContext(player, zoneId, currentTime)
+		local effect = DefensivePropState.EvaluateRescueDropEffect(DefensivePropConfig, context)
+		if effect.granted ~= true then
+			return effect
+		end
+
+		local rescueApi = getRescueContractQueryApi()
+		if rescueApi ~= nil and type(rescueApi.GrantRescueAcceleration) == "function" then
+			pcall(rescueApi.GrantRescueAcceleration, player.UserId, currentTime)
+		end
+		return effect
+	end
+
 	local function recordEvent(message: string, metadata: any)
 		local eventLog = getEventLogQueryApi()
 		if eventLog == nil or type(eventLog.RecordEvent) ~= "function" then
@@ -627,16 +698,19 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		end
 
 		local result = DefensivePropState.CreateDrop(DefensivePropConfig, record, player.UserId, currentTime)
+		local rescueDropEffect = nil
 		if result.accepted == true and result.record ~= nil then
 			propRecordById[propId] = result.record
 			applyPropAttributes(propId)
 			schedulePropRefresh(propId, result.record)
 			lastDropRequestAtByUserId[player.UserId] = currentTime
+			rescueDropEffect = tryGrantRescueDropEffect(player, result.record.zoneId, currentTime)
 			recordEvent("defensive prop dropped", {
 				propId = propId,
 				userId = player.UserId,
 				propType = result.record.propType,
 				zoneId = result.record.zoneId,
+				rescueDropEffect = rescueDropEffect,
 			})
 		end
 
@@ -644,6 +718,7 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 			accepted = result.accepted,
 			reason = result.reason,
 			snapshot = result.snapshot,
+			rescueDropEffect = rescueDropEffect,
 		}
 	end
 

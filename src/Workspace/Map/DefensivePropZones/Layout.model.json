@@ -37,6 +37,80 @@
           }
         }
       ]
+    },
+    {
+      "name": "DefensivePropZone_B",
+      "className": "Part",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.97,
+        "Material": "SmoothPlastic",
+        "Color": [0.35, 0.55, 0.95],
+        "Size": [52, 1, 52],
+        "Position": [-46, 0.5, -21],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": false,
+        "Locked": true
+      },
+      "children": [
+        {
+          "name": "Radius",
+          "className": "NumberValue",
+          "properties": {
+            "Value": 26
+          }
+        },
+        {
+          "name": "ZoneTag",
+          "className": "StringValue",
+          "properties": {
+            "Value": "TinyfolkDefense"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DefensivePropZone_C",
+      "className": "Part",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.97,
+        "Material": "SmoothPlastic",
+        "Color": [0.35, 0.55, 0.95],
+        "Size": [52, 1, 52],
+        "Position": [39, 0.5, -21.5],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": false,
+        "Locked": true
+      },
+      "children": [
+        {
+          "name": "Radius",
+          "className": "NumberValue",
+          "properties": {
+            "Value": 26
+          }
+        },
+        {
+          "name": "ZoneTag",
+          "className": "StringValue",
+          "properties": {
+            "Value": "TinyfolkDefense"
+          }
+        }
+      ]
     }
   ]
 }

@@ -267,4 +267,29 @@ do
 	assertEqual(tinyfolkBreak.reason, "requester_not_giant", "Tinyfolk break reason")
 end
 
+do
+	local rescueAccelerationCalls = {}
+	_G._RescueContractService_QueryAPI = {
+		GetRescuerContract = function(userId: number, _at: number?): any
+			if userId == tinyfolk.UserId then
+				return { rescuerUserId = userId, targetUserId = 5555 }
+			end
+			return nil
+		end,
+		GrantRescueAcceleration = function(userId: number, at: number?): boolean
+			table.insert(rescueAccelerationCalls, { userId = userId, at = at })
+			return true
+		end,
+	}
+
+	DefensivePropService.ResetForTests()
+	currentTime = 500
+	local rescueDrop = DefensivePropService.requestDrop(tinyfolk, "DefensiveProp_A")
+	assertTrue(rescueDrop.accepted, "rescue-context drop accepts")
+	assertTrue(rescueDrop.rescueDropEffect.granted, "rescue drop effect grants acceleration")
+	assertEqual(rescueDrop.rescueDropEffect.reason, "rescue_drop_active_contract", "rescue drop reason")
+	assertEqual(#rescueAccelerationCalls, 1, "rescue acceleration seam invoked once")
+	assertEqual(rescueAccelerationCalls[1].userId, tinyfolk.UserId, "rescue acceleration targets dropper")
+end
+
 print("defensive_prop_service_runtime_entrypoint: all checks passed")

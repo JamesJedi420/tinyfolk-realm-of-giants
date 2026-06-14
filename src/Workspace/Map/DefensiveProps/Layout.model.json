@@ -22,6 +22,50 @@
         "DefensivePropZoneId": "DefensivePropZone_A",
         "DefensivePropEnabled": true
       }
+    },
+    {
+      "name": "DefensiveProp_B",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.15,
+        "Material": "Wood",
+        "Color": [0.62, 0.48, 0.32],
+        "Size": [8, 5, 2],
+        "Position": [-46, 2.5, -21],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": true,
+        "Locked": true
+      },
+      "attributes": {
+        "DefensivePropType": "shelf",
+        "DefensivePropZoneId": "DefensivePropZone_B",
+        "DefensivePropEnabled": true
+      }
+    },
+    {
+      "name": "DefensiveProp_C",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.15,
+        "Material": "Fabric",
+        "Color": [0.45, 0.35, 0.25],
+        "Size": [10, 3, 1],
+        "Position": [39, 2, -21.5],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": true,
+        "Locked": true
+      },
+      "attributes": {
+        "DefensivePropType": "rope_gate",
+        "DefensivePropZoneId": "DefensivePropZone_C",
+        "DefensivePropEnabled": true
+      }
     }
   ]
 }
