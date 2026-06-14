@@ -4,9 +4,15 @@
     {
       "name": "TinyfolkSpawn",
       "className": "SpawnLocation",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
       "properties": {
         "Anchored": true,
         "Neutral": true,
+        "Transparency": 1,
+        "CanCollide": false,
         "Size": [
           8,
           1,
@@ -22,9 +28,15 @@
     {
       "name": "GiantSpawn",
       "className": "SpawnLocation",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
       "properties": {
         "Anchored": true,
         "Neutral": true,
+        "Transparency": 1,
+        "CanCollide": false,
         "Size": [
           8,
           1,

@@ -12,9 +12,11 @@ rojo build default.project.json -o TinyfolkRealmOfGiants.rbxlx
 
 ## Required Views
 
-- Overhead map: use `Workspace.Map.ValidationCameras.Shot_Overhead_Map`.
-- Giant road readability: use `Workspace.Map.ValidationCameras.Shot_Giant_PlazaRoads`.
-- Tinyfolk route-scale readability: use `Workspace.Map.ValidationCameras.Shot_Tinyfolk_RouteRead`.
+- Overhead map: use `Workspace.Map.ValidationCameras.Layout.Shot_Overhead_Map`.
+- Giant road readability: use `Workspace.Map.ValidationCameras.Layout.Shot_Giant_PlazaRoads`.
+- Tinyfolk route-scale readability: use `Workspace.Map.ValidationCameras.Layout.Shot_Tinyfolk_RouteRead`.
+- In Studio Play mode, `MapValidationScreenshotClient` shows **bottom-left buttons** for the three validation cameras and also accepts **H** / **G** / **T** when Studio is not paused. Number keys **1/2** remain role select via `RoleClient`.
+- `MapScreenshotPresentationService` hides helper folders (`DistrictPads`, `RouteNodes`, zones, objectives, etc.) on server start during Play.
 - After focusing a validation anchor, deselect it or select `Workspace.Map` before capturing so Studio selection outlines do not obscure the map.
 
 ## Helper Visibility Policy
