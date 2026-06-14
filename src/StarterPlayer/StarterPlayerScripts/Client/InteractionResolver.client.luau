@@ -289,10 +289,7 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 
 				if
 					isGiant
-					and (
-						propState == DefensivePropConfig.Status.Dropped
-						or propState == DefensivePropConfig.Status.Blocked
-					)
+					and (propState == DefensivePropConfig.Status.Dropped or propState == DefensivePropConfig.Status.Blocked)
 					and not isDefensivePropBreakInProgress(part)
 					and distance <= DefensivePropConfig.BreakInteractionRangeStuds
 				then

@@ -857,7 +857,11 @@ local function createDefensivePropService(runtimeGame: any?, options: any?)
 		end
 		local remotes = ensureRemotesFolder()
 		local remote = ensureRemoteEvent(remotes, REQUEST_REMOTE_NAME)
-		if remote == nil or type(remote.OnServerEvent) ~= "table" or type(remote.OnServerEvent.Connect) ~= "function" then
+		if
+			remote == nil
+			or type(remote.OnServerEvent) ~= "table"
+			or type(remote.OnServerEvent.Connect) ~= "function"
+		then
 			return
 		end
 		remote.OnServerEvent:Connect(function(player: any, payload: any)
