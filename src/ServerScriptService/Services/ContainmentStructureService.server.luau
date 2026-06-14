@@ -376,7 +376,7 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		if type(input) ~= "table" then
 			return { eligible = false, reason = "delivery_input_invalid", structureId = nil }
 		end
-		if service.getRegisteredStructureCount() == 0 then
+		if next(structureRecordById) == nil then
 			return { eligible = false, reason = "structures_unregistered", structureId = nil, skipped = true }
 		end
 		local structureId = input.structureId

@@ -116,7 +116,7 @@ function ContainmentZoneEscapeState.ResolveEscapeAction(state: ProgressState, no
 	}
 end
 
-function ContainmentZoneEscapeState.Clear(state: ProgressState?): ProgressState
+function ContainmentZoneEscapeState.Clear(_state: ProgressState?): ProgressState
 	return ContainmentZoneEscapeState.NewState(nil, 0)
 end
 

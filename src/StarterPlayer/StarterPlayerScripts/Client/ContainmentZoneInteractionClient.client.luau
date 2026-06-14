@@ -21,7 +21,7 @@ local localPlayer = Players.LocalPlayer
 
 local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
 local escapeRemote = remotesFolder:WaitForChild(ESCAPE_REMOTE_NAME) :: RemoteEvent
-local rescueRemote = remotesFolder:WaitForChild(RESCAPE_REMOTE_NAME) :: RemoteEvent
+local rescueRemote = remotesFolder:WaitForChild(RESCUE_REMOTE_NAME) :: RemoteEvent
 
 local function isLocalPlayerContained(): boolean
 	return localPlayer:GetAttribute(CaptureConfig.StateAttributes.CaptureActive) == true

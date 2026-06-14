@@ -52,8 +52,6 @@ local function createContainmentZoneInteractionService(runtimeGame: any?, option
 		then Shared:WaitForChild("GiantRealm")
 		else nil
 
-	local CaptureConfig =
-		resolveDependency(Config, "CaptureConfig", "../../ReplicatedStorage/Shared/Config/CaptureConfig")
 	local RoleConfig = resolveDependency(Config, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 	local ContainmentStructureConfig = resolveDependency(
 		Config,
