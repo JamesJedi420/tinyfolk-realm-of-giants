@@ -422,6 +422,23 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		)
 	end
 
+	local function notifyAbusePairRewardCap(metadata: any)
+		local abuseApi = if type(depsAny.abuseApi) == "table"
+			then depsAny.abuseApi
+			else getGlobalApi("_RepeatedTargetingAbuseService_QueryAPI")
+		if type(abuseApi) ~= "table" or type(abuseApi.RecordPairRewardCapReached) ~= "function" then
+			return
+		end
+		pcall(
+			abuseApi.RecordPairRewardCapReached,
+			metadata.custodianUserId,
+			metadata.targetUserId,
+			metadata.pairRewardCount,
+			metadata.endedAt,
+			metadata.operationId
+		)
+	end
+
 	local function readPairCount(pairKey: string, endedAt: number): number
 		local history = pairHistoryByKey[pairKey]
 		if history == nil then
@@ -520,7 +537,9 @@ function ContainmentRewardResolver.Create(deps: any?): any
 				endedAt = endedAt,
 				endReason = endReason,
 				heldSeconds = heldSeconds,
+				pairRewardCount = nextPairCount,
 			}
+			notifyAbusePairRewardCap(capMetadata)
 			local trophyResult = recordTrophy(capMetadata)
 			local giantLevelResult = recordGiantLevel(capMetadata)
 			return {

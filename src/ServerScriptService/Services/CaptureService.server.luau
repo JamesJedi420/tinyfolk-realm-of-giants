@@ -460,6 +460,39 @@ local function getGiantLevelServiceQueryApi(): any?
 	return nil
 end
 
+local function getRepeatedTargetingAbuseQueryApi(): any?
+	local queryApi = globalEnv._RepeatedTargetingAbuseService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._RepeatedTargetingAbuseService_QueryAPI) == "table" then
+		return (_G :: any)._RepeatedTargetingAbuseService_QueryAPI
+	end
+	return nil
+end
+
+local function notifyAbuseCaptureStart(custodianUserId: number, targetUserId: number, at: number)
+	local abuseApi = getRepeatedTargetingAbuseQueryApi()
+	if abuseApi == nil or type(abuseApi.RecordCaptureStart) ~= "function" then
+		return
+	end
+	pcall(abuseApi.RecordCaptureStart, custodianUserId, targetUserId, at, nil)
+end
+
+local function notifyAbuseCustodyEnd(
+	custodianUserId: number,
+	targetUserId: number,
+	endReason: string,
+	at: number,
+	operationId: string?
+)
+	local abuseApi = getRepeatedTargetingAbuseQueryApi()
+	if abuseApi == nil or type(abuseApi.RecordCustodyEnd) ~= "function" then
+		return
+	end
+	pcall(abuseApi.RecordCustodyEnd, custodianUserId, targetUserId, endReason, at, operationId)
+end
+
 local function getPenRationingServiceQueryApi(): any?
 	local queryApi = globalEnv._PenRationingService_QueryAPI
 	if type(queryApi) == "table" then
@@ -629,6 +662,7 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		if giantLevelApi ~= nil and type(giantLevelApi.RecordCaptureSuccess) == "function" then
 			giantLevelApi.RecordCaptureSuccess(custodian.UserId, target.UserId, resolvedNow)
 		end
+		notifyAbuseCaptureStart(custodian.UserId, target.UserId, resolvedNow)
 	else
 		markRejectedRequest(custodian.UserId, resolvedNow)
 	end
@@ -669,6 +703,13 @@ local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?,
 	state = transition.state
 	projectCustodyEndReason(transition.record, endReason)
 	local reward = resolveContainmentRewardForRecord(transition.record, endReason, resolvedNow, operationId)
+	notifyAbuseCustodyEnd(
+		transition.record.custodianUserId,
+		transition.record.targetUserId,
+		endReason,
+		resolvedNow,
+		operationId
+	)
 	clearStructureOccupantForTarget(targetUserId)
 	applyCaptureAttributesFromState()
 
