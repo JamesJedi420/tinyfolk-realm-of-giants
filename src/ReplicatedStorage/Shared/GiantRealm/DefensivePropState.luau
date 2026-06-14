@@ -13,7 +13,21 @@ export type Config = {
 	MaxActivePropsPerTinyfolk: number,
 	BarrierContactStaggerSeconds: number?,
 	BarrierContactCooldownSeconds: number?,
-	PropTypes: { [string]: { displayName: string } },
+	PropTypes: {
+		[string]: {
+			displayName: string,
+			barrierStartupSeconds: number?,
+			barrierActiveSeconds: number?,
+			obstacleDurationSeconds: number?,
+			breakDurationSeconds: number?,
+			barrierContactStaggerSeconds: number?,
+		},
+	},
+}
+
+export type RescueDropContext = {
+	hasActiveRescueContract: boolean,
+	downedAllyInZone: boolean,
 }
 
 export type PropRecord = {
@@ -238,6 +252,38 @@ function DefensivePropState.ValidatePropType(config: Config, propType: any): boo
 	return type(propType) == "string" and type(config.PropTypes[propType]) == "table"
 end
 
+function DefensivePropState.ResolvePropTypeNumber(
+	config: Config,
+	propType: string,
+	propTypeFieldName: string,
+	configFieldName: string
+): number
+	local propTypeConfig = config.PropTypes[propType]
+	if type(propTypeConfig) == "table" and type(propTypeConfig[propTypeFieldName]) == "number" then
+		return positiveNumber(propTypeConfig[propTypeFieldName], 0)
+	end
+	return positiveNumber(config[configFieldName], 0)
+end
+
+function DefensivePropState.EvaluateRescueDropEffect(_config: Config, context: RescueDropContext): any
+	if context.hasActiveRescueContract ~= true and context.downedAllyInZone ~= true then
+		return {
+			granted = false,
+			reason = "no_rescue_context",
+			effect = nil,
+		}
+	end
+	local reason = if context.hasActiveRescueContract and context.downedAllyInZone
+		then "rescue_drop_contract_and_ally"
+		elseif context.hasActiveRescueContract then "rescue_drop_active_contract"
+		else "rescue_drop_downed_ally_in_zone"
+	return {
+		granted = true,
+		reason = reason,
+		effect = "rescue_acceleration",
+	}
+end
+
 function DefensivePropState.CanDrop(
 	config: Config,
 	record: PropRecord?,
@@ -292,9 +338,24 @@ function DefensivePropState.CreateDrop(config: Config, record: PropRecord, dropp
 		return canDrop
 	end
 
-	local startupSeconds = positiveNumber(config.BarrierStartupSeconds, 0)
-	local activeSeconds = positiveNumber(config.BarrierActiveSeconds, 0)
-	local obstacleSeconds = positiveNumber(config.ObstacleDurationSeconds, 0)
+	local startupSeconds = DefensivePropState.ResolvePropTypeNumber(
+		config,
+		record.propType,
+		"barrierStartupSeconds",
+		"BarrierStartupSeconds"
+	)
+	local activeSeconds = DefensivePropState.ResolvePropTypeNumber(
+		config,
+		record.propType,
+		"barrierActiveSeconds",
+		"BarrierActiveSeconds"
+	)
+	local obstacleSeconds = DefensivePropState.ResolvePropTypeNumber(
+		config,
+		record.propType,
+		"obstacleDurationSeconds",
+		"ObstacleDurationSeconds"
+	)
 	local startupEndsAt = now + startupSeconds
 	local activeEndsAt = startupEndsAt + activeSeconds
 	local obstacleExpiresAt = now + obstacleSeconds
@@ -351,7 +412,12 @@ function DefensivePropState.StartBreak(config: Config, record: PropRecord, broke
 	end
 
 	local nextRecord = cloneRecord(record)
-	local breakDuration = positiveNumber(config.BreakDurationSeconds, 0)
+	local breakDuration = DefensivePropState.ResolvePropTypeNumber(
+		config,
+		record.propType,
+		"breakDurationSeconds",
+		"BreakDurationSeconds"
+	)
 	nextRecord.breakStartedAt = now
 	nextRecord.breakEndsAt = now + breakDuration
 
@@ -444,7 +510,12 @@ function DefensivePropState.ApplyBarrierContact(
 	end
 
 	local nextRecord, breakInterrupted = DefensivePropState.InterruptBreak(record)
-	local staggerSeconds = positiveNumber(config.BarrierContactStaggerSeconds, 0)
+	local staggerSeconds = DefensivePropState.ResolvePropTypeNumber(
+		config,
+		record.propType,
+		"barrierContactStaggerSeconds",
+		"BarrierContactStaggerSeconds"
+	)
 
 	return {
 		accepted = true,

@@ -1663,6 +1663,14 @@ globalEnv._RescueContractService_QueryAPI = {
 		end
 		return cancelPostRescueProtection(target, breakingAction, resolvedAt)
 	end,
+	GrantRescueAcceleration = function(userId: number, at: number?): boolean
+		local player = getPlayerByUserId(userId)
+		if player == nil then
+			return false
+		end
+		grantRescueAcceleration(player, if type(at) == "number" then at else now())
+		return true
+	end,
 	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
 		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
 	end,

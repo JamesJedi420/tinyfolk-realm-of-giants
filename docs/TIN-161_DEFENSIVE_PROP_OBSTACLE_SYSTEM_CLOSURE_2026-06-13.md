@@ -32,6 +32,5 @@ lune run tests/defensive_prop_service_runtime_entrypoint.spec.luau
 
 ## Deferred
 
-- Studio drop/break interaction spot-check.
-- Rescue-relevant drop side effects beyond break interruption.
-- Additional prop families beyond authored anchor catalog wiring.
+- Live Studio Play spot-check evidence (checklist at `docs/TIN-161_STUDIO_SPOTCHECK_CHECKLIST.md`).
+- Portable props and presentation polish.

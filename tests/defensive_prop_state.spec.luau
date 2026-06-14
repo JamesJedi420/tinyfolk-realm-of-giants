@@ -130,4 +130,40 @@ do
 	)
 end
 
+do
+	local shelfRecord = DefensivePropState.NewRecord("DefensiveProp_B", "shelf", "DefensivePropZone_B", true)
+	local shelfDrop = DefensivePropState.CreateDrop(DefensivePropConfig, shelfRecord, 4201, 100)
+	assertEqual(shelfDrop.record.barrierActiveEndsAt, 107, "shelf prop type uses longer active window")
+end
+
+do
+	local ropeRecord = DefensivePropState.NewRecord("DefensiveProp_C", "rope_gate", "DefensivePropZone_C", true)
+	local ropeDrop = DefensivePropState.CreateDrop(DefensivePropConfig, ropeRecord, 4201, 200)
+	local ropeStagger = DefensivePropState.ApplyBarrierContact(DefensivePropConfig, ropeDrop.record, 202, nil)
+	assertEqual(ropeStagger.staggerSeconds, 1, "rope_gate prop type uses longer stagger")
+end
+
+do
+	local noContext = DefensivePropState.EvaluateRescueDropEffect(DefensivePropConfig, {
+		hasActiveRescueContract = false,
+		downedAllyInZone = false,
+	})
+	assertFalse(noContext.granted, "rescue drop effect rejects without context")
+	assertEqual(noContext.reason, "no_rescue_context", "no context reason")
+
+	local withContract = DefensivePropState.EvaluateRescueDropEffect(DefensivePropConfig, {
+		hasActiveRescueContract = true,
+		downedAllyInZone = false,
+	})
+	assertTrue(withContract.granted, "rescue drop effect grants with active contract")
+	assertEqual(withContract.effect, "rescue_acceleration", "rescue drop effect type")
+
+	local withAlly = DefensivePropState.EvaluateRescueDropEffect(DefensivePropConfig, {
+		hasActiveRescueContract = false,
+		downedAllyInZone = true,
+	})
+	assertTrue(withAlly.granted, "rescue drop effect grants with downed ally in zone")
+	assertEqual(withAlly.reason, "rescue_drop_downed_ally_in_zone", "downed ally reason")
+end
+
 print("defensive_prop_state: all checks passed")

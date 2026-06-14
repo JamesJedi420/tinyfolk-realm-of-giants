@@ -29,6 +29,8 @@ DefensivePropConfig.BarrierContactStaggerSeconds = 0.75
 DefensivePropConfig.BarrierContactCooldownSeconds = 1.5
 DefensivePropConfig.GiantBarrierContactScanIntervalSeconds = 0.25
 
+DefensivePropConfig.RescueDropAllyRadiusStuds = 24
+
 DefensivePropConfig.PropTypeAttribute = "DefensivePropType"
 DefensivePropConfig.ZoneIdAttribute = "DefensivePropZoneId"
 DefensivePropConfig.EnabledAttribute = "DefensivePropEnabled"
@@ -53,12 +55,21 @@ DefensivePropConfig.Attributes = {
 }
 
 DefensivePropConfig.PropTypes = {
-	shelf = { displayName = "Shelf" },
-	plank = { displayName = "Plank" },
+	shelf = {
+		displayName = "Shelf",
+		barrierActiveSeconds = 6,
+	},
+	plank = {
+		displayName = "Plank",
+		barrierStartupSeconds = 0.75,
+	},
 	curtain = { displayName = "Curtain" },
 	tray = { displayName = "Tray" },
 	ladder = { displayName = "Ladder" },
-	rope_gate = { displayName = "Rope Gate" },
+	rope_gate = {
+		displayName = "Rope Gate",
+		barrierContactStaggerSeconds = 1,
+	},
 	loose_board = { displayName = "Loose Board" },
 	crate = { displayName = "Crate" },
 }
