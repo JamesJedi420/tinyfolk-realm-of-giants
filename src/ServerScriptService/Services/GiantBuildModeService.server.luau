@@ -17,6 +17,8 @@ local GiantMacroRouteAccess: any
 local ResourceFlowState: any
 local SnareTrapConfig: any
 local SnareTrapState: any
+local ContainmentStructureConfig: any
+local ContainmentStructurePlacementState: any
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
@@ -128,6 +130,8 @@ local function resolveDependencies()
 	EscapeConfig = requireChildModule(config, "EscapeConfig")
 	GiantMacroRouteAccess = requireChildModule(giantRealm, "GiantMacroRouteAccess")
 	SnareTrapState = requireChildModule(giantRealm, "SnareTrapState")
+	ContainmentStructureConfig = requireChildModule(config, "ContainmentStructureConfig")
+	ContainmentStructurePlacementState = requireChildModule(giantRealm, "ContainmentStructurePlacementState")
 	ResourceFlowState = requireChildModule(script.Parent, "ResourceFlowState")
 end
 
@@ -259,6 +263,24 @@ local function getDefensivePropQueryApi(): any?
 	return nil
 end
 
+local function getContainmentStructureQueryApi(): any?
+	local queryApi = rawget(globalEnv, "_ContainmentStructureService_QueryAPI")
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._ContainmentStructureService_QueryAPI) == "table" then
+		return (_G :: any)._ContainmentStructureService_QueryAPI
+	end
+	return nil
+end
+
+local function refreshContainmentStructureRegistry()
+	local queryApi = getContainmentStructureQueryApi()
+	if queryApi ~= nil and type(queryApi.RefreshRegistries) == "function" then
+		queryApi.RefreshRegistries()
+	end
+end
+
 local function buildGiantMacroRouteAccessPayload(routeId: string, routePart: any, player: any?): any
 	local role = getPlayerRole(player)
 	local giantOnly = routePart:GetAttribute(EscapeConfig.GiantOnlyRouteAttribute) == true
@@ -388,6 +410,19 @@ local function createMockFolder(name: string, parent: any): any
 		return children
 	end
 
+	function folder.GetDescendants(self: any): { any }
+		local descendants: { any } = {}
+		for _, child in pairs(self._Children) do
+			table.insert(descendants, child)
+			if type(child.GetDescendants) == "function" then
+				for _, descendant in ipairs(child:GetDescendants()) do
+					table.insert(descendants, descendant)
+				end
+			end
+		end
+		return descendants
+	end
+
 	function folder.SetAttribute(self: any, attributeName: string, value: any)
 		self._Attributes[attributeName] = value
 	end
@@ -443,6 +478,81 @@ local function removeChildFolderByName(parent: any, childName: string)
 	end
 end
 
+local function removeChildPartByName(parent: any, childName: string)
+	removeChildFolderByName(parent, childName)
+end
+
+local function createMockPart(name: string, parent: any, position: any, size: any): any
+	local part: any = {
+		Name = name,
+		ClassName = "BasePart",
+		Position = position,
+		Size = size,
+		_Children = {},
+		_Attributes = {},
+	}
+
+	function part.IsA(self: any, expectedClass: string): boolean
+		return expectedClass == "BasePart" or expectedClass == "Part" or self.ClassName == expectedClass
+	end
+
+	function part.FindFirstChild(self: any, childName: string): any
+		return self._Children[childName]
+	end
+
+	function part.GetChildren(self: any): { any }
+		local children: { any } = {}
+		for _, child in pairs(self._Children) do
+			table.insert(children, child)
+		end
+		return children
+	end
+
+	function part.GetDescendants(self: any): { any }
+		local descendants: { any } = { self }
+		for _, child in pairs(self._Children) do
+			table.insert(descendants, child)
+			if type(child.GetDescendants) == "function" then
+				for _, descendant in ipairs(child:GetDescendants()) do
+					table.insert(descendants, descendant)
+				end
+			end
+		end
+		return descendants
+	end
+
+	function part.SetAttribute(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end
+
+	function part.GetAttribute(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
+	end
+
+	part.Parent = parent
+	if type(parent._Children) == "table" then
+		parent._Children[name] = part
+	end
+
+	return part
+end
+
+local function createPart(name: string, parent: any, position: any, size: any): any
+	if type(parent) == "table" and type(parent._Children) == "table" then
+		return createMockPart(name, parent, position, size)
+	end
+
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 0.97
+	part.Position = Vector3.new(position.x, position.y, position.z)
+	part.Size = Vector3.new(size.x, size.y, size.z)
+	part.Parent = parent
+	return part
+end
+
 local function setArtifactAttribute(instance: any, attributeName: string, value: any)
 	if type(instance.SetAttribute) == "function" then
 		instance:SetAttribute(attributeName, value)
@@ -457,6 +567,86 @@ local function setArtifactAttribute(instance: any, attributeName: string, value:
 		end
 		rawset(attributes, attributeName, value)
 	end
+end
+
+local function getFirstOccupiedCenter(request: StructurePlacementRequest): { x: number, y: number, z: number }?
+	local occupiedBox = request.proposedOccupiedSpace[1]
+	if occupiedBox == nil then
+		return nil
+	end
+	return occupiedBox.worldCenter
+end
+
+local function applyContainmentStructureArtifactAttributes(
+	artifact: any,
+	geometry: any,
+	placedByUserId: number,
+	placedAt: number
+)
+	setArtifactAttribute(artifact, ContainmentStructureConfig.StructureTypeAttribute, geometry.structureType)
+	setArtifactAttribute(artifact, ContainmentStructureConfig.ZoneIdAttribute, geometry.zoneId)
+	setArtifactAttribute(artifact, ContainmentStructureConfig.CapacityAttribute, geometry.capacity)
+	setArtifactAttribute(artifact, ContainmentStructureConfig.EnabledAttribute, true)
+	setArtifactAttribute(
+		artifact,
+		ContainmentStructureConfig.EscapeInteractionAttribute,
+		geometry.escapeInteractionEnabled
+	)
+	setArtifactAttribute(artifact, "GiantBuildStructureId", geometry.giantStructureId)
+	setArtifactAttribute(artifact, "PlacedByUserId", placedByUserId)
+	setArtifactAttribute(artifact, "PlacedAt", placedAt)
+end
+
+local function materializeContainmentStructureArtifacts(
+	request: StructurePlacementRequest,
+	placedByUserId: number,
+	placedAt: number
+)
+	local worldCenter = getFirstOccupiedCenter(request)
+	if worldCenter == nil then
+		error("containment_placement_center_missing")
+	end
+
+	local geometry = ContainmentStructurePlacementState.BuildPlacementGeometry(
+		ContainmentStructureConfig,
+		request.structureId,
+		worldCenter
+	)
+	if geometry == nil then
+		error("containment_placement_geometry_invalid")
+	end
+
+	local mapFolder = ensureChildFolder(Workspace, "Map")
+	local structuresFolder = ensureChildFolder(mapFolder, "ContainmentStructures")
+	local zonesFolder = ensureChildFolder(mapFolder, "ContainmentStructureZones")
+
+	removeChildPartByName(structuresFolder, geometry.structureId)
+	removeChildPartByName(zonesFolder, geometry.zoneId)
+
+	local structureArtifact =
+		createPart(geometry.structureId, structuresFolder, geometry.structurePosition, geometry.structureSize)
+	local zoneArtifact = createPart(geometry.zoneId, zonesFolder, geometry.zonePosition, geometry.zoneSize)
+
+	local geometryWithGiantId = {
+		structureType = geometry.structureType,
+		zoneId = geometry.zoneId,
+		capacity = geometry.capacity,
+		escapeInteractionEnabled = geometry.escapeInteractionEnabled,
+		giantStructureId = request.structureId,
+	}
+	applyContainmentStructureArtifactAttributes(structureArtifact, geometryWithGiantId, placedByUserId, placedAt)
+	setArtifactAttribute(zoneArtifact, ContainmentStructureConfig.ZoneIdAttribute, geometry.zoneId)
+	setArtifactAttribute(zoneArtifact, "GiantBuildStructureId", request.structureId)
+
+	refreshContainmentStructureRegistry()
+	debugLog(
+		string.format(
+			"Materialized containment structure artifact structureId=%s zoneId=%s giantStructureId=%s",
+			geometry.structureId,
+			geometry.zoneId,
+			request.structureId
+		)
+	)
 end
 
 local function materializeAcceptedWorkspaceArtifact(state: AcceptedStructurePlacementState)
@@ -694,19 +884,20 @@ local function isSnareTrapStructure(structureId: string): boolean
 	return type(definition) == "table" and definition.category == "trap"
 end
 
+local function isContainmentStructure(structureId: string): boolean
+	local definition = GiantStructureCatalog[structureId]
+	return ContainmentStructurePlacementState.IsContainmentBuildStructure(
+		definition,
+		ContainmentStructureConfig,
+		structureId
+	)
+end
+
 local function getVectorDistance(a: { x: number, y: number, z: number }, b: { x: number, y: number, z: number }): number
 	local dx = a.x - b.x
 	local dy = a.y - b.y
 	local dz = a.z - b.z
 	return math.sqrt(dx * dx + dy * dy + dz * dz)
-end
-
-local function getFirstOccupiedCenter(request: StructurePlacementRequest): { x: number, y: number, z: number }?
-	local occupiedBox = request.proposedOccupiedSpace[1]
-	if occupiedBox == nil then
-		return nil
-	end
-	return occupiedBox.worldCenter
 end
 
 local function collectBaseParts(node: any, output: { any })
@@ -1070,6 +1261,22 @@ placementRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 			return
 		end
 		lastSnareTrapPlacementAtByUserId[player.UserId] = placedAt
+	elseif isContainmentStructure(request.structureId) then
+		local previousState = placedStructureById[request.structureId]
+		local appliedPlacement, placementError = pcall(function()
+			materializeContainmentStructureArtifacts(request, player.UserId, placedAt)
+			placedStructureById[request.structureId] = accepted
+		end)
+
+		if not appliedPlacement then
+			placedStructureById[request.structureId] = previousState
+			rollbackStructureSpend(spentFrom, spendOperationId, woodCost, stoneCost, request.structureId, placedAt)
+			local applyFailureReason =
+				string.format("containment_placement_apply_failed detail=%s", tostring(placementError))
+			rejectPlacement(player, applyFailureReason)
+			logPlacementOutcome("rejected", player, request.structureId, applyFailureReason)
+			return
+		end
 	else
 		local previousState = placedStructureById[request.structureId]
 		local appliedPlacement, placementError = pcall(function()

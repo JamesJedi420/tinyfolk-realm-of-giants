@@ -529,6 +529,10 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		)
 	end
 
+	function service.refreshRegistries()
+		refreshRegistries()
+	end
+
 	function service.ResetForTests()
 		structureRecordById = {}
 		refreshRegistries()
@@ -562,6 +566,9 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		end,
 		EvaluateCaptureDeliveryEligibility = function(input: any): any
 			return evaluateCaptureDeliveryEligibility(input)
+		end,
+		RefreshRegistries = function()
+			service.refreshRegistries()
 		end,
 		ResetForTests = function()
 			service.ResetForTests()

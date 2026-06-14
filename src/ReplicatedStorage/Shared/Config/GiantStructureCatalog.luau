@@ -26,6 +26,18 @@ local GiantStructureCatalog: { [string]: GiantStructureDefinition } = {
 		woodCost = 10,
 		stoneCost = 4,
 	},
+	GiantStructure_Containment_Cage_A = {
+		displayName = "Containment Cage",
+		category = "containment",
+		woodCost = 20,
+		stoneCost = 12,
+	},
+	GiantStructure_Containment_Jar_A = {
+		displayName = "Containment Jar",
+		category = "containment",
+		woodCost = 14,
+		stoneCost = 6,
+	},
 }
 
 for structureId, definition in pairs(GiantStructureCatalog) do
