@@ -79,7 +79,8 @@ end
 
 function MapScreenshotPresentationPolicy.shouldHideInstance(instance: Instance, mapRoot: Instance?): boolean
 	if instance:IsA("BasePart") then
-		return MapScreenshotPresentationPolicy.shouldHidePart(instance, mapRoot)
+		local part = instance :: BasePart
+		return MapScreenshotPresentationPolicy.shouldHidePart(part, mapRoot)
 	end
 	return MapScreenshotPresentationPolicy.shouldHideByAttribute(instance)
 		or MapScreenshotPresentationPolicy.isUnderHideFolder(instance, mapRoot)
