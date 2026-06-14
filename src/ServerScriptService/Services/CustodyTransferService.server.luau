@@ -111,6 +111,31 @@ local function getRuntimeEventLogQueryApi(): any?
 	return nil
 end
 
+local function getRepeatedTargetingAbuseQueryApi(): any?
+	local queryApi = globalEnv._RepeatedTargetingAbuseService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._RepeatedTargetingAbuseService_QueryAPI) == "table" then
+		return (_G :: any)._RepeatedTargetingAbuseService_QueryAPI
+	end
+	return nil
+end
+
+local function notifyAbuseCustodyTransfer(
+	outgoingCustodianUserId: number,
+	incomingCustodianUserId: number,
+	targetUserId: number,
+	at: number,
+	requestId: string?
+)
+	local abuseApi = getRepeatedTargetingAbuseQueryApi()
+	if abuseApi == nil or type(abuseApi.RecordCustodyTransfer) ~= "function" then
+		return
+	end
+	pcall(abuseApi.RecordCustodyTransfer, outgoingCustodianUserId, incomingCustodianUserId, targetUserId, at, requestId)
+end
+
 local function resolveMaxConcurrentCapturesPerCustodian(): number
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
 	if type(upgradeApi) ~= "table" and type(_G) == "table" then
@@ -504,6 +529,13 @@ local function confirmCustodyTransfer(incomingCustodianUserId: number, requestId
 		terms = transition.terms,
 		record = transferResult.record,
 	})
+	notifyAbuseCustodyTransfer(
+		pending.terms.outgoingCustodianUserId,
+		incomingCustodianUserId,
+		pending.terms.targetUserId,
+		resolvedNow,
+		transition.request.requestId
+	)
 
 	return {
 		accepted = true,
