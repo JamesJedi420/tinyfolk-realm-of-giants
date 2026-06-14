@@ -13,6 +13,9 @@ ContainmentStructureConfig.ZonesFolderPath = { "Map", "ContainmentStructureZones
 ContainmentStructureConfig.DefaultCapacity = 1
 ContainmentStructureConfig.AssignInteractionRangeStuds = 14
 ContainmentStructureConfig.RescueInteractionRangeStuds = 14
+ContainmentStructureConfig.ContainmentEscapeProgressRequired = 5
+ContainmentStructureConfig.ContainmentEscapeActionCooldownSeconds = 0.35
+ContainmentStructureConfig.ContainmentRescueCooldownSeconds = 0.5
 
 ContainmentStructureConfig.StructureTypeAttribute = "ContainmentStructureType"
 ContainmentStructureConfig.ZoneIdAttribute = "ContainmentStructureZoneId"
@@ -28,6 +31,13 @@ ContainmentStructureConfig.Attributes = {
 	OccupantCount = "ContainmentStructureOccupantCount",
 	OccupantUserIds = "ContainmentStructureOccupantUserIds",
 	EscapeInteractionEnabled = "ContainmentEscapeInteractionEnabled",
+}
+
+ContainmentStructureConfig.PlayerAttributes = {
+	EscapeProgress = "ContainmentEscapeProgress",
+	EscapeProgressRequired = "ContainmentEscapeProgressRequired",
+	EscapeLastReason = "ContainmentEscapeLastReason",
+	StructureId = "ContainmentStructureId",
 }
 
 ContainmentStructureConfig.StructureTypes = {

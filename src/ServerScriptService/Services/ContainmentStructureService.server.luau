@@ -371,6 +371,35 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		return candidates[1]
 	end
 
+	local function evaluateCaptureDeliveryEligibility(input: any): any
+		refreshRegistries()
+		if type(input) ~= "table" then
+			return { eligible = false, reason = "delivery_input_invalid", structureId = nil }
+		end
+		if service.getRegisteredStructureCount() == 0 then
+			return { eligible = false, reason = "structures_unregistered", structureId = nil, skipped = true }
+		end
+		local structureId = input.structureId
+		if type(structureId) ~= "string" or structureId == "" then
+			structureId = resolveStructureForPositions(input.custodianPosition, input.targetPosition)
+		end
+		if structureId == nil then
+			return { eligible = false, reason = "containment_structure_not_in_range", structureId = nil }
+		end
+		local record = structureRecordById[structureId]
+		local snapshot = ContainmentStructureState.Snapshot(ContainmentStructureConfig, record)
+		if snapshot == nil or snapshot.hasCapacity ~= true then
+			return {
+				eligible = false,
+				reason = if snapshot ~= nil and snapshot.hasCapacity ~= true
+					then "structure_capacity_full"
+					else "structure_missing",
+				structureId = structureId,
+			}
+		end
+		return { eligible = true, reason = "accepted", structureId = structureId }
+	end
+
 	local function findStructureIdForTargetUserId(targetUserId: number): string?
 		for structureId, record in pairs(structureRecordById) do
 			if record ~= nil and ContainmentStructureState.IsOccupant(record, targetUserId) then
@@ -530,6 +559,9 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		end,
 		HasEscapeInteractionForTarget = function(targetUserId: number): boolean
 			return service.hasEscapeInteractionForTarget(targetUserId)
+		end,
+		EvaluateCaptureDeliveryEligibility = function(input: any): any
+			return evaluateCaptureDeliveryEligibility(input)
 		end,
 		ResetForTests = function()
 			service.ResetForTests()

@@ -51,6 +51,7 @@ CaptureConfig.StateAttributes = {
 	CaptivityEscapeProgressRequired = "CaptivityEscapeProgressRequired",
 	CaptivityEscapeSuppressed = "CaptivityEscapeSuppressed",
 	CaptivityEscapeLastReason = "CaptivityEscapeLastReason",
+	CaptureContainmentPhase = "CaptureContainmentPhase",
 	AntiGuardingPressure = "AntiGuardingPressure",
 	AntiGuardingPressurePhase = "AntiGuardingPressurePhase",
 	AntiGuardingCounterplayReady = "AntiGuardingCounterplayReady",

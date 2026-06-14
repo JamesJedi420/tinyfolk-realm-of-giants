@@ -398,6 +398,7 @@ applyCaptureAttributesFromState = function()
 		player:SetAttribute(attrs.CaptureActive, false)
 		player:SetAttribute(attrs.CaptureCustodianUserId, nil)
 		player:SetAttribute(attrs.CaptureExpiresAt, nil)
+		player:SetAttribute(attrs.CaptureContainmentPhase, nil)
 	end
 
 	local captures = CaptureState.GetAllCaptures(state)
@@ -413,6 +414,7 @@ applyCaptureAttributesFromState = function()
 			target:SetAttribute(attrs.CaptureActive, true)
 			target:SetAttribute(attrs.CaptureCustodianUserId, record.custodianUserId)
 			target:SetAttribute(attrs.CaptureExpiresAt, record.expiresAt)
+			target:SetAttribute(attrs.CaptureContainmentPhase, record.containmentPhase)
 		end
 	end
 end
