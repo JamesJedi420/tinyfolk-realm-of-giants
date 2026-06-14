@@ -11,25 +11,25 @@ local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 local CaptivityDurationState = require(GiantRealm:WaitForChild("CaptivityDurationState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
-local STRUGGLE_REMOTE_NAME = "CaptivityStruggleRequest"
-local ALLY_ASSIST_REMOTE_NAME = "CaptivityAllyAssistRequest"
+local ESCAPE_REMOTE_NAME = "ContainmentEscapeRequest"
+local RESCUE_REMOTE_NAME = "ContainmentRescueRequest"
 
-local STRUGGLE_KEY = Enum.KeyCode.F
-local ALLY_ASSIST_KEY = Enum.KeyCode.R
+local ESCAPE_KEY = Enum.KeyCode.F
+local RESCUE_KEY = Enum.KeyCode.R
 
 local localPlayer = Players.LocalPlayer
 
 local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
-local struggleRemote = remotesFolder:WaitForChild(STRUGGLE_REMOTE_NAME) :: RemoteEvent
-local allyAssistRemote = remotesFolder:WaitForChild(ALLY_ASSIST_REMOTE_NAME) :: RemoteEvent
+local escapeRemote = remotesFolder:WaitForChild(ESCAPE_REMOTE_NAME) :: RemoteEvent
+local rescueRemote = remotesFolder:WaitForChild(RESCUE_REMOTE_NAME) :: RemoteEvent
 
-local function isLocalPlayerCapturedButNotContained(): boolean
+local function isLocalPlayerContained(): boolean
 	return localPlayer:GetAttribute(CaptureConfig.StateAttributes.CaptureActive) == true
 		and localPlayer:GetAttribute(CaptureConfig.StateAttributes.CaptureContainmentPhase)
-			~= CaptivityDurationState.Phases.contained
+			== CaptivityDurationState.Phases.contained
 end
 
-local function getNearestCapturedAllyTarget(): Player?
+local function getNearestContainedAllyTarget(): Player?
 	local bestTarget: Player? = nil
 	local bestDistance = math.huge
 	local localCharacter = localPlayer.Character
@@ -43,6 +43,8 @@ local function getNearestCapturedAllyTarget(): Player?
 			candidate ~= localPlayer
 			and candidate:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk
 			and candidate:GetAttribute(CaptureConfig.StateAttributes.CaptureActive) == true
+			and candidate:GetAttribute(CaptureConfig.StateAttributes.CaptureContainmentPhase)
+				== CaptivityDurationState.Phases.contained
 		then
 			local candidateCharacter = candidate.Character
 			local candidateRoot = if candidateCharacter ~= nil
@@ -69,19 +71,15 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 		return
 	end
 
-	if input.KeyCode == STRUGGLE_KEY and isLocalPlayerCapturedButNotContained() then
-		struggleRemote:FireServer()
+	if input.KeyCode == ESCAPE_KEY and isLocalPlayerContained() then
+		escapeRemote:FireServer()
 		return
 	end
 
-	if input.KeyCode == ALLY_ASSIST_KEY and localPlayer:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
-		local target = getNearestCapturedAllyTarget()
-		if
-			target ~= nil
-			and target:GetAttribute(CaptureConfig.StateAttributes.CaptureContainmentPhase)
-				~= CaptivityDurationState.Phases.contained
-		then
-			allyAssistRemote:FireServer(target.UserId)
+	if input.KeyCode == RESCUE_KEY and localPlayer:GetAttribute("Role") == RoleConfig.Roles.Tinyfolk then
+		local target = getNearestContainedAllyTarget()
+		if target ~= nil then
+			rescueRemote:FireServer(target.UserId)
 		end
 	end
 end)

@@ -37,6 +37,16 @@ local carriedStateByTargetUserId: { [number]: any } = {}
 local preGrabCFrameByTargetUserId: { [number]: any } = {}
 local lastRequestAtByUserId: { [number]: number } = {}
 
+local function getContainmentZoneInteractionQueryApi(): any?
+	if type(globalEnv._ContainmentZoneInteractionService_QueryAPI) == "table" then
+		return globalEnv._ContainmentZoneInteractionService_QueryAPI
+	end
+	if type(_G) == "table" and type((_G :: any)._ContainmentZoneInteractionService_QueryAPI) == "table" then
+		return (_G :: any)._ContainmentZoneInteractionService_QueryAPI
+	end
+	return nil
+end
+
 local function debugLog(message: string)
 	print(string.format("[GrabService] %s", message))
 end
@@ -1014,6 +1024,16 @@ placeRequestRemote.OnServerEvent:Connect(function(player: Player, payload: unkno
 	end
 
 	clearHoldByGiantUserId(player.UserId, "placed", placeCFrame)
+
+	local containmentInteractionApi = getContainmentZoneInteractionQueryApi()
+	if containmentInteractionApi ~= nil and type(containmentInteractionApi.TryDeliverGrabPlacement) == "function" then
+		pcall(containmentInteractionApi.TryDeliverGrabPlacement, {
+			giantUserId = player.UserId,
+			targetUserId = target.UserId,
+			giantPosition = giantRoot.Position,
+			targetPosition = placeCFrame.Position,
+		})
+	end
 
 	debugLog(string.format("Accepted PlaceRequest giantUserId=%d targetUserId=%d", player.UserId, target.UserId))
 end)
