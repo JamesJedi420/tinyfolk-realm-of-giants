@@ -176,12 +176,20 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 		local sx = getCoordinate(zonePart.Size, "X", "x")
 		local sy = getCoordinate(zonePart.Size, "Y", "y")
 		local sz = getCoordinate(zonePart.Size, "Z", "z")
-		if px == nil or py == nil or pz == nil or zx == nil or zy == nil or zz == nil or sx == nil or sy == nil or sz == nil then
+		if
+			px == nil
+			or py == nil
+			or pz == nil
+			or zx == nil
+			or zy == nil
+			or zz == nil
+			or sx == nil
+			or sy == nil
+			or sz == nil
+		then
 			return false
 		end
-		return math.abs(px - zx) <= (sx / 2)
-			and math.abs(py - zy) <= (sy / 2)
-			and math.abs(pz - zz) <= (sz / 2)
+		return math.abs(px - zx) <= (sx / 2) and math.abs(py - zy) <= (sy / 2) and math.abs(pz - zz) <= (sz / 2)
 	end
 
 	local function positionInsideZone(position: any, zonePart: any): boolean
@@ -202,7 +210,10 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 	local function resolveStructureType(structurePart: any): string
 		if type(structurePart.GetAttribute) == "function" then
 			local attr = structurePart:GetAttribute(ContainmentStructureConfig.StructureTypeAttribute)
-			if type(attr) == "string" and ContainmentStructureState.ValidateStructureType(ContainmentStructureConfig, attr) then
+			if
+				type(attr) == "string"
+				and ContainmentStructureState.ValidateStructureType(ContainmentStructureConfig, attr)
+			then
 				return attr
 			end
 		end
@@ -282,7 +293,10 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 	local function registerStructures()
 		local root = getNestedRoot(ContainmentStructureConfig.StructuresFolderPath)
 		for _, descendant in ipairs(getDescendants(root)) do
-			if isBasePart(descendant) and startsWithPrefix(descendant.Name, ContainmentStructureConfig.StructureNamePrefix) then
+			if
+				isBasePart(descendant)
+				and startsWithPrefix(descendant.Name, ContainmentStructureConfig.StructureNamePrefix)
+			then
 				structurePartById[descendant.Name] = descendant
 				if structureRecordById[descendant.Name] == nil then
 					local structureType = resolveStructureType(descendant)
@@ -304,7 +318,9 @@ local function createContainmentStructureService(runtimeGame: any?, options: any
 	local function registerZones()
 		local root = getNestedRoot(ContainmentStructureConfig.ZonesFolderPath)
 		for _, descendant in ipairs(getDescendants(root)) do
-			if isBasePart(descendant) and startsWithPrefix(descendant.Name, ContainmentStructureConfig.ZoneNamePrefix) then
+			if
+				isBasePart(descendant) and startsWithPrefix(descendant.Name, ContainmentStructureConfig.ZoneNamePrefix)
+			then
 				zonePartById[descendant.Name] = descendant
 			end
 		end

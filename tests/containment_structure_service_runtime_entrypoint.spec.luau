@@ -122,12 +122,10 @@ end
 
 game = fakeGame
 
-local ContainmentStructureService = require("../src/ServerScriptService/Services/ContainmentStructureService.server")(
-	fakeGame,
-	{
+local ContainmentStructureService =
+	require("../src/ServerScriptService/Services/ContainmentStructureService.server")(fakeGame, {
 		disableScheduling = true,
-	}
-)
+	})
 
 do
 	assertEqual(ContainmentStructureService.getRegisteredStructureCount(), 1, "registers authored structure")

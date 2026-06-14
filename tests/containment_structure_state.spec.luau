@@ -39,7 +39,10 @@ end
 do
 	local record = newRecord()
 	assertEqual(ContainmentStructureState.OccupantCount(record), 0, "new record has zero occupants")
-	assertTrue(ContainmentStructureState.HasEscapeInteraction(ContainmentStructureConfig, record), "cage exposes escape interaction")
+	assertTrue(
+		ContainmentStructureState.HasEscapeInteraction(ContainmentStructureConfig, record),
+		"cage exposes escape interaction"
+	)
 end
 
 do
@@ -79,15 +82,8 @@ end
 
 do
 	local record = newRecord()
-	local canRescue = ContainmentStructureState.CanRescueOccupant(
-		ContainmentStructureConfig,
-		record,
-		9001,
-		4201,
-		true,
-		true,
-		8
-	)
+	local canRescue =
+		ContainmentStructureState.CanRescueOccupant(ContainmentStructureConfig, record, 9001, 4201, true, true, 8)
 	assertFalse(canRescue.accepted, "rescue rejects without occupant")
 	assertEqual(canRescue.reason, "occupant_not_found", "missing occupant reason")
 
