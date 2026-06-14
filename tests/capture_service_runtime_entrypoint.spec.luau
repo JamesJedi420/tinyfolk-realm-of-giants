@@ -536,4 +536,62 @@ assertEqual(promoted.record.containmentPhase, "contained", "promoted record phas
 assertEqual(promoted.record.containedAt, 2.0, "promoted containedAt set")
 assertEqual(promoted.record.captivityAnchorAt, 1.0, "promote preserves captivity anchor")
 
+local structureOccupants: { [number]: string? } = {}
+local structureAssignCalls = 0
+local structureRemoveCalls = 0
+_G._ContainmentStructureService_QueryAPI = {
+	ResolveAssignOccupantForCapture = function(input: any): any
+		structureAssignCalls += 1
+		if type(input) ~= "table" or type(input.targetUserId) ~= "number" then
+			return { accepted = false, reason = "assign_input_invalid", structureId = nil }
+		end
+		structureOccupants[input.targetUserId] = "ContainmentStructure_A"
+		return {
+			accepted = true,
+			reason = "accepted",
+			structureId = "ContainmentStructure_A",
+		}
+	end,
+	RemoveOccupantByTargetUserId = function(targetUserId: number): any
+		structureRemoveCalls += 1
+		structureOccupants[targetUserId] = nil
+		return {
+			accepted = true,
+			reason = "accepted",
+			structureId = "ContainmentStructure_A",
+		}
+	end,
+}
+
+resetState()
+structureAssignCalls = 0
+structureRemoveCalls = 0
+local structureCapture = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(structureCapture.accepted == true, "structure wiring capture accepted")
+local structurePromote = captureApi.PromoteTargetToContained(2102, 2.0)
+assertTrue(structurePromote.accepted == true, "structure wiring promote accepted")
+assertEqual(structurePromote.structureId, "ContainmentStructure_A", "structure wiring promote assigns structure")
+assertEqual(structureAssignCalls, 1, "structure wiring promote calls assign seam")
+assertEqual(structureOccupants[2102], "ContainmentStructure_A", "structure wiring occupant tracked")
+local structureRelease = captureApi.ReleaseCapture(2101, 2102, 5.0)
+assertTrue(structureRelease.accepted == true, "structure wiring release accepted")
+assertEqual(structureRemoveCalls, 1, "structure wiring release clears occupant")
+assertEqual(structureOccupants[2102], nil, "structure wiring occupant cleared")
+assertEqual(scoreEvents[2].eventId, "containment_reward", "structure wiring release emits containment reward")
+assertEqual(scoreEvents[2].metadata.heldSeconds, 4, "structure wiring reward scales with held seconds")
+assertEqual(scoreEvents[2].metadata.contributionRatio, 0.5, "structure wiring reward contribution ratio")
+
+resetState()
+structureAssignCalls = 0
+structureRemoveCalls = 0
+local containedTimeoutCapture = captureApi.RequestCapture(2101, 2102, 1.0)
+assertTrue(containedTimeoutCapture.accepted == true, "contained timeout capture accepted")
+local containedTimeoutPromote = captureApi.PromoteTargetToContained(2102, 2.0)
+assertTrue(containedTimeoutPromote.accepted == true, "contained timeout promote accepted")
+captureApi.GetTargetCapture(2102, 9.0)
+assertEqual(#safeReturnCalls, 1, "contained timeout triggers safe return fallback")
+assertEqual(scoreEvents[2].eventId, "containment_reward", "contained timeout emits terminal containment reward")
+assertEqual(scoreEvents[2].metadata.endReason, "timeout", "contained timeout reward reason")
+assertEqual(structureRemoveCalls, 1, "contained timeout clears structure occupant")
+
 print("capture_service_runtime_entrypoint: all checks passed")

@@ -376,6 +376,13 @@ local function applyCaptivitySafeReturnFallback(record: any, at: number, returnR
 	CaptivitySafeReturnCaller.Apply(record.targetUserId, at, returnReason)
 end
 
+local function clearStructureOccupantForTarget(targetUserId: number)
+	local structureApi = getContainmentStructureQueryApi()
+	if structureApi ~= nil and type(structureApi.RemoveOccupantByTargetUserId) == "function" then
+		pcall(structureApi.RemoveOccupantByTargetUserId, targetUserId)
+	end
+end
+
 local function pruneExpiredCaptures(at: number)
 	for _, record in ipairs(CaptureState.GetAllCaptures(state)) do
 		local timeout = CaptivityDurationState.ResolveTimeout(record, at, CaptureConfig)
@@ -383,6 +390,7 @@ local function pruneExpiredCaptures(at: number)
 			local endReason = timeout.custodyEndReason or CapturePersistenceRules.CustodyEndReasons.timeout
 			resolveContainmentRewardForRecord(record, endReason, record.expiresAt, nil)
 			projectCustodyEndReason(record, endReason)
+			clearStructureOccupantForTarget(record.targetUserId)
 			local fallbackReason = timeout.fallbackEndReason or CapturePersistenceRules.CustodyEndReasons.safe_return
 			applyCaptivitySafeReturnFallback(record, at, fallbackReason)
 		end
@@ -661,10 +669,7 @@ local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?,
 	state = transition.state
 	projectCustodyEndReason(transition.record, endReason)
 	local reward = resolveContainmentRewardForRecord(transition.record, endReason, resolvedNow, operationId)
-	local structureApi = getContainmentStructureQueryApi()
-	if structureApi ~= nil and type(structureApi.RemoveOccupantByTargetUserId) == "function" then
-		pcall(structureApi.RemoveOccupantByTargetUserId, targetUserId)
-	end
+	clearStructureOccupantForTarget(targetUserId)
 	applyCaptureAttributesFromState()
 
 	return {
