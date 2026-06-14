@@ -114,6 +114,17 @@ local function getRoleServiceQueryApi(): any?
 	return queryApi
 end
 
+local function getContainmentStructureQueryApi(): any?
+	local queryApi = globalEnv._ContainmentStructureService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._ContainmentStructureService_QueryAPI) == "table" then
+		return (_G :: any)._ContainmentStructureService_QueryAPI
+	end
+	return nil
+end
+
 local function makeLocalIdempotencyAdapter(): any
 	local mapsByName: { [string]: { [string]: any } } = {}
 	return {
@@ -648,6 +659,10 @@ local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?,
 	state = transition.state
 	projectCustodyEndReason(transition.record, endReason)
 	local reward = resolveContainmentRewardForRecord(transition.record, endReason, resolvedNow, operationId)
+	local structureApi = getContainmentStructureQueryApi()
+	if structureApi ~= nil and type(structureApi.RemoveOccupantByTargetUserId) == "function" then
+		pcall(structureApi.RemoveOccupantByTargetUserId, targetUserId)
+	end
 	applyCaptureAttributesFromState()
 
 	return {
@@ -684,16 +699,61 @@ local function promoteTargetToContained(targetUserId: any, at: number?): any
 		return { accepted = false, reason = "target_user_id_invalid" }
 	end
 
+	local record = CaptureState.GetTargetCapture(state, targetUserId)
+	if record == nil then
+		return { accepted = false, reason = "capture_missing" }
+	end
+
+	local structureApi = getContainmentStructureQueryApi()
+	local structureAssignment = nil
+	if structureApi ~= nil and type(structureApi.ResolveAssignOccupantForCapture) == "function" then
+		local custodian = getPlayerByUserId(record.custodianUserId)
+		local target = getPlayerByUserId(targetUserId)
+		local custodianPosition = nil
+		local targetPosition = nil
+		if custodian ~= nil then
+			local custodianRoot = getHumanoidRootPart(custodian)
+			if custodianRoot ~= nil then
+				custodianPosition = custodianRoot.Position
+			end
+		end
+		if target ~= nil then
+			local targetRoot = getHumanoidRootPart(target)
+			if targetRoot ~= nil then
+				targetPosition = targetRoot.Position
+			end
+		end
+		structureAssignment = structureApi.ResolveAssignOccupantForCapture({
+			targetUserId = targetUserId,
+			custodianUserId = record.custodianUserId,
+			custodianPosition = custodianPosition,
+			targetPosition = targetPosition,
+		})
+		if structureAssignment.accepted ~= true and structureAssignment.skipped ~= true then
+			return {
+				accepted = false,
+				reason = structureAssignment.reason,
+				structureId = structureAssignment.structureId,
+			}
+		end
+	end
+
 	local transition = CaptureState.ResolvePromoteToContained(state, {
 		now = resolvedNow,
 		targetUserId = targetUserId,
 	})
+	if transition.accepted ~= true and structureAssignment ~= nil and structureAssignment.skipped ~= true then
+		if structureApi ~= nil and type(structureApi.RemoveOccupantByTargetUserId) == "function" then
+			pcall(structureApi.RemoveOccupantByTargetUserId, targetUserId)
+		end
+	end
 	state = transition.state
 	applyCaptureAttributesFromState()
 	return {
 		accepted = transition.accepted,
 		reason = transition.reason,
 		record = transition.record,
+		structureId = if structureAssignment ~= nil then structureAssignment.structureId else nil,
 	}
 end
 
