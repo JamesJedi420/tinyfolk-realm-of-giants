@@ -8,6 +8,7 @@ local HIDE_FOLDER_NAMES: { [string]: boolean } = {
 	CaptureZones = true,
 	ControlZones = true,
 	DefensivePropZones = true,
+	ContainmentStructureZones = true,
 	Objectives = true,
 	EscapeReadability = true,
 	ValidationCameras = true,

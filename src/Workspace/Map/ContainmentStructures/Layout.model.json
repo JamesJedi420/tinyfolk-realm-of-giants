@@ -1,0 +1,33 @@
+{
+  "className": "Model",
+  "properties": {
+    "Tags": [
+      "GameplayTag_Containment"
+    ]
+  },
+  "children": [
+    {
+      "name": "ContainmentStructure_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [0.38, 0.22, 0.16],
+        "Size": [12, 4, 10],
+        "Position": [55, 2, -88],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": true,
+        "Locked": true
+      },
+      "attributes": {
+        "ContainmentStructureType": "cage",
+        "ContainmentStructureZoneId": "ContainmentStructureZone_A",
+        "ContainmentStructureCapacity": 2,
+        "ContainmentStructureEnabled": true,
+        "ContainmentEscapeInteractionEnabled": true
+      }
+    }
+  ]
+}

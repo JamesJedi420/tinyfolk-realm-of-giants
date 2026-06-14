@@ -1,0 +1,35 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "ContainmentStructureZone_A",
+      "className": "Part",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Transparency": 0.97,
+        "Material": "SmoothPlastic",
+        "Color": [0.55, 0.35, 0.95],
+        "Size": [38, 6, 22],
+        "Position": [55, 3, -82],
+        "CanTouch": true,
+        "CanQuery": true,
+        "CastShadow": false,
+        "Locked": true
+      },
+      "children": [
+        {
+          "name": "ZoneTag",
+          "className": "StringValue",
+          "properties": {
+            "Value": "GiantContainment"
+          }
+        }
+      ]
+    }
+  ]
+}
