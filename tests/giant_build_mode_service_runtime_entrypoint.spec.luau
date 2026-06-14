@@ -131,6 +131,8 @@ addChild(remotesFolder, "ConstructionBuildRequest", constructionBuildRemote)
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 configFolder._Children["GiantBuildModeConfig"] = "../../ReplicatedStorage/Shared/Config/GiantBuildModeConfig"
 configFolder._Children["GiantStructureCatalog"] = "../../ReplicatedStorage/Shared/Config/GiantStructureCatalog"
+configFolder._Children["ContainmentStructureConfig"] =
+	"../../ReplicatedStorage/Shared/Config/ContainmentStructureConfig"
 configFolder._Children["SnareTrapConfig"] = "../../ReplicatedStorage/Shared/Config/SnareTrapConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
@@ -144,6 +146,8 @@ giantRealmFolder._Children["GiantRealmResourceState"] =
 giantRealmFolder._Children["GiantRealmTreasuryPresentation"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/GiantRealmTreasuryPresentation"
 giantRealmFolder._Children["SnareTrapState"] = "../../ReplicatedStorage/Shared/GiantRealm/SnareTrapState"
+giantRealmFolder._Children["ContainmentStructurePlacementState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/ContainmentStructurePlacementState"
 giantRealmFolder._Children["GiantMacroRouteAccess"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantMacroRouteAccess"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
