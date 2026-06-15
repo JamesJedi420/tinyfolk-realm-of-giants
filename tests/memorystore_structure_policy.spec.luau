@@ -84,6 +84,14 @@ local expectedPolicies: { [string]: any } = {
 		maxPayloadBytes = 4096,
 		parts = { "giant_realm_9402" },
 	},
+	giantLevelPendingXp = {
+		kind = "HashMap",
+		name = "tin_giant_level_pending_xp_v1",
+		key = "glevel:giant_realm_9402",
+		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
+		maxPayloadBytes = 4096,
+		parts = { "giant_realm_9402" },
+	},
 	queueProcessingIdempotency = {
 		kind = "HashMap",
 		name = "tin_queue_processing_idempotency_v1",
