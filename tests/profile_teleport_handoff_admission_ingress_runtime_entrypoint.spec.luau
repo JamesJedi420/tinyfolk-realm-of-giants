@@ -2,6 +2,8 @@
 
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 local ProfileTeleportHandoffService = require("../src/ServerScriptService/Services/ProfileTeleportHandoffService")
+local RealmTransferHandoffService = require("../src/ServerScriptService/Services/RealmTransferHandoffService")
+local TransferLockService = require("../src/ServerScriptService/Services/TransferLockService")
 local globalEnv: any = getfenv()
 
 local function assertEqual(actual: any, expected: any, label: string)
@@ -31,6 +33,8 @@ globalEnv._ProfilePersistenceLifecycle_QueryAPI = {
 }
 
 ProfilePersistenceGateway.ResetForTests()
+TransferLockService.ResetForTests()
+RealmTransferHandoffService.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
 local loadedProfileByUserId: { [number]: any } = {}

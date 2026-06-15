@@ -154,7 +154,9 @@ See `docs/PROFILE_OWNERSHIP_DECISION.md` for the full ownership decision record.
 
 **TIN-49 persistent realm architecture status:** Canonical shared-hub vs Giant-realm topology, persistence tier partitions, controlled-transfer shell, player `locationCategory` model, and downstream handoff boundaries for TIN-11/TIN-106 are now defined in `docs/TIN-49_PERSISTENT_REALM_ARCHITECTURE.md`. This slice is architecture-definition only; handoff tokens and durable realm session records remain deferred to TIN-106.
 
-**TIN-11 realm transfer state model status:** Server-owned `realmAssignment` profile namespace, deterministic `RealmTransferState` transition resolver (capture/rescue/escape return/trade/party admission), and `RealmTransferAssignmentService` debug/query seam are implemented with focused specs. Handoff-token runtime and durable realm session records remain deferred to TIN-106.
+**TIN-11 realm transfer state model status:** Server-owned `realmAssignment` profile namespace, deterministic `RealmTransferState` transition resolver (capture/rescue/escape return/trade/party admission), and `RealmTransferAssignmentService` debug/query seam are implemented with focused specs.
+
+**TIN-106 realm transfer handoff tokens status:** `RealmTransferHandoffState` and `RealmTransferHandoffService` now own short-lived handoff tokens, durable realm session records keyed by `realmId`, and transfer-lock acquire/consume on arrival. `ProfileTeleportHandoffService` wires controlled-transfer begin/confirm to `_RealmTransferHandoffService_QueryAPI` and `_RealmTransferAssignmentService_QueryAPI.ApplyTransition` while keeping TeleportData non-authoritative per TIN-49. Prototype session records are in-memory per server; destination confirm falls back to `pendingRecovery` when session records are not replicated cross-server.
 
 ### Ephemeral Cross-Server Coordination System
 - MemoryStore structure policy for live realm registry, admission queue, party matchmaking queue, transfer locks, active realm capacity, rescue contract queue, and capture timers
