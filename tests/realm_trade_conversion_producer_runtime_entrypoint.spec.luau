@@ -99,4 +99,35 @@ local lastSnapshot = RealmTradeConversionService.GetLastConversionSnapshot()
 assertTrue(type(lastSnapshot) == "table", "last conversion snapshot stored")
 assertEqual(lastSnapshot.operationId, "trade-dest-trade-op-3-9002", "last snapshot operation id")
 
+RealmTradeConversionService.ResetForTests()
+globalEnv._GiantBuildModeService_QueryAPI = {
+	GetRealmOwnerUserId = function(): number?
+		return 9002
+	end,
+}
+
+local remoteTradeResult = RealmTradeConversionService.RecordTradeSuccess({
+	operationId = "trade-op-remote",
+	sourceRealmOwnerUserId = 9001,
+	destinationRealmOwnerUserId = 9002,
+	convertedAt = 70,
+})
+assertTrue(remoteTradeResult.accepted, "remote source publish accepted while destination local")
+assertTrue(type(remoteTradeResult.destinationResult) == "table", "destination local result present")
+assertTrue(remoteTradeResult.destinationResult.accepted, "destination local conversion accepted")
+assertEqual(remoteTradeResult.sourceResult, nil, "source not local on destination server")
+
+globalEnv._GiantBuildModeService_QueryAPI = {
+	GetRealmOwnerUserId = function(): number?
+		return 9001
+	end,
+}
+
+local mergedSource = RealmTradeConversionService.MergePendingConversions(9001)
+assertTrue(mergedSource.accepted, "merge pending conversions for source owner")
+local sourceSnapshot = RealmTradeConversionService.GetSessionLedgerSnapshot(9001)
+assertEqual(sourceSnapshot.ledger.essence, 5, "merged source essence")
+assertEqual(sourceSnapshot.ledger.wood, 10, "merged source wood")
+assertEqual(sourceSnapshot.ledger.recentConversionCount, 1, "merged source conversion count")
+
 print("realm_trade_conversion_producer_runtime_entrypoint.spec.luau: all checks passed")
