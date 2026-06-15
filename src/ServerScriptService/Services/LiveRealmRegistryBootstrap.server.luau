@@ -7,7 +7,7 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local LiveRealmRegistryState = require(GiantRealm:WaitForChild("LiveRealmRegistryState"))
 local LiveRealmRegistryStore = require(script.Parent:WaitForChild("LiveRealmRegistryStore"))
-local LiveRealmRegistryService = require(script.Parent:WaitForChild("LiveRealmRegistryService"))
+local LiveRealmRegistryService = require(script.Parent.LiveRealmRegistryService)
 local MemoryStoreAdapter = require(script.Parent:WaitForChild("MemoryStoreAdapter"))
 local MemoryStoreStructurePolicy = require(script.Parent:WaitForChild("MemoryStoreStructurePolicy"))
 

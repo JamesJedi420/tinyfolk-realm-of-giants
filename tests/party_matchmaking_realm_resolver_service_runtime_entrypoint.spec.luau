@@ -30,6 +30,48 @@ assert(missingTarget.accepted == false, "missing target rejected")
 assert(missingTarget.reason == "target_realm_missing", "missing target reason")
 
 resolverApi.ConfigureForTests({
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "giant_realm_7001",
+				ownerUserId = 7001,
+				privateServerId = "ps-live-7001",
+				accessMode = "private",
+				playerCount = 2,
+				capacity = 8,
+				dangerRating = 0.8,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 100,
+			},
+		}
+	end,
+})
+
+local raidBoardAccepted = resolverApi.ResolveTargetRealmId({
+	partyId = "party-raid-board",
+})
+assert(raidBoardAccepted.accepted == true, "hub raid board accepted")
+assert(raidBoardAccepted.targetRealmId == "giant_realm_7001", "hub raid board target realm")
+assert(raidBoardAccepted.privateServerId == "ps-live-7001", "hub raid board private server id")
+assert(raidBoardAccepted.resolverPath == "hub_raid_board", "hub raid board resolver path")
+
+local hubDirectAccepted = resolverApi.ResolveTargetRealmId({
+	partyId = "party-direct",
+	targetRealmId = "giant_realm_7001",
+})
+assert(hubDirectAccepted.accepted == true, "hub direct target accepted")
+assert(hubDirectAccepted.resolverPath == "hub_direct", "hub direct resolver path")
+
+local hubDirectRejected = resolverApi.ResolveTargetRealmId({
+	partyId = "party-direct-missing",
+	targetRealmId = "giant_realm_missing",
+})
+assert(hubDirectRejected.accepted == false, "hub direct missing rejected")
+assert(hubDirectRejected.reason == "target_realm_unavailable", "hub direct missing reason")
+
+resolverApi.ResetForTests()
+resolverApi.ConfigureForTests({
 	resolveFallbackTargetRealmId = function(input: any)
 		if input.partyId == "party-fallback" then
 			return "realm-fallback"
