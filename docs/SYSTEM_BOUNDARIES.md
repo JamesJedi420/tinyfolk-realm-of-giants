@@ -152,7 +152,9 @@ See `docs/PROFILE_OWNERSHIP_DECISION.md` for the full ownership decision record.
 
 **TIN-174 state ownership model status:** A bounded deterministic contract now defines persistent-vs-session ownership partitions, write-back scope routing for capture/escape/defense/return outcomes, and reconnect restoration actions without introducing new save-pipeline behavior. The contract is implemented in `Shared/GiantRealm/EventStateOwnershipModel` with focused coverage in `tests/event_state_ownership_model.spec.luau`, and keeps player-profile ownership separate from giant-realm profile ownership and session-runtime projections.
 
-**TIN-49 persistent realm architecture status:** Canonical shared-hub vs Giant-realm topology, persistence tier partitions, controlled-transfer shell, player `locationCategory` model, and downstream handoff boundaries for TIN-11/TIN-106 are now defined in `docs/TIN-49_PERSISTENT_REALM_ARCHITECTURE.md`. This slice is architecture-definition only; transfer state machine, handoff tokens, and durable realm session records remain deferred to TIN-11 and TIN-106.
+**TIN-49 persistent realm architecture status:** Canonical shared-hub vs Giant-realm topology, persistence tier partitions, controlled-transfer shell, player `locationCategory` model, and downstream handoff boundaries for TIN-11/TIN-106 are now defined in `docs/TIN-49_PERSISTENT_REALM_ARCHITECTURE.md`. This slice is architecture-definition only; handoff tokens and durable realm session records remain deferred to TIN-106.
+
+**TIN-11 realm transfer state model status:** Server-owned `realmAssignment` profile namespace, deterministic `RealmTransferState` transition resolver (capture/rescue/escape return/trade/party admission), and `RealmTransferAssignmentService` debug/query seam are implemented with focused specs. Handoff-token runtime and durable realm session records remain deferred to TIN-106.
 
 ### Ephemeral Cross-Server Coordination System
 - MemoryStore structure policy for live realm registry, admission queue, party matchmaking queue, transfer locks, active realm capacity, rescue contract queue, and capture timers

@@ -22,6 +22,7 @@ local ownersByNamespace = {
 	specialistPreference = EventStateOwnershipModel.Owners.playerProfile,
 	trophyDisplayPreference = EventStateOwnershipModel.Owners.playerProfile,
 	pendingRecovery = EventStateOwnershipModel.Owners.playerProfile,
+	realmAssignment = EventStateOwnershipModel.Owners.playerProfile,
 	discoveredRealms = EventStateOwnershipModel.Owners.playerProfile,
 	partyHistory = EventStateOwnershipModel.Owners.playerProfile,
 	skillsProfileState = EventStateOwnershipModel.Owners.playerProfile,

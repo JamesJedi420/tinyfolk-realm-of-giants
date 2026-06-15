@@ -44,6 +44,11 @@ local function run()
 			"pending recovery owner"
 		)
 		assertEqual(
+			namespaceOwners.realmAssignment,
+			EventStateOwnershipModel.Owners.playerProfile,
+			"realm assignment owner"
+		)
+		assertEqual(
 			namespaceOwners.discoveredRealms,
 			EventStateOwnershipModel.Owners.playerProfile,
 			"discovered realms owner"
@@ -72,6 +77,7 @@ local function run()
 			specialistPreference = EventStateOwnershipModel.Owners.playerProfile,
 			trophyDisplayPreference = EventStateOwnershipModel.Owners.playerProfile,
 			pendingRecovery = EventStateOwnershipModel.Owners.playerProfile,
+			realmAssignment = EventStateOwnershipModel.Owners.playerProfile,
 			discoveredRealms = EventStateOwnershipModel.Owners.playerProfile,
 			partyHistory = EventStateOwnershipModel.Owners.playerProfile,
 			skillsProfileState = EventStateOwnershipModel.Owners.playerProfile,
