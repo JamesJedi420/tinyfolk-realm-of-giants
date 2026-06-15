@@ -52,6 +52,10 @@ local GiantLevelTradeXpProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("GiantLevelTradeXpProducer"))
 	else (require :: any)("./GiantLevelTradeXpProducer")
 
+local RealmTradeConversionProducer = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmTradeConversionProducer"))
+	else (require :: any)("./RealmTradeConversionProducer")
+
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
 
@@ -420,7 +424,18 @@ local function getGiantLevelServiceQueryApi(): any?
 	return nil
 end
 
-local function recordTradeXpFromHandoff(handoffEntry: any?)
+local function getRealmTradeConversionServiceQueryApi(): any?
+	local queryApi = globalEnv._RealmTradeConversionService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._RealmTradeConversionService_QueryAPI) == "table" then
+		return (_G :: any)._RealmTradeConversionService_QueryAPI
+	end
+	return nil
+end
+
+local function recordTradeRewardsFromHandoff(handoffEntry: any?)
 	if type(handoffEntry) ~= "table" then
 		return
 	end
@@ -428,14 +443,20 @@ local function recordTradeXpFromHandoff(handoffEntry: any?)
 		return
 	end
 
+	local awardedAt = os.time()
 	local giantLevelApi = getGiantLevelServiceQueryApi()
-	if giantLevelApi == nil then
-		return
+	if giantLevelApi ~= nil then
+		pcall(GiantLevelTradeXpProducer.RecordFromHandoffEntry, handoffEntry, awardedAt, {
+			giantLevelApi = giantLevelApi,
+		})
 	end
 
-	pcall(GiantLevelTradeXpProducer.RecordFromHandoffEntry, handoffEntry, os.time(), {
-		giantLevelApi = giantLevelApi,
-	})
+	local conversionApi = getRealmTradeConversionServiceQueryApi()
+	if conversionApi ~= nil then
+		pcall(RealmTradeConversionProducer.RecordFromHandoffEntry, handoffEntry, awardedAt, {
+			conversionApi = conversionApi,
+		})
+	end
 end
 
 local function resolveBeginOperation(assignmentReason: string): string?
@@ -1290,7 +1311,7 @@ function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, 
 		end
 	end
 
-	recordTradeXpFromHandoff(consumedHandoffEntry)
+	recordTradeRewardsFromHandoff(consumedHandoffEntry)
 
 	clearPendingHandoff(userId)
 	return makeResult(

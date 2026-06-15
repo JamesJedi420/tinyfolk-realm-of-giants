@@ -3,6 +3,11 @@
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 local ProfileTeleportHandoffService = require("../src/ServerScriptService/Services/ProfileTeleportHandoffService")
 local RealmTransferHandoffService = require("../src/ServerScriptService/Services/RealmTransferHandoffService")
+local RealmTransferAssignmentService = require("../src/ServerScriptService/Services/RealmTransferAssignmentService")
+local RealmAssignmentProfileState = require("../src/ReplicatedStorage/Shared/GiantRealm/RealmAssignmentProfileState")
+local RealmTransferState = require("../src/ReplicatedStorage/Shared/GiantRealm/RealmTransferState")
+local RealmTradeConversionProducer = require("../src/ServerScriptService/Services/RealmTradeConversionProducer")
+local RealmTradeConversionService = require("../src/ServerScriptService/Services/RealmTradeConversionService")
 local TransferLockService = require("../src/ServerScriptService/Services/TransferLockService")
 local globalEnv: any = getfenv()
 
@@ -97,6 +102,8 @@ globalEnv._PartyMatchmakingAdmissionService_QueryAPI = makePartyMatchmakingAdmis
 ProfilePersistenceGateway.ResetForTests()
 TransferLockService.ResetForTests()
 RealmTransferHandoffService.ResetForTests()
+RealmTransferAssignmentService.ResetForTests()
+RealmTradeConversionService.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
 local loadedProfileByUserId: { [number]: any } = {}
@@ -436,5 +443,68 @@ assertEqual(
 	false,
 	"invalid callback user"
 )
+
+local tradeTravelerUserId = 4100
+local tradeSourceOwnerUserId = 9001
+local tradeDestinationOwnerUserId = 9100
+local tradeTargetRealmId = RealmTransferState.FormatRealmId(tradeDestinationOwnerUserId)
+local tradeXpCalls = {}
+globalEnv._GiantLevelService_QueryAPI = {
+	RecordTradeSuccess = function(input: any)
+		table.insert(tradeXpCalls, input)
+		return { accepted = true, reason = "accepted" }
+	end,
+}
+globalEnv._GiantBuildModeService_QueryAPI = {
+	GetRealmOwnerUserId = function(): number?
+		return tradeDestinationOwnerUserId
+	end,
+}
+loadedProfileByUserId[tradeTravelerUserId] = {
+	userId = tradeTravelerUserId,
+	schemaVersion = 1,
+	realmAssignment = {
+		locationCategory = RealmAssignmentProfileState.LocationCategory.GiantRealm,
+		realmId = RealmTransferState.FormatRealmId(tradeSourceOwnerUserId),
+		realmOwnerUserId = tradeSourceOwnerUserId,
+		updatedAt = 10,
+	},
+}
+RealmTransferAssignmentService.HydrateFromProfile(tradeTravelerUserId)
+ownershipReadyByUserId[tradeTravelerUserId] = true
+
+local tradeHandoff = ProfileTeleportHandoffService.BeginCrossServerHandoff(makePlayer(tradeTravelerUserId), {
+	flow = "trade",
+	targetRealmId = tradeTargetRealmId,
+	realmOwnerUserId = tradeDestinationOwnerUserId,
+	assignmentReason = RealmAssignmentProfileState.AssignmentReason.Trade,
+	operationId = "trade-handoff-4100",
+})
+assertEqual(tradeHandoff.ok, true, "trade handoff begins")
+assertTrue(type(tradeHandoff.handoffToken) == "string", "trade handoff token assigned")
+
+ownershipReadyByUserId[tradeTravelerUserId] = true
+local tradeConfirm =
+	ProfileTeleportHandoffService.ConfirmDestinationOwnership(tradeTravelerUserId, tradeHandoff.handoffToken)
+assertEqual(tradeConfirm.ok, true, "trade handoff confirm succeeds")
+assertEqual(#tradeXpCalls, 1, "trade confirm records xp once")
+assertEqual(tradeXpCalls[1].operationId, "trade-handoff-4100", "trade xp operation id")
+
+local tradeConversionSnapshot = RealmTradeConversionService.GetSessionLedgerSnapshot(tradeDestinationOwnerUserId)
+assertTrue(tradeConversionSnapshot.accepted, "trade conversion session snapshot accepted")
+assertEqual(tradeConversionSnapshot.ledger.essence, 8, "trade conversion dest essence")
+assertEqual(tradeConversionSnapshot.ledger.wood, 12, "trade conversion dest wood")
+assertEqual(tradeConversionSnapshot.ledger.recentConversionCount, 1, "trade conversion count")
+
+local tradeReplay = RealmTradeConversionProducer.RecordFromHandoffEntry({
+	assignmentReason = RealmAssignmentProfileState.AssignmentReason.Trade,
+	operationId = "trade-handoff-4100",
+	handoffToken = tradeHandoff.handoffToken,
+	targetRealmId = tradeTargetRealmId,
+	realmOwnerUserId = tradeDestinationOwnerUserId,
+	userId = tradeTravelerUserId,
+}, 80, { conversionApi = globalEnv._RealmTradeConversionService_QueryAPI })
+assertTrue(tradeReplay.accepted, "trade conversion replay accepted")
+assertTrue(tradeReplay.destinationResult.duplicate, "trade conversion replay idempotent")
 
 print("profile_teleport_handoff_service_runtime_entrypoint: all checks passed")
