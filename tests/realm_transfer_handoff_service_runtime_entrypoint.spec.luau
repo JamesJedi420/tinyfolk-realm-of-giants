@@ -123,4 +123,25 @@ assertEqual(
 	"confirm giant realm"
 )
 
+local abortInvalidate = RealmTransferHandoffService.InvalidateHandoffOnAbort({
+	handoffToken = "handoff:7101:abort",
+	targetRealmId = targetRealmId,
+	now = 220,
+})
+assertTrue(abortInvalidate.accepted == true, "missing abort invalidate accepted")
+
+local expiredBegin = RealmTransferHandoffService.BeginHandoff({
+	userId = 7105,
+	targetRealmId = targetRealmId,
+	operationId = "handoff:7105:expired",
+	now = 200,
+})
+assertTrue(expiredBegin.accepted == true, "expired begin accepted")
+local expiredResolution = RealmTransferHandoffService.ResolveExpiredSession({
+	handoffToken = "handoff:7105:expired",
+	targetRealmId = targetRealmId,
+	now = 291,
+})
+assertEqual(expiredResolution.resolution, "pending_recovery_authority", "expired session resolves to pending recovery")
+
 print("realm_transfer_handoff_service_runtime_entrypoint: all checks passed")

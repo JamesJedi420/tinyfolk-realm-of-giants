@@ -391,6 +391,45 @@ local destinationReady = ProfileTeleportHandoffService.ConfirmDestinationOwnersh
 assertEqual(destinationReady.ok, true, "destination-only confirm succeeds once ownership is ready")
 assertEqual(destinationReady.handoffToken, "token-destination", "destination-only confirm preserves token")
 
+loadedProfileByUserId[4020] = {
+	userId = 4020,
+	pendingRecovery = {
+		handoffToken = "handoff:4020:expired",
+		targetRealmId = "realm-main-01",
+		startedAt = 10,
+		status = "awaiting_destination",
+	},
+}
+ownershipReadyByUserId[4020] = true
+RealmTransferHandoffService.BeginHandoff({
+	userId = 4020,
+	targetRealmId = "realm-main-01",
+	operationId = "handoff:4020:expired",
+	now = 100,
+})
+local expiredWithRecovery = ProfileTeleportHandoffService.ConfirmDestinationOwnership(4020, "handoff:4020:expired")
+assertEqual(expiredWithRecovery.ok, true, "expired token confirms via pending recovery authority")
+assertEqual(
+	ProfileTeleportHandoffService.CanSpawnGameplayForUserId(4020),
+	true,
+	"expired recovery confirm allows spawn"
+)
+
+loadedProfileByUserId[4021] = {
+	userId = 4021,
+	pendingRecovery = {
+		handoffToken = "handoff:4021:pending",
+		targetRealmId = "realm-main-01",
+		startedAt = 11,
+		status = "awaiting_destination",
+	},
+}
+ownershipReadyByUserId[4021] = true
+local invalidTokenConfirm = ProfileTeleportHandoffService.ConfirmDestinationOwnership(4021, "handoff:4021:invalid")
+assertEqual(invalidTokenConfirm.ok, false, "invalid token confirm fails")
+assertEqual(invalidTokenConfirm.reason, "handoff_token_mismatch", "invalid token mismatch reason")
+assertEqual(invalidTokenConfirm.fallbackRoute, "safe_fallback", "invalid token routes to safe fallback")
+
 assertEqual(ProfileTeleportHandoffService.CanSpawnGameplayForUserId(0), false, "invalid user cannot spawn")
 assertEqual(
 	ProfileTeleportHandoffService.RegisterReleaseReadyCallback(0, function() end),
