@@ -2282,6 +2282,14 @@ local function getGiantReputationQueryApi(): any
 	return nil
 end
 
+local function getRealmReservedServerAllocationQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._RealmReservedServerAllocationService_QueryAPI) == "table" then
+		return globalValue._RealmReservedServerAllocationService_QueryAPI
+	end
+	return nil
+end
+
 local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 	if not isValidOwnerUserId(ownerUserId) then
 		return nil, "save_snapshot_owner_user_id_invalid"
@@ -2353,6 +2361,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		giantReputationPersistenceState = giantReputationQueryApi.BuildPersistenceState()
 	end
 
+	local realmServerAllocationState = nil
+	local allocationQueryApi = getRealmReservedServerAllocationQueryApi()
+	if allocationQueryApi ~= nil then
+		if type(allocationQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "realm_server_allocation_build_persistence_missing"
+		end
+		realmServerAllocationState = allocationQueryApi.BuildPersistenceState(ownerUserId)
+	end
+
 	local root = GiantRealmSaveSchema.BuildSaveRoot(
 		ownerUserId,
 		GetSaveablePlacedStructures(),
@@ -2364,7 +2381,8 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		worksiteUpgradeState,
 		trophyPersistenceState,
 		giantLevelPersistenceState,
-		giantReputationPersistenceState
+		giantReputationPersistenceState,
+		realmServerAllocationState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
 	if not valid then
@@ -2535,6 +2553,27 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedGiantReputation, giantReputationReason = giantReputationQueryApi.ApplyPersistenceState(nil)
 		if not appliedGiantReputation then
 			return false, giantReputationReason or "giant_reputation_apply_persistence_failed"
+		end
+	end
+
+	local allocationQueryApi = getRealmReservedServerAllocationQueryApi()
+	if root.realmServerAllocation ~= nil then
+		if allocationQueryApi == nil then
+			return false, "realm_server_allocation_query_api_missing"
+		end
+		if type(allocationQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "realm_server_allocation_apply_persistence_missing"
+		end
+
+		local appliedAllocation, allocationReason =
+			allocationQueryApi.ApplyPersistenceState(root.realmServerAllocation, root.ownerUserId)
+		if not appliedAllocation then
+			return false, allocationReason or "realm_server_allocation_apply_persistence_failed"
+		end
+	elseif allocationQueryApi ~= nil and type(allocationQueryApi.ApplyPersistenceState) == "function" then
+		local appliedAllocation, allocationReason = allocationQueryApi.ApplyPersistenceState(nil, root.ownerUserId)
+		if not appliedAllocation then
+			return false, allocationReason or "realm_server_allocation_apply_persistence_failed"
 		end
 	end
 

@@ -887,6 +887,13 @@ local function loadGiantRealmForPlayer(player: Player)
 	projectActiveGiantRealmOwner()
 	debugLog(string.format("Loaded Giant realm profile userId=%d", player.UserId))
 
+	local allocationApi = _G._RealmReservedServerAllocationService_QueryAPI
+	if type(allocationApi) == "table" and type(allocationApi.EnsureAllocation) == "function" then
+		pcall(allocationApi.EnsureAllocation, {
+			ownerUserId = player.UserId,
+		})
+	end
+
 	local registryApi = _G._LiveRealmRegistry_QueryAPI
 	if type(registryApi) == "table" and type(registryApi.PublishActiveRealm) == "function" then
 		pcall(registryApi.PublishActiveRealm, {

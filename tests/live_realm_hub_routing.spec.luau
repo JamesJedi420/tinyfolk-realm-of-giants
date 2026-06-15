@@ -79,10 +79,13 @@ assertEqual(
 	"ps-live-9001",
 	"private live access code resolved"
 )
+local publicResolved = LiveRealmHubRouting.ResolveTeleportAccessCodeDetailed(availability[2], "reserved-code-9002", nil)
+assertEqual(publicResolved.accessCode, "reserved-code-9002", "public stable fallback uses durable allocation")
+assertEqual(publicResolved.resolverPath, "durable_allocation", "public durable resolver path")
 assertEqual(
 	LiveRealmHubRouting.ResolveTeleportAccessCode(availability[2]),
 	nil,
-	"public stable fallback does not resolve teleport access code"
+	"public stable fallback without durable allocation unresolved"
 )
 assertEqual(
 	LiveRealmHubRouting.ResolveTeleportAccessCode(availability[3]),
