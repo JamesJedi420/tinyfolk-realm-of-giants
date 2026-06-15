@@ -10,12 +10,14 @@ GiantLevelConfig.EventKinds = {
 	CaptureSuccess = "capture_success",
 	ContainmentHeld = "containment_held",
 	WorksiteUpgrade = "worksite_upgrade",
+	TradeSuccess = "trade_success",
 }
 
 GiantLevelConfig.XpAwardsByEventKind = {
 	capture_success = 25,
 	containment_held = 40,
 	worksite_upgrade = 15,
+	trade_success = 30,
 }
 
 GiantLevelConfig.ValidModifierFields = {

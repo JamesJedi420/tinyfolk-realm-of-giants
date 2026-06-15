@@ -48,6 +48,10 @@ local RealmTransferAssignmentService = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmTransferAssignmentService"))
 	else (require :: any)("./RealmTransferAssignmentService")
 
+local GiantLevelTradeXpProducer = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("GiantLevelTradeXpProducer"))
+	else (require :: any)("./GiantLevelTradeXpProducer")
+
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
 
@@ -403,6 +407,35 @@ local function pendingRecoveryMatchesHandoff(recovery: any?, handoffToken: strin
 		return false
 	end
 	return recovery.handoffToken == handoffToken and recovery.targetRealmId == targetRealmId
+end
+
+local function getGiantLevelServiceQueryApi(): any?
+	local queryApi = globalEnv._GiantLevelService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._GiantLevelService_QueryAPI) == "table" then
+		return (_G :: any)._GiantLevelService_QueryAPI
+	end
+	return nil
+end
+
+local function recordTradeXpFromHandoff(handoffEntry: any?)
+	if type(handoffEntry) ~= "table" then
+		return
+	end
+	if handoffEntry.assignmentReason ~= RealmAssignmentProfileState.AssignmentReason.Trade then
+		return
+	end
+
+	local giantLevelApi = getGiantLevelServiceQueryApi()
+	if giantLevelApi == nil then
+		return
+	end
+
+	pcall(GiantLevelTradeXpProducer.RecordFromHandoffEntry, handoffEntry, os.time(), {
+		giantLevelApi = giantLevelApi,
+	})
 end
 
 local function resolveBeginOperation(assignmentReason: string): string?
@@ -1239,9 +1272,11 @@ function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, 
 		then pending.targetRealmId
 		else nil
 	local resolvedHandoffToken = if pendingToken ~= nil then pendingToken else handoffToken
+	local consumedHandoffEntry: any? = nil
 	if isNonEmptyString(resolvedHandoffToken) and isNonEmptyString(resolvedTargetRealmId) then
-		local consumed, consumeReason =
+		local consumed, consumeReason, handoffEntry =
 			consumeControlledTransferHandoff(userId, resolvedHandoffToken :: string, resolvedTargetRealmId)
+		consumedHandoffEntry = handoffEntry
 		if not consumed then
 			local retryable = consumeReason == "handoff_token_expired"
 			return makeResult(
@@ -1254,6 +1289,8 @@ function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, 
 			)
 		end
 	end
+
+	recordTradeXpFromHandoff(consumedHandoffEntry)
 
 	clearPendingHandoff(userId)
 	return makeResult(

@@ -35,6 +35,7 @@ local VALID_EVENT_KINDS = {
 	[GiantLevelConfig.EventKinds.CaptureSuccess] = true,
 	[GiantLevelConfig.EventKinds.ContainmentHeld] = true,
 	[GiantLevelConfig.EventKinds.WorksiteUpgrade] = true,
+	[GiantLevelConfig.EventKinds.TradeSuccess] = true,
 }
 
 local function isFiniteNumber(value: any): boolean
