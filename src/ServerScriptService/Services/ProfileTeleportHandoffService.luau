@@ -56,8 +56,19 @@ local RealmTradeConversionProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmTradeConversionProducer"))
 	else (require :: any)("./RealmTradeConversionProducer")
 
+local LiveRealmHubRouting = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("LiveRealmHubRouting")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/LiveRealmHubRouting")
+
 local ProfileTeleportHandoffService: any = {}
 local globalEnv: any = getfenv()
+
+local DEFAULT_LIVE_REGISTRY_AVAILABILITY_LIMIT = 25
 
 export type HandoffResult = {
 	ok: boolean,
@@ -300,6 +311,57 @@ local function clearPendingHandoff(userId: number)
 	pendingHandoffByUserId[userId] = nil
 	releaseReadyCallbacksByUserId[userId] = nil
 	clearPersistedPendingRecovery(userId)
+end
+
+local function getLiveRegistryHubApi(): any?
+	local queryApi = globalEnv._LiveRealmRegistryHubSurface_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_LiveRealmRegistryHubSurface_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	return nil
+end
+
+local function readLiveRealmAvailability(limit: number?, at: number?): { any }?
+	local hubApi = getLiveRegistryHubApi()
+	if type(hubApi) ~= "table" or type((hubApi :: any).ListLiveRealmAvailability) ~= "function" then
+		return nil
+	end
+
+	local resolvedLimit = if type(limit) == "number" and limit > 0
+		then limit
+		else DEFAULT_LIVE_REGISTRY_AVAILABILITY_LIMIT
+	local ok, availability = pcall(function()
+		return (hubApi :: any).ListLiveRealmAvailability(resolvedLimit, at)
+	end)
+	if not ok or type(availability) ~= "table" then
+		return nil
+	end
+
+	return availability
+end
+
+local function validateTargetRealmForHandoff(targetRealmId: string): (boolean, string?)
+	local availability = readLiveRealmAvailability(DEFAULT_LIVE_REGISTRY_AVAILABILITY_LIMIT, nil)
+	if availability == nil then
+		return true, nil
+	end
+
+	local hubResult = LiveRealmHubRouting.ResolveAdmissionTarget({
+		targetRealmId = targetRealmId,
+	}, availability)
+	if hubResult.accepted ~= true then
+		return false, hubResult.reason
+	end
+
+	return true, nil
 end
 
 local function getRealmTransferHandoffQueryApi(): any?
@@ -1186,6 +1248,18 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 	local targetRealmId = if type(contextAny) == "table" then contextAny.targetRealmId else nil
 	if not isNonEmptyString(targetRealmId) then
 		return makeResult(false, "BeginCrossServerHandoff", "target_realm_id_invalid", false, nil, "safe_fallback")
+	end
+
+	local targetAvailable, availabilityReason = validateTargetRealmForHandoff(targetRealmId)
+	if not targetAvailable then
+		return makeResult(
+			false,
+			"BeginCrossServerHandoff",
+			availabilityReason or "target_realm_unavailable",
+			true,
+			nil,
+			"safe_fallback"
+		)
 	end
 
 	local handoffBegun, handoffReason, handoffToken = beginControlledTransferHandoff(userId, targetRealmId, contextAny)

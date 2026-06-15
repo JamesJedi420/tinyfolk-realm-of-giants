@@ -355,4 +355,77 @@ assertEqual(globalResolverResult.ok, true, "global resolver dispatch accepted")
 assertEqual(globalResolverReserveCalls, 1, "global resolver reserve called")
 assertEqual(globalResolverTeleportCalls, 1, "global resolver teleport called")
 
+do
+	local hubReserveCalls = 0
+	local hubTeleportAccessCode: string? = nil
+	local hubDispatcher = RealmTeleportDispatcher.Create({
+		partyResolver = function(partyId: string): { number }
+			if partyId == "party-good" then
+				return { 101 }
+			end
+			return {}
+		end,
+		playersService = {
+			GetPlayerByUserId = function(_self: any, userId: number): any
+				return fakePlayersByUserId[userId]
+			end,
+		},
+		handoffApi = {
+			BeginCrossServerHandoff = function(_player: any, _context: any): any
+				return {
+					ok = true,
+					handoffToken = "token-101",
+				}
+			end,
+		},
+		listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+			return {
+				{
+					realmId = "realm-100",
+					ownerUserId = 100,
+					privateServerId = "registry-access-code",
+					accessMode = "private",
+					playerCount = 1,
+					capacity = 8,
+					dangerRating = 0.5,
+					lifecycle = "active",
+					isAvailable = true,
+					updatedAt = 100,
+				},
+			}
+		end,
+		teleportService = {
+			ReserveServer = function(_self: any, _placeId: number): string
+				hubReserveCalls += 1
+				return "should-not-be-used"
+			end,
+			TeleportToPrivateServer = function(
+				_self: any,
+				_placeId: number,
+				accessCode: string,
+				_players: { any },
+				_spawnName: any,
+				_teleportData: any
+			)
+				hubTeleportAccessCode = accessCode
+			end,
+		},
+		destinationResolver = function(_entry: any): any
+			return {
+				placeId = 12345,
+			}
+		end,
+	})
+
+	local hubAccepted = hubDispatcher.Dispatch({
+		operationId = "op-hub",
+		partyId = "party-good",
+		targetRealmId = "realm-100",
+	})
+	assertEqual(hubAccepted.ok, true, "hub resolved dispatch accepted")
+	assertEqual(hubAccepted.registryAccessCodeResolved, true, "hub resolved access code flag")
+	assertEqual(hubReserveCalls, 0, "hub resolved dispatch skips reserve server")
+	assertEqual(hubTeleportAccessCode, "registry-access-code", "hub resolved dispatch uses registry access code")
+end
+
 print("realm_teleport_dispatcher_runtime_entrypoint: all checks passed")

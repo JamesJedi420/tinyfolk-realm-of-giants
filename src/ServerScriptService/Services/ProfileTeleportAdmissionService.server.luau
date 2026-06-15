@@ -4,12 +4,24 @@ local AdmissionQueueProducer = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("AdmissionQueueProducer"))
 	else (require :: any)("./AdmissionQueueProducer")
 
+local LiveRealmHubRouting = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("LiveRealmHubRouting")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/LiveRealmHubRouting")
+
 local globalEnv: any = getfenv()
 
 local DEFAULT_EXPIRATION_SECONDS = 600
+local DEFAULT_AVAILABILITY_LIMIT = 25
 
 local queryApiOverride: any = nil
 local nowFnOverride: (() -> number)? = nil
+local liveRegistryHubApiOverride: any = nil
+local listLiveRealmAvailabilityOverride: ((number?, number?) -> { any })? = nil
 
 type AdmissionDiagnostics = {
 	enqueueAttempts: number,
@@ -61,6 +73,72 @@ local function isValidUserId(value: any): boolean
 	return true
 end
 
+local function getLiveRegistryHubApi(): any?
+	if liveRegistryHubApiOverride ~= nil then
+		return liveRegistryHubApiOverride
+	end
+
+	local envAny: any = globalEnv
+	if type(envAny) ~= "table" then
+		return nil
+	end
+
+	local queryApi = envAny._LiveRealmRegistryHubSurface_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_LiveRealmRegistryHubSurface_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	return nil
+end
+
+local function readLiveRealmAvailability(limit: number?, at: number?): { any }?
+	if type(listLiveRealmAvailabilityOverride) == "function" then
+		local ok, availability = pcall(listLiveRealmAvailabilityOverride, limit, at)
+		if ok and type(availability) == "table" then
+			return availability
+		end
+		return nil
+	end
+
+	local hubApi = getLiveRegistryHubApi()
+	if type(hubApi) ~= "table" or type((hubApi :: any).ListLiveRealmAvailability) ~= "function" then
+		return nil
+	end
+
+	local resolvedLimit = if type(limit) == "number" and limit > 0 then limit else DEFAULT_AVAILABILITY_LIMIT
+	local ok, availability = pcall(function()
+		return (hubApi :: any).ListLiveRealmAvailability(resolvedLimit, at)
+	end)
+	if not ok or type(availability) ~= "table" then
+		return nil
+	end
+
+	return availability
+end
+
+local function validateTargetRealmAvailability(targetRealmId: string): (boolean, string?)
+	local availability = readLiveRealmAvailability(DEFAULT_AVAILABILITY_LIMIT, nil)
+	if availability == nil then
+		return true, nil
+	end
+
+	local hubResult = LiveRealmHubRouting.ResolveAdmissionTarget({
+		targetRealmId = targetRealmId,
+	}, availability)
+	if hubResult.accepted ~= true then
+		return false, hubResult.reason
+	end
+
+	return true, nil
+end
+
 local function getRealmAdmissionQueueQueryApi(): any?
 	if queryApiOverride ~= nil then
 		return queryApiOverride
@@ -108,6 +186,13 @@ function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: 
 	if not isNonEmptyString(input.targetRealmId) then
 		admissionDiagnostics.lastReason = "target_realm_id_invalid"
 		return { accepted = false, reason = "target_realm_id_invalid" }
+	end
+
+	local targetAvailable, availabilityReason = validateTargetRealmAvailability(input.targetRealmId)
+	if not targetAvailable then
+		local rejectedReason = availabilityReason or "target_realm_unavailable"
+		admissionDiagnostics.lastReason = rejectedReason
+		return { accepted = false, reason = rejectedReason }
 	end
 
 	local userId = input.userId
@@ -164,11 +249,18 @@ function ProfileTeleportAdmissionService.ConfigureForTests(config: any)
 	local configAny: any = config
 	queryApiOverride = if type(configAny) == "table" then configAny.admissionQueueApi else nil
 	nowFnOverride = if type(configAny) == "table" and type(configAny.now) == "function" then configAny.now else nil
+	liveRegistryHubApiOverride = if type(configAny) == "table" then configAny.liveRegistryHubApi else nil
+	listLiveRealmAvailabilityOverride = if type(configAny) == "table"
+			and type(configAny.listLiveRealmAvailability) == "function"
+		then configAny.listLiveRealmAvailability
+		else nil
 end
 
 function ProfileTeleportAdmissionService.ResetForTests()
 	queryApiOverride = nil
 	nowFnOverride = nil
+	liveRegistryHubApiOverride = nil
+	listLiveRealmAvailabilityOverride = nil
 	admissionDiagnostics = {
 		enqueueAttempts = 0,
 		enqueueSucceeded = 0,
