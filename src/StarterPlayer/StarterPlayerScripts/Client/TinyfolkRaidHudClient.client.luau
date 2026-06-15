@@ -20,6 +20,7 @@ local CUSTODY_NAME = "Custody"
 local EFFECTS_NAME = "Effects"
 local TEAM_NAME = "Team"
 local SCORE_NAME = "Score"
+local SUPPORT_NAME = "Support"
 local UPDATED_NAME = "Updated"
 
 local ACCENT_BY_TONE = {
@@ -70,7 +71,7 @@ local panel = Instance.new("Frame")
 panel.Name = PANEL_NAME
 panel.AnchorPoint = Vector2.new(0, 0)
 panel.Position = UDim2.fromScale(0.02, 0.14)
-panel.Size = UDim2.fromOffset(380, 192)
+panel.Size = UDim2.fromOffset(380, 210)
 panel.BackgroundColor3 = Color3.fromRGB(15, 18, 24)
 panel.BackgroundTransparency = 0.08
 panel.BorderSizePixel = 0
@@ -116,7 +117,11 @@ team.Text = "Team: --"
 local score = makeLabel(panel, SCORE_NAME, 12, 162, 18)
 score.Text = "Score: --"
 
-local updated = makeLabel(panel, UPDATED_NAME, 11, 182, 14)
+local support = makeLabel(panel, SUPPORT_NAME, 12, 182, 18)
+support.TextColor3 = Color3.fromRGB(156, 196, 224)
+support.Text = "Support: --"
+
+local updated = makeLabel(panel, UPDATED_NAME, 11, 202, 14)
 updated.TextColor3 = Color3.fromRGB(156, 164, 176)
 updated.Text = "Updated at --"
 
@@ -153,6 +158,7 @@ local function refreshHud()
 	effects.Text = model.personalEffects
 	team.Text = model.teammateActivity
 	score.Text = model.scoreFeedback
+	support.Text = model.support
 	updated.Text = model.updatedAt
 end
 
