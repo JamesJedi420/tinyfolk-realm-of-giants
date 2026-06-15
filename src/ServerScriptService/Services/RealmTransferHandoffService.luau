@@ -13,6 +13,10 @@ local RealmTransferHandoffState = if script ~= nil and script.Parent ~= nil
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmTransferHandoffState")
 
+local RealmTransferSessionStore = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmTransferSessionStore"))
+	else (require :: any)("./RealmTransferSessionStore")
+
 local RealmTransferHandoffService: any = {}
 local globalEnv: any = getfenv()
 
@@ -23,13 +27,16 @@ export type HandoffDiagnostics = {
 	totalConsumes: number,
 	acceptedConsumes: number,
 	rejectedConsumes: number,
+	totalInvalidations: number,
+	acceptedInvalidations: number,
+	rejectedInvalidations: number,
 	lastOperation: string,
 	lastReason: string,
 }
 
-local sessionRecordsByRealmId: { [string]: RealmTransferHandoffState.SessionRecord? } = {}
 local tokenCounter = 0
 local nowFn: (() -> number)? = nil
+local sessionStore: any? = nil
 local diagnostics: HandoffDiagnostics = {
 	totalBegins = 0,
 	acceptedBegins = 0,
@@ -37,6 +44,9 @@ local diagnostics: HandoffDiagnostics = {
 	totalConsumes = 0,
 	acceptedConsumes = 0,
 	rejectedConsumes = 0,
+	totalInvalidations = 0,
+	acceptedInvalidations = 0,
+	rejectedInvalidations = 0,
 	lastOperation = "none",
 	lastReason = "not_started",
 }
@@ -49,6 +59,9 @@ local function cloneDiagnostics(): HandoffDiagnostics
 		totalConsumes = diagnostics.totalConsumes,
 		acceptedConsumes = diagnostics.acceptedConsumes,
 		rejectedConsumes = diagnostics.rejectedConsumes,
+		totalInvalidations = diagnostics.totalInvalidations,
+		acceptedInvalidations = diagnostics.acceptedInvalidations,
+		rejectedInvalidations = diagnostics.rejectedInvalidations,
 		lastOperation = diagnostics.lastOperation,
 		lastReason = diagnostics.lastReason,
 	}
@@ -116,6 +129,26 @@ local function getTransferLockQueryApi(): any?
 	return queryApi
 end
 
+local function getMemoryStoreAdapter(): any?
+	local queryApi = globalEnv._MemoryStoreAdapter_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	return nil
+end
+
+local function resolveSessionStore(): any
+	if sessionStore ~= nil then
+		return sessionStore
+	end
+	sessionStore = RealmTransferSessionStore.Create({
+		adapter = getMemoryStoreAdapter(),
+		handoffState = RealmTransferHandoffState,
+		structurePolicy = MemoryStoreStructurePolicy,
+	})
+	return sessionStore
+end
+
 local function recordDiagnostics(operation: string, accepted: boolean, reason: string)
 	diagnostics.lastOperation = operation
 	diagnostics.lastReason = reason
@@ -133,6 +166,13 @@ local function recordDiagnostics(operation: string, accepted: boolean, reason: s
 		else
 			diagnostics.rejectedConsumes += 1
 		end
+	elseif operation == "invalidate" then
+		diagnostics.totalInvalidations += 1
+		if accepted then
+			diagnostics.acceptedInvalidations += 1
+		else
+			diagnostics.rejectedInvalidations += 1
+		end
 	end
 end
 
@@ -144,12 +184,15 @@ end
 function RealmTransferHandoffService.ConfigureForTests(config: any?)
 	local configAny: any = config
 	nowFn = if type(configAny) == "table" and type(configAny.now) == "function" then configAny.now else nil
+	if type(configAny) == "table" and type(configAny.store) == "table" then
+		sessionStore = configAny.store
+	end
 end
 
 function RealmTransferHandoffService.ResetForTests()
-	sessionRecordsByRealmId = {}
 	tokenCounter = 0
 	nowFn = nil
+	sessionStore = nil
 	diagnostics = {
 		totalBegins = 0,
 		acceptedBegins = 0,
@@ -157,9 +200,16 @@ function RealmTransferHandoffService.ResetForTests()
 		totalConsumes = 0,
 		acceptedConsumes = 0,
 		rejectedConsumes = 0,
+		totalInvalidations = 0,
+		acceptedInvalidations = 0,
+		rejectedInvalidations = 0,
 		lastOperation = "none",
 		lastReason = "reset",
 	}
+	local store = resolveSessionStore()
+	if type(store) == "table" and type(store.ResetForTests) == "function" then
+		store.ResetForTests()
+	end
 end
 
 function RealmTransferHandoffService.GetSessionRecord(realmId: any): any
@@ -171,7 +221,16 @@ function RealmTransferHandoffService.GetSessionRecord(realmId: any): any
 		}
 	end
 
-	local record = sessionRecordsByRealmId[realmId]
+	local storeResult = resolveSessionStore().GetSessionRecord(realmId)
+	if storeResult.accepted ~= true then
+		return {
+			accepted = false,
+			reason = storeResult.reason,
+			sessionRecord = storeResult.sessionRecord,
+		}
+	end
+
+	local record = storeResult.sessionRecord
 	if record == nil then
 		return {
 			accepted = false,
@@ -243,30 +302,36 @@ function RealmTransferHandoffService.BeginHandoff(input: any): any
 		}
 	end
 
-	local currentRecord = sessionRecordsByRealmId[targetRealmId]
-	local beginResult = RealmTransferHandoffState.BeginHandoff(currentRecord, {
-		userId = userId,
-		targetRealmId = targetRealmId,
-		operationId = operationId,
-		assignmentReason = input.assignmentReason,
-		now = now,
-		ttlSeconds = resolveTtlSeconds(),
-		realmOwnerUserId = input.realmOwnerUserId,
-	})
-	if beginResult.accepted ~= true or beginResult.sessionRecord == nil then
+	local beginResult: any = nil
+	local storeResult = resolveSessionStore().UpdateSessionRecord(targetRealmId, function(currentRecord: any?)
+		beginResult = RealmTransferHandoffState.BeginHandoff(currentRecord, {
+			userId = userId,
+			targetRealmId = targetRealmId,
+			operationId = operationId,
+			assignmentReason = input.assignmentReason,
+			now = now,
+			ttlSeconds = resolveTtlSeconds(),
+			realmOwnerUserId = input.realmOwnerUserId,
+		})
+		return beginResult
+	end)
+
+	if storeResult.accepted ~= true or beginResult == nil or beginResult.accepted ~= true then
 		if type(lockApi.Release) == "function" then
 			lockApi.Release(operationId)
 		end
-		recordDiagnostics("begin", false, beginResult.reason)
+		local reason = if type(beginResult) == "table" and type(beginResult.reason) == "string"
+			then beginResult.reason
+			else storeResult.reason
+		recordDiagnostics("begin", false, reason)
 		return {
 			accepted = false,
-			reason = beginResult.reason,
+			reason = reason,
 			handoffToken = nil,
 			handoffEntry = nil,
 		}
 	end
 
-	sessionRecordsByRealmId[targetRealmId] = beginResult.sessionRecord
 	recordDiagnostics("begin", true, "accepted")
 	return {
 		accepted = true,
@@ -315,23 +380,46 @@ function RealmTransferHandoffService.ConsumeHandoffOnArrival(input: any): any
 	end
 
 	local now = readNow(input.now)
-	local currentRecord = sessionRecordsByRealmId[targetRealmId]
-	local consumeResult = RealmTransferHandoffState.ConsumeHandoff(currentRecord, {
-		userId = userId,
-		handoffToken = handoffToken,
-		now = now,
-	})
-	if consumeResult.accepted ~= true then
-		recordDiagnostics("consume", false, consumeResult.reason)
+	local consumeResult: any = nil
+	local storeResult = resolveSessionStore().UpdateSessionRecord(targetRealmId, function(currentRecord: any?)
+		consumeResult = RealmTransferHandoffState.ConsumeHandoff(currentRecord, {
+			userId = userId,
+			handoffToken = handoffToken,
+			now = now,
+		})
+		return consumeResult
+	end)
+
+	if storeResult.accepted ~= true then
+		local reason = if type(consumeResult) == "table" and type(consumeResult.reason) == "string"
+			then consumeResult.reason
+			else storeResult.reason
+		if reason == "session_record_missing" then
+			recordDiagnostics("consume", false, reason)
+			return {
+				accepted = false,
+				reason = reason,
+				handoffEntry = nil,
+			}
+		end
+		recordDiagnostics("consume", false, reason)
 		return {
 			accepted = false,
-			reason = consumeResult.reason,
-			handoffEntry = consumeResult.handoffEntry,
+			reason = reason,
+			handoffEntry = if type(consumeResult) == "table" then consumeResult.handoffEntry else nil,
 		}
 	end
 
-	if consumeResult.sessionRecord ~= nil then
-		sessionRecordsByRealmId[targetRealmId] = consumeResult.sessionRecord
+	if consumeResult == nil or consumeResult.accepted ~= true then
+		local reason = if type(consumeResult) == "table" and type(consumeResult.reason) == "string"
+			then consumeResult.reason
+			else "handoff_consume_failed"
+		recordDiagnostics("consume", false, reason)
+		return {
+			accepted = false,
+			reason = reason,
+			handoffEntry = if type(consumeResult) == "table" then consumeResult.handoffEntry else nil,
+		}
 	end
 
 	local lockApi = getTransferLockQueryApi()
@@ -347,6 +435,193 @@ function RealmTransferHandoffService.ConsumeHandoffOnArrival(input: any): any
 	}
 end
 
+function RealmTransferHandoffService.InvalidateHandoffOnAbort(input: any): any
+	if type(input) ~= "table" then
+		recordDiagnostics("invalidate", false, "handoff_input_invalid")
+		return {
+			accepted = false,
+			reason = "handoff_input_invalid",
+			handoffEntry = nil,
+		}
+	end
+
+	local handoffToken = input.handoffToken
+	local targetRealmId = input.targetRealmId
+	if not isNonEmptyString(handoffToken) then
+		recordDiagnostics("invalidate", false, "handoff_token_invalid")
+		return {
+			accepted = false,
+			reason = "handoff_token_invalid",
+			handoffEntry = nil,
+		}
+	end
+	if not isNonEmptyString(targetRealmId) then
+		recordDiagnostics("invalidate", false, "handoff_target_realm_invalid")
+		return {
+			accepted = false,
+			reason = "handoff_target_realm_invalid",
+			handoffEntry = nil,
+		}
+	end
+
+	local now = readNow(input.now)
+	local invalidateResult: any = nil
+	local storeResult = resolveSessionStore().UpdateSessionRecord(targetRealmId, function(currentRecord: any?)
+		invalidateResult = RealmTransferHandoffState.InvalidateHandoff(currentRecord, {
+			handoffToken = handoffToken,
+			now = now,
+		})
+		return invalidateResult
+	end)
+
+	if storeResult.accepted ~= true then
+		local reason = if type(invalidateResult) == "table" and type(invalidateResult.reason) == "string"
+			then invalidateResult.reason
+			else storeResult.reason
+		if reason == "session_record_missing" or reason == "handoff_token_not_found" then
+			recordDiagnostics("invalidate", true, "accepted")
+			local lockApi = getTransferLockQueryApi()
+			if lockApi ~= nil and type(lockApi.Release) == "function" then
+				lockApi.Release(handoffToken)
+			end
+			return {
+				accepted = true,
+				reason = "accepted",
+				handoffEntry = nil,
+			}
+		end
+		recordDiagnostics("invalidate", false, reason)
+		return {
+			accepted = false,
+			reason = reason,
+			handoffEntry = nil,
+		}
+	end
+
+	if invalidateResult == nil or invalidateResult.accepted ~= true then
+		local reason = if type(invalidateResult) == "table" and type(invalidateResult.reason) == "string"
+			then invalidateResult.reason
+			else "handoff_invalidate_failed"
+		if reason == "session_record_missing" or reason == "handoff_token_not_found" then
+			recordDiagnostics("invalidate", true, "accepted")
+			local lockApi = getTransferLockQueryApi()
+			if lockApi ~= nil and type(lockApi.Release) == "function" then
+				lockApi.Release(handoffToken)
+			end
+			return {
+				accepted = true,
+				reason = "accepted",
+				handoffEntry = nil,
+			}
+		end
+		recordDiagnostics("invalidate", false, reason)
+		return {
+			accepted = false,
+			reason = reason,
+			handoffEntry = if type(invalidateResult) == "table" then invalidateResult.handoffEntry else nil,
+		}
+	end
+
+	local lockApi = getTransferLockQueryApi()
+	if lockApi ~= nil and type(lockApi.Release) == "function" then
+		lockApi.Release(handoffToken)
+	end
+
+	recordDiagnostics("invalidate", true, "accepted")
+	return {
+		accepted = true,
+		reason = "accepted",
+		handoffEntry = invalidateResult.handoffEntry,
+	}
+end
+
+function RealmTransferHandoffService.ResolveExpiredSession(input: any): any
+	if type(input) ~= "table" then
+		return {
+			accepted = false,
+			reason = "handoff_input_invalid",
+			resolution = "invalid_input",
+			handoffEntry = nil,
+		}
+	end
+
+	local handoffToken = input.handoffToken
+	local targetRealmId = input.targetRealmId
+	if not isNonEmptyString(handoffToken) then
+		return {
+			accepted = false,
+			reason = "handoff_token_invalid",
+			resolution = "invalid_token",
+			handoffEntry = nil,
+		}
+	end
+	if not isNonEmptyString(targetRealmId) then
+		return {
+			accepted = false,
+			reason = "handoff_target_realm_invalid",
+			resolution = "invalid_target",
+			handoffEntry = nil,
+		}
+	end
+
+	local now = readNow(input.now)
+	local sessionResult = resolveSessionStore().GetSessionRecord(targetRealmId)
+	if sessionResult.accepted ~= true or sessionResult.sessionRecord == nil then
+		return {
+			accepted = true,
+			reason = "session_record_missing",
+			resolution = "pending_recovery_authority",
+			handoffEntry = nil,
+		}
+	end
+
+	local record = sessionResult.sessionRecord
+	local entryBeforePrune = RealmTransferHandoffState.GetHandoffEntry(record, handoffToken)
+	local prunedRecord = RealmTransferHandoffState.PruneExpired(record, now)
+	local entryAfterPrune = RealmTransferHandoffState.GetHandoffEntry(prunedRecord, handoffToken)
+
+	if entryBeforePrune ~= nil and entryAfterPrune == nil and entryBeforePrune.expiresAt <= now then
+		resolveSessionStore().UpdateSessionRecord(targetRealmId, function(_currentRecord: any?)
+			return {
+				accepted = true,
+				reason = "accepted",
+				sessionRecord = prunedRecord,
+			}
+		end)
+		return {
+			accepted = true,
+			reason = "handoff_token_expired",
+			resolution = "pending_recovery_authority",
+			handoffEntry = entryBeforePrune,
+		}
+	end
+
+	if entryAfterPrune == nil then
+		return {
+			accepted = false,
+			reason = "handoff_token_not_found",
+			resolution = "safe_fallback",
+			handoffEntry = nil,
+		}
+	end
+
+	if entryAfterPrune.expiresAt <= now then
+		return {
+			accepted = true,
+			reason = "handoff_token_expired",
+			resolution = "pending_recovery_authority",
+			handoffEntry = entryAfterPrune,
+		}
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		resolution = "session_record_authority",
+		handoffEntry = entryAfterPrune,
+	}
+end
+
 function RealmTransferHandoffService.GetDiagnostics(): HandoffDiagnostics
 	return cloneDiagnostics()
 end
@@ -357,6 +632,12 @@ globalEnv._RealmTransferHandoffService_QueryAPI = {
 	end,
 	ConsumeHandoffOnArrival = function(input: any): any
 		return RealmTransferHandoffService.ConsumeHandoffOnArrival(input)
+	end,
+	InvalidateHandoffOnAbort = function(input: any): any
+		return RealmTransferHandoffService.InvalidateHandoffOnAbort(input)
+	end,
+	ResolveExpiredSession = function(input: any): any
+		return RealmTransferHandoffService.ResolveExpiredSession(input)
 	end,
 	GetSessionRecord = function(realmId: any): any
 		return RealmTransferHandoffService.GetSessionRecord(realmId)

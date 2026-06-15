@@ -69,4 +69,19 @@ local duplicateBegin = RealmTransferHandoffState.BeginHandoff(activeBegin.sessio
 })
 assertEqual(duplicateBegin.reason, "handoff_token_already_active", "duplicate token rejected")
 
+local invalidateResult = RealmTransferHandoffState.InvalidateHandoff(activeBegin.sessionRecord, {
+	handoffToken = "handoff:7003:dup",
+	now = now + 2,
+})
+assertTrue(invalidateResult.accepted == true, "invalidate accepted")
+assertTrue(invalidateResult.sessionRecord.handoffsByToken["handoff:7003:dup"] == nil, "invalidate clears token")
+
+local encoded, encodeReason = RealmTransferHandoffState.EncodeSessionRecord(beginResult.sessionRecord :: any)
+assertTrue(type(encoded) == "string", "encode session record")
+assertTrue(encodeReason == nil, "encode reason nil")
+local decoded, decodeReason = RealmTransferHandoffState.DecodeSessionRecord(encoded)
+assertTrue(decoded ~= nil, "decode session record")
+assertEqual(decodeReason, nil, "decode reason nil")
+assertEqual(decoded.realmId, targetRealmId, "roundtrip realm id")
+
 print("realm_transfer_handoff_state: all checks passed")

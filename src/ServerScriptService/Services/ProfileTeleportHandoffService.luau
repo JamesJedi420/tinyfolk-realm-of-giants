@@ -355,6 +355,56 @@ local function resolveAssignmentReason(context: any?): string
 	return RealmAssignmentProfileState.AssignmentReason.PartyAdmission
 end
 
+local function abortControlledTransferHandoff(userId: number, handoffToken: string, targetRealmId: string?)
+	if not isNonEmptyString(targetRealmId) or not isNonEmptyString(handoffToken) then
+		return
+	end
+
+	local handoffApi = getRealmTransferHandoffQueryApi()
+	if handoffApi == nil or type(handoffApi.InvalidateHandoffOnAbort) ~= "function" then
+		if handoffApi ~= nil and type(handoffApi.ConsumeHandoffOnArrival) == "function" then
+			pcall(handoffApi.ConsumeHandoffOnArrival, {
+				userId = userId,
+				handoffToken = handoffToken,
+				targetRealmId = targetRealmId,
+				now = os.time(),
+			})
+		end
+		return
+	end
+
+	pcall(handoffApi.InvalidateHandoffOnAbort, {
+		handoffToken = handoffToken,
+		targetRealmId = targetRealmId,
+		now = os.time(),
+	})
+end
+
+local function resolveConfirmOperation(assignmentReason: string?): string
+	if assignmentReason == RealmAssignmentProfileState.AssignmentReason.EscapeReturn then
+		return RealmTransferState.Operations.ConfirmHubReturn
+	end
+	return RealmTransferState.Operations.ConfirmArrival
+end
+
+local function getPendingRecoveryForUserId(userId: number): any?
+	local profileResult = ProfilePersistenceGateway.GetLoadedPlayerProfileData(makePlayerStub(userId))
+	if not profileResult.ok or type(profileResult.data) ~= "table" then
+		return nil
+	end
+	return PendingRecoveryProfileState.GetRecovery(profileResult.data)
+end
+
+local function pendingRecoveryMatchesHandoff(recovery: any?, handoffToken: string, targetRealmId: string): boolean
+	if recovery == nil then
+		return false
+	end
+	if recovery.status ~= PendingRecoveryProfileState.Status.AwaitingDestination then
+		return false
+	end
+	return recovery.handoffToken == handoffToken and recovery.targetRealmId == targetRealmId
+end
+
 local function resolveBeginOperation(assignmentReason: string): string?
 	if assignmentReason == RealmAssignmentProfileState.AssignmentReason.Capture then
 		return RealmTransferState.Operations.BeginCapture
@@ -451,14 +501,7 @@ local function beginControlledTransferHandoff(
 	if realmOwnerUserId ~= nil then
 		local transitionOk, transitionReason = applyAssignmentTransition(userId, beginOperation, targetRealmId, context)
 		if not transitionOk then
-			if type(handoffApi.ConsumeHandoffOnArrival) == "function" then
-				pcall(handoffApi.ConsumeHandoffOnArrival, {
-					userId = userId,
-					handoffToken = handoffToken,
-					targetRealmId = targetRealmId,
-					now = os.time(),
-				})
-			end
+			abortControlledTransferHandoff(userId, handoffToken, targetRealmId)
 			return false, transitionReason or "assignment_transition_failed", nil
 		end
 	end
@@ -470,20 +513,71 @@ local function consumeControlledTransferHandoff(
 	userId: number,
 	handoffToken: string,
 	targetRealmId: string?
-): (boolean, string?)
+): (boolean, string?, any?)
 	if not isNonEmptyString(targetRealmId) then
-		return false, "handoff_target_realm_invalid"
+		return false, "handoff_target_realm_invalid", nil
 	end
 
+	local resolvedTargetRealmId = targetRealmId :: string
+	local recovery = getPendingRecoveryForUserId(userId)
 	local handoffApi = getRealmTransferHandoffQueryApi()
+	if handoffApi ~= nil and type(handoffApi.ResolveExpiredSession) == "function" then
+		local resolutionResult = handoffApi.ResolveExpiredSession({
+			handoffToken = handoffToken,
+			targetRealmId = resolvedTargetRealmId,
+			now = os.time(),
+		})
+		if type(resolutionResult) == "table" then
+			if resolutionResult.resolution == "safe_fallback" then
+				return false, resolutionResult.reason or "handoff_token_not_found", nil
+			end
+			if
+				resolutionResult.resolution == "pending_recovery_authority"
+				and pendingRecoveryMatchesHandoff(recovery, handoffToken, resolvedTargetRealmId)
+			then
+				local assignmentApi = getRealmTransferAssignmentQueryApi()
+				if assignmentApi == nil or type(assignmentApi.ApplyTransition) ~= "function" then
+					return true, nil, resolutionResult.handoffEntry
+				end
+
+				local assignmentReason = if type(resolutionResult.handoffEntry) == "table"
+					then resolutionResult.handoffEntry.assignmentReason
+					else nil
+				local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(resolvedTargetRealmId)
+				if realmOwnerUserId == nil and type(resolutionResult.handoffEntry) == "table" then
+					local entryAny: any = resolutionResult.handoffEntry
+					if isValidUserId(entryAny.realmOwnerUserId) then
+						realmOwnerUserId = entryAny.realmOwnerUserId
+					end
+				end
+				if realmOwnerUserId ~= nil then
+					local transitionResult = assignmentApi.ApplyTransition(userId, {
+						operation = resolveConfirmOperation(assignmentReason),
+						now = os.time(),
+						realmOwnerUserId = realmOwnerUserId,
+						realmId = resolvedTargetRealmId,
+					})
+					if type(transitionResult) ~= "table" or transitionResult.accepted ~= true then
+						local reason = if type(transitionResult) == "table"
+								and type(transitionResult.reason) == "string"
+							then transitionResult.reason
+							else "assignment_confirm_failed"
+						return false, reason, nil
+					end
+				end
+				return true, nil, resolutionResult.handoffEntry
+			end
+		end
+	end
+
 	if handoffApi == nil or type(handoffApi.ConsumeHandoffOnArrival) ~= "function" then
-		return true, nil
+		return true, nil, nil
 	end
 
 	local consumeResult = handoffApi.ConsumeHandoffOnArrival({
 		userId = userId,
 		handoffToken = handoffToken,
-		targetRealmId = targetRealmId,
+		targetRealmId = resolvedTargetRealmId,
 		now = os.time(),
 	})
 	if type(consumeResult) ~= "table" or consumeResult.accepted ~= true then
@@ -491,17 +585,77 @@ local function consumeControlledTransferHandoff(
 			then consumeResult.reason
 			else "handoff_consume_failed"
 		if reason == "session_record_missing" then
-			return true, nil
+			if pendingRecoveryMatchesHandoff(recovery, handoffToken, resolvedTargetRealmId) then
+				local assignmentApi = getRealmTransferAssignmentQueryApi()
+				if assignmentApi == nil or type(assignmentApi.ApplyTransition) ~= "function" then
+					return true, nil, nil
+				end
+
+				local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(resolvedTargetRealmId)
+				if realmOwnerUserId ~= nil then
+					local transitionResult = assignmentApi.ApplyTransition(userId, {
+						operation = RealmTransferState.Operations.ConfirmArrival,
+						now = os.time(),
+						realmOwnerUserId = realmOwnerUserId,
+						realmId = resolvedTargetRealmId,
+					})
+					if type(transitionResult) ~= "table" or transitionResult.accepted ~= true then
+						local transitionReason = if type(transitionResult) == "table"
+								and type(transitionResult.reason) == "string"
+							then transitionResult.reason
+							else "assignment_confirm_failed"
+						return false, transitionReason, nil
+					end
+				end
+				return true, nil, nil
+			end
+			return true, nil, nil
 		end
-		return false, reason
+		if
+			reason == "handoff_token_expired"
+			and pendingRecoveryMatchesHandoff(recovery, handoffToken, resolvedTargetRealmId)
+		then
+			local assignmentApi = getRealmTransferAssignmentQueryApi()
+			if assignmentApi == nil or type(assignmentApi.ApplyTransition) ~= "function" then
+				return true, nil, consumeResult.handoffEntry
+			end
+
+			local assignmentReason = if type(consumeResult.handoffEntry) == "table"
+				then consumeResult.handoffEntry.assignmentReason
+				else nil
+			local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(resolvedTargetRealmId)
+			if realmOwnerUserId == nil and type(consumeResult.handoffEntry) == "table" then
+				local entryAny: any = consumeResult.handoffEntry
+				if isValidUserId(entryAny.realmOwnerUserId) then
+					realmOwnerUserId = entryAny.realmOwnerUserId
+				end
+			end
+			if realmOwnerUserId ~= nil then
+				local transitionResult = assignmentApi.ApplyTransition(userId, {
+					operation = resolveConfirmOperation(assignmentReason),
+					now = os.time(),
+					realmOwnerUserId = realmOwnerUserId,
+					realmId = resolvedTargetRealmId,
+				})
+				if type(transitionResult) ~= "table" or transitionResult.accepted ~= true then
+					local transitionReason = if type(transitionResult) == "table"
+							and type(transitionResult.reason) == "string"
+						then transitionResult.reason
+						else "assignment_confirm_failed"
+					return false, transitionReason, nil
+				end
+			end
+			return true, nil, consumeResult.handoffEntry
+		end
+		return false, reason, consumeResult.handoffEntry
 	end
 
 	local assignmentApi = getRealmTransferAssignmentQueryApi()
 	if assignmentApi == nil or type(assignmentApi.ApplyTransition) ~= "function" then
-		return true, nil
+		return true, nil, consumeResult.handoffEntry
 	end
 
-	local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(targetRealmId)
+	local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(resolvedTargetRealmId)
 	if realmOwnerUserId == nil and type(consumeResult.handoffEntry) == "table" then
 		local entryAny: any = consumeResult.handoffEntry
 		if isValidUserId(entryAny.realmOwnerUserId) then
@@ -509,21 +663,24 @@ local function consumeControlledTransferHandoff(
 		end
 	end
 	if realmOwnerUserId ~= nil then
+		local assignmentReason = if type(consumeResult.handoffEntry) == "table"
+			then consumeResult.handoffEntry.assignmentReason
+			else nil
 		local transitionResult = assignmentApi.ApplyTransition(userId, {
-			operation = RealmTransferState.Operations.ConfirmArrival,
+			operation = resolveConfirmOperation(assignmentReason),
 			now = os.time(),
 			realmOwnerUserId = realmOwnerUserId,
-			realmId = targetRealmId,
+			realmId = resolvedTargetRealmId,
 		})
 		if type(transitionResult) ~= "table" or transitionResult.accepted ~= true then
 			local reason = if type(transitionResult) == "table" and type(transitionResult.reason) == "string"
 				then transitionResult.reason
 				else "assignment_confirm_failed"
-			return false, reason
+			return false, reason, consumeResult.handoffEntry
 		end
 	end
 
-	return true, nil
+	return true, nil, consumeResult.handoffEntry
 end
 
 local function getPartyMatchmakingAdmissionQueryApi(): any?
@@ -991,15 +1148,7 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 
 	local enqueueResult = requestAdmissionHandoff(userId, handoffToken, targetRealmId)
 	if enqueueResult.accepted ~= true then
-		local handoffApi = getRealmTransferHandoffQueryApi()
-		if handoffApi ~= nil and type(handoffApi.ConsumeHandoffOnArrival) == "function" then
-			pcall(handoffApi.ConsumeHandoffOnArrival, {
-				userId = userId,
-				handoffToken = handoffToken,
-				targetRealmId = targetRealmId,
-				now = os.time(),
-			})
-		end
+		abortControlledTransferHandoff(userId, handoffToken, targetRealmId)
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1094,11 +1243,12 @@ function ProfileTeleportHandoffService.ConfirmDestinationOwnership(userId: any, 
 		local consumed, consumeReason =
 			consumeControlledTransferHandoff(userId, resolvedHandoffToken :: string, resolvedTargetRealmId)
 		if not consumed then
+			local retryable = consumeReason == "handoff_token_expired"
 			return makeResult(
 				false,
 				"ConfirmDestinationOwnership",
 				consumeReason or "handoff_consume_failed",
-				consumeReason == "handoff_token_expired",
+				retryable,
 				resolvedHandoffToken,
 				"safe_fallback"
 			)
@@ -1196,8 +1346,24 @@ function ProfileTeleportHandoffService.StartDestinationOrchestration(config: any
 	playersService.PlayerAdded:Connect(onPlayerAdded)
 	playersService.PlayerRemoving:Connect(function(player: any)
 		local userId = getPlayerUserId(player)
-		if userId ~= nil then
-			clearDestinationAwaitingOwnership(userId)
+		if userId == nil then
+			return
+		end
+
+		clearDestinationAwaitingOwnership(userId)
+
+		local pending = pendingHandoffByUserId[userId]
+		if pending ~= nil and isNonEmptyString(pending.handoffToken) and isNonEmptyString(pending.targetRealmId) then
+			abortControlledTransferHandoff(userId, pending.handoffToken, pending.targetRealmId)
+			local assignmentApi = getRealmTransferAssignmentQueryApi()
+			if assignmentApi ~= nil and type(assignmentApi.ApplyTransition) == "function" then
+				pcall(assignmentApi.ApplyTransition, userId, {
+					operation = RealmTransferState.Operations.AbortToHub,
+					now = os.time(),
+				})
+			end
+			pendingHandoffByUserId[userId] = nil
+			releaseReadyCallbacksByUserId[userId] = nil
 		end
 	end)
 
