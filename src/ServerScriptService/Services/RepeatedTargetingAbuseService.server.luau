@@ -107,6 +107,47 @@ local function projectDetectionAttributes(record: any)
 	end
 end
 
+local function projectCustodyBlockAttributes(custodianUserId: number?, targetUserId: number?, result: any)
+	if type(result) ~= "table" or result.blocked ~= true then
+		return
+	end
+
+	local attrs = RepeatedTargetingAbuseConfig.StateAttributes
+	local expiresAt = if type(result.expiresAt) == "number" then result.expiresAt else nil
+	local patternKind = if type(result.patternKind) == "string" then result.patternKind else nil
+	local players = {
+		if type(custodianUserId) == "number" then getPlayerByUserId(custodianUserId) else nil,
+		if type(targetUserId) == "number" then getPlayerByUserId(targetUserId) else nil,
+	}
+
+	for _, player in ipairs(players) do
+		if player ~= nil then
+			player:SetAttribute(attrs.CustodyBlockActive, true)
+			if expiresAt ~= nil then
+				player:SetAttribute(attrs.CustodyBlockExpiresAt, expiresAt)
+			end
+			if patternKind ~= nil then
+				player:SetAttribute(attrs.CustodyBlockPattern, patternKind)
+			end
+		end
+	end
+end
+
+local function projectRewardDampeningAttribute(custodianUserId: number, result: any)
+	if type(result) ~= "table" or type(result.multiplier) ~= "number" then
+		return
+	end
+	if result.multiplier >= 1 then
+		return
+	end
+
+	local player = getPlayerByUserId(custodianUserId)
+	if player == nil then
+		return
+	end
+	player:SetAttribute(RepeatedTargetingAbuseConfig.StateAttributes.RewardDampeningMultiplier, result.multiplier)
+end
+
 local function recordEvent(input: any): any
 	local resolvedNow = if type(input) == "table" and type(input.now) == "number" then input.now else now()
 	local transition = RepeatedTargetingAbuseState.RecordEvent(
@@ -219,6 +260,42 @@ globalEnv._RepeatedTargetingAbuseService_QueryAPI = {
 	end,
 	GetStateSnapshot = function(): any
 		return RepeatedTargetingAbuseState.GetStateSnapshot(state)
+	end,
+	IsCustodyInteractionBlocked = function(input: any): any
+		if type(input) ~= "table" then
+			return { blocked = false, reason = "input_invalid" }
+		end
+		local resolvedNow = if type(input.now) == "number" then input.now else now()
+		local result = RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(state, {
+			custodianUserId = input.custodianUserId,
+			targetUserId = input.targetUserId,
+			now = resolvedNow,
+			interactionKind = input.interactionKind,
+			outgoingCustodianUserId = input.outgoingCustodianUserId,
+			incomingCustodianUserId = input.incomingCustodianUserId,
+		}, RepeatedTargetingAbuseConfig)
+		if type(result.state) == "table" then
+			state = result.state
+		end
+		projectCustodyBlockAttributes(input.custodianUserId, input.targetUserId, result)
+		return {
+			blocked = result.blocked == true,
+			reason = result.reason,
+			patternKind = result.patternKind,
+			expiresAt = result.expiresAt,
+		}
+	end,
+	GetRewardDampeningMultiplier = function(custodianUserId: number, targetUserId: number, at: number?): any
+		local resolvedNow = if type(at) == "number" then at else now()
+		local result = RepeatedTargetingAbuseState.ResolveRewardDampeningMultiplier(
+			state,
+			custodianUserId,
+			targetUserId,
+			resolvedNow,
+			RepeatedTargetingAbuseConfig
+		)
+		projectRewardDampeningAttribute(custodianUserId, result)
+		return result
 	end,
 	ResetForTests = function()
 		state = RepeatedTargetingAbuseState.NewState()

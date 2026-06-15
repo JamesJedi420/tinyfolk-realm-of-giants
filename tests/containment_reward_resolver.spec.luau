@@ -236,6 +236,19 @@ assertTrue(missingScore.accepted, "missing score api is non-fatal")
 assertEqual(missingScore.scoreReason, "score_api_unavailable", "missing score api reason")
 assertEqual(missingScore.rewardGranted, false, "missing score api reports no reward")
 
+local dampeningEvents = {}
+local dampeningResolver = ContainmentRewardResolver.Create({
+	idempotencyStore = makeStore(),
+	scoreApi = makeScoreApi(dampeningEvents),
+	abuseApi = {
+		GetRewardDampeningMultiplier = function(_custodianUserId: number, _targetUserId: number, _at: number): any
+			return { multiplier = 0.5, reason = "abuse_reward_dampening", patternKind = "pair_repeat_targeting" }
+		end,
+	},
+})
+local dampened = dampeningResolver.Resolve(resolveInput({ operationId = "containment-released-101-202-9000" }))
+assertEqual(dampened.contributionRatio, 0.25, "abuse dampening halves contribution ratio")
+
 local invalid = resolver.Resolve({
 	custodianUserId = 101,
 	targetUserId = 202,

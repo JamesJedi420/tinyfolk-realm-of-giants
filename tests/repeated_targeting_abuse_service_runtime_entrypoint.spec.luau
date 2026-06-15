@@ -161,4 +161,29 @@ abuseApi.RecordCustodyEnd(giant.UserId, target.UserId, "released", 5)
 local targetSnapshot = abuseApi.GetTargetSnapshot(target.UserId, 5)
 assertTrue(targetSnapshot.eventCount >= 5, "target snapshot reflects custody events")
 
+resetState()
+for index = 1, 3 do
+	abuseApi.RecordCaptureStart(giant.UserId, target.UserId, index)
+end
+local blockResult = abuseApi.IsCustodyInteractionBlocked({
+	custodianUserId = giant.UserId,
+	targetUserId = target.UserId,
+	now = 3,
+	interactionKind = "capture",
+})
+assertTrue(blockResult.blocked == true, "service blocks custody interaction after pair repeat detection")
+assertEqual(blockResult.reason, "repeated_targeting_custody_blocked", "service custody block reason")
+assertTrue(
+	giant:GetAttribute("RepeatedTargetingAbuseCustodyBlockActive") == true,
+	"giant receives custody block attribute"
+)
+
+local dampening = abuseApi.GetRewardDampeningMultiplier(giant.UserId, target.UserId, 3)
+assertEqual(dampening.multiplier, 0.5, "service returns reward dampening multiplier")
+assertEqual(dampening.reason, "abuse_reward_dampening", "service dampening reason")
+assertTrue(
+	giant:GetAttribute("RepeatedTargetingAbuseRewardDampeningMultiplier") == 0.5,
+	"giant receives reward dampening attribute"
+)
+
 print("repeated_targeting_abuse_service_runtime_entrypoint: all checks passed")
