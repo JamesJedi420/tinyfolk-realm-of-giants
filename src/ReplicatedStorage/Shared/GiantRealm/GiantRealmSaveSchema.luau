@@ -1,5 +1,7 @@
 --!strict
 
+local RealmReservedServerAllocationState = require("./RealmReservedServerAllocationState")
+
 local GiantRealmSaveSchema: any = {}
 
 GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION = 1
@@ -179,6 +181,12 @@ export type GiantReputationPersistenceSaveRecord = {
 	recentEvents: { GiantReputationEventSaveRecord }?,
 }
 
+export type RealmServerAllocationSaveRecord = {
+	reservedAccessCode: string,
+	destinationPlaceId: number,
+	allocatedAt: number,
+}
+
 export type GiantRealmSaveRoot = {
 	schemaVersion: number,
 	ownerUserId: number,
@@ -192,6 +200,7 @@ export type GiantRealmSaveRoot = {
 	trophyPersistence: TrophyPersistenceSaveRecord?,
 	giantLevelPersistence: GiantLevelPersistenceSaveRecord?,
 	giantReputationPersistence: GiantReputationPersistenceSaveRecord?,
+	realmServerAllocation: RealmServerAllocationSaveRecord?,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -965,6 +974,21 @@ function GiantRealmSaveSchema.ValidateGiantReputationPersistenceRecord(record: a
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateRealmServerAllocationRecord(record: any, ownerUserId: any): (boolean, string?)
+	return RealmReservedServerAllocationState.ValidateSaveRecord(record, ownerUserId)
+end
+
+function GiantRealmSaveSchema.SerializeRealmServerAllocationRecord(state: any): RealmServerAllocationSaveRecord?
+	if type(state) ~= "table" then
+		return nil
+	end
+	local valid, _ = RealmReservedServerAllocationState.ValidateAllocationRecord(state)
+	if not valid then
+		return nil
+	end
+	return RealmReservedServerAllocationState.ToSaveRecord(state)
+end
+
 function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 	if type(root) ~= "table" then
 		return false, "save_root_invalid"
@@ -1033,6 +1057,12 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 		GiantRealmSaveSchema.ValidateGiantReputationPersistenceRecord(root.giantReputationPersistence)
 	if not giantReputationValid then
 		return false, giantReputationReason
+	end
+
+	local allocationValid, allocationReason =
+		GiantRealmSaveSchema.ValidateRealmServerAllocationRecord(root.realmServerAllocation, root.ownerUserId)
+	if not allocationValid then
+		return false, allocationReason
 	end
 
 	return true, nil
@@ -1463,7 +1493,8 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	worksiteUpgradeState: any?,
 	trophyPersistenceState: any?,
 	giantLevelPersistenceState: any?,
-	giantReputationPersistenceState: any?
+	giantReputationPersistenceState: any?,
+	realmServerAllocationState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
 		schemaVersion = GiantRealmSaveSchema.INITIAL_SCHEMA_VERSION,
@@ -1478,6 +1509,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		trophyPersistence = nil,
 		giantLevelPersistence = nil,
 		giantReputationPersistence = nil,
+		realmServerAllocation = nil,
 	}
 
 	local reinforcementRecord = GiantRealmSaveSchema.SerializeEmergencyReinforcementRecord(emergencyReinforcementState)
@@ -1524,6 +1556,11 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		GiantRealmSaveSchema.SerializeGiantReputationPersistenceRecord(giantReputationPersistenceState)
 	if giantReputationRecord ~= nil then
 		root.giantReputationPersistence = giantReputationRecord
+	end
+
+	local allocationRecord = GiantRealmSaveSchema.SerializeRealmServerAllocationRecord(realmServerAllocationState)
+	if allocationRecord ~= nil then
+		root.realmServerAllocation = allocationRecord
 	end
 
 	return root

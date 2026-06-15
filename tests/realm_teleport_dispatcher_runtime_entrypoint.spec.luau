@@ -125,17 +125,29 @@ local dispatcher = RealmTeleportDispatcher.Create({
 			placeId = 12345,
 		}
 	end,
+	resolveReservedAccessCode = function(targetRealmId: string): any
+		if targetRealmId == "giant_realm_100" then
+			return {
+				accepted = true,
+				accessCode = "reserved-access-code",
+			}
+		end
+		return {
+			accepted = false,
+			reason = "reserved_server_unallocated",
+		}
+	end,
 })
 
 local accepted = dispatcher.Dispatch({
 	operationId = "op-accept",
 	partyId = "party-good",
-	targetRealmId = "realm-100",
+	targetRealmId = "giant_realm_100",
 })
 assertEqual(accepted.ok, true, "accepted dispatch ok")
 assertEqual(accepted.retryable, false, "accepted dispatch retryable false")
 assertEqual(accepted.reason, "accepted", "accepted dispatch reason")
-assertEqual(reserveCalls, 1, "reserve called once")
+assertEqual(reserveCalls, 0, "reserve not called when allocation resolver supplies code")
 assertEqual(teleportCalls, 1, "teleport called once")
 assertEqual(#handoffCalls, 2, "handoff called per player")
 
@@ -215,12 +227,18 @@ do
 				placeId = 12345,
 			}
 		end,
+		resolveReservedAccessCode = function(_targetRealmId: string): any
+			return {
+				accepted = true,
+				accessCode = "reserved-access-code-telemetry",
+			}
+		end,
 	})
 
 	local acceptedWithDiagnostics = dispatcherWithPayloadFailure.Dispatch({
 		operationId = "op-telemetry",
 		partyId = "party-good",
-		targetRealmId = "realm-100",
+		targetRealmId = "giant_realm_100",
 	})
 	assertEqual(acceptedWithDiagnostics.ok, true, "dispatch still accepted on payload failure")
 	assertEqual(acceptedWithDiagnostics.reason, "accepted", "dispatch reason still accepted")
@@ -344,15 +362,21 @@ local globalResolverDispatcher = RealmTeleportDispatcher.Create({
 			placeId = 12345,
 		}
 	end,
+	resolveReservedAccessCode = function(_targetRealmId: string): any
+		return {
+			accepted = true,
+			accessCode = "code-global",
+		}
+	end,
 })
 
 local globalResolverResult = globalResolverDispatcher.Dispatch({
 	operationId = "op-global",
 	partyId = "party-global",
-	targetRealmId = "realm-100",
+	targetRealmId = "giant_realm_100",
 })
 assertEqual(globalResolverResult.ok, true, "global resolver dispatch accepted")
-assertEqual(globalResolverReserveCalls, 1, "global resolver reserve called")
+assertEqual(globalResolverReserveCalls, 0, "global resolver does not reserve per dispatch")
 assertEqual(globalResolverTeleportCalls, 1, "global resolver teleport called")
 
 do
@@ -426,6 +450,92 @@ do
 	assertEqual(hubAccepted.registryAccessCodeResolved, true, "hub resolved access code flag")
 	assertEqual(hubReserveCalls, 0, "hub resolved dispatch skips reserve server")
 	assertEqual(hubTeleportAccessCode, "registry-access-code", "hub resolved dispatch uses registry access code")
+end
+
+do
+	local publicReserveCalls = 0
+	local publicTeleportCode: string? = nil
+	local publicDispatcher = RealmTeleportDispatcher.Create({
+		partyResolver = function(partyId: string): { number }
+			if partyId == "party-good" then
+				return { 101 }
+			end
+			return {}
+		end,
+		playersService = {
+			GetPlayerByUserId = function(_self: any, userId: number): any
+				return fakePlayersByUserId[userId]
+			end,
+		},
+		handoffApi = {
+			BeginCrossServerHandoff = function(_player: any, _context: any): any
+				return {
+					ok = true,
+					handoffToken = "token-public",
+				}
+			end,
+		},
+		listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+			return {
+				{
+					realmId = "giant_realm_9002",
+					ownerUserId = 9002,
+					privateServerId = "giant_realm_ps_9002",
+					accessMode = "public",
+					playerCount = 1,
+					capacity = 8,
+					dangerRating = 0.4,
+					lifecycle = "active",
+					isAvailable = true,
+					updatedAt = 100,
+				},
+			}
+		end,
+		resolveReservedAccessCode = function(targetRealmId: string): any
+			if targetRealmId == "giant_realm_9002" then
+				return {
+					accepted = true,
+					accessCode = "mirror-reserved-9002",
+				}
+			end
+			return {
+				accepted = false,
+				reason = "reserved_server_unallocated",
+			}
+		end,
+		teleportService = {
+			ReserveServer = function(_self: any, _placeId: number): string
+				publicReserveCalls += 1
+				return "should-not-be-used"
+			end,
+			TeleportToPrivateServer = function(
+				_self: any,
+				_placeId: number,
+				accessCode: string,
+				_players: { any },
+				_spawnName: any,
+				_teleportData: any
+			)
+				publicTeleportCode = accessCode
+			end,
+		},
+		destinationResolver = function(_entry: any): any
+			return {
+				placeId = 12345,
+			}
+		end,
+	})
+
+	local publicAccepted = publicDispatcher.Dispatch({
+		operationId = "op-public",
+		partyId = "party-good",
+		targetRealmId = "giant_realm_9002",
+		entryType = "standard",
+	})
+	assertEqual(publicAccepted.ok, true, "public stable fallback dispatch accepted")
+	assertEqual(publicReserveCalls, 0, "public stable fallback skips reserve server")
+	assertEqual(publicTeleportCode, "mirror-reserved-9002", "public stable fallback uses mirror code")
+	assertEqual(publicAccepted.accessCodeResolverPath, "durable_allocation", "public resolver path")
 end
 
 print("realm_teleport_dispatcher_runtime_entrypoint: all checks passed")

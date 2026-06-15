@@ -111,6 +111,35 @@ local function resolveRuntimePrivateServerId(): string
 	return ""
 end
 
+local function resolveAllocationBackedPrivateServerId(ownerUserId: number): string
+	local runtimeId = resolveRuntimePrivateServerId()
+	if runtimeRegistryState ~= nil then
+		local stableFallback = runtimeRegistryState.ResolveStablePrivateServerId(ownerUserId, nil)
+		if runtimeId ~= "" and runtimeId ~= stableFallback then
+			return runtimeId
+		end
+	else
+		if runtimeId ~= "" then
+			return runtimeId
+		end
+	end
+
+	local allocationApi = getGlobalTable("_RealmReservedServerAllocationService_QueryAPI")
+	if type(allocationApi) == "table" and type((allocationApi :: any).ResolveAccessCodeForRealm) == "function" then
+		local realmId = if runtimeRegistryState ~= nil
+			then runtimeRegistryState.FormatRealmId(ownerUserId)
+			else string.format("giant_realm_%d", ownerUserId)
+		local ok, result = pcall(function()
+			return (allocationApi :: any).ResolveAccessCodeForRealm(realmId)
+		end)
+		if ok and type(result) == "table" and result.accepted == true and type(result.accessCode) == "string" then
+			return result.accessCode
+		end
+	end
+
+	return runtimeId
+end
+
 local function resolvePlayerCount(): number
 	local configAny: any = runtimeConfig
 	if type(configAny) == "table" and type(configAny.getPlayerCount) == "function" then
@@ -222,10 +251,10 @@ local function refreshTrackedRealm(ownerUserId: number): any
 	local patch = {
 		privateServerId = runtimeRegistryState.ResolveStablePrivateServerId(
 			ownerUserId,
-			resolveRuntimePrivateServerId()
+			resolveAllocationBackedPrivateServerId(ownerUserId)
 		),
 		jobId = resolveRuntimeJobId(),
-		accessMode = runtimeRegistryState.ResolveAccessMode(resolveRuntimePrivateServerId()),
+		accessMode = runtimeRegistryState.ResolveAccessMode(resolveAllocationBackedPrivateServerId(ownerUserId)),
 		playerCount = resolvePlayerCount(),
 		capacity = resolveCapacity(realmId),
 		lifecycle = runtimeRegistryState.Lifecycle.Active,
@@ -308,7 +337,7 @@ function LiveRealmRegistryService.PublishActiveRealm(input: any): any
 	local publishInput, buildReason = runtimeRegistryState.BuildPublishInput({
 		ownerUserId = ownerUserId,
 		now = now,
-		privateServerId = resolveRuntimePrivateServerId(),
+		privateServerId = resolveAllocationBackedPrivateServerId(ownerUserId),
 		jobId = resolveRuntimeJobId(),
 		playerCount = resolvePlayerCount(),
 		capacity = resolveCapacity(realmId),

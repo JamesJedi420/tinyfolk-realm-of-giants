@@ -12,6 +12,24 @@ local LiveRealmHubRouting = if game ~= nil and type(game.GetService) == "functio
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/LiveRealmHubRouting")
 
+local RealmReservedServerAllocationState = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("RealmReservedServerAllocationState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmReservedServerAllocationState")
+
+local RealmTransferState = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("RealmTransferState")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmTransferState")
+
 local DEFAULT_AVAILABILITY_LIMIT = 25
 
 local function isFiniteNumber(value: any): boolean
@@ -220,27 +238,85 @@ local function readLiveRealmAvailability(config: any?, limit: number?, at: numbe
 	return availability
 end
 
-local function resolveRegistryTeleportAccessCode(config: any?, targetRealmId: string): (string?, string?)
+local function resolveAllocationApi(config: any?): any?
+	local configAny: any = config
+	if type(configAny) == "table" and (configAny :: any).allocationApi ~= nil then
+		return (configAny :: any).allocationApi
+	end
+
+	return getGlobalTable("_RealmReservedServerAllocationService_QueryAPI")
+end
+
+local function resolveReservedAccessCode(config: any?, targetRealmId: string): (string?, string?)
+	local configAny: any = config
+	local resolveOverride = if type(configAny) == "table" then configAny.resolveReservedAccessCode else nil
+	if type(resolveOverride) == "function" then
+		local ok, result = pcall(resolveOverride, targetRealmId)
+		if ok and type(result) == "table" and result.accepted == true and isNonEmptyString(result.accessCode) then
+			return result.accessCode, nil
+		end
+		if ok and type(result) == "table" and type(result.reason) == "string" then
+			return nil, result.reason
+		end
+		return nil, "reserved_server_unallocated"
+	end
+
+	local allocationApi = resolveAllocationApi(config)
+	if type(allocationApi) ~= "table" or type((allocationApi :: any).ResolveAccessCodeForRealm) ~= "function" then
+		return nil, "allocation_api_unavailable"
+	end
+
+	local ok, result = pcall(function()
+		return (allocationApi :: any).ResolveAccessCodeForRealm(targetRealmId)
+	end)
+	if not ok or type(result) ~= "table" then
+		return nil, "allocation_resolve_failed"
+	end
+	if result.accepted ~= true or not isNonEmptyString(result.accessCode) then
+		return nil, if type(result.reason) == "string" then result.reason else "reserved_server_unallocated"
+	end
+
+	return result.accessCode, nil
+end
+
+local function resolveRegistryTeleportAccessCode(config: any?, entry: any): (string?, string?, string?)
+	local targetRealmId = if type(entry) == "table" then entry.targetRealmId else nil
+	if not isNonEmptyString(targetRealmId) then
+		return nil, "target_realm_id_invalid", "unresolved"
+	end
+
 	local availability = readLiveRealmAvailability(config, DEFAULT_AVAILABILITY_LIMIT, nil)
-	if availability == nil then
-		return nil, "hub_unavailable"
+	local snapshot = if availability ~= nil
+		then LiveRealmHubRouting.FindAvailabilityByRealmId(availability, targetRealmId)
+		else nil
+
+	if availability ~= nil then
+		local hubResult = LiveRealmHubRouting.ResolveAdmissionTarget({
+			targetRealmId = targetRealmId,
+		}, availability)
+		if hubResult.accepted ~= true then
+			return nil, hubResult.reason, "unresolved"
+		end
+
+		local admissionOk, admissionReason =
+			RealmReservedServerAllocationState.ValidateDispatchAdmission(entry.entryType, snapshot)
+		if not admissionOk then
+			return nil, admissionReason, "unresolved"
+		end
 	end
 
-	local hubResult = LiveRealmHubRouting.ResolveAdmissionTarget({
-		targetRealmId = targetRealmId,
-	}, availability)
-	if hubResult.accepted ~= true then
-		return nil, hubResult.reason
+	local reservedAccessCode, allocationReason = resolveReservedAccessCode(config, targetRealmId)
+	local ownerUserId = RealmTransferState.ParseRealmOwnerUserId(targetRealmId)
+	local resolved = LiveRealmHubRouting.ResolveTeleportAccessCodeDetailed(snapshot, reservedAccessCode, ownerUserId)
+	if isNonEmptyString(resolved.accessCode) then
+		return resolved.accessCode, nil, resolved.resolverPath
 	end
 
-	local accessCode = LiveRealmHubRouting.ResolveTeleportAccessCode(
-		LiveRealmHubRouting.FindAvailabilityByRealmId(availability, targetRealmId)
-	)
-	if accessCode == nil then
-		return nil, "target_private_server_unresolved"
+	if allocationReason == "reserved_server_unallocated" then
+		return nil, "reserved_server_unallocated", "unresolved"
 	end
 
-	return accessCode, nil
+	return nil, allocationReason or "target_private_server_unresolved", "unresolved"
 end
 
 local function resolveDestinationPlaceId(config: any?, entry: any): number?
@@ -367,24 +443,15 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			return makeFailure("destination_place_unresolved", true)
 		end
 
-		local registryAccessCode, registryReason = resolveRegistryTeleportAccessCode(config, entry.targetRealmId)
+		local registryAccessCode, registryReason, resolverPath = resolveRegistryTeleportAccessCode(config, entry)
 		local serverCodeOrError: string? = nil
 		if registryAccessCode ~= nil then
 			serverCodeOrError = registryAccessCode
 		else
-			if registryReason == "target_realm_unavailable" then
-				return makeFailure("target_realm_unavailable", true)
+			if registryReason == "target_realm_unavailable" or registryReason == "entry_access_mode_rejected" then
+				return makeFailure(registryReason, false)
 			end
-			if type(teleportService.ReserveServer) ~= "function" then
-				return makeFailure("reserve_server_unavailable", true)
-			end
-			local reserveOk, reservedCode = pcall(function()
-				return teleportService:ReserveServer(placeId)
-			end)
-			if not reserveOk or not isNonEmptyString(reservedCode) then
-				return makeFailure("reserve_server_failed", true)
-			end
-			serverCodeOrError = reservedCode
+			return makeFailure(registryReason or "target_private_server_unresolved", true)
 		end
 
 		if not isNonEmptyString(serverCodeOrError) then
@@ -451,6 +518,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			accessCode = serverCodeOrError,
 			destinationPlaceId = placeId,
 			registryAccessCodeResolved = registryAccessCode ~= nil,
+			accessCodeResolverPath = resolverPath,
 		}
 		if type((teleportData :: any).tinyfolkToolPayloadFailures) == "table" then
 			extraResult.tinyfolkToolPayloadFailures = (teleportData :: any).tinyfolkToolPayloadFailures

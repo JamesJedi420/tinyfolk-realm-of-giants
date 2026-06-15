@@ -4,6 +4,10 @@ local LiveRealmRegistryState = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("LiveRealmRegistryState"))
 	else (require :: any)("./LiveRealmRegistryState")
 
+local RealmReservedServerAllocationState = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmReservedServerAllocationState"))
+	else (require :: any)("./RealmReservedServerAllocationState")
+
 local LiveRealmHubRouting: any = {}
 
 export type ResolveAdmissionTargetInput = {
@@ -57,20 +61,62 @@ function LiveRealmHubRouting.SelectRaidBoardTarget(availability: { any }): any?
 	return nil
 end
 
-function LiveRealmHubRouting.ResolveTeleportAccessCode(snapshot: any?): string?
+export type ResolveTeleportAccessCodeResult = {
+	accessCode: string?,
+	resolverPath: string,
+}
+
+function LiveRealmHubRouting.ResolveTeleportAccessCode(snapshot: any?, reservedAccessCode: any?): string?
+	local detailed = LiveRealmHubRouting.ResolveTeleportAccessCodeDetailed(snapshot, reservedAccessCode, nil)
+	return detailed.accessCode
+end
+
+function LiveRealmHubRouting.ResolveTeleportAccessCodeDetailed(
+	snapshot: any?,
+	reservedAccessCode: any?,
+	ownerUserId: any?
+): ResolveTeleportAccessCodeResult
+	local resolvedOwnerUserId = if type(snapshot) == "table" then snapshot.ownerUserId else ownerUserId
+
 	if type(snapshot) ~= "table" or snapshot.isAvailable ~= true then
-		return nil
+		if
+			type(resolvedOwnerUserId) == "number"
+			and RealmReservedServerAllocationState.IsUsableReservedAccessCode(reservedAccessCode, resolvedOwnerUserId)
+		then
+			return {
+				accessCode = reservedAccessCode,
+				resolverPath = "durable_allocation",
+			}
+		end
+		return {
+			accessCode = nil,
+			resolverPath = "unresolved",
+		}
 	end
-	if snapshot.accessMode ~= LiveRealmRegistryState.AccessMode.Private then
-		return nil
+
+	if isNonEmptyString(snapshot.privateServerId) then
+		if not LiveRealmHubRouting.IsStablePrivateServerFallback(snapshot.privateServerId, snapshot.ownerUserId) then
+			return {
+				accessCode = snapshot.privateServerId,
+				resolverPath = "live_registry",
+			}
+		end
 	end
-	if not isNonEmptyString(snapshot.privateServerId) then
-		return nil
+
+	if
+		type(snapshot.ownerUserId) == "number"
+		and RealmReservedServerAllocationState.IsUsableReservedAccessCode(reservedAccessCode, snapshot.ownerUserId)
+	then
+		return {
+			accessCode = reservedAccessCode,
+			resolverPath = "durable_allocation",
+		}
 	end
-	if LiveRealmHubRouting.IsStablePrivateServerFallback(snapshot.privateServerId, snapshot.ownerUserId) then
-		return nil
-	end
-	return snapshot.privateServerId
+
+	return {
+		accessCode = nil,
+		resolverPath = "unresolved",
+	}
 end
 
 function LiveRealmHubRouting.ResolveAdmissionTarget(

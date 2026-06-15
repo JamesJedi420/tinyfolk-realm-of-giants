@@ -39,9 +39,10 @@ local policySetResult = MemoryStoreStructurePolicy.ValidatePolicySet()
 assertEqual(policySetResult.ok, true, "policy set valid")
 
 local structureIds = MemoryStoreStructurePolicy.GetStructureIds()
-assertEqual(#structureIds, 14, "structure count")
+assertEqual(#structureIds, 15, "structure count")
 assertEqual(structureIds[1], "liveRealmRegistry", "stable order first")
-assertEqual(structureIds[14], "captureTimers", "stable order last")
+assertEqual(structureIds[14], "rescueContractQueue", "stable order penultimate")
+assertEqual(structureIds[15], "captureTimers", "stable order last")
 
 local expectedPolicies: { [string]: any } = {
 	liveRealmRegistry = {
@@ -98,6 +99,14 @@ local expectedPolicies: { [string]: any } = {
 		key = "tradeconv:giant_realm_9402",
 		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
 		maxPayloadBytes = 4096,
+		parts = { "giant_realm_9402" },
+	},
+	realmReservedServerAllocation = {
+		kind = "HashMap",
+		name = "tin_realm_reserved_server_allocation_v1",
+		key = "realmalloc:giant_realm_9402",
+		ttlSeconds = MemoryStoreStructurePolicy.MAX_EXPIRATION_SECONDS,
+		maxPayloadBytes = 1024,
 		parts = { "giant_realm_9402" },
 	},
 	queueProcessingIdempotency = {
