@@ -8,9 +8,12 @@ local globalEnv: any = getfenv()
 local function buildAdapter(): any?
 	local activeCapacityPolicy = MemoryStoreStructurePolicy.GetPolicy("activeRealmCapacity")
 	local mapName = if type(activeCapacityPolicy) == "table" then activeCapacityPolicy.name else nil
+	local liveRegistryPolicy = MemoryStoreStructurePolicy.GetPolicy("liveRealmRegistry")
+	local liveRegistryMapName = if type(liveRegistryPolicy) == "table" then liveRegistryPolicy.name else nil
 
 	return MemoryStoreAdapter.CreateDefault({
 		activeRealmCapacityMapName = mapName,
+		liveRealmRegistryMapName = liveRegistryMapName,
 	})
 end
 

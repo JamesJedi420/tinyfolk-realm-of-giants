@@ -63,11 +63,12 @@ function MemoryStoreAdapter.Create(config: any?): any?
 	local configAny: any = config
 	local memoryStoreService = if type(configAny) == "table" then configAny.memoryStoreService else nil
 	local activeRealmCapacityMapName = if type(configAny) == "table" then configAny.activeRealmCapacityMapName else nil
+	local liveRealmRegistryMapName = if type(configAny) == "table" then configAny.liveRealmRegistryMapName else nil
 
 	if memoryStoreService == nil then
 		return nil
 	end
-	if not isNonEmptyString(activeRealmCapacityMapName) then
+	if not isNonEmptyString(activeRealmCapacityMapName) and not isNonEmptyString(liveRealmRegistryMapName) then
 		return nil
 	end
 	if not hasMethod(memoryStoreService, "GetQueue") then
@@ -76,9 +77,13 @@ function MemoryStoreAdapter.Create(config: any?): any?
 	if not hasMethod(memoryStoreService, "GetHashMap") then
 		return nil
 	end
+	if isNonEmptyString(liveRealmRegistryMapName) and not hasMethod(memoryStoreService, "GetSortedMap") then
+		return nil
+	end
 
 	local queueByName: { [string]: any } = {}
 	local hashMapByName: { [string]: any } = {}
+	local sortedMapByName: { [string]: any } = {}
 	local activeCapacityMap: any? = nil
 
 	local function getQueue(queueName: any): any?
@@ -103,6 +108,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 	end
 
 	local function getActiveCapacityMap(): any?
+		if not isNonEmptyString(activeRealmCapacityMapName) then
+			return nil
+		end
 		if activeCapacityMap ~= nil then
 			return activeCapacityMap
 		end
@@ -113,6 +121,28 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		end
 		activeCapacityMap = hashMap
 		return hashMap
+	end
+
+	local function getSortedMap(mapName: any): any?
+		if not isNonEmptyString(mapName) then
+			return nil
+		end
+		if sortedMapByName[mapName] ~= nil then
+			return sortedMapByName[mapName]
+		end
+
+		local sortedMap = memoryStoreService:GetSortedMap(mapName)
+		if
+			sortedMap == nil
+			or not hasMethod(sortedMap, "SetAsync")
+			or not hasMethod(sortedMap, "GetAsync")
+			or not hasMethod(sortedMap, "RemoveAsync")
+			or not hasMethod(sortedMap, "GetRangeAsync")
+		then
+			return nil
+		end
+		sortedMapByName[mapName] = sortedMap
+		return sortedMap
 	end
 
 	local function getHashMap(mapName: any): any?
@@ -262,6 +292,100 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		return hashMap:UpdateAsync(key, transform, ttlSeconds)
 	end
 
+	function adapter.SortedMapSetAsync(mapName: any, key: any, value: any, sortKey: any, ttlSeconds: any)
+		if not isNonEmptyString(mapName) then
+			error("sorted_map_name_invalid")
+		end
+		if not isNonEmptyString(key) then
+			error("key_invalid")
+		end
+		if type(value) ~= "string" then
+			error("value_invalid")
+		end
+		if not isFiniteNumber(sortKey) then
+			error("sort_key_invalid")
+		end
+		if not isPositiveInteger(ttlSeconds) then
+			error("ttl_seconds_invalid")
+		end
+
+		local sortedMap = getSortedMap(mapName)
+		if sortedMap == nil or type(sortedMap.SetAsync) ~= "function" then
+			error("sorted_map_unavailable")
+		end
+		sortedMap:SetAsync(key, value, ttlSeconds, sortKey)
+	end
+
+	function adapter.SortedMapGetAsync(mapName: any, key: any): any
+		if not isNonEmptyString(mapName) then
+			error("sorted_map_name_invalid")
+		end
+		if not isNonEmptyString(key) then
+			error("key_invalid")
+		end
+
+		local sortedMap = getSortedMap(mapName)
+		if sortedMap == nil or type(sortedMap.GetAsync) ~= "function" then
+			error("sorted_map_unavailable")
+		end
+		return sortedMap:GetAsync(key)
+	end
+
+	function adapter.SortedMapRemoveAsync(mapName: any, key: any)
+		if not isNonEmptyString(mapName) then
+			error("sorted_map_name_invalid")
+		end
+		if not isNonEmptyString(key) then
+			error("key_invalid")
+		end
+
+		local sortedMap = getSortedMap(mapName)
+		if sortedMap == nil or type(sortedMap.RemoveAsync) ~= "function" then
+			error("sorted_map_unavailable")
+		end
+		sortedMap:RemoveAsync(key)
+	end
+
+	function adapter.SortedMapGetRangeAsync(mapName: any, direction: any, count: any, exclusiveStartKey: any?): { any }
+		if not isNonEmptyString(mapName) then
+			error("sorted_map_name_invalid")
+		end
+		if direction ~= "ascending" and direction ~= "descending" then
+			error("sort_direction_invalid")
+		end
+		if not isPositiveInteger(count) then
+			error("count_invalid")
+		end
+		if exclusiveStartKey ~= nil and not isNonEmptyString(exclusiveStartKey) then
+			error("exclusive_start_key_invalid")
+		end
+
+		local sortedMap = getSortedMap(mapName)
+		if sortedMap == nil or type(sortedMap.GetRangeAsync) ~= "function" then
+			error("sorted_map_unavailable")
+		end
+
+		local sortDirection = if direction == "descending"
+			then Enum.SortDirection.Descending
+			else Enum.SortDirection.Ascending
+		local items = sortedMap:GetRangeAsync(sortDirection, count, exclusiveStartKey)
+		if type(items) ~= "table" then
+			error("sorted_map_range_result_invalid")
+		end
+
+		local normalized = {}
+		for _, item in ipairs(items) do
+			if type(item) == "table" then
+				table.insert(normalized, {
+					key = item.key,
+					value = item.value,
+					sortKey = item.sortKey,
+				})
+			end
+		end
+		return normalized
+	end
+
 	return adapter
 end
 
@@ -282,9 +406,11 @@ function MemoryStoreAdapter.CreateDefault(config: any?): any?
 	end
 
 	local activeRealmCapacityMapName = if type(configAny) == "table" then configAny.activeRealmCapacityMapName else nil
+	local liveRealmRegistryMapName = if type(configAny) == "table" then configAny.liveRealmRegistryMapName else nil
 	return MemoryStoreAdapter.Create({
 		memoryStoreService = memoryStoreService,
 		activeRealmCapacityMapName = activeRealmCapacityMapName,
+		liveRealmRegistryMapName = liveRealmRegistryMapName,
 	})
 end
 
