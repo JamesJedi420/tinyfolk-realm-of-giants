@@ -79,15 +79,23 @@ assertEqual(
 )
 assertEqual(GiantLevelState.ResolveEventKindFromContainmentEnd("starvation"), nil, "starvation not xp eligible")
 
-local serialized = GiantLevelState.SerializePersistenceState(levelUp.state)
+local trade = GiantLevelState.ApplyXpEvent(levelUp.state, {
+	operationId = "trade-dest-trade-op-1-9001",
+	eventKind = GiantLevelConfig.EventKinds.TradeSuccess,
+	awardedAt = 45,
+})
+assertTrue(trade.accepted, "trade xp accepted")
+assertEqual(trade.state.xp, 150, "trade xp total")
+
+local serialized = GiantLevelState.SerializePersistenceState(trade.state)
 local restored = GiantLevelState.ApplyPersistenceState(serialized)
 assertTrue(restored.accepted, "persistence round trip accepted")
-assertEqual(restored.state.xp, 120, "persistence xp")
+assertEqual(restored.state.xp, 150, "persistence xp")
 assertEqual(restored.state.level, 2, "persistence level")
-assertEqual(#restored.state.recentEvents, 4, "persistence recent events")
+assertEqual(#restored.state.recentEvents, 5, "persistence recent events")
 assertEqual(restored.needsEntitlementReconcile, false, "resolved unlock ids persisted")
 
-local unlockResult = GiantLevelState.ResolveLevelUnlocks(levelUp.state, 2, 2)
+local unlockResult = GiantLevelState.ResolveLevelUnlocks(trade.state, 2, 2)
 assertTrue(unlockResult.accepted, "level 2 unlock accepted")
 assertEqual(#unlockResult.newlyResolved, 1, "level 2 unlock count")
 assertEqual(unlockResult.newlyResolved[1].unlockId, "giant_level_2_steward", "level 2 unlock id")
@@ -106,7 +114,7 @@ local boostedCapture = GiantLevelState.ApplyXpEvent(unlockResult.state, {
 	awardedAt = 50,
 })
 assertTrue(boostedCapture.accepted, "boosted capture accepted")
-assertEqual(boostedCapture.state.xp, 146, "boosted capture xp award")
+assertEqual(boostedCapture.state.xp, 176, "boosted capture xp award")
 
 local legacyRestore = GiantLevelState.ApplyPersistenceState({
 	xp = 120,

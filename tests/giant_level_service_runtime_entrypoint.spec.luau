@@ -32,10 +32,20 @@ configFolder._Children["GiantLevelConfig"] = "../../ReplicatedStorage/Shared/Con
 
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["GiantLevelState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantLevelState"
+giantRealmFolder._Children["GiantLevelCrossRealmSyncState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/GiantLevelCrossRealmSyncState"
+giantRealmFolder._Children["RealmTransferState"] = "../../ReplicatedStorage/Shared/GiantRealm/RealmTransferState"
+
+local servicesFolder = makeNode("Services")
+servicesFolder._Children["MemoryStoreStructurePolicy"] = "../../ServerScriptService/Services/MemoryStoreStructurePolicy"
+servicesFolder._Children["GiantLevelPendingXpStore"] = "../../ServerScriptService/Services/GiantLevelPendingXpStore"
 
 local sharedFolder = makeNode("Shared")
 sharedFolder._Children["Config"] = configFolder
 sharedFolder._Children["GiantRealm"] = giantRealmFolder
+
+local serverScriptService = makeNode("ServerScriptService")
+serverScriptService._Children["Services"] = servicesFolder
 
 local replicatedStorage = makeNode("ReplicatedStorage")
 replicatedStorage._Children["Shared"] = sharedFolder
@@ -57,6 +67,9 @@ local fakeGame: any = {}
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "ReplicatedStorage" then
 		return replicatedStorage
+	end
+	if serviceName == "ServerScriptService" then
+		return serverScriptService
 	end
 	if serviceName == "Players" then
 		return {
@@ -150,5 +163,39 @@ assertEqual(
 	nil,
 	"persistence restore skips level up signal"
 )
+
+local tradeResult = levelApi.RecordTradeSuccess({
+	operationId = "trade-op-3",
+	sourceRealmOwnerUserId = 5001,
+	destinationRealmOwnerUserId = 6002,
+	awardedAt = 60,
+})
+assertTrue(tradeResult.accepted, "trade xp recorded for active destination owner mismatch path")
+assertEqual(levelApi.GetXp(), 152, "trade xp increments active realm owner with modifier")
+
+levelApi.ResetForTests()
+local pendingOnlyPersistence = {
+	xp = 0,
+	level = 1,
+	recentEvents = {},
+}
+local pendingBuffer = {
+	realmId = "giant_realm_5001",
+	updatedAt = 70,
+	events = {
+		{
+			operationId = "remote-trade-dest-trade-op-9-6002",
+			eventKind = GiantLevelConfig.EventKinds.TradeSuccess,
+			xpAwarded = 30,
+			awardedAt = 65,
+		},
+	},
+}
+local GiantLevelCrossRealmSyncState =
+	require("../src/ReplicatedStorage/Shared/GiantRealm/GiantLevelCrossRealmSyncState")
+local mergedPersistence =
+	GiantLevelCrossRealmSyncState.MergePersistenceWithPending(pendingOnlyPersistence, pendingBuffer)
+assertTrue(mergedPersistence.accepted, "cross realm merge accepted")
+assertEqual(mergedPersistence.state.xp, 30, "cross realm merge applies pending trade xp")
 
 print("giant_level_service_runtime_entrypoint.spec.luau: all checks passed")
