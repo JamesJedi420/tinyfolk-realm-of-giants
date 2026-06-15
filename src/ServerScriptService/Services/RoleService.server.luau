@@ -886,6 +886,13 @@ local function loadGiantRealmForPlayer(player: Player)
 	activeGiantRealmOwnerUserId = player.UserId
 	projectActiveGiantRealmOwner()
 	debugLog(string.format("Loaded Giant realm profile userId=%d", player.UserId))
+
+	local registryApi = _G._LiveRealmRegistry_QueryAPI
+	if type(registryApi) == "table" and type(registryApi.PublishActiveRealm) == "function" then
+		pcall(registryApi.PublishActiveRealm, {
+			ownerUserId = player.UserId,
+		})
+	end
 end
 
 local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
@@ -922,6 +929,13 @@ local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
 	if activeGiantRealmOwnerUserId == player.UserId then
 		activeGiantRealmOwnerUserId = findLoadedGiantRealmOwnerUserId()
 		projectActiveGiantRealmOwner()
+	end
+
+	local registryApi = _G._LiveRealmRegistry_QueryAPI
+	if type(registryApi) == "table" and type(registryApi.PruneActiveRealm) == "function" then
+		pcall(registryApi.PruneActiveRealm, {
+			ownerUserId = player.UserId,
+		})
 	end
 end
 

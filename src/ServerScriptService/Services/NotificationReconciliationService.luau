@@ -255,6 +255,9 @@ local function messageChannel(messageType: string): string?
 	if string.sub(messageType, 1, 7) == "rescue_" then
 		return "rescueQueue"
 	end
+	if messageType == "RealmStatusChanged" or messageType == "realm_status_changed" then
+		return "realmStatus"
+	end
 	if string.sub(messageType, 1, 6) == "realm_" then
 		return "realmStatus"
 	end
@@ -316,6 +319,25 @@ end
 
 function NotificationReconciliationService.ReconcileRealmStatus(input: any?): any
 	local at = resolveAt(input)
+	local inputAny: any = input
+	local limit = if type(inputAny) == "table" and isPositiveInteger(inputAny.limit)
+		then inputAny.limit
+		else DEFAULT_RESCUE_QUEUE_LIMIT
+
+	local liveRegistryApi = resolveDependency("liveRealmRegistryHubApi", "_LiveRealmRegistryHubSurface_QueryAPI")
+	if type(liveRegistryApi) == "table" and type((liveRegistryApi :: any).ListLiveRealmAvailability) == "function" then
+		local ok, entries = pcall(function()
+			return (liveRegistryApi :: any).ListLiveRealmAvailability(limit, at)
+		end)
+		if ok and type(entries) == "table" then
+			recordChannel("realmStatus", true, "accepted", nil, nil, at)
+			return makeResult(true, "accepted", "realmStatus", {
+				limit = limit,
+				realms = cloneTable(entries),
+			})
+		end
+	end
+
 	local configAny: any = runtimeConfig
 	local registry = if type(configAny) == "table" then configAny.realmMetadataRegistry else nil
 	local ok, snapshot = pcall(function()
