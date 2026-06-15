@@ -493,6 +493,32 @@ local function notifyAbuseCustodyEnd(
 	pcall(abuseApi.RecordCustodyEnd, custodianUserId, targetUserId, endReason, at, operationId)
 end
 
+local function resolveAbuseCustodyBlock(
+	custodianUserId: number,
+	targetUserId: number,
+	at: number,
+	interactionKind: string,
+	outgoingCustodianUserId: number?,
+	incomingCustodianUserId: number?
+): any
+	local abuseApi = getRepeatedTargetingAbuseQueryApi()
+	if abuseApi == nil or type(abuseApi.IsCustodyInteractionBlocked) ~= "function" then
+		return { blocked = false, reason = "accepted" }
+	end
+	local ok, result = pcall(abuseApi.IsCustodyInteractionBlocked, {
+		custodianUserId = custodianUserId,
+		targetUserId = targetUserId,
+		now = at,
+		interactionKind = interactionKind,
+		outgoingCustodianUserId = outgoingCustodianUserId,
+		incomingCustodianUserId = incomingCustodianUserId,
+	})
+	if not ok or type(result) ~= "table" then
+		return { blocked = false, reason = "accepted" }
+	end
+	return result
+end
+
 local function getPenRationingServiceQueryApi(): any?
 	local queryApi = globalEnv._PenRationingService_QueryAPI
 	if type(queryApi) == "table" then
@@ -596,6 +622,14 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 		setCaptureLastReason(custodian, moraleGate.reason)
 		setCaptureLastReason(target, moraleGate.reason)
 		return { accepted = false, reason = moraleGate.reason }
+	end
+
+	local abuseBlock = resolveAbuseCustodyBlock(custodian.UserId, targetUserId, resolvedNow, "capture", nil, nil)
+	if abuseBlock.blocked == true then
+		markRejectedRequest(custodian.UserId, resolvedNow)
+		setCaptureLastReason(custodian, abuseBlock.reason)
+		setCaptureLastReason(target, abuseBlock.reason)
+		return { accepted = false, reason = abuseBlock.reason }
 	end
 
 	local transition = CaptureState.ResolveRequest(state, {

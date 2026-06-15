@@ -162,4 +162,53 @@ assertTrue(
 	"pair snapshot reflects capture count"
 )
 
+local blockSnapshot = RepeatedTargetingAbuseState.GetStateSnapshot(pairRepeatResult.state)
+assertTrue(blockSnapshot.activeCustodyBlockCount >= 1, "pair repeat registers custody block")
+
+local blockResult = RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(pairRepeatResult.state, {
+	custodianUserId = custodianUserId,
+	targetUserId = targetUserId,
+	now = 4,
+	interactionKind = "capture",
+}, RepeatedTargetingAbuseConfig)
+assertTrue(blockResult.blocked == true, "pair repeat block rejects capture interaction")
+assertEqual(blockResult.reason, "repeated_targeting_custody_blocked", "pair repeat block reason")
+
+local expiredBlock = RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(pairRepeatResult.state, {
+	custodianUserId = custodianUserId,
+	targetUserId = targetUserId,
+	now = 4 + RepeatedTargetingAbuseConfig.CustodyBlockDurationSeconds + 1,
+	interactionKind = "capture",
+}, RepeatedTargetingAbuseConfig)
+assertEqual(expiredBlock.blocked, false, "custody block expires after duration")
+
+local dampening = RepeatedTargetingAbuseState.ResolveRewardDampeningMultiplier(
+	pairRepeatResult.state,
+	custodianUserId,
+	targetUserId,
+	4,
+	RepeatedTargetingAbuseConfig
+)
+assertEqual(dampening.multiplier, 0.5, "pair repeat dampens rewards")
+assertEqual(dampening.reason, "abuse_reward_dampening", "dampening reason")
+
+local targetBlockState = loopResult.state
+local targetBlock = RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(targetBlockState, {
+	custodianUserId = custodianUserId + 99,
+	targetUserId = targetUserId,
+	now = 10,
+	interactionKind = "capture",
+}, RepeatedTargetingAbuseConfig)
+assertTrue(targetBlock.blocked == true, "target custody loop blocks new captures on target")
+
+local transferBlock = RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(secondTransfer.state, {
+	custodianUserId = incomingUserId,
+	targetUserId = targetUserId,
+	now = 2,
+	interactionKind = "transfer",
+	outgoingCustodianUserId = incomingUserId,
+	incomingCustodianUserId = outgoingUserId,
+}, RepeatedTargetingAbuseConfig)
+assertTrue(transferBlock.blocked == true, "transfer loop blocks ping-pong transfer")
+
 print("repeated_targeting_abuse_state: all checks passed")

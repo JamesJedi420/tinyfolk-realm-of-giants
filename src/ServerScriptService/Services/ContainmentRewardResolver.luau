@@ -422,6 +422,27 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		)
 	end
 
+	local function getAbuseRewardDampeningMultiplier(
+		custodianUserId: number,
+		targetUserId: number,
+		endedAt: number
+	): number
+		local abuseApi = if type(depsAny.abuseApi) == "table"
+			then depsAny.abuseApi
+			else getGlobalApi("_RepeatedTargetingAbuseService_QueryAPI")
+		if type(abuseApi) ~= "table" or type(abuseApi.GetRewardDampeningMultiplier) ~= "function" then
+			return 1
+		end
+		local ok, result = pcall(abuseApi.GetRewardDampeningMultiplier, custodianUserId, targetUserId, endedAt)
+		if not ok or type(result) ~= "table" or type(result.multiplier) ~= "number" then
+			return 1
+		end
+		if result.multiplier < 0 or result.multiplier > 1 then
+			return 1
+		end
+		return result.multiplier
+	end
+
 	local function notifyAbusePairRewardCap(metadata: any)
 		local abuseApi = if type(depsAny.abuseApi) == "table"
 			then depsAny.abuseApi
@@ -558,6 +579,11 @@ function ContainmentRewardResolver.Create(deps: any?): any
 		end
 
 		local contributionRatio = clamp(baseRatio * pairMultiplier, 0.25, 1)
+		local abuseDampeningMultiplier =
+			getAbuseRewardDampeningMultiplier(input.custodianUserId, input.targetUserId, endedAt)
+		if abuseDampeningMultiplier < 1 then
+			contributionRatio = clamp(contributionRatio * abuseDampeningMultiplier, 0, 1)
+		end
 		writePairCount(pairKey, endedAt, nextPairCount)
 		local metadata = {
 			operationId = operationId,

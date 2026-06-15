@@ -136,6 +136,32 @@ local function notifyAbuseCustodyTransfer(
 	pcall(abuseApi.RecordCustodyTransfer, outgoingCustodianUserId, incomingCustodianUserId, targetUserId, at, requestId)
 end
 
+local function resolveAbuseCustodyBlock(
+	custodianUserId: number,
+	targetUserId: number,
+	at: number,
+	interactionKind: string,
+	outgoingCustodianUserId: number?,
+	incomingCustodianUserId: number?
+): any
+	local abuseApi = getRepeatedTargetingAbuseQueryApi()
+	if abuseApi == nil or type(abuseApi.IsCustodyInteractionBlocked) ~= "function" then
+		return { blocked = false, reason = "accepted" }
+	end
+	local ok, result = pcall(abuseApi.IsCustodyInteractionBlocked, {
+		custodianUserId = custodianUserId,
+		targetUserId = targetUserId,
+		now = at,
+		interactionKind = interactionKind,
+		outgoingCustodianUserId = outgoingCustodianUserId,
+		incomingCustodianUserId = incomingCustodianUserId,
+	})
+	if not ok or type(result) ~= "table" then
+		return { blocked = false, reason = "accepted" }
+	end
+	return result
+end
+
 local function resolveMaxConcurrentCapturesPerCustodian(): number
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
 	if type(upgradeApi) ~= "table" and type(_G) == "table" then
@@ -391,6 +417,21 @@ local function requestCustodyTransfer(
 		return { accepted = false, reason = "incoming_capacity_reached" }
 	end
 
+	local abuseBlock = resolveAbuseCustodyBlock(
+		outgoingCustodianUserId,
+		targetUserId,
+		resolvedNow,
+		"transfer",
+		outgoingCustodianUserId,
+		incomingCustodianUserId
+	)
+	if abuseBlock.blocked == true then
+		setTransferLastReason(outgoing, abuseBlock.reason)
+		setTransferLastReason(incoming, abuseBlock.reason)
+		setTransferLastReason(target, abuseBlock.reason)
+		return { accepted = false, reason = abuseBlock.reason }
+	end
+
 	local transition = CustodyTransferState.ResolveRequest(state, {
 		now = resolvedNow,
 		outgoingCustodianUserId = outgoingCustodianUserId,
@@ -474,6 +515,20 @@ local function confirmCustodyTransfer(incomingCustodianUserId: number, requestId
 	if not incomingCustodianHasCapacity(incomingCustodianUserId, resolvedNow) then
 		setTransferLastReason(incoming, "incoming_capacity_reached")
 		return { accepted = false, reason = "incoming_capacity_reached" }
+	end
+
+	local abuseBlock = resolveAbuseCustodyBlock(
+		incomingCustodianUserId,
+		pending.terms.targetUserId,
+		resolvedNow,
+		"transfer",
+		pending.terms.outgoingCustodianUserId,
+		incomingCustodianUserId
+	)
+	if abuseBlock.blocked == true then
+		setTransferLastReason(incoming, abuseBlock.reason)
+		setTransferLastReason(target, abuseBlock.reason)
+		return { accepted = false, reason = abuseBlock.reason }
 	end
 
 	local transition = CustodyTransferState.ResolveConfirm(state, {

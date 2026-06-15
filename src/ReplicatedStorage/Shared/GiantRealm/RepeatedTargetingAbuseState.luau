@@ -43,12 +43,24 @@ export type SuspiciousLoopRecord = {
 	operationId: string?,
 }
 
+export type CustodyBlockRecord = {
+	blockKey: string,
+	patternKind: string,
+	custodianUserId: number?,
+	targetUserId: number?,
+	outgoingCustodianUserId: number?,
+	incomingCustodianUserId: number?,
+	startedAt: number,
+	expiresAt: number,
+}
+
 export type State = {
 	pairEventsByKey: { [string]: { EventEntry } },
 	targetEventsByUserId: { [number]: { EventEntry } },
 	transferEventsByTargetUserId: { [number]: { EventEntry } },
 	suspiciousLoops: { SuspiciousLoopRecord },
 	lastDetectionAtByKey: { [string]: number? },
+	activeCustodyBlocks: { [string]: CustodyBlockRecord },
 	sequence: number,
 	lastReason: string?,
 }
@@ -70,6 +82,15 @@ export type RecordResult = {
 	reason: string,
 	state: State,
 	detections: { SuspiciousLoopRecord },
+}
+
+export type CustodyBlockInput = {
+	custodianUserId: number,
+	targetUserId: number,
+	incomingCustodianUserId: number?,
+	outgoingCustodianUserId: number?,
+	interactionKind: string?,
+	now: number,
 }
 
 local function isFiniteNumber(value: any): boolean
@@ -185,12 +206,27 @@ local function cloneState(state: State): State
 
 	local lastDetectionAtByKey: { [string]: number? } = table.clone(state.lastDetectionAtByKey)
 
+	local activeCustodyBlocks: { [string]: CustodyBlockRecord } = {}
+	for key, block in pairs(state.activeCustodyBlocks) do
+		activeCustodyBlocks[key] = {
+			blockKey = block.blockKey,
+			patternKind = block.patternKind,
+			custodianUserId = block.custodianUserId,
+			targetUserId = block.targetUserId,
+			outgoingCustodianUserId = block.outgoingCustodianUserId,
+			incomingCustodianUserId = block.incomingCustodianUserId,
+			startedAt = block.startedAt,
+			expiresAt = block.expiresAt,
+		}
+	end
+
 	return {
 		pairEventsByKey = pairEventsByKey,
 		targetEventsByUserId = targetEventsByUserId,
 		transferEventsByTargetUserId = transferEventsByTargetUserId,
 		suspiciousLoops = suspiciousLoops,
 		lastDetectionAtByKey = lastDetectionAtByKey,
+		activeCustodyBlocks = activeCustodyBlocks,
 		sequence = state.sequence,
 		lastReason = state.lastReason,
 	}
@@ -235,6 +271,105 @@ local function resolveCustodianUserId(input: RecordInput): number?
 	return nil
 end
 
+local function isCustodyBlockPatternEnabled(patternKind: string, config: any): boolean
+	local patterns = if config ~= nil and type((config :: any).CustodyBlockPatterns) == "table"
+		then (config :: any).CustodyBlockPatterns
+		else RepeatedTargetingAbuseConfig.CustodyBlockPatterns
+	if type(patterns) ~= "table" then
+		return false
+	end
+	return patterns[patternKind] == true
+end
+
+local function custodyBlockDuration(config: any): number
+	return positiveNumber(
+		if config ~= nil then (config :: any).CustodyBlockDurationSeconds else nil,
+		RepeatedTargetingAbuseConfig.CustodyBlockDurationSeconds
+	)
+end
+
+local function registerCustodyBlocksFromDetection(state: State, detection: SuspiciousLoopRecord, config: any): State
+	if not isCustodyBlockPatternEnabled(detection.patternKind, config) then
+		return state
+	end
+
+	local duration = custodyBlockDuration(config)
+	local expiresAt = detection.at + duration
+	local kinds = RepeatedTargetingAbuseState.PatternKinds
+
+	if detection.patternKind == kinds.PairRepeatTargeting or detection.patternKind == kinds.ShortCustodyCycle then
+		if isPositiveInteger(detection.custodianUserId) then
+			local custodianId = detection.custodianUserId :: number
+			local key = string.format("pair:%d:%d", custodianId, detection.targetUserId)
+			state.activeCustodyBlocks[key] = {
+				blockKey = key,
+				patternKind = detection.patternKind,
+				custodianUserId = custodianId,
+				targetUserId = detection.targetUserId,
+				outgoingCustodianUserId = nil,
+				incomingCustodianUserId = nil,
+				startedAt = detection.at,
+				expiresAt = expiresAt,
+			}
+		end
+		return state
+	end
+
+	if detection.patternKind == kinds.TargetCustodyLoop then
+		local key = string.format("target:%d", detection.targetUserId)
+		state.activeCustodyBlocks[key] = {
+			blockKey = key,
+			patternKind = detection.patternKind,
+			custodianUserId = detection.custodianUserId,
+			targetUserId = detection.targetUserId,
+			outgoingCustodianUserId = nil,
+			incomingCustodianUserId = nil,
+			startedAt = detection.at,
+			expiresAt = expiresAt,
+		}
+		return state
+	end
+
+	if detection.patternKind == kinds.CustodyTransferLoop then
+		if
+			isPositiveInteger(detection.outgoingCustodianUserId)
+			and isPositiveInteger(detection.incomingCustodianUserId)
+		then
+			local outgoingCustodianUserId = detection.outgoingCustodianUserId :: number
+			local incomingCustodianUserId = detection.incomingCustodianUserId :: number
+			local transferKey = string.format(
+				"transfer:%d:%d:%d",
+				detection.targetUserId,
+				outgoingCustodianUserId,
+				incomingCustodianUserId
+			)
+			state.activeCustodyBlocks[transferKey] = {
+				blockKey = transferKey,
+				patternKind = detection.patternKind,
+				custodianUserId = nil,
+				targetUserId = detection.targetUserId,
+				outgoingCustodianUserId = outgoingCustodianUserId,
+				incomingCustodianUserId = incomingCustodianUserId,
+				startedAt = detection.at,
+				expiresAt = expiresAt,
+			}
+			local outgoingPairKey = string.format("pair:%d:%d", outgoingCustodianUserId, detection.targetUserId)
+			state.activeCustodyBlocks[outgoingPairKey] = {
+				blockKey = outgoingPairKey,
+				patternKind = detection.patternKind,
+				custodianUserId = outgoingCustodianUserId,
+				targetUserId = detection.targetUserId,
+				outgoingCustodianUserId = outgoingCustodianUserId,
+				incomingCustodianUserId = incomingCustodianUserId,
+				startedAt = detection.at,
+				expiresAt = expiresAt,
+			}
+		end
+	end
+
+	return state
+end
+
 function RepeatedTargetingAbuseState.NewState(): State
 	return {
 		pairEventsByKey = {},
@@ -242,6 +377,7 @@ function RepeatedTargetingAbuseState.NewState(): State
 		transferEventsByTargetUserId = {},
 		suspiciousLoops = {},
 		lastDetectionAtByKey = {},
+		activeCustodyBlocks = {},
 		sequence = 0,
 		lastReason = nil,
 	}
@@ -272,6 +408,7 @@ local function appendDetection(
 	end
 	nextState.lastDetectionAtByKey[detection.detectionKey] = detection.at
 	nextState.lastReason = "detection_recorded"
+	nextState = registerCustodyBlocksFromDetection(nextState, record, config)
 	return nextState, record
 end
 
@@ -755,6 +892,147 @@ function RepeatedTargetingAbuseState.GetRecentSuspiciousLoops(state: State, limi
 	return output
 end
 
+function RepeatedTargetingAbuseState.PruneExpiredCustodyBlocks(state: State, now: number): State
+	if not isFiniteNumber(now) then
+		return cloneState(state)
+	end
+
+	local nextState = cloneState(state)
+	for key, block in pairs(nextState.activeCustodyBlocks) do
+		if block.expiresAt <= now then
+			nextState.activeCustodyBlocks[key] = nil
+		end
+	end
+	return nextState
+end
+
+function RepeatedTargetingAbuseState.ResolveCustodyInteractionBlock(
+	state: State,
+	input: CustodyBlockInput,
+	_config: any?
+): any
+	if
+		not isPositiveInteger(input.custodianUserId)
+		or not isPositiveInteger(input.targetUserId)
+		or not isFiniteNumber(input.now)
+	then
+		return { blocked = false, reason = "input_invalid" }
+	end
+
+	local prunedState = RepeatedTargetingAbuseState.PruneExpiredCustodyBlocks(state, input.now)
+	local interactionKind = if type(input.interactionKind) == "string" then input.interactionKind else "capture"
+	local pairKey = string.format("pair:%d:%d", input.custodianUserId, input.targetUserId)
+	local pairBlock = prunedState.activeCustodyBlocks[pairKey]
+	if pairBlock ~= nil then
+		return {
+			blocked = true,
+			reason = "repeated_targeting_custody_blocked",
+			patternKind = pairBlock.patternKind,
+			expiresAt = pairBlock.expiresAt,
+			state = prunedState,
+		}
+	end
+
+	if interactionKind == "capture" then
+		local targetKey = string.format("target:%d", input.targetUserId)
+		local targetBlock = prunedState.activeCustodyBlocks[targetKey]
+		if targetBlock ~= nil then
+			return {
+				blocked = true,
+				reason = "repeated_targeting_custody_blocked",
+				patternKind = targetBlock.patternKind,
+				expiresAt = targetBlock.expiresAt,
+				state = prunedState,
+			}
+		end
+	end
+
+	if interactionKind == "transfer" then
+		local outgoingCustodianUserId = if isPositiveInteger(input.outgoingCustodianUserId)
+			then input.outgoingCustodianUserId
+			else input.custodianUserId
+		local incomingCustodianUserId = input.incomingCustodianUserId
+		if isPositiveInteger(outgoingCustodianUserId) and isPositiveInteger(incomingCustodianUserId) then
+			local outgoingId = outgoingCustodianUserId :: number
+			local incomingId = incomingCustodianUserId :: number
+			local transferKey = string.format("transfer:%d:%d:%d", input.targetUserId, outgoingId, incomingId)
+			local transferBlock = prunedState.activeCustodyBlocks[transferKey]
+			if transferBlock ~= nil then
+				return {
+					blocked = true,
+					reason = "repeated_targeting_custody_blocked",
+					patternKind = transferBlock.patternKind,
+					expiresAt = transferBlock.expiresAt,
+					state = prunedState,
+				}
+			end
+		end
+	end
+
+	return {
+		blocked = false,
+		reason = "accepted",
+		state = prunedState,
+	}
+end
+
+function RepeatedTargetingAbuseState.ResolveRewardDampeningMultiplier(
+	state: State,
+	custodianUserId: number,
+	targetUserId: number,
+	now: number,
+	config: any?
+): any
+	if not isPositiveInteger(custodianUserId) or not isPositiveInteger(targetUserId) or not isFiniteNumber(now) then
+		return { multiplier = 1, reason = "input_invalid" }
+	end
+
+	local windowSeconds = positiveNumber(
+		if config ~= nil then (config :: any).RewardDampeningWindowSeconds else nil,
+		RepeatedTargetingAbuseConfig.RewardDampeningWindowSeconds
+	)
+	local multipliers = if config ~= nil and type((config :: any).RewardDampeningMultipliers) == "table"
+		then (config :: any).RewardDampeningMultipliers
+		else RepeatedTargetingAbuseConfig.RewardDampeningMultipliers
+	local kinds = RepeatedTargetingAbuseState.PatternKinds
+
+	local bestMultiplier = 1
+	local bestPattern: string? = nil
+	for _, record in ipairs(state.suspiciousLoops) do
+		if now - record.at > windowSeconds then
+			continue
+		end
+
+		local matchesPair = record.custodianUserId == custodianUserId and record.targetUserId == targetUserId
+		local matchesTarget = record.targetUserId == targetUserId and record.patternKind == kinds.TargetCustodyLoop
+		local matchesTransfer = record.patternKind == kinds.CustodyTransferLoop
+			and record.targetUserId == targetUserId
+			and (record.outgoingCustodianUserId == custodianUserId or record.incomingCustodianUserId == custodianUserId)
+		if not matchesPair and not matchesTarget and not matchesTransfer then
+			continue
+		end
+
+		local patternMultiplier = if type(multipliers) == "table" then multipliers[record.patternKind] else nil
+		if type(patternMultiplier) == "number" and patternMultiplier < bestMultiplier then
+			bestMultiplier = patternMultiplier
+			bestPattern = record.patternKind
+		end
+	end
+
+	if bestPattern ~= nil then
+		return {
+			multiplier = bestMultiplier,
+			patternKind = bestPattern,
+			reason = "abuse_reward_dampening",
+		}
+	end
+
+	return {
+		multiplier = 1,
+		reason = "accepted",
+	}
+end
+
 function RepeatedTargetingAbuseState.ClearUserHistory(state: State, userId: number): State
 	if not isPositiveInteger(userId) then
 		return cloneState(state)
@@ -775,6 +1053,16 @@ function RepeatedTargetingAbuseState.ClearUserHistory(state: State, userId: numb
 	end
 	nextState.targetEventsByUserId[userId] = nil
 	nextState.transferEventsByTargetUserId[userId] = nil
+	for key, block in pairs(nextState.activeCustodyBlocks) do
+		if
+			block.custodianUserId == userId
+			or block.targetUserId == userId
+			or block.outgoingCustodianUserId == userId
+			or block.incomingCustodianUserId == userId
+		then
+			nextState.activeCustodyBlocks[key] = nil
+		end
+	end
 	return nextState
 end
 
@@ -792,6 +1080,7 @@ do
 			pairKeyCount = countKeys(state.pairEventsByKey),
 			targetCount = countKeys(state.targetEventsByUserId),
 			suspiciousLoopCount = #state.suspiciousLoops,
+			activeCustodyBlockCount = countKeys(state.activeCustodyBlocks),
 			sequence = state.sequence,
 			lastReason = state.lastReason,
 		}
