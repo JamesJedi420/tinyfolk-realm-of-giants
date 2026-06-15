@@ -658,6 +658,16 @@ function RaidStatusProjection.BuildPlayerProjection(config: any, input: any): an
 	addGiantProximityWarningEntry(projectionConfig, entriesById, order, resolvedWarningLevel)
 	addScoreFeedback(projectionConfig, entriesById, order, attrs)
 
+	if boolValue(getAttr(attrs, "ModerationReportAffordanceAvailable")) then
+		addOrRefresh(entriesById, order, {
+			id = "moderation_report_support",
+			category = categoryName(projectionConfig, "Support", "support"),
+			severity = severityName(projectionConfig, "Info", "info"),
+			labelKey = "raid_status_moderation_report_support",
+			privacy = "self",
+		})
+	end
+
 	local teammates = if type(input) == "table" and type(input.teammates) == "table" then input.teammates else {}
 	for _, teammate in ipairs(teammates) do
 		addTeammateActivity(projectionConfig, entriesById, order, teammate, now)

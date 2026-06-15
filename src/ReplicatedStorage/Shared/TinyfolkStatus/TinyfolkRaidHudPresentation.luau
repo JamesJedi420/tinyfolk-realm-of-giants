@@ -24,6 +24,7 @@ export type HudModel = {
 	personalEffects: string,
 	teammateActivity: string,
 	scoreFeedback: string,
+	support: string,
 	updatedAt: string,
 	accentTone: string,
 }
@@ -157,6 +158,7 @@ local function formatEntry(entry: Entry, hud: any, now: number?): string
 	local teammateCategory = categories.TeammateActivity or "teammate_activity"
 	local scoreCategory = categories.ScoreFeedback or "score_feedback"
 	local escapeCategory = categories.Escape or "escape"
+	local supportCategory = categories.Support or "support"
 
 	if entry.category == threatCategory then
 		local label = entry.id
@@ -228,6 +230,13 @@ local function formatEntry(entry: Entry, hud: any, now: number?): string
 		return string.format("Escape: %s", titleCase(entry.id))
 	end
 
+	if entry.category == supportCategory then
+		if entry.id == "moderation_report_support" then
+			return "Support: Report capture or custody issue (server export available)"
+		end
+		return string.format("Support: %s", titleCase(entry.id))
+	end
+
 	return string.format("%s: %s", titleCase(entry.category), titleCase(entry.id))
 end
 
@@ -286,6 +295,12 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 	local teammateActivity =
 		formatEntryList(attributes and attributes.RaidHudTeammateActivity, hud, "Team: none", updatedAt)
 	local scoreFeedback = formatEntryList(attributes and attributes.RaidHudScoreFeedback, hud, "Score: none", updatedAt)
+	local supportCategory = categories.Support or "support"
+	local supportEntry =
+		findEntry(attributes and attributes.RaidHudSummary, supportCategory, "moderation_report_support")
+	local support = if supportEntry ~= nil
+		then "Support: Report capture or custody issue (server export available)"
+		else "Support: none"
 
 	return {
 		visible = visible,
@@ -300,6 +315,7 @@ function TinyfolkRaidHudPresentation.BuildHudModel(config: any, attributes: any)
 		personalEffects = personalEffects,
 		teammateActivity = teammateActivity,
 		scoreFeedback = scoreFeedback,
+		support = support,
 		updatedAt = formatUpdatedAt(if type(attributes) == "table" then attributes.RaidHudUpdatedAt else nil),
 		accentTone = threatLevel,
 	}

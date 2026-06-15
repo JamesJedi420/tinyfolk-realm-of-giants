@@ -104,6 +104,8 @@ $testFiles = @(
     'tests\rescue_contract_state.spec.luau',
     'tests\rescue_contract_admission_ingress_runtime_entrypoint.spec.luau',
     'tests\rescue_contract_service_runtime_entrypoint.spec.luau',
+    'tests\moderation_report_state.spec.luau',
+    'tests\moderation_report_service_runtime_entrypoint.spec.luau',
     'tests\headless_match_simulation.spec.luau'
 )
 

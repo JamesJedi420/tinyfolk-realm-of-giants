@@ -94,6 +94,7 @@ TinyfolkStatusConfig.RaidHud = {
 		Threat = "threat",
 		ScoreFeedback = "score_feedback",
 		Escape = "escape",
+		Support = "support",
 	},
 	Severity = {
 		Info = "info",

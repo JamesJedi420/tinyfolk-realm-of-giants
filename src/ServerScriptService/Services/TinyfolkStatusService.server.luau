@@ -245,6 +245,8 @@ local HUD_SOURCE_ATTRIBUTES = {
 	"PostRescueMovementSpeedMultiplier",
 	"RescueAccelerationActive",
 	"RescueAccelerationExpiresAt",
+	"ModerationReportAffordanceAvailable",
+	"ModerationReportAffordanceSurfaces",
 	"ScoreLastFeedbackKey",
 	"ScoreLastAwardedPoints",
 	"ScoreLastBucket",
