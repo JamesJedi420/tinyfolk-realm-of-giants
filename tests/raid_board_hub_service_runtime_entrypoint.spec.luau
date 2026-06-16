@@ -252,9 +252,110 @@ local queuePrivate = api.HandleQueueRequestForTests(tinyfolk, {
 assertEqual(queuePrivate.accepted, false, "queue private realm rejected")
 assertEqual(queuePrivate.reason, "target_realm_unavailable", "queue private realm reason")
 
-local diagnosticsAfterReject = api.GetDiagnostics()
-assertEqual(diagnosticsAfterReject.queueFailed, 1, "diagnostics queue failed count")
-assertEqual(diagnosticsAfterReject.lastReason, "target_realm_unavailable", "diagnostics last reason after reject")
+api.ConfigureForTests({
+	now = function()
+		return 203
+	end,
+	liveRegistryApi = {
+		ListLiveRealmAvailability = function(_limit: any, _at: any): { any }
+			return availability
+		end,
+	},
+	admissionApi = {
+		RequestPartyMatchAdmission = function(input: any): any
+			table.insert(admissionCalls, input)
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					operationId = "op-raid-board",
+					partyId = input.partyId,
+				},
+			}
+		end,
+	},
+	tinyfolkPartyApi = {
+		ResolveRaidBoardQueueContext = function(_userId: number): any
+			return {
+				accepted = false,
+				reason = "party_not_ready",
+				partyId = "tinyfolk_party:4401:100000",
+				partyMemberUserIds = { 4401, 4403 },
+			}
+		end,
+	},
+	resolveOwnerDisplayName = function(ownerUserId: number): string?
+		if ownerUserId == 9002 then
+			return "Board Giant"
+		end
+		return nil
+	end,
+})
+
+local partyQueueBlocked = api.HandleQueueRequestForTests(tinyfolk, {
+	requestId = "queue-party-blocked",
+	targetRealmId = "giant_realm_9002",
+}, 203)
+assertEqual(partyQueueBlocked.accepted, false, "party queue blocked when not ready")
+assertEqual(partyQueueBlocked.reason, "party_not_ready", "party queue blocked reason")
+assertEqual(#admissionCalls, 1, "admission still one call after party block")
+
+local diagnosticsAfterPartyBlock = api.GetDiagnostics()
+assertEqual(diagnosticsAfterPartyBlock.queueFailed, 2, "diagnostics queue failed count after party block")
+assertEqual(diagnosticsAfterPartyBlock.lastReason, "party_not_ready", "diagnostics last reason after party block")
+
+api.ConfigureForTests({
+	now = function()
+		return 204
+	end,
+	liveRegistryApi = {
+		ListLiveRealmAvailability = function(_limit: any, _at: any): { any }
+			return availability
+		end,
+	},
+	admissionApi = {
+		RequestPartyMatchAdmission = function(input: any): any
+			table.insert(admissionCalls, input)
+			return {
+				accepted = true,
+				reason = "accepted",
+				snapshot = {
+					operationId = "op-raid-board-party",
+					partyId = input.partyId,
+				},
+			}
+		end,
+	},
+	tinyfolkPartyApi = {
+		ResolveRaidBoardQueueContext = function(userId: number): any
+			if userId == 4401 then
+				return {
+					accepted = true,
+					reason = "accepted",
+					partyId = "tinyfolk_party:4401:100000",
+					partyMemberUserIds = { 4401, 4403 },
+				}
+			end
+			return { accepted = true, reason = "solo" }
+		end,
+	},
+	resolveOwnerDisplayName = function(ownerUserId: number): string?
+		if ownerUserId == 9002 then
+			return "Board Giant"
+		end
+		return nil
+	end,
+})
+
+local partyQueueAccepted = api.HandleQueueRequestForTests(tinyfolk, {
+	requestId = "queue-party",
+	targetRealmId = "giant_realm_9002",
+}, 205)
+assertEqual(partyQueueAccepted.accepted, true, "party queue accepted")
+assertEqual(#admissionCalls, 2, "admission called for party queue")
+assertEqual(admissionCalls[2].partyId, "tinyfolk_party:4401:100000", "party queue party id")
+assertEqual(admissionCalls[2].partyMemberUserIds[1], 4401, "party queue member leader")
+assertEqual(admissionCalls[2].partyMemberUserIds[2], 4403, "party queue member second")
 
 api.BroadcastNotify({
 	eventKind = "realm_status_changed",
