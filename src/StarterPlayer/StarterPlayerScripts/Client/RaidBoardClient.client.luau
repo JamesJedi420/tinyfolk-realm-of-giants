@@ -186,6 +186,16 @@ local function requestList(force: boolean?)
 	status.Text = "Loading realm listings..."
 end
 
+local function togglePanelFromInteraction()
+	if panel.Visible then
+		hidePanel()
+		return
+	end
+
+	showPanel()
+	requestList(true)
+end
+
 local function queueForRealm(targetRealmId: string)
 	queueRequestRemote:FireServer({
 		requestId = nextRequestId(),
@@ -299,6 +309,14 @@ UserInputService.InputBegan:Connect(function(input: any, gameProcessedEvent: boo
 			requestList(true)
 		end
 	end
+end)
+
+localPlayer:GetAttributeChangedSignal(RaidBoardConfig.OpenRequestAttribute):Connect(function()
+	if localPlayer:GetAttribute(RaidBoardConfig.OpenRequestAttribute) ~= true then
+		return
+	end
+	localPlayer:SetAttribute(RaidBoardConfig.OpenRequestAttribute, false)
+	togglePanelFromInteraction()
 end)
 
 listResponseRemote.OnClientEvent:Connect(function(payload: any)

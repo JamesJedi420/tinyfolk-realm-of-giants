@@ -190,6 +190,20 @@ local function resolveAt(input: any): number
 	return nowSeconds()
 end
 
+local function fanOutRaidBoardNotify(at: number)
+	local raidBoardApi = resolveDependency("raidBoardHubApi", "_RaidBoardHubService_QueryAPI")
+	if type(raidBoardApi) ~= "table" or type((raidBoardApi :: any).BroadcastNotify) ~= "function" then
+		return
+	end
+
+	pcall(function()
+		(raidBoardApi :: any).BroadcastNotify({
+			reason = "realm_status_reconciled",
+			at = at,
+		})
+	end)
+end
+
 local function resolveScheduler(config: any): any?
 	if type(config) == "table" and type(config.reconciliationScheduler) == "table" then
 		return config.reconciliationScheduler
@@ -331,6 +345,7 @@ function NotificationReconciliationService.ReconcileRealmStatus(input: any?): an
 		end)
 		if ok and type(entries) == "table" then
 			recordChannel("realmStatus", true, "accepted", nil, nil, at)
+			fanOutRaidBoardNotify(at)
 			return makeResult(true, "accepted", "realmStatus", {
 				limit = limit,
 				realms = cloneTable(entries),
@@ -349,6 +364,7 @@ function NotificationReconciliationService.ReconcileRealmStatus(input: any?): an
 	end
 
 	recordChannel("realmStatus", true, "accepted", nil, nil, at)
+	fanOutRaidBoardNotify(at)
 	return makeResult(true, "accepted", "realmStatus", {
 		realms = cloneTable(snapshot),
 	})
