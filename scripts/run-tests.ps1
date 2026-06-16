@@ -95,6 +95,8 @@ $testFiles = @(
     'tests\party_matchmaking_realm_resolver_service_runtime_entrypoint.spec.luau',
     'tests\party_matchmaking_admission_service_runtime_entrypoint.spec.luau',
     'tests\raid_board_hub_state.spec.luau',
+    'tests\tinyfolk_party_state.spec.luau',
+    'tests\tinyfolk_party_service_runtime_entrypoint.spec.luau',
     'tests\raid_board_hub_service_runtime_entrypoint.spec.luau',
     'tests\rescue_admission_service_runtime_entrypoint.spec.luau',
     'tests\realm_metadata_registry.spec.luau',

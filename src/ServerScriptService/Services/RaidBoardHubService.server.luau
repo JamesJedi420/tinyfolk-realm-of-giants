@@ -24,6 +24,7 @@ local ownerDisplayNameOrder: { number } = {}
 
 local liveRegistryApiOverride: any = nil
 local admissionApiOverride: any = nil
+local tinyfolkPartyApiOverride: any = nil
 local ownerDisplayNameResolverOverride: ((number) -> string?)? = nil
 local nowFnOverride: (() -> number)? = nil
 
@@ -97,6 +98,37 @@ local function getAdmissionApi(): any?
 	return getGlobalTable("_PartyMatchmakingAdmissionService_QueryAPI")
 end
 
+local function buildSoloPartyId(userId: number): string
+	return string.format("%s%d", RaidBoardConfig.PartyIdPrefix, userId)
+end
+
+local function getTinyfolkPartyApi(): any?
+	if tinyfolkPartyApiOverride ~= nil then
+		return tinyfolkPartyApiOverride
+	end
+	return getGlobalTable("_TinyfolkPartyService_QueryAPI")
+end
+
+local function resolveQueuePartyContext(player: Player): (boolean, string, string?, { number }?)
+	local partyApi = getTinyfolkPartyApi()
+	if type(partyApi) ~= "table" or type(partyApi.ResolveRaidBoardQueueContext) ~= "function" then
+		return true, "solo", buildSoloPartyId(player.UserId), { player.UserId }
+	end
+
+	local context = partyApi.ResolveRaidBoardQueueContext(player.UserId)
+	if type(context) ~= "table" then
+		return false, "party_context_unavailable", nil, nil
+	end
+	if context.accepted ~= true then
+		local reason = if type(context.reason) == "string" then context.reason else "party_context_rejected"
+		return false, reason, nil, nil
+	end
+	if type(context.partyId) == "string" and type(context.partyMemberUserIds) == "table" then
+		return true, "party", context.partyId, context.partyMemberUserIds
+	end
+	return true, "solo", buildSoloPartyId(player.UserId), { player.UserId }
+end
+
 local function ensureRemotesFolder(): Folder
 	local existing = ReplicatedStorage:FindFirstChild(REMOTES_FOLDER_NAME)
 	if existing and existing:IsA("Folder") then
@@ -130,10 +162,6 @@ end
 
 local function isTinyfolk(player: Player): boolean
 	return player:GetAttribute(ROLE_ATTRIBUTE) == RoleConfig.Roles.Tinyfolk
-end
-
-local function buildSoloPartyId(userId: number): string
-	return string.format("%s%d", RaidBoardConfig.PartyIdPrefix, userId)
 end
 
 local function touchOwnerDisplayNameCache(ownerUserId: number, displayName: string)
@@ -362,6 +390,20 @@ local function handleQueueRequest(player: Player, payload: any, responseRemote: 
 		return response
 	end
 
+	local queueAccepted, queueReason, queuePartyId, queueMemberUserIds = resolveQueuePartyContext(player)
+	if queueAccepted ~= true then
+		diagnostics.queueFailed += 1
+		diagnostics.lastReason = queueReason
+		local response = {
+			requestId = requestId,
+			accepted = false,
+			reason = queueReason,
+			targetRealmId = targetRealmId,
+		}
+		responseRemote:FireClient(player, response)
+		return response
+	end
+
 	local admissionApi = getAdmissionApi()
 	if type(admissionApi) ~= "table" or type(admissionApi.RequestPartyMatchAdmission) ~= "function" then
 		diagnostics.queueFailed += 1
@@ -377,9 +419,9 @@ local function handleQueueRequest(player: Player, payload: any, responseRemote: 
 	end
 
 	local admissionResult = admissionApi.RequestPartyMatchAdmission({
-		partyId = buildSoloPartyId(player.UserId),
+		partyId = queuePartyId,
 		targetRealmId = targetRealmId,
-		partyMemberUserIds = { player.UserId },
+		partyMemberUserIds = queueMemberUserIds,
 	})
 
 	if type(admissionResult) ~= "table" or admissionResult.accepted ~= true then
@@ -464,6 +506,7 @@ globalEnv._RaidBoardHubService_QueryAPI = {
 		local configAny: any = if type(config) == "table" then config else {}
 		liveRegistryApiOverride = configAny.liveRegistryApi
 		admissionApiOverride = configAny.admissionApi
+		tinyfolkPartyApiOverride = configAny.tinyfolkPartyApi
 		ownerDisplayNameResolverOverride = if type(configAny.resolveOwnerDisplayName) == "function"
 			then configAny.resolveOwnerDisplayName
 			else nil
@@ -472,6 +515,7 @@ globalEnv._RaidBoardHubService_QueryAPI = {
 	ResetForTests = function()
 		liveRegistryApiOverride = nil
 		admissionApiOverride = nil
+		tinyfolkPartyApiOverride = nil
 		ownerDisplayNameResolverOverride = nil
 		nowFnOverride = nil
 		lastListRequestAtByUserId = {}
