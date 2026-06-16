@@ -21,6 +21,7 @@ type PartyRecord = TinyfolkPartyState.PartyRecord
 local partiesById: { [string]: PartyRecord? } = {}
 local partyIdByUserId: { [number]: string? } = {}
 local lastRequestAtByUserId: { [number]: number? } = {}
+local pendingDisconnectByUserId: { [number]: number? } = {}
 
 local partyResolverApiOverride: any = nil
 local playersServiceOverride: any = nil
@@ -140,6 +141,10 @@ local function getPartyForUserId(userId: number): PartyRecord?
 		return nil
 	end
 	return partiesById[partyId]
+end
+
+local function clearPendingDisconnect(userId: number)
+	pendingDisconnectByUserId[userId] = nil
 end
 
 local function containsUserId(values: { number }, userId: number): boolean
@@ -498,6 +503,7 @@ local function handleActionRequest(
 ): any
 	local resolvedAt = if type(at) == "number" then at else now()
 	diagnostics.actionAttempts += 1
+	clearPendingDisconnect(player.UserId)
 
 	if not isTinyfolk(player) then
 		return rejectAction(player, responseRemote, "role_not_tinyfolk", getPartyForUserId(player.UserId), "unknown")
@@ -595,6 +601,47 @@ local function resolveRaidBoardQueueContext(userId: number): any
 	}
 end
 
+local function handleTransferOutcome(input: any): any
+	if type(input) ~= "table" then
+		return { accepted = false, reason = "input_invalid" }
+	end
+	if type(input.partyId) ~= "string" or input.partyId == "" or type(input.transferredUserIds) ~= "table" then
+		return { accepted = false, reason = "input_invalid" }
+	end
+
+	local party = partiesById[input.partyId]
+	if party == nil then
+		return { accepted = false, reason = "party_not_found" }
+	end
+
+	local outcome = TinyfolkPartyState.ResolveTransferOutcome({
+		party = party,
+		transferredUserIds = input.transferredUserIds,
+		at = if type(input.at) == "number" then input.at else now(),
+	})
+	if outcome.accepted ~= true then
+		return { accepted = false, reason = outcome.reason or "transfer_outcome_invalid" }
+	end
+
+	local transition: TinyfolkPartyState.TransitionResult = {
+		accepted = true,
+		reason = "accepted",
+		party = outcome.party,
+		dissolved = outcome.dissolved,
+		notifyUserIds = party.memberUserIds,
+	}
+	local updatedParty = applyPartyTransition(transition, party.memberUserIds)
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		dissolved = outcome.dissolved,
+		party = buildSnapshotFromParty(updatedParty, "accepted", true),
+		transferredUserIds = outcome.transferredUserIds,
+		recoveredUserIds = outcome.recoveredUserIds,
+	}
+end
+
 local remotesFolder = ensureRemotesFolder()
 local actionRequestRemote = ensureRemoteEvent(remotesFolder, TinyfolkPartyConfig.Remotes.ActionRequest)
 local actionResponseRemote = ensureRemoteEvent(remotesFolder, TinyfolkPartyConfig.Remotes.ActionResponse)
@@ -606,10 +653,44 @@ end)
 
 resolvePlayersService().PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
-	if getPartyForUserId(player.UserId) ~= nil then
-		handleLeave(player, actionResponseRemote, notifyRemote, now())
+	local disconnectAt = now()
+	local party = getPartyForUserId(player.UserId)
+	if party == nil then
+		return
 	end
+	pendingDisconnectByUserId[player.UserId] = disconnectAt + TinyfolkPartyConfig.DisconnectGraceSeconds
+	local outcome = TinyfolkPartyState.ResolveTransferOutcome({
+		party = party,
+		transferredUserIds = { player.UserId },
+		at = disconnectAt,
+	})
+	if outcome.accepted ~= true then
+		return
+	end
+	local transition: TinyfolkPartyState.TransitionResult = {
+		accepted = true,
+		reason = "accepted",
+		party = outcome.party,
+		dissolved = outcome.dissolved,
+		notifyUserIds = party.memberUserIds,
+	}
+	applyPartyTransition(transition, party.memberUserIds)
 end)
+
+local playersServiceForEvents = resolvePlayersService()
+if
+	type(playersServiceForEvents) == "table"
+	and type(playersServiceForEvents.PlayerAdded) == "table"
+	and type(playersServiceForEvents.PlayerAdded.Connect) == "function"
+then
+	playersServiceForEvents.PlayerAdded:Connect(function(player: Player)
+		clearPendingDisconnect(player.UserId)
+		local party = getPartyForUserId(player.UserId)
+		if party ~= nil then
+			syncPlayerAttributes(player, party)
+		end
+	end)
+end
 
 globalEnv._TinyfolkPartyService_QueryAPI = {
 	HandleActionRequestForTests = function(player: Player, payload: any, at: number?): any
@@ -625,6 +706,12 @@ globalEnv._TinyfolkPartyService_QueryAPI = {
 	GetDiagnostics = function(): any
 		return cloneDiagnostics()
 	end,
+	HandleTransferOutcomeForTests = function(input: any): any
+		return handleTransferOutcome(input)
+	end,
+	GetPendingDisconnectExpiryForTests = function(userId: number): any
+		return pendingDisconnectByUserId[userId]
+	end,
 	ConfigureForTests = function(config: any?)
 		local configAny: any = if type(config) == "table" then config else {}
 		partyResolverApiOverride = configAny.partyResolverApi
@@ -635,6 +722,7 @@ globalEnv._TinyfolkPartyService_QueryAPI = {
 		partiesById = {}
 		partyIdByUserId = {}
 		lastRequestAtByUserId = {}
+		pendingDisconnectByUserId = {}
 		partyResolverApiOverride = nil
 		playersServiceOverride = nil
 		nowFnOverride = nil

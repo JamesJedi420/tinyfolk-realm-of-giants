@@ -6,6 +6,7 @@ TinyfolkPartyConfig.RequestCooldownSeconds = 0.25
 TinyfolkPartyConfig.MaxPartySize = 4
 TinyfolkPartyConfig.PartyIdPrefix = "tinyfolk_party:"
 TinyfolkPartyConfig.DebugOpenKeyName = "P"
+TinyfolkPartyConfig.DisconnectGraceSeconds = 30
 
 TinyfolkPartyConfig.Actions = {
 	Create = "create",

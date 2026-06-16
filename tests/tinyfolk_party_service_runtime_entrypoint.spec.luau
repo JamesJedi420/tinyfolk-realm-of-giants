@@ -233,4 +233,44 @@ assertTrue(leaveAccepted.accepted, "leader leave accepted")
 assertEqual(api.GetPartySnapshot(leader.UserId).partyId, nil, "leader no longer in party")
 assertEqual(#resolverCalls.unregister, 1, "resolver unregister on dissolve")
 
+local reconnectCreate = api.HandleActionRequestForTests(leader, {
+	action = "create",
+}, 107)
+assertTrue(reconnectCreate.accepted, "reconnect setup create accepted")
+local reconnectInvite = api.HandleActionRequestForTests(leader, {
+	action = "invite",
+	targetUserId = 5002,
+}, 108)
+assertTrue(reconnectInvite.accepted, "reconnect setup invite accepted")
+local reconnectJoin = api.HandleActionRequestForTests(member, {
+	action = "accept_invite",
+}, 109)
+assertTrue(reconnectJoin.accepted, "reconnect setup join accepted")
+
+playersService.PlayerRemoving:Fire(member)
+local afterDisconnectSnapshot = api.GetPartySnapshot(leader.UserId)
+assertEqual(afterDisconnectSnapshot.accepted, true, "disconnect keeps party alive for remaining members")
+assertEqual(#afterDisconnectSnapshot.memberUserIds, 1, "disconnect removes leaving member")
+assertEqual(afterDisconnectSnapshot.memberUserIds[1], 5001, "disconnect keeps leader as remaining member")
+assertTrue(type(api.GetPendingDisconnectExpiryForTests(member.UserId)) == "number", "disconnect grace tracked")
+
+local transferInvite = api.HandleActionRequestForTests(leader, {
+	action = "invite",
+	targetUserId = 5002,
+}, 200)
+assertTrue(transferInvite.accepted, "transfer setup invite accepted")
+local transferJoin = api.HandleActionRequestForTests(member, {
+	action = "accept_invite",
+}, 201)
+assertTrue(transferJoin.accepted, "transfer setup join accepted")
+local transferOutcome = api.HandleTransferOutcomeForTests({
+	partyId = transferJoin.partyId,
+	transferredUserIds = { 5001 },
+	at = 202,
+})
+assertTrue(transferOutcome.accepted, "transfer outcome accepted")
+assertEqual(transferOutcome.dissolved, false, "transfer outcome keeps party for failed member recovery")
+assertEqual(transferOutcome.party.leaderUserId, 5002, "transfer outcome reassigns leader to remaining member")
+assertEqual(transferOutcome.party.memberUserIds[1], 5002, "transfer outcome keeps only failed member")
+
 print("tinyfolk_party_service_runtime_entrypoint: all checks passed")
