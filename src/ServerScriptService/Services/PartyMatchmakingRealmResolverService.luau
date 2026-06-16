@@ -41,6 +41,73 @@ local function getLiveRegistryHubApi(): any?
 	return nil
 end
 
+local function getRealmPermissionQueryApi(): any?
+	local fromEnv = rawget(globalEnv, "_RealmPermissionService_QueryAPI")
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_RealmPermissionService_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	return nil
+end
+
+local function validateResolvedRealmPermission(targetRealmId: string, entryType: string?): (boolean, string?)
+	local permissionApi = getRealmPermissionQueryApi()
+	if type(permissionApi) ~= "table" or type(permissionApi.EvaluateAdmissionForRealm) ~= "function" then
+		return true, nil
+	end
+
+	local ok, result = pcall(function()
+		return permissionApi.EvaluateAdmissionForRealm(targetRealmId, {
+			entryType = entryType,
+		})
+	end)
+	if not ok or type(result) ~= "table" then
+		return true, nil
+	end
+	if result.accepted == true then
+		return true, nil
+	end
+
+	return false, if type(result.reason) == "string" then result.reason else "realm_access_denied"
+end
+
+local function rejectPermission(targetRealmId: string?, reason: string, resolverPath: string): any
+	return {
+		accepted = false,
+		reason = reason,
+		targetRealmId = targetRealmId,
+		privateServerId = nil,
+		resolverPath = resolverPath,
+	}
+end
+
+local function finalizeResolvedTarget(
+	targetRealmId: string,
+	privateServerId: string?,
+	resolverPath: string,
+	entryType: string?
+): any
+	local permissionAllowed, permissionReason = validateResolvedRealmPermission(targetRealmId, entryType)
+	if not permissionAllowed then
+		return rejectPermission(targetRealmId, permissionReason or "realm_access_denied", "permission_rejected")
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		targetRealmId = targetRealmId,
+		privateServerId = privateServerId,
+		resolverPath = resolverPath,
+	}
+end
+
 local function readLiveRealmAvailability(limit: number?, at: number?): { any }?
 	if type(listLiveRealmAvailabilityOverride) == "function" then
 		local ok, availability = pcall(listLiveRealmAvailabilityOverride, limit, at)
@@ -85,13 +152,12 @@ local function resolveViaLiveRegistryHub(input: any): any?
 		}
 	end
 
-	return {
-		accepted = true,
-		reason = "accepted",
-		targetRealmId = hubResult.targetRealmId,
-		privateServerId = hubResult.privateServerId,
-		resolverPath = hubResult.resolverPath,
-	}
+	return finalizeResolvedTarget(
+		hubResult.targetRealmId,
+		hubResult.privateServerId,
+		hubResult.resolverPath,
+		if type(input) == "table" then input.entryType else nil
+	)
 end
 
 function PartyMatchmakingRealmResolverService.ResolveTargetRealmId(input: any): any
@@ -124,13 +190,12 @@ function PartyMatchmakingRealmResolverService.ResolveTargetRealmId(input: any): 
 		if type(resolveFallbackTargetRealmIdOverride) == "function" then
 			local ok, resolved = pcall(resolveFallbackTargetRealmIdOverride, input)
 			if ok and isNonEmptyString(resolved) then
-				return {
-					accepted = true,
-					reason = "accepted",
-					targetRealmId = resolved,
-					privateServerId = nil,
-					resolverPath = "fallback_override",
-				}
+				return finalizeResolvedTarget(
+					resolved,
+					nil,
+					"fallback_override",
+					if type(input) == "table" then input.entryType else nil
+				)
 			end
 		end
 
@@ -143,13 +208,12 @@ function PartyMatchmakingRealmResolverService.ResolveTargetRealmId(input: any): 
 		}
 	end
 
-	return {
-		accepted = true,
-		reason = "accepted",
-		targetRealmId = input.targetRealmId,
-		privateServerId = nil,
-		resolverPath = "direct_input",
-	}
+	return finalizeResolvedTarget(
+		input.targetRealmId,
+		nil,
+		"direct_input",
+		if type(input) == "table" then input.entryType else nil
+	)
 end
 
 function PartyMatchmakingRealmResolverService.ConfigureForTests(config: any?)
