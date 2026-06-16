@@ -36,7 +36,7 @@ resolverApi.ConfigureForTests({
 				realmId = "giant_realm_7001",
 				ownerUserId = 7001,
 				privateServerId = "ps-live-7001",
-				accessMode = "private",
+				accessMode = "public",
 				playerCount = 2,
 				capacity = 8,
 				dangerRating = 0.8,
@@ -95,6 +95,53 @@ local accepted = resolverApi.ResolveTargetRealmId({
 assert(accepted.accepted == true, "valid request accepted")
 assert(accepted.reason == "accepted", "valid request reason")
 assert(accepted.targetRealmId == "realm-42", "valid request target")
+
+local permissionFactory = require("../src/ServerScriptService/Services/RealmPermissionService.server")
+permissionFactory(game, {
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "giant_realm_locked",
+				ownerUserId = 8801,
+				privateServerId = "ps-locked",
+				accessMode = "private",
+				playerCount = 1,
+				capacity = 8,
+				dangerRating = 0.5,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 120,
+			},
+		}
+	end,
+})
+
+resolverApi.ConfigureForTests({
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "giant_realm_locked",
+				ownerUserId = 8801,
+				privateServerId = "ps-locked",
+				accessMode = "private",
+				playerCount = 1,
+				capacity = 8,
+				dangerRating = 0.5,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 120,
+			},
+		}
+	end,
+})
+
+local lockedRejected = resolverApi.ResolveTargetRealmId({
+	partyId = "party-locked",
+	targetRealmId = "giant_realm_locked",
+})
+assert(lockedRejected.accepted == false, "locked realm rejected by permission gate")
+assert(lockedRejected.reason == "realm_access_locked", "locked realm rejection reason")
+assert(lockedRejected.resolverPath == "permission_rejected", "locked realm permission resolver path")
 
 globalEnv._PartyMatchmakingRealmResolver_QueryAPI = nil
 

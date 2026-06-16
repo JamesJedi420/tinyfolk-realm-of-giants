@@ -165,6 +165,58 @@ assertEqual(diagnosticsAfterRejected.enqueueSucceeded, 2, "rejected diagnostics 
 assertEqual(diagnosticsAfterRejected.enqueueFailed, 2, "rejected diagnostics enqueue failures")
 assertEqual(diagnosticsAfterRejected.lastReason, "queue_backpressure", "rejected diagnostics last reason")
 
+local permissionFactory = require("../src/ServerScriptService/Services/RealmPermissionService.server")
+permissionFactory(game, {
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "realm-locked-teleport",
+				ownerUserId = 9901,
+				privateServerId = "ps-locked-teleport",
+				accessMode = "private",
+				playerCount = 1,
+				capacity = 8,
+				dangerRating = 0.5,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 200,
+			},
+		}
+	end,
+})
+serviceApi.ConfigureForTests({
+	now = function()
+		return 460
+	end,
+	admissionQueueApi = admissionQueueApi,
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "realm-locked-teleport",
+				ownerUserId = 9901,
+				privateServerId = "ps-locked-teleport",
+				accessMode = "private",
+				playerCount = 1,
+				capacity = 8,
+				dangerRating = 0.5,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 200,
+			},
+		}
+	end,
+})
+local lockedRejected = serviceApi.RequestTeleportHandoffAdmission({
+	userId = 8106,
+	handoffToken = "handoff_token_locked",
+	targetRealmId = "realm-locked-teleport",
+})
+assertEqual(lockedRejected.accepted, false, "locked realm teleport admission rejected")
+assertEqual(lockedRejected.reason, "realm_access_locked", "locked realm teleport rejection reason")
+local diagnosticsAfterLocked = serviceApi.GetAdmissionDiagnostics()
+assertEqual(diagnosticsAfterLocked.enqueueAttempts, 4, "locked realm does not enqueue")
+assertEqual(diagnosticsAfterLocked.lastReason, "realm_access_locked", "locked realm diagnostics reason")
+
 serviceApi.ResetForTests()
 resetGlobals()
 

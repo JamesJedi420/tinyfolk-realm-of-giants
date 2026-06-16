@@ -112,6 +112,48 @@ local function getPartyMatchmakingRealmResolverQueryApi(): any?
 	return queryApi
 end
 
+local function getRealmPermissionQueryApi(): any?
+	local envAny: any = globalEnv
+	if type(envAny) ~= "table" then
+		return nil
+	end
+
+	local queryApi = envAny._RealmPermissionService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, "_RealmPermissionService_QueryAPI")
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+
+	return nil
+end
+
+local function validateRealmAdmissionPermission(targetRealmId: string, entryType: string?): (boolean, string?)
+	local permissionApi = getRealmPermissionQueryApi()
+	if type(permissionApi) ~= "table" or type(permissionApi.EvaluateAdmissionForRealm) ~= "function" then
+		return true, nil
+	end
+
+	local ok, result = pcall(function()
+		return permissionApi.EvaluateAdmissionForRealm(targetRealmId, {
+			entryType = entryType,
+		})
+	end)
+	if not ok or type(result) ~= "table" then
+		return true, nil
+	end
+	if result.accepted == true then
+		return true, nil
+	end
+
+	return false, if type(result.reason) == "string" then result.reason else "realm_access_denied"
+end
+
 local function resolveTargetRealmId(input: any): (string?, string?)
 	if type(input) ~= "table" then
 		admissionDiagnostics.lastResolverPath = "invalid_request"
@@ -214,6 +256,13 @@ local function requestAdmissionWithEntryType(input: any, entryType: string, oper
 		local resolvedReason = targetReason or "target_realm_unavailable"
 		admissionDiagnostics.lastReason = resolvedReason
 		return { accepted = false, reason = targetReason or "target_realm_unavailable" }
+	end
+
+	local permissionAllowed, permissionReason = validateRealmAdmissionPermission(targetRealmId, entryType)
+	if not permissionAllowed then
+		local rejectedReason = permissionReason or "realm_access_denied"
+		admissionDiagnostics.lastReason = rejectedReason
+		return { accepted = false, reason = rejectedReason }
 	end
 
 	local createdAt = resolveNow()

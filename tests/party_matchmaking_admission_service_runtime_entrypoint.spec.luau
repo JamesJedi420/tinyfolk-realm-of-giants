@@ -270,6 +270,42 @@ assertEqual(enqueueFailedDiagnostics.enqueueFailed >= 4, true, "diagnostics enqu
 assertEqual(enqueueFailedDiagnostics.lastEnqueueReason, "admission_enqueue_failed", "diagnostics enqueue throw reason")
 assertEqual(enqueueFailedDiagnostics.lastReason, "admission_enqueue_failed", "diagnostics enqueue throw last reason")
 
+local permissionFactory = require("../src/ServerScriptService/Services/RealmPermissionService.server")
+permissionFactory(game, {
+	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
+		return {
+			{
+				realmId = "realm-locked-party",
+				ownerUserId = 7701,
+				privateServerId = "ps-locked-party",
+				accessMode = "private",
+				playerCount = 1,
+				capacity = 8,
+				dangerRating = 0.5,
+				lifecycle = "active",
+				isAvailable = true,
+				updatedAt = 300,
+			},
+		}
+	end,
+})
+serviceApi.ConfigureForTests({
+	now = function()
+		return 205
+	end,
+	admissionQueueApi = admissionQueueApi,
+})
+local lockedRejected = serviceApi.RequestPartyAdmission({
+	partyId = "party-locked",
+	targetRealmId = "realm-locked-party",
+	memberUserIds = { 12 },
+})
+assertEqual(lockedRejected.accepted, false, "locked realm party admission rejected")
+assertEqual(lockedRejected.reason, "realm_access_locked", "locked realm party rejection reason")
+assertEqual(#enqueuePayloads, 3, "locked realm party admission does not enqueue")
+local lockedDiagnostics = serviceApi.GetAdmissionDiagnostics()
+assertEqual(lockedDiagnostics.lastReason, "realm_access_locked", "locked realm party diagnostics reason")
+
 serviceApi.ResetForTests()
 resetGlobals()
 
