@@ -1,0 +1,77 @@
+{
+  "className": "Model",
+  "children": [
+    {
+      "name": "RaidBoardHub_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [
+          0.36,
+          0.22,
+          0.18
+        ],
+        "Size": [
+          8,
+          6,
+          1.5
+        ],
+        "Position": [
+          0,
+          4,
+          192
+        ]
+      }
+    },
+    {
+      "name": "RaidBoard_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.24,
+          0.22,
+          0.2
+        ],
+        "Size": [
+          14,
+          1,
+          6
+        ],
+        "Position": [
+          0,
+          0.5,
+          192
+        ]
+      }
+    },
+    {
+      "name": "RaidBoard_Frame",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Metal",
+        "Color": [
+          0.45,
+          0.28,
+          0.24
+        ],
+        "Size": [
+          9,
+          7,
+          0.5
+        ],
+        "Position": [
+          0,
+          4.8,
+          191.1
+        ]
+      }
+    }
+  ]
+}

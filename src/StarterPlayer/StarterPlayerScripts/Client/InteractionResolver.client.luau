@@ -15,6 +15,7 @@ local LaborActionConfig = require(Config:WaitForChild("LaborActionConfig"))
 local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
+local RaidBoardConfig = require(Config:WaitForChild("RaidBoardConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local TinyfolkLaborUpgradeConfig = require(Config:WaitForChild("TinyfolkLaborUpgradeConfig"))
 local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
@@ -78,6 +79,7 @@ type CandidateAction =
 	| "defensive_prop_break"
 	| "construction_build"
 	| "upgrade_board_hub"
+	| "raid_board_open"
 	| "worksite_upgrade"
 	| "warehouse_deliver"
 	| "granary_deliver"
@@ -101,6 +103,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	defensive_prop_break = 2,
 	construction_build = 3,
 	upgrade_board_hub = 4,
+	raid_board_open = 4,
 	worksite_upgrade = 4,
 	warehouse_deliver = 5,
 	granary_deliver = 5,
@@ -332,6 +335,23 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				targetId = targetId,
 				distance = distance,
 				priority = getPriority("upgrade_board_hub"),
+				mode = "open",
+				payload = {
+					boardId = targetId,
+				},
+			})
+		end
+
+		if
+			isTinyfolk
+			and startsWithPrefix(targetId, RaidBoardConfig.BoardNamePrefix)
+			and distance <= RaidBoardConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "raid_board_open",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("raid_board_open"),
 				mode = "open",
 				payload = {
 					boardId = targetId,
@@ -573,6 +593,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "upgrade_board_hub" then
 		upgradeHubRemote:FireServer(candidate.payload)
+		return
+	end
+
+	if candidate.action == "raid_board_open" then
+		localPlayer:SetAttribute(RaidBoardConfig.OpenRequestAttribute, true)
 		return
 	end
 

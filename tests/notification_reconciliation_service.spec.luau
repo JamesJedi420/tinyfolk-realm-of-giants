@@ -163,6 +163,50 @@ do
 end
 
 do
+	local notifyPayloads: { any } = {}
+	configure({
+		liveRealmRegistryHubApi = {
+			ListLiveRealmAvailability = function(_limit: any, _at: any): any
+				return {
+					{
+						realmId = "realm-public-1",
+						ownerUserId = 42,
+						accessMode = "public",
+						isAvailable = true,
+						dangerRating = 0.5,
+						playerCount = 1,
+						capacity = 8,
+						updatedAt = 100,
+					},
+				}
+			end,
+		},
+		raidBoardHubApi = {
+			BroadcastNotify = function(payload: any)
+				table.insert(notifyPayloads, payload)
+			end,
+		},
+		now = function()
+			return 55
+		end,
+	})
+
+	local reconcileResult = NotificationReconciliationService.ReconcileRealmStatus()
+	assertTrue(reconcileResult.accepted, "realm status reconcile with fanout accepted")
+	assertEqual(#notifyPayloads, 1, "realm status reconcile fans out notify")
+	assertEqual(notifyPayloads[1].reason, "realm_status_reconciled", "realm status notify reason")
+	assertEqual(notifyPayloads[1].at, 55, "realm status notify at")
+
+	local envelope = buildEnvelope("realm_status_changed", "op-realm-1", {
+		realmId = "realm-public-1",
+	})
+	local handleResult = NotificationReconciliationService.HandleNotification(envelope)
+	assertTrue(handleResult.accepted, "realm status notification accepted")
+	assertEqual(#notifyPayloads, 2, "realm status notification fans out notify")
+	assertEqual(notifyPayloads[2].at, 100, "realm status notification uses envelope sentAt")
+end
+
+do
 	local queriedAts: { number } = {}
 	configure({
 		systemAnnouncementApi = {

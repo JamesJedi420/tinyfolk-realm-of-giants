@@ -9,6 +9,11 @@ RaidBoardConfig.MaxListLimit = 50
 RaidBoardConfig.OwnerDisplayNameCacheMax = 64
 RaidBoardConfig.PartyIdPrefix = "raid_board:"
 
+RaidBoardConfig.BoardNamePrefix = "RaidBoardHub_"
+RaidBoardConfig.DefaultBoardId = "RaidBoardHub_A"
+RaidBoardConfig.InteractionRangeStuds = 16
+RaidBoardConfig.OpenRequestAttribute = "RaidBoardOpenRequested"
+
 RaidBoardConfig.Remotes = {
 	ListRequest = "RaidBoardListRequest",
 	ListResponse = "RaidBoardListResponse",
