@@ -71,7 +71,7 @@ assertEqual(offline.resolverPath, "hub_direct_offline", "offline hub resolver pa
 
 local raidBoard = LiveRealmHubRouting.ResolveAdmissionTarget({}, availability)
 assertTrue(raidBoard.accepted, "raid board target accepted")
-assertEqual(raidBoard.targetRealmId, "giant_realm_9001", "raid board picks highest danger available")
+assertEqual(raidBoard.targetRealmId, "giant_realm_9002", "raid board picks highest danger discoverable realm")
 assertEqual(raidBoard.resolverPath, "hub_raid_board", "raid board resolver path")
 
 assertEqual(

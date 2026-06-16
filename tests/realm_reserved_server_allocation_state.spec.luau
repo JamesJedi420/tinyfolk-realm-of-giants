@@ -92,4 +92,10 @@ local privateAdmissionOk, privateAdmissionReason =
 assertEqual(privateAdmissionOk, false, "standard entry rejected for private realm")
 assertEqual(privateAdmissionReason, "entry_access_mode_rejected", "standard private admission reason")
 
+local raidAdmissionOk, raidAdmissionReason = RealmReservedServerAllocationState.ValidateDispatchAdmission("standard", {
+	accessMode = LiveRealmRegistryState.AccessMode.RaidEnabled,
+})
+assertTrue(raidAdmissionOk, "standard entry accepted for raid_enabled realm")
+assertEqual(raidAdmissionReason, "accepted", "standard raid_enabled admission reason")
+
 print("realm_reserved_server_allocation_state: all checks passed")

@@ -14,13 +14,15 @@ end
 local publicAdmission = RealmPermissionState.EvaluateAdmission({
 	accessMode = RealmPermissionConfig.Modes.Public,
 	entryType = "direct_invite",
+	requesterUserIds = { 1001 },
 })
 assertEqual(publicAdmission.accepted, true, "public mode accepts admission")
 assertEqual(publicAdmission.reason, RealmPermissionConfig.Reasons.Accepted, "public mode accepted reason")
 
 local raidAdmission = RealmPermissionState.EvaluateAdmission({
 	accessMode = RealmPermissionConfig.Modes.RaidEnabled,
-	entryType = "direct_invite",
+	entryType = "standard",
+	requesterUserIds = { 1001 },
 })
 assertEqual(raidAdmission.accepted, true, "raid_enabled mode accepts admission")
 assertEqual(raidAdmission.reason, RealmPermissionConfig.Reasons.Accepted, "raid_enabled accepted reason")
@@ -28,23 +30,72 @@ assertEqual(raidAdmission.reason, RealmPermissionConfig.Reasons.Accepted, "raid_
 local lockedAdmission = RealmPermissionState.EvaluateAdmission({
 	accessMode = RealmPermissionConfig.Modes.Locked,
 	entryType = "direct_invite",
+	requesterUserIds = { 1001 },
 })
 assertEqual(lockedAdmission.accepted, false, "locked mode rejects admission")
 assertEqual(lockedAdmission.reason, RealmPermissionConfig.Reasons.Locked, "locked rejection reason")
 
-local inviteAdmission = RealmPermissionState.EvaluateAdmission({
+local inviteDenied = RealmPermissionState.EvaluateAdmission({
 	accessMode = RealmPermissionConfig.Modes.InviteOnly,
 	entryType = "direct_invite",
+	requesterUserIds = { 1001 },
+	inviteAllowlistUserIds = { 2002 },
 })
-assertEqual(inviteAdmission.accepted, false, "invite_only mode rejects admission")
-assertEqual(inviteAdmission.reason, RealmPermissionConfig.Reasons.InviteOnly, "invite_only rejection reason")
+assertEqual(inviteDenied.accepted, false, "invite_only rejects non-allowlisted user")
+assertEqual(inviteDenied.reason, RealmPermissionConfig.Reasons.NotInvited, "invite_only not invited reason")
 
-local friendsAdmission = RealmPermissionState.EvaluateAdmission({
+local inviteAccepted = RealmPermissionState.EvaluateAdmission({
+	accessMode = RealmPermissionConfig.Modes.InviteOnly,
+	entryType = "direct_invite",
+	requesterUserIds = { 1001, 1002 },
+	inviteAllowlistUserIds = { 1001, 1002 },
+})
+assertEqual(inviteAccepted.accepted, true, "invite_only accepts allowlisted party")
+assertEqual(inviteAccepted.reason, RealmPermissionConfig.Reasons.Accepted, "invite_only accepted reason")
+
+local inviteStandardRejected = RealmPermissionState.EvaluateAdmission({
+	accessMode = RealmPermissionConfig.Modes.InviteOnly,
+	entryType = "standard",
+	requesterUserIds = { 1001 },
+	inviteAllowlistUserIds = { 1001 },
+})
+assertEqual(inviteStandardRejected.accepted, false, "invite_only rejects standard entry")
+assertEqual(
+	inviteStandardRejected.reason,
+	RealmPermissionConfig.Reasons.InviteOnly,
+	"invite_only standard rejection reason"
+)
+
+local friendsDenied = RealmPermissionState.EvaluateAdmission({
 	accessMode = RealmPermissionConfig.Modes.FriendsOnly,
 	entryType = "direct_invite",
+	requesterUserIds = { 1001 },
+	realmOwnerUserId = 9001,
+	isFriendsWithOwner = function(_ownerUserId: number, _requesterUserId: number): boolean
+		return false
+	end,
 })
-assertEqual(friendsAdmission.accepted, false, "friends_only mode rejects admission")
-assertEqual(friendsAdmission.reason, RealmPermissionConfig.Reasons.FriendsOnly, "friends_only rejection reason")
+assertEqual(friendsDenied.accepted, false, "friends_only rejects non-friend")
+assertEqual(friendsDenied.reason, RealmPermissionConfig.Reasons.NotFriend, "friends_only not friend reason")
+
+local friendsAccepted = RealmPermissionState.EvaluateAdmission({
+	accessMode = RealmPermissionConfig.Modes.FriendsOnly,
+	entryType = "direct_invite",
+	requesterUserIds = { 1001 },
+	realmOwnerUserId = 9001,
+	isFriendsWithOwner = function(_ownerUserId: number, _requesterUserId: number): boolean
+		return true
+	end,
+})
+assertEqual(friendsAccepted.accepted, true, "friends_only accepts friend")
+assertEqual(friendsAccepted.reason, RealmPermissionConfig.Reasons.Accepted, "friends_only accepted reason")
+
+local resolverProbeInvite = RealmPermissionState.EvaluateAdmission({
+	accessMode = RealmPermissionConfig.Modes.InviteOnly,
+	resolverProbe = true,
+})
+assertEqual(resolverProbeInvite.accepted, true, "resolver probe accepts invite_only target resolution")
+assertEqual(resolverProbeInvite.reason, RealmPermissionConfig.Reasons.Accepted, "resolver probe invite_only reason")
 
 local invalidAdmission = RealmPermissionState.EvaluateAdmission({
 	accessMode = "mystery_mode",
@@ -74,5 +125,17 @@ assertEqual(
 	RealmPermissionConfig.Modes.InviteOnly,
 	"registry invite_only maps to invite_only"
 )
+assertEqual(
+	RealmPermissionState.ToRegistryAccessMode(RealmPermissionConfig.Modes.Locked),
+	"private",
+	"locked maps to private registry mode"
+)
+assertEqual(
+	RealmPermissionState.ToRegistryAccessMode(RealmPermissionConfig.Modes.RaidEnabled),
+	"raid_enabled",
+	"raid_enabled maps to registry mode"
+)
+assertEqual(RealmPermissionState.IsDiscoverableRegistryAccessMode("raid_enabled"), true, "raid_enabled is discoverable")
+assertEqual(RealmPermissionState.ParseRealmOwnerUserId("giant_realm_9001"), 9001, "parse realm owner user id")
 
 print("realm_permission_state: all checks passed")

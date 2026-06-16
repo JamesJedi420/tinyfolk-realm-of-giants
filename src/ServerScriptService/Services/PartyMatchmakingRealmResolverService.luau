@@ -57,7 +57,11 @@ local function getRealmPermissionQueryApi(): any?
 	return nil
 end
 
-local function validateResolvedRealmPermission(targetRealmId: string, entryType: string?): (boolean, string?)
+local function validateResolvedRealmPermission(
+	targetRealmId: string,
+	entryType: string?,
+	requesterUserIds: { number }?
+): (boolean, string?)
 	local permissionApi = getRealmPermissionQueryApi()
 	if type(permissionApi) ~= "table" or type(permissionApi.EvaluateAdmissionForRealm) ~= "function" then
 		return true, nil
@@ -66,6 +70,8 @@ local function validateResolvedRealmPermission(targetRealmId: string, entryType:
 	local ok, result = pcall(function()
 		return permissionApi.EvaluateAdmissionForRealm(targetRealmId, {
 			entryType = entryType,
+			requesterUserIds = requesterUserIds,
+			resolverProbe = requesterUserIds == nil,
 		})
 	end)
 	if not ok or type(result) ~= "table" then
@@ -92,9 +98,11 @@ local function finalizeResolvedTarget(
 	targetRealmId: string,
 	privateServerId: string?,
 	resolverPath: string,
-	entryType: string?
+	entryType: string?,
+	requesterUserIds: { number }?
 ): any
-	local permissionAllowed, permissionReason = validateResolvedRealmPermission(targetRealmId, entryType)
+	local permissionAllowed, permissionReason =
+		validateResolvedRealmPermission(targetRealmId, entryType, requesterUserIds)
 	if not permissionAllowed then
 		return rejectPermission(targetRealmId, permissionReason or "realm_access_denied", "permission_rejected")
 	end
@@ -156,7 +164,8 @@ local function resolveViaLiveRegistryHub(input: any): any?
 		hubResult.targetRealmId,
 		hubResult.privateServerId,
 		hubResult.resolverPath,
-		if type(input) == "table" then input.entryType else nil
+		if type(input) == "table" then input.entryType else nil,
+		if type(input) == "table" then input.requesterUserIds else nil
 	)
 end
 
@@ -194,7 +203,8 @@ function PartyMatchmakingRealmResolverService.ResolveTargetRealmId(input: any): 
 					resolved,
 					nil,
 					"fallback_override",
-					if type(input) == "table" then input.entryType else nil
+					if type(input) == "table" then input.entryType else nil,
+					if type(input) == "table" then input.requesterUserIds else nil
 				)
 			end
 		end
@@ -212,7 +222,8 @@ function PartyMatchmakingRealmResolverService.ResolveTargetRealmId(input: any): 
 		input.targetRealmId,
 		nil,
 		"direct_input",
-		if type(input) == "table" then input.entryType else nil
+		if type(input) == "table" then input.entryType else nil,
+		if type(input) == "table" then input.requesterUserIds else nil
 	)
 end
 

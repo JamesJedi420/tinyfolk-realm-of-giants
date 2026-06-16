@@ -58,6 +58,7 @@ end
 
 game = fakeGame
 
+local registryRefreshCalls = {}
 local availability = {
 	{
 		realmId = "giant_realm_9001",
@@ -90,12 +91,22 @@ local service = serviceFactory(fakeGame, {
 	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
 		return availability
 	end,
+	liveRegistryApi = {
+		RefreshActiveRealm = function(input: any): any
+			table.insert(registryRefreshCalls, input)
+			return { accepted = true, reason = "accepted" }
+		end,
+	},
+	isFriendsWithOwner = function(ownerUserId: number, requesterUserId: number): boolean
+		return ownerUserId == 9003 and requesterUserId == 4401
+	end,
 })
 
 local permissionApi = globalEnv._RealmPermissionService_QueryAPI
 assertEqual(type(permissionApi), "table", "permission query api published")
 assertEqual(type(permissionApi.GetRealmAccessMode), "function", "get mode function published")
 assertEqual(type(permissionApi.EvaluateAdmissionForRealm), "function", "evaluate function published")
+assertEqual(type(permissionApi.SetOwnerRealmAccessMode), "function", "owner setter published")
 
 assertEqual(
 	permissionApi.GetRealmAccessMode("giant_realm_9001"),
@@ -112,15 +123,18 @@ assertEqual(
 	RealmPermissionConfig.Modes.Public,
 	"missing realm defaults to public"
 )
+assertEqual(permissionApi.GetRegistryAccessMode("giant_realm_9002"), "private", "registry mode maps locked to private")
 
 local publicAdmission = permissionApi.EvaluateAdmissionForRealm("giant_realm_9001", {
 	entryType = "direct_invite",
+	requesterUserIds = { 4401 },
 })
 assertEqual(publicAdmission.accepted, true, "public realm admission accepted")
 assertEqual(publicAdmission.reason, RealmPermissionConfig.Reasons.Accepted, "public realm admission reason")
 
 local lockedAdmission = permissionApi.EvaluateAdmissionForRealm("giant_realm_9002", {
 	entryType = "direct_invite",
+	requesterUserIds = { 4401 },
 })
 assertEqual(lockedAdmission.accepted, false, "private/locked realm admission rejected")
 assertEqual(lockedAdmission.reason, RealmPermissionConfig.Reasons.Locked, "private/locked realm rejection reason")
@@ -134,14 +148,55 @@ assertEqual(
 )
 local raidAdmission = permissionApi.EvaluateAdmissionForRealm("giant_realm_9002", {
 	entryType = "direct_invite",
+	requesterUserIds = { 4401 },
 })
 assertEqual(raidAdmission.accepted, true, "session raid_enabled admission accepted")
+
+local ownerSet = permissionApi.SetOwnerRealmAccessMode(9002, "invite_only")
+assertEqual(ownerSet.accepted, true, "owner access mode set accepted")
+assertEqual(#registryRefreshCalls, 1, "owner setter publishes registry refresh")
+assertEqual(registryRefreshCalls[1].ownerUserId, 9002, "registry refresh owner user id")
+assertEqual(registryRefreshCalls[1].accessMode, "invite_only", "registry refresh access mode")
+
+permissionApi.AddInviteAllowlistUser("giant_realm_9002", 4401)
+local inviteDenied = permissionApi.EvaluateAdmissionForRealm("giant_realm_9002", {
+	entryType = "direct_invite",
+	requesterUserIds = { 4402 },
+})
+assertEqual(inviteDenied.accepted, false, "invite_only rejects non-allowlisted user")
+assertEqual(inviteDenied.reason, RealmPermissionConfig.Reasons.NotInvited, "invite_only not invited reason")
+
+local inviteAccepted = permissionApi.EvaluateAdmissionForRealm("giant_realm_9002", {
+	entryType = "direct_invite",
+	requesterUserIds = { 4401 },
+})
+assertEqual(inviteAccepted.accepted, true, "invite_only accepts allowlisted user")
+
+permissionApi.SetSessionRealmAccessMode("giant_realm_9003", "friends_only")
+local friendsAccepted = permissionApi.EvaluateAdmissionForRealm("giant_realm_9003", {
+	entryType = "direct_invite",
+	requesterUserIds = { 4401 },
+})
+assertEqual(friendsAccepted.accepted, true, "friends_only accepts friend via checker")
+
+local friendsDenied = permissionApi.EvaluateAdmissionForRealm("giant_realm_9003", {
+	entryType = "direct_invite",
+	requesterUserIds = { 4402 },
+})
+assertEqual(friendsDenied.accepted, false, "friends_only rejects non-friend")
+assertEqual(friendsDenied.reason, RealmPermissionConfig.Reasons.NotFriend, "friends_only not friend reason")
 
 service.ResetForTests()
 permissionApi.ConfigureForTests({
 	listLiveRealmAvailability = function(_limit: number?, _at: number?): { any }
 		return availability
 	end,
+	liveRegistryApi = {
+		RefreshActiveRealm = function(input: any): any
+			table.insert(registryRefreshCalls, input)
+			return { accepted = true, reason = "accepted" }
+		end,
+	},
 })
 assertEqual(
 	permissionApi.GetRealmAccessMode("giant_realm_9002"),

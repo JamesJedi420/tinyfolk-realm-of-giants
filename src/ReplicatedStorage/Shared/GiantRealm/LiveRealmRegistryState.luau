@@ -21,6 +21,8 @@ LiveRealmRegistryState.AccessMode = {
 	Public = "public",
 	Private = "private",
 	InviteOnly = "invite_only",
+	RaidEnabled = "raid_enabled",
+	FriendsOnly = "friends_only",
 }
 
 export type Entry = {
@@ -73,6 +75,8 @@ local VALID_ACCESS_MODE: { [string]: boolean } = {
 	[LiveRealmRegistryState.AccessMode.Public] = true,
 	[LiveRealmRegistryState.AccessMode.Private] = true,
 	[LiveRealmRegistryState.AccessMode.InviteOnly] = true,
+	[LiveRealmRegistryState.AccessMode.RaidEnabled] = true,
+	[LiveRealmRegistryState.AccessMode.FriendsOnly] = true,
 }
 
 local function isFiniteNumber(value: any): boolean
