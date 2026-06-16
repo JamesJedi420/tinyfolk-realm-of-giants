@@ -90,6 +90,28 @@ local soloQueueAllowed, soloQueueReason = TinyfolkPartyState.ValidateRaidBoardQu
 assertTrue(soloQueueAllowed, "solo party queue allowed when ready")
 assertEqual(soloQueueReason, "accepted", "solo queue reason")
 
+local partialOutcome = TinyfolkPartyState.ResolveTransferOutcome({
+	party = memberReady.party,
+	transferredUserIds = { 101 },
+	at = 30,
+})
+assertTrue(partialOutcome.accepted, "partial transfer outcome accepted")
+assertEqual(partialOutcome.dissolved, false, "partial transfer keeps party")
+assertEqual(partialOutcome.party.leaderUserId, 202, "partial transfer reassigns leader")
+assertEqual(partialOutcome.party.memberUserIds[1], 202, "partial transfer leaves non-transferred member")
+assertEqual(#partialOutcome.party.readyUserIds, 0, "partial transfer clears ready state")
+assertEqual(partialOutcome.transferredUserIds[1], 101, "partial transfer returns transferred user")
+assertEqual(partialOutcome.recoveredUserIds[1], 202, "partial transfer returns recovered user")
+
+local fullOutcome = TinyfolkPartyState.ResolveTransferOutcome({
+	party = memberReady.party,
+	transferredUserIds = { 101, 202 },
+	at = 31,
+})
+assertTrue(fullOutcome.accepted, "full transfer outcome accepted")
+assertTrue(fullOutcome.dissolved, "full transfer dissolves party")
+assertEqual(fullOutcome.party, nil, "full transfer clears party")
+
 local snapshot = TinyfolkPartyState.BuildSnapshot(soloReady.party, "accepted", true)
 assertEqual(snapshot.partyId, soloReady.party.partyId, "snapshot party id")
 assertEqual(snapshot.leaderUserId, 303, "snapshot leader")

@@ -24,6 +24,15 @@ export type TransitionResult = {
 	notifyUserIds: { number }?,
 }
 
+export type TransferOutcomeResult = {
+	accepted: boolean,
+	reason: string,
+	party: PartyRecord?,
+	dissolved: boolean,
+	recoveredUserIds: { number }?,
+	transferredUserIds: { number }?,
+}
+
 local function isPositiveInteger(value: any): boolean
 	return type(value) == "number" and value == math.floor(value) and value > 0
 end
@@ -356,6 +365,75 @@ function TinyfolkPartyState.ValidateRaidBoardQueue(party: PartyRecord, requester
 		return false, "party_not_ready"
 	end
 	return true, "accepted"
+end
+
+function TinyfolkPartyState.ResolveTransferOutcome(input: any): TransferOutcomeResult
+	if type(input) ~= "table" or type(input.party) ~= "table" or type(input.transferredUserIds) ~= "table" then
+		return { accepted = false, reason = "input_invalid", party = nil, dissolved = false }
+	end
+
+	local party = cloneParty(input.party :: PartyRecord)
+	local transferredUserIds = normalizeUserIds(input.transferredUserIds)
+	local at = input.at
+	if transferredUserIds == nil or not isFiniteNumber(at) then
+		return { accepted = false, reason = "input_invalid", party = party, dissolved = false }
+	end
+
+	local transferredLookup: { [number]: boolean } = {}
+	for _, transferredUserId in ipairs(transferredUserIds) do
+		if containsUserId(party.memberUserIds, transferredUserId) then
+			transferredLookup[transferredUserId] = true
+		end
+	end
+
+	local remainingMembers: { number } = {}
+	local transferredMembers: { number } = {}
+	for _, memberUserId in ipairs(party.memberUserIds) do
+		if transferredLookup[memberUserId] == true then
+			table.insert(transferredMembers, memberUserId)
+		else
+			table.insert(remainingMembers, memberUserId)
+		end
+	end
+
+	if #transferredMembers <= 0 then
+		return {
+			accepted = true,
+			reason = "accepted",
+			party = party,
+			dissolved = false,
+			recoveredUserIds = cloneSortedUserIds(remainingMembers),
+			transferredUserIds = {},
+		}
+	end
+
+	if #remainingMembers <= 0 then
+		return {
+			accepted = true,
+			reason = "accepted",
+			party = nil,
+			dissolved = true,
+			recoveredUserIds = {},
+			transferredUserIds = cloneSortedUserIds(transferredMembers),
+		}
+	end
+
+	party.memberUserIds = cloneSortedUserIds(remainingMembers)
+	party.readyUserIds = {}
+	party.pendingInviteUserIds = {}
+	if transferredLookup[party.leaderUserId] == true then
+		party.leaderUserId = party.memberUserIds[1]
+	end
+	party.updatedAt = at
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		party = party,
+		dissolved = false,
+		recoveredUserIds = cloneSortedUserIds(remainingMembers),
+		transferredUserIds = cloneSortedUserIds(transferredMembers),
+	}
 end
 
 return TinyfolkPartyState
