@@ -239,6 +239,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		return queryApi
 	end
 
+	local function getFollowerProxyQueryApi(): any?
+		local globalValue: any = globalEnv
+		if type(globalValue) ~= "table" then
+			return nil
+		end
+		local queryApi = globalValue._GiantFollowerProxyService_QueryAPI
+		if type(queryApi) ~= "table" then
+			return nil
+		end
+		return queryApi
+	end
+
 	local function ensureRemotesFolder(): Folder?
 		if ReplicatedStorage == nil or type(ReplicatedStorage.FindFirstChild) ~= "function" then
 			return nil
@@ -1635,6 +1647,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		if callerRole ~= RoleConfig.Roles.Giant then
 			return { accepted = false, reason = "caller_not_giant" }
 		end
+		local followerProxyQueryApi = getFollowerProxyQueryApi()
+		if followerProxyQueryApi ~= nil and type(followerProxyQueryApi.IsProxyControlActive) == "function" then
+			local proxyOk, proxyActive = pcall(function()
+				return followerProxyQueryApi.IsProxyControlActive(player.UserId)
+			end)
+			if proxyOk and proxyActive == true then
+				return { accepted = false, reason = "proxy_control_active" }
+			end
+		end
 
 		local grabServiceQueryApi = getGrabServiceQueryApi()
 		if grabServiceQueryApi ~= nil and type(grabServiceQueryApi.IsPlayerCarried) == "function" then
@@ -2637,6 +2658,15 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 
 		if type(player.UserId) == "number" and isSafeZoneAbuseLocked(player.UserId, now()) then
 			return false
+		end
+		local followerProxyQueryApi = getFollowerProxyQueryApi()
+		if followerProxyQueryApi ~= nil and type(followerProxyQueryApi.IsProxyControlActive) == "function" then
+			local proxyOk, proxyActive = pcall(function()
+				return followerProxyQueryApi.IsProxyControlActive(player.UserId)
+			end)
+			if proxyOk and proxyActive == true then
+				return false
+			end
 		end
 
 		if type(request) ~= "table" then

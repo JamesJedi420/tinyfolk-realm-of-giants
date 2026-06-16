@@ -265,6 +265,7 @@ local transportQueryFault = false
 local scoreQueryFault = false
 local movementHookFault = false
 local remoteBarrierSnapshot: any = nil
+local proxyControlActiveByUserId: { [number]: boolean } = {}
 local memoryStoreValuesByMap: { [string]: { [string]: any } } = {}
 local captureCustodyEndRequests: { any } = {}
 local escapeActionAllowed = true
@@ -370,6 +371,11 @@ globalEnv._RemoteControlStationService_QueryAPI = {
 		return remoteBarrierSnapshot
 	end,
 }
+globalEnv._GiantFollowerProxyService_QueryAPI = {
+	IsProxyControlActive = function(userId: number): boolean
+		return proxyControlActiveByUserId[userId] == true
+	end,
+}
 local EscapeService = require("../src/ServerScriptService/Services/EscapeService.server")(MockGame, {
 	autoInitialize = true,
 	clock = function()
@@ -436,6 +442,7 @@ local function resetRouteDefaults()
 	scoreQueryFault = false
 	movementHookFault = false
 	remoteBarrierSnapshot = nil
+	proxyControlActiveByUserId = {}
 	captureCustodyEndRequests = {}
 	escapeActionAllowed = true
 	captureQueryFault = false
@@ -445,6 +452,26 @@ local function resetRouteDefaults()
 	EscapeService.ResetFinalExitForTests()
 	EscapeService.ResetFallbackEscapeForTests()
 	routeAttributes.RouteEnabled = true
+end
+
+do
+	resetRouteDefaults()
+	local giant = MockPlayer.new(5001, "ProxyLockedGiant", { role = "Giant" })
+	local tinyfolk = MockPlayer.new(5002, "ProxyLockedTinyfolk", { role = "Tinyfolk", crossingPhase = "MidCrossing" })
+	playersByUserId[5002] = tinyfolk
+	proxyControlActiveByUserId[5001] = true
+
+	local block = EscapeService.requestTraversalGapBlock(giant, "EscapeRoute_A")
+	assertEqual(block.accepted, false, "proxy-controlled Giant cannot trigger traversal-gap block")
+	assertEqual(block.reason, "proxy_control_active", "proxy-controlled Giant block reason")
+
+	local throughGapReachAllowed = EscapeService.validateThroughGapReach(giant, tinyfolk, {
+		routeId = "EscapeRoute_A",
+		lineOfSightCheck = function()
+			return true
+		end,
+	})
+	assertEqual(throughGapReachAllowed, false, "proxy-controlled Giant cannot perform through-gap reach")
 end
 
 local function advanceFinalExitToOpen(routeId: string?)

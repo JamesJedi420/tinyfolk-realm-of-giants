@@ -843,6 +843,18 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		return type(snapshot) == "table" and snapshot.state == RemoteControlStationConfig.BarrierState.Active
 	end
 
+	function service.isGiantOperatingStation(userId: number): boolean
+		if type(userId) ~= "number" then
+			return false
+		end
+		for _, stationState in pairs(stationStateById) do
+			if type(stationState) == "table" and stationState.activeOperatorUserId == userId then
+				return true
+			end
+		end
+		return false
+	end
+
 	function service.ResetForTests()
 		stationStateById = {}
 		stationPartById = {}
@@ -965,6 +977,9 @@ local function createRemoteControlStationService(runtimeGame: any?, options: any
 		end,
 		IsRouteRemoteBarrierActive = function(routeId: string): boolean
 			return service.isRouteRemoteBarrierActive(routeId)
+		end,
+		IsGiantOperatingStation = function(userId: number): boolean
+			return service.isGiantOperatingStation(userId)
 		end,
 		GetRouteBarrierSnapshot = function(routeId: string): any
 			return service.getBarrierSnapshot(routeId)
