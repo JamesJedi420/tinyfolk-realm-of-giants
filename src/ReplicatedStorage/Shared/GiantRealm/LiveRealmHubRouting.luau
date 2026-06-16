@@ -47,18 +47,40 @@ function LiveRealmHubRouting.FindAvailabilityByRealmId(availability: { any }, re
 	return nil
 end
 
+local function isRaidBoardDiscoverableSnapshot(snapshot: any): boolean
+	if type(snapshot) ~= "table" or snapshot.isAvailable ~= true or not isNonEmptyString(snapshot.realmId) then
+		return false
+	end
+	return snapshot.accessMode == "public" or snapshot.accessMode == "raid_enabled"
+end
+
 function LiveRealmHubRouting.SelectRaidBoardTarget(availability: { any }): any?
 	if type(availability) ~= "table" then
 		return nil
 	end
 
+	local bestSnapshot: any = nil
+	local bestDanger = -1
 	for _, snapshot in ipairs(availability) do
-		if type(snapshot) == "table" and snapshot.isAvailable == true and isNonEmptyString(snapshot.realmId) then
-			return snapshot
+		if isRaidBoardDiscoverableSnapshot(snapshot) then
+			local dangerRating = if type(snapshot.dangerRating) == "number" then snapshot.dangerRating else 0
+			if dangerRating > bestDanger then
+				bestDanger = dangerRating
+				bestSnapshot = snapshot
+			elseif dangerRating == bestDanger and bestSnapshot ~= nil then
+				local bestRealmId = if type(bestSnapshot.realmId) == "string" then bestSnapshot.realmId else ""
+				local candidateRealmId = snapshot.realmId
+				if candidateRealmId < bestRealmId then
+					bestSnapshot = snapshot
+				end
+			elseif bestSnapshot == nil then
+				bestSnapshot = snapshot
+				bestDanger = dangerRating
+			end
 		end
 	end
 
-	return nil
+	return bestSnapshot
 end
 
 export type ResolveTeleportAccessCodeResult = {

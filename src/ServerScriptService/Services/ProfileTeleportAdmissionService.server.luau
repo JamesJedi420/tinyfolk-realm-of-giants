@@ -178,7 +178,11 @@ local function getRealmPermissionQueryApi(): any?
 	return nil
 end
 
-local function validateRealmAdmissionPermission(targetRealmId: string, entryType: string?): (boolean, string?)
+local function validateRealmAdmissionPermission(
+	targetRealmId: string,
+	entryType: string?,
+	requesterUserIds: { number }?
+): (boolean, string?)
 	local permissionApi = getRealmPermissionQueryApi()
 	if type(permissionApi) ~= "table" or type(permissionApi.EvaluateAdmissionForRealm) ~= "function" then
 		return true, nil
@@ -187,6 +191,7 @@ local function validateRealmAdmissionPermission(targetRealmId: string, entryType
 	local ok, result = pcall(function()
 		return permissionApi.EvaluateAdmissionForRealm(targetRealmId, {
 			entryType = entryType,
+			requesterUserIds = requesterUserIds,
 		})
 	end)
 	if not ok or type(result) ~= "table" then
@@ -237,14 +242,16 @@ function ProfileTeleportAdmissionService.RequestTeleportHandoffAdmission(input: 
 		return { accepted = false, reason = rejectedReason }
 	end
 
-	local permissionAllowed, permissionReason = validateRealmAdmissionPermission(input.targetRealmId, "direct_invite")
+	local userId = input.userId
+	local permissionAllowed, permissionReason = validateRealmAdmissionPermission(input.targetRealmId, "direct_invite", {
+		userId,
+	})
 	if not permissionAllowed then
 		local rejectedReason = permissionReason or "realm_access_denied"
 		admissionDiagnostics.lastReason = rejectedReason
 		return { accepted = false, reason = rejectedReason }
 	end
 
-	local userId = input.userId
 	local handoffToken = input.handoffToken
 	local createdAt = resolveNow()
 	local operationId = if isNonEmptyString(input.operationId) then input.operationId else handoffToken

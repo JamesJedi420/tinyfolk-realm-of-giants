@@ -133,7 +133,11 @@ local function getRealmPermissionQueryApi(): any?
 	return nil
 end
 
-local function validateRealmAdmissionPermission(targetRealmId: string, entryType: string?): (boolean, string?)
+local function validateRealmAdmissionPermission(
+	targetRealmId: string,
+	entryType: string?,
+	requesterUserIds: { number }?
+): (boolean, string?)
 	local permissionApi = getRealmPermissionQueryApi()
 	if type(permissionApi) ~= "table" or type(permissionApi.EvaluateAdmissionForRealm) ~= "function" then
 		return true, nil
@@ -142,6 +146,7 @@ local function validateRealmAdmissionPermission(targetRealmId: string, entryType
 	local ok, result = pcall(function()
 		return permissionApi.EvaluateAdmissionForRealm(targetRealmId, {
 			entryType = entryType,
+			requesterUserIds = requesterUserIds,
 		})
 	end)
 	if not ok or type(result) ~= "table" then
@@ -258,7 +263,8 @@ local function requestAdmissionWithEntryType(input: any, entryType: string, oper
 		return { accepted = false, reason = targetReason or "target_realm_unavailable" }
 	end
 
-	local permissionAllowed, permissionReason = validateRealmAdmissionPermission(targetRealmId, entryType)
+	local permissionAllowed, permissionReason =
+		validateRealmAdmissionPermission(targetRealmId, entryType, resolveMemberUserIds(input))
 	if not permissionAllowed then
 		local rejectedReason = permissionReason or "realm_access_denied"
 		admissionDiagnostics.lastReason = rejectedReason

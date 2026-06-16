@@ -24,6 +24,7 @@ RaidBoardConfig.Remotes = {
 
 RaidBoardConfig.EntryTypeLabels = {
 	public = "Raid",
+	raid_enabled = "Raid Open",
 }
 
 RaidBoardConfig.RewardTierBuckets = {

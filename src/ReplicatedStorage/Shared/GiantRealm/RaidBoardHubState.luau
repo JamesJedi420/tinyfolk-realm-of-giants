@@ -83,6 +83,7 @@ function RaidBoardHubState.IsDiscoverableSnapshot(snapshot: any): boolean
 		return false
 	end
 	return snapshot.accessMode == LiveRealmRegistryState.AccessMode.Public
+		or snapshot.accessMode == LiveRealmRegistryState.AccessMode.RaidEnabled
 end
 
 function RaidBoardHubState.IsQueueableSnapshot(snapshot: any, availability: { any }): boolean

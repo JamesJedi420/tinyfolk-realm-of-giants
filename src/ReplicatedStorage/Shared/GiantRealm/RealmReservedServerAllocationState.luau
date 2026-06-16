@@ -367,7 +367,10 @@ function RealmReservedServerAllocationState.ValidateDispatchAdmission(entryType:
 	if type(snapshot) ~= "table" then
 		return false, "target_realm_unavailable"
 	end
-	if snapshot.accessMode ~= LiveRealmRegistryState.AccessMode.Public then
+	if
+		snapshot.accessMode ~= LiveRealmRegistryState.AccessMode.Public
+		and snapshot.accessMode ~= LiveRealmRegistryState.AccessMode.RaidEnabled
+	then
 		return false, "entry_access_mode_rejected"
 	end
 	return true, "accepted"

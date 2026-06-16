@@ -236,7 +236,27 @@ local function stopHeartbeat()
 	runtimeHeartbeatToken = nil
 end
 
-local function refreshTrackedRealm(ownerUserId: number): any
+local function resolvePublishedAccessMode(ownerUserId: number, runtimePrivateServerId: string): string
+	local permissionApi = getGlobalTable("_RealmPermissionService_QueryAPI")
+	if type(permissionApi) == "table" and type(permissionApi.GetRegistryAccessMode) == "function" then
+		local realmId = if runtimeRegistryState ~= nil
+			then runtimeRegistryState.FormatRealmId(ownerUserId)
+			else string.format("giant_realm_%d", ownerUserId)
+		local ok, registryAccessMode = pcall(function()
+			return permissionApi.GetRegistryAccessMode(realmId)
+		end)
+		if ok and type(registryAccessMode) == "string" and registryAccessMode ~= "" then
+			return registryAccessMode
+		end
+	end
+
+	if runtimeRegistryState ~= nil then
+		return runtimeRegistryState.ResolveAccessMode(runtimePrivateServerId)
+	end
+	return "public"
+end
+
+local function refreshTrackedRealm(ownerUserId: number, patchOverrides: any?): any
 	if runtimeStore == nil or runtimeRegistryState == nil then
 		recordDiagnostic("refresh", false, "store_unavailable", nil)
 		return {
@@ -248,17 +268,21 @@ local function refreshTrackedRealm(ownerUserId: number): any
 
 	local now = resolveNow()
 	local realmId = runtimeRegistryState.FormatRealmId(ownerUserId)
+	local allocationBackedPrivateServerId = resolveAllocationBackedPrivateServerId(ownerUserId)
 	local patch = {
 		privateServerId = runtimeRegistryState.ResolveStablePrivateServerId(
 			ownerUserId,
-			resolveAllocationBackedPrivateServerId(ownerUserId)
+			allocationBackedPrivateServerId
 		),
 		jobId = resolveRuntimeJobId(),
-		accessMode = runtimeRegistryState.ResolveAccessMode(resolveAllocationBackedPrivateServerId(ownerUserId)),
+		accessMode = resolvePublishedAccessMode(ownerUserId, allocationBackedPrivateServerId),
 		playerCount = resolvePlayerCount(),
 		capacity = resolveCapacity(realmId),
 		lifecycle = runtimeRegistryState.Lifecycle.Active,
 	}
+	if type(patchOverrides) == "table" and type(patchOverrides.accessMode) == "string" then
+		patch.accessMode = patchOverrides.accessMode
+	end
 	local result = runtimeStore.RefreshRegistryEntry(realmId, patch, now)
 	recordDiagnostic(
 		"refresh",
@@ -397,7 +421,7 @@ function LiveRealmRegistryService.RefreshActiveRealm(input: any): any
 			snapshot = nil,
 		}
 	end
-	return refreshTrackedRealm(math.floor(input.ownerUserId))
+	return refreshTrackedRealm(math.floor(input.ownerUserId), input)
 end
 
 function LiveRealmRegistryService.PruneActiveRealm(input: any): any

@@ -56,6 +56,19 @@ local availability = {
 		updatedAt = 80,
 	},
 	{
+		realmId = "giant_realm_9005",
+		ownerUserId = 9005,
+		privateServerId = "ps-live-9005",
+		jobId = "job-9005",
+		accessMode = LiveRealmRegistryState.AccessMode.RaidEnabled,
+		playerCount = 1,
+		capacity = 8,
+		dangerRating = 0.95,
+		lifecycle = LiveRealmRegistryState.Lifecycle.Active,
+		isAvailable = true,
+		updatedAt = 85,
+	},
+	{
 		realmId = "giant_realm_9004",
 		ownerUserId = 9004,
 		privateServerId = "ps-live-9004",
@@ -74,17 +87,23 @@ local projected = RaidBoardHubState.ProjectListings({
 	availability = availability,
 	ownerDisplayNames = {
 		[9002] = "Alpha Giant",
+		[9005] = "Raid Giant",
 	},
 	limit = 10,
 })
 assertTrue(projected.accepted, "projection accepted")
-assertEqual(#projected.listings, 1, "only public available listing included")
-assertEqual(projected.listings[1].realmId, "giant_realm_9002", "public listing realm id")
-assertEqual(projected.listings[1].ownerDisplayName, "Alpha Giant", "resolved owner display name")
-assertEqual(projected.listings[1].realmDisplayName, "Alpha Giant's Realm", "realm display name")
-assertEqual(projected.listings[1].entryTypeLabel, "Raid", "entry type label")
-assertEqual(projected.listings[1].rewardTierLabel, "Moderate", "reward tier label")
-assertTrue(projected.listings[1].isQueueable, "public listing queueable")
+assertEqual(#projected.listings, 2, "public and raid_enabled available listings included")
+assertEqual(projected.listings[1].realmId, "giant_realm_9005", "raid_enabled listing sorted first by danger")
+assertEqual(projected.listings[1].entryTypeLabel, "Raid Open", "raid_enabled entry type label")
+assertEqual(projected.listings[2].realmId, "giant_realm_9002", "public listing realm id")
+assertEqual(projected.listings[1].ownerDisplayName, "Raid Giant", "resolved raid owner display name")
+assertEqual(projected.listings[1].realmDisplayName, "Raid Giant's Realm", "raid realm display name")
+assertEqual(projected.listings[1].rewardTierLabel, "Legendary", "raid reward tier label")
+assertTrue(projected.listings[1].isQueueable, "raid_enabled listing queueable")
+assertEqual(projected.listings[2].ownerDisplayName, "Alpha Giant", "resolved public owner display name")
+assertEqual(projected.listings[2].entryTypeLabel, "Raid", "public entry type label")
+assertEqual(projected.listings[2].rewardTierLabel, "Moderate", "public reward tier label")
+assertTrue(projected.listings[2].isQueueable, "public listing queueable")
 
 local safeOk, safeReason = RaidBoardHubState.AssertClientSafeListingRow(projected.listings[1])
 assertTrue(safeOk, "listing row client safe")
