@@ -51,6 +51,7 @@ type Diagnostics = {
 local runtimeConfig: any = nil
 local runtimeScheduler: any = nil
 local runtimeLoopToken: any = nil
+local runtimeReturnRecoveryConnections: { any } = {}
 local scheduleNextTick: (() -> ())? = nil
 
 local diagnostics: Diagnostics
@@ -204,6 +205,69 @@ local function fanOutRaidBoardNotify(at: number)
 	end)
 end
 
+local function fanOutRescueHubNotify(at: number)
+	local rescueHubApi = resolveDependency("rescueHubApi", "_RescueContractHubSurface_QueryAPI")
+	if type(rescueHubApi) ~= "table" or type((rescueHubApi :: any).BroadcastNotify) ~= "function" then
+		return
+	end
+
+	pcall(function()
+		(rescueHubApi :: any).BroadcastNotify({
+			reason = "rescue_queue_reconciled",
+			at = at,
+		})
+	end)
+end
+
+local function resolvePlayersService(config: any): any?
+	if type(config) == "table" and config.players ~= nil then
+		return config.players
+	end
+	if game ~= nil and type(game.GetService) == "function" then
+		local ok, players = pcall(function()
+			return game:GetService("Players")
+		end)
+		if ok then
+			return players
+		end
+	end
+	return nil
+end
+
+local function resolvePlayerForUserId(userId: number, input: any?): any?
+	local inputAny: any = input
+	if type(inputAny) == "table" and type(inputAny.player) == "table" then
+		local player = inputAny.player
+		if type(player.UserId) == "number" and player.UserId == userId then
+			return player
+		end
+	end
+
+	local players = resolvePlayersService(runtimeConfig)
+	if type(players) ~= "table" or type(players.GetPlayers) ~= "function" then
+		return nil
+	end
+
+	for _, player in players:GetPlayers() do
+		if type(player) == "table" and player.UserId == userId then
+			return player
+		end
+	end
+
+	return nil
+end
+
+local function stopReturnRecoveryOnJoin()
+	for _, connection in ipairs(runtimeReturnRecoveryConnections) do
+		if type(connection) == "table" and type(connection.Disconnect) == "function" then
+			pcall(function()
+				connection:Disconnect()
+			end)
+		end
+	end
+	table.clear(runtimeReturnRecoveryConnections)
+end
+
 local function resolveScheduler(config: any): any?
 	if type(config) == "table" and type(config.reconciliationScheduler) == "table" then
 		return config.reconciliationScheduler
@@ -325,6 +389,7 @@ function NotificationReconciliationService.ReconcileRescueQueue(input: any?): an
 	end
 
 	recordChannel("rescueQueue", true, "accepted", nil, nil, at)
+	fanOutRescueHubNotify(at)
 	return makeResult(true, "accepted", "rescueQueue", {
 		limit = limit,
 		entries = cloneTable(entries),
@@ -411,10 +476,25 @@ function NotificationReconciliationService.ReconcileReturnRecovery(input: any): 
 		return makeResult(false, "return_recovery_reconcile_failed", "returnRecovery", nil)
 	end
 
+	local recoveryOrchestrated = false
+	local recoveryReason: string? = nil
+	local player = resolvePlayerForUserId(input.userId, input)
+	if player ~= nil and type((api :: any).OrchestrateDestinationArrival) == "function" then
+		local orchestrationOk, orchestrationResult = pcall(function()
+			return (api :: any).OrchestrateDestinationArrival(player)
+		end)
+		if orchestrationOk and type(orchestrationResult) == "table" then
+			recoveryOrchestrated = orchestrationResult.ok == true
+			recoveryReason = if type(orchestrationResult.reason) == "string" then orchestrationResult.reason else nil
+		end
+	end
+
 	recordChannel("returnRecovery", true, "accepted", nil, nil, at)
 	return makeResult(true, "accepted", "returnRecovery", {
 		userId = input.userId,
 		canSpawnGameplay = canSpawn,
+		recoveryOrchestrated = recoveryOrchestrated,
+		recoveryReason = recoveryReason,
 	})
 end
 
@@ -517,10 +597,37 @@ end
 
 function NotificationReconciliationService.Start(config: any?): any
 	stopLoop()
+	stopReturnRecoveryOnJoin()
 	runtimeConfig = if type(config) == "table" then config else {}
 	resetDiagnostics("started")
 
 	local configAny: any = runtimeConfig
+	if configAny.enableReturnRecoveryOnJoin == true then
+		local players = resolvePlayersService(runtimeConfig)
+		if
+			type(players) == "table"
+			and type(players.PlayerAdded) == "table"
+			and type(players.PlayerAdded.Connect) == "function"
+			and type(players.GetPlayers) == "function"
+		then
+			local function reconcileJoiningPlayer(player: any)
+				if type(player) ~= "table" or not isPositiveInteger(player.UserId) then
+					return
+				end
+				NotificationReconciliationService.ReconcileReturnRecovery({
+					at = nowSeconds(),
+					userId = player.UserId,
+					player = player,
+				})
+			end
+
+			table.insert(runtimeReturnRecoveryConnections, players.PlayerAdded:Connect(reconcileJoiningPlayer))
+			for _, player in players:GetPlayers() do
+				reconcileJoiningPlayer(player)
+			end
+		end
+	end
+
 	if configAny.enableReconciliationLoop == true then
 		runtimeScheduler = resolveScheduler(runtimeConfig)
 		local intervalSeconds = resolveIntervalSeconds(runtimeConfig)
@@ -590,6 +697,7 @@ end
 
 function NotificationReconciliationService.ResetForTests()
 	stopLoop()
+	stopReturnRecoveryOnJoin()
 	runtimeConfig = nil
 	runtimeScheduler = nil
 	scheduleNextTick = nil
