@@ -315,7 +315,10 @@ local invalidLoadOwnerLayer = ProfileStoreOwnerLayer.Create({
 	end,
 })
 local invalidGiantLoad = invalidLoadOwnerLayer.LoadGiantRealmProfile("GiantRealmProfile:1111", 1111)
-assertFailure(invalidGiantLoad, "LoadGiantRealmProfile", "schema_version_invalid", "giant load invalid root")
+assertSuccess(invalidGiantLoad, "LoadGiantRealmProfile", "GiantRealmProfile:1111", "giant load recovers invalid root")
+assertTrue(type(invalidGiantLoad.meta) == "table", "giant load recovery meta present")
+assertEqual(invalidGiantLoad.meta.loadOutcome, "recovered_corrupt", "giant load recovery outcome")
+assertEqual(invalidGiantLoad.data.ownerUserId, 1111, "giant load recovery owner user id")
 
 ProfilePersistenceGateway.ResetForTests()
 ProfilePersistenceGateway.ConfigureOwnerLayer(ProfileStoreOwnerLayer.Create({

@@ -883,11 +883,33 @@ local function loadGiantRealmForPlayer(player: Player)
 		return
 	end
 
-	local loadResult = ProfilePersistenceGateway.LoadGiantRealmProfile(player.UserId)
-	if not loadResult.ok then
-		debugWarn(
-			string.format("Giant realm load failed userId=%d reason=%s", player.UserId, tostring(loadResult.reason))
-		)
+	local loadApi = _G._GiantRealmLoadService_QueryAPI
+	local loadAccepted = false
+	if type(loadApi) == "table" and type(loadApi.LoadAndInitialize) == "function" then
+		local loadResult = loadApi.LoadAndInitialize(player.UserId)
+		loadAccepted = type(loadResult) == "table" and loadResult.accepted == true
+		if not loadAccepted then
+			debugWarn(
+				string.format(
+					"Giant realm load failed userId=%d reason=%s",
+					player.UserId,
+					tostring(if type(loadResult) == "table" then loadResult.reason else "load_service_unavailable")
+				)
+			)
+			return
+		end
+	else
+		local loadResult = ProfilePersistenceGateway.LoadGiantRealmProfile(player.UserId)
+		if not loadResult.ok then
+			debugWarn(
+				string.format("Giant realm load failed userId=%d reason=%s", player.UserId, tostring(loadResult.reason))
+			)
+			return
+		end
+		loadAccepted = true
+	end
+
+	if not loadAccepted then
 		return
 	end
 
@@ -917,28 +939,45 @@ local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
 		return
 	end
 
-	local saveResult = ProfilePersistenceGateway.SaveGiantRealmProfile(player.UserId)
-	if not saveResult.ok then
-		debugWarn(
-			string.format(
-				"Giant realm save failed userId=%d reason=%s cleanupReason=%s",
-				player.UserId,
-				tostring(saveResult.reason),
-				reason
+	local loadApi = _G._GiantRealmLoadService_QueryAPI
+	if type(loadApi) == "table" and type(loadApi.SaveAndRelease) == "function" then
+		local releaseResult = loadApi.SaveAndRelease(player.UserId, reason)
+		if type(releaseResult) ~= "table" or releaseResult.accepted ~= true then
+			debugWarn(
+				string.format(
+					"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
+					player.UserId,
+					tostring(
+						if type(releaseResult) == "table" then releaseResult.reason else "release_service_unavailable"
+					),
+					reason
+				)
 			)
-		)
-	end
+		end
+	else
+		local saveResult = ProfilePersistenceGateway.SaveGiantRealmProfile(player.UserId)
+		if not saveResult.ok then
+			debugWarn(
+				string.format(
+					"Giant realm save failed userId=%d reason=%s cleanupReason=%s",
+					player.UserId,
+					tostring(saveResult.reason),
+					reason
+				)
+			)
+		end
 
-	local releaseResult = ProfilePersistenceGateway.ReleaseGiantRealmProfile(player.UserId)
-	if not releaseResult.ok then
-		debugWarn(
-			string.format(
-				"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
-				player.UserId,
-				tostring(releaseResult.reason),
-				reason
+		local releaseResult = ProfilePersistenceGateway.ReleaseGiantRealmProfile(player.UserId)
+		if not releaseResult.ok then
+			debugWarn(
+				string.format(
+					"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
+					player.UserId,
+					tostring(releaseResult.reason),
+					reason
+				)
 			)
-		)
+		end
 	end
 
 	loadedGiantRealmOwnerUserIds[player.UserId] = nil
