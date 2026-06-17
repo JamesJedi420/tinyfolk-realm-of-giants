@@ -16,6 +16,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local RaidBoardConfig = require(Config:WaitForChild("RaidBoardConfig"))
+local RealmEntryPortalConfig = require(Config:WaitForChild("RealmEntryPortalConfig"))
 local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig"))
 local TinyfolkPartyConfig = require(Config:WaitForChild("TinyfolkPartyConfig"))
 local PartyMatchmakingQueueConfig = require(Config:WaitForChild("PartyMatchmakingQueueConfig"))
@@ -83,6 +84,7 @@ type CandidateAction =
 	| "construction_build"
 	| "upgrade_board_hub"
 	| "raid_board_open"
+	| "realm_portal_open"
 	| "rescue_contract_board_open"
 	| "party_hub_open"
 	| "party_matchmaking_hub_open"
@@ -110,6 +112,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	construction_build = 3,
 	upgrade_board_hub = 4,
 	raid_board_open = 4,
+	realm_portal_open = 4,
 	rescue_contract_board_open = 4,
 	party_hub_open = 4,
 	party_matchmaking_hub_open = 4,
@@ -364,6 +367,23 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				mode = "open",
 				payload = {
 					boardId = targetId,
+				},
+			})
+		end
+
+		if
+			isTinyfolk
+			and startsWithPrefix(targetId, RealmEntryPortalConfig.PortalNamePrefix)
+			and distance <= RealmEntryPortalConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "realm_portal_open",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("realm_portal_open"),
+				mode = "open",
+				payload = {
+					portalId = targetId,
 				},
 			})
 		end
@@ -658,6 +678,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "raid_board_open" then
 		localPlayer:SetAttribute(RaidBoardConfig.OpenRequestAttribute, true)
+		return
+	end
+
+	if candidate.action == "realm_portal_open" then
+		localPlayer:SetAttribute(RealmEntryPortalConfig.OpenRequestAttribute, true)
 		return
 	end
 
