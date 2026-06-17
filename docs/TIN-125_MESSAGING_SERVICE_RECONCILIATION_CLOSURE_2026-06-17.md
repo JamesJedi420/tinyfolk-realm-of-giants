@@ -47,6 +47,6 @@ TIN-125 full MessagingService reconciliation shipped.
 
 **Evidence**
 - Kickoff: `docs/TIN-125_MESSAGING_SERVICE_RECONCILIATION_KICKOFF_2026-06-17.md`
-- PR: _(fill on merge)_
+- PR: https://github.com/JamesJedi420/tinyfolk-realm-of-giants/pull/117
 
 Ready for **Done**.
