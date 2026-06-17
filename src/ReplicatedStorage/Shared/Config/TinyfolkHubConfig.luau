@@ -22,6 +22,7 @@ TinyfolkHubConfig.DefaultPartyAnchorId = "PartyHub_A"
 
 TinyfolkHubConfig.Activities = {
 	RaidBoard = "raid_board",
+	RescueContractBoard = "rescue_contract_board",
 	Party = "party",
 	RealmPortal = "realm_portal",
 }

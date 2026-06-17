@@ -179,6 +179,54 @@
       }
     },
     {
+      "name": "RescueContractBoardHub_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [
+          0.46,
+          0.28,
+          0.28
+        ],
+        "Size": [
+          6,
+          5,
+          1.5
+        ],
+        "Position": [
+          0,
+          3.5,
+          178
+        ]
+      }
+    },
+    {
+      "name": "RescueContractBoardHub_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.24,
+          0.28,
+          0.32
+        ],
+        "Size": [
+          10,
+          1,
+          6
+        ],
+        "Position": [
+          0,
+          0.5,
+          178
+        ]
+      }
+    },
+    {
       "name": "RealmPortalHub_A",
       "className": "Part",
       "properties": {

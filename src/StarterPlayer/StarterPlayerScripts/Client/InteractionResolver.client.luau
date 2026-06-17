@@ -16,6 +16,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local RaidBoardConfig = require(Config:WaitForChild("RaidBoardConfig"))
+local RescueContractConfig = require(Config:WaitForChild("RescueContractConfig"))
 local TinyfolkPartyConfig = require(Config:WaitForChild("TinyfolkPartyConfig"))
 local PartyMatchmakingQueueConfig = require(Config:WaitForChild("PartyMatchmakingQueueConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
@@ -82,6 +83,7 @@ type CandidateAction =
 	| "construction_build"
 	| "upgrade_board_hub"
 	| "raid_board_open"
+	| "rescue_contract_board_open"
 	| "party_hub_open"
 	| "party_matchmaking_hub_open"
 	| "worksite_upgrade"
@@ -108,6 +110,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	construction_build = 3,
 	upgrade_board_hub = 4,
 	raid_board_open = 4,
+	rescue_contract_board_open = 4,
 	party_hub_open = 4,
 	party_matchmaking_hub_open = 4,
 	worksite_upgrade = 4,
@@ -358,6 +361,23 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 				targetId = targetId,
 				distance = distance,
 				priority = getPriority("raid_board_open"),
+				mode = "open",
+				payload = {
+					boardId = targetId,
+				},
+			})
+		end
+
+		if
+			isTinyfolk
+			and startsWithPrefix(targetId, RescueContractConfig.BoardNamePrefix)
+			and distance <= RescueContractConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "rescue_contract_board_open",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("rescue_contract_board_open"),
 				mode = "open",
 				payload = {
 					boardId = targetId,
@@ -638,6 +658,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "raid_board_open" then
 		localPlayer:SetAttribute(RaidBoardConfig.OpenRequestAttribute, true)
+		return
+	end
+
+	if candidate.action == "rescue_contract_board_open" then
+		localPlayer:SetAttribute(RescueContractConfig.OpenRequestAttribute, true)
 		return
 	end
 

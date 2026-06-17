@@ -463,6 +463,50 @@ local function canPerformEscapeAction(action: string): (boolean, string?)
 	return true, nil
 end
 
+local function getGlobalTable(name: string): any?
+	local fromEnv = rawget(globalEnv, name)
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, name)
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+	return nil
+end
+
+local function getRescueQueueStoreQueryApi(): any?
+	return getGlobalTable("_RescueContractQueue_QueryAPI")
+end
+
+local function enqueueRescueQueueEntryToStore(queueEntry: any)
+	local storeApi = getRescueQueueStoreQueryApi()
+	if storeApi == nil or type(storeApi.EnqueueQueueEntry) ~= "function" then
+		return
+	end
+	pcall(storeApi.EnqueueQueueEntry, queueEntry)
+end
+
+local function removeRescueQueueStoreReceipt(receiptId: any)
+	if type(receiptId) ~= "string" or receiptId == "" then
+		return
+	end
+	local storeApi = getRescueQueueStoreQueryApi()
+	if storeApi == nil or type(storeApi.RemoveStoreReceipt) ~= "function" then
+		return
+	end
+	pcall(storeApi.RemoveStoreReceipt, receiptId)
+end
+
+local function removeRescueQueueStoreReceiptForEntry(queueEntry: any)
+	if type(queueEntry) ~= "table" then
+		return
+	end
+	removeRescueQueueStoreReceipt(queueEntry.storeReceiptId)
+end
+
 local function getRescueHandoffQueryApi(): any?
 	local globalValue: any = globalEnv
 	if type(globalValue) ~= "table" then
@@ -884,6 +928,7 @@ local function pruneExpiredQueueEntries(at: number)
 	local hasHandoffExpiryHook = handoffApi ~= nil and type(handoffApi.OnRescueQueueExpired) == "function"
 
 	for _, expiredEntry in ipairs(expiredEntries) do
+		removeRescueQueueStoreReceiptForEntry(expiredEntry)
 		emitRescueQueueFanout("rescue_queue_expired", {
 			queueEntryId = expiredEntry.queueEntryId,
 			capturedUserId = expiredEntry.capturedUserId,
@@ -1017,6 +1062,7 @@ local function publishRescueQueueEntry(contract: any, target: Player?, at: numbe
 	}
 
 	rescueQueueState = RescueContractQueueState.UpsertPending(rescueQueueState, queueEntry)
+	enqueueRescueQueueEntryToStore(queueEntry)
 	emitRescueQueueFanout("rescue_queue_published", {
 		queueEntryId = queueEntry.queueEntryId,
 		operationId = queueEntry.operationId,
@@ -1400,6 +1446,8 @@ local function acceptRescueQueueEntry(acceptedByUserId: any, queueEntryId: any, 
 		return { accepted = false, reason = "idempotency_mark_completed_failed" }
 	end
 
+	removeRescueQueueStoreReceiptForEntry(queueEntry)
+
 	emitRescueQueueFanout("rescue_queue_accepted", {
 		queueEntryId = queueEntry.queueEntryId,
 		operationId = queueEntry.operationId,
@@ -1443,6 +1491,58 @@ local function listRescueQueueEntriesForHub(limit: any, at: number?): { any }
 		table.insert(limited, entries[index])
 	end
 	return limited
+end
+
+local function ingestQueueEntry(entry: any, storeReceiptId: any, at: number?): any
+	local resolvedNow = if type(at) == "number" then at else now()
+	if type(entry) ~= "table" then
+		return { accepted = false, reason = "entry_invalid" }
+	end
+
+	local validation = RescueContractQueueState.ValidateEntry(entry)
+	if validation.ok ~= true or validation.entry == nil then
+		return { accepted = false, reason = validation.reason or "entry_invalid" }
+	end
+
+	local queueEntry = validation.entry
+	if queueEntry.status ~= "pending" then
+		return { accepted = false, reason = "queue_entry_not_pending" }
+	end
+	if RescueContractQueueState.IsExpired(queueEntry, resolvedNow) then
+		return { accepted = false, reason = "queue_entry_expired" }
+	end
+
+	local existingEntry = RescueContractQueueState.GetEntry(rescueQueueState, queueEntry.queueEntryId)
+	if existingEntry ~= nil and existingEntry.status ~= "pending" then
+		return { accepted = false, reason = "queue_entry_not_pending" }
+	end
+
+	local nextEntry = {
+		queueEntryId = queueEntry.queueEntryId,
+		operationId = queueEntry.operationId,
+		capturedUserId = queueEntry.capturedUserId,
+		realmId = queueEntry.realmId,
+		sessionId = queueEntry.sessionId,
+		rewardHint = queueEntry.rewardHint,
+		dangerRating = queueEntry.dangerRating,
+		expiration = queueEntry.expiration,
+		rescuerUserId = queueEntry.rescuerUserId,
+		targetRealmOwnerUserId = queueEntry.targetRealmOwnerUserId,
+		entryRouteId = queueEntry.entryRouteId,
+		entryRouteKind = queueEntry.entryRouteKind,
+		createdAt = queueEntry.createdAt,
+		status = "pending",
+		storeReceiptId = if type(storeReceiptId) == "string" and storeReceiptId ~= ""
+			then storeReceiptId
+			else if existingEntry ~= nil then existingEntry.storeReceiptId else nil,
+	}
+
+	rescueQueueState = RescueContractQueueState.UpsertPending(rescueQueueState, nextEntry)
+	return {
+		accepted = true,
+		reason = "accepted",
+		queueEntryId = nextEntry.queueEntryId,
+	}
 end
 
 local function buildPersistenceState(): any
@@ -1675,6 +1775,9 @@ globalEnv._RescueContractService_QueryAPI = {
 	end,
 	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
 		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
+	end,
+	IngestQueueEntry = function(entry: any, storeReceiptId: any, at: number?): any
+		return ingestQueueEntry(entry, storeReceiptId, at)
 	end,
 	GetAdmissionIngressDiagnostics = function(): any
 		return {

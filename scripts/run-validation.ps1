@@ -76,6 +76,8 @@ if ($ChangedOnly) {
         'src/ServerScriptService/Services/GiantBuildModeService.server.luau'
         'src/ServerScriptService/Services/ShrineService.server.luau'
         'src/ServerScriptService/Services/RescueContractService.server.luau'
+        'src/ServerScriptService/Services/RescueContractQueueService.luau'
+        'src/ReplicatedStorage/Shared/GiantRealm/RescueContractHubState.luau'
         'src/ServerScriptService/Services/ResourceFlowState.luau'
         'tests/profile_persistence_lifecycle.spec.luau'
         'tests/giant_build_mode_service_runtime_entrypoint.spec.luau'

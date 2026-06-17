@@ -62,6 +62,9 @@ function TinyfolkHubState.ResolveActivityEligibility(
 	if activity == TinyfolkHubConfig.Activities.RaidBoard then
 		return true, "accepted"
 	end
+	if activity == TinyfolkHubConfig.Activities.RescueContractBoard then
+		return true, "accepted"
+	end
 	if activity == TinyfolkHubConfig.Activities.Party then
 		return true, "accepted"
 	end
