@@ -367,6 +367,10 @@ function TinyfolkPartyState.ValidateRaidBoardQueue(party: PartyRecord, requester
 	return true, "accepted"
 end
 
+function TinyfolkPartyState.ValidateMatchmakingQueue(party: PartyRecord, requesterUserId: number): (boolean, string)
+	return TinyfolkPartyState.ValidateRaidBoardQueue(party, requesterUserId)
+end
+
 function TinyfolkPartyState.ResolveTransferOutcome(input: any): TransferOutcomeResult
 	if type(input) ~= "table" or type(input.party) ~= "table" or type(input.transferredUserIds) ~= "table" then
 		return { accepted = false, reason = "input_invalid", party = nil, dissolved = false }

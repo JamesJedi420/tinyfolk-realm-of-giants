@@ -663,6 +663,70 @@ local function resolveRaidBoardQueueContext(userId: number): any
 	}
 end
 
+local function resolveMatchmakingQueueContext(userId: number): any
+	if not isPositiveInteger(userId) then
+		return {
+			accepted = false,
+			reason = "input_invalid",
+		}
+	end
+
+	local party = getPartyForUserId(userId)
+	if party == nil then
+		return {
+			accepted = false,
+			reason = "party_required",
+		}
+	end
+
+	local queueAccepted, queueReason = TinyfolkPartyState.ValidateMatchmakingQueue(party, userId)
+	if queueAccepted ~= true then
+		return {
+			accepted = false,
+			reason = queueReason,
+			partyId = party.partyId,
+			partyMemberUserIds = party.memberUserIds,
+		}
+	end
+
+	local resolverApi = getPartyResolverApi()
+	if type(resolverApi) == "table" and type(resolverApi.ResolvePartyMemberUserIds) == "function" then
+		local resolvedMembers = resolverApi.ResolvePartyMemberUserIds(party.partyId)
+		if type(resolvedMembers) ~= "table" or #resolvedMembers ~= #party.memberUserIds then
+			return {
+				accepted = false,
+				reason = "party_members_invalid",
+				partyId = party.partyId,
+				partyMemberUserIds = party.memberUserIds,
+			}
+		end
+		for _, memberUserId in ipairs(party.memberUserIds) do
+			local found = false
+			for _, resolvedUserId in ipairs(resolvedMembers) do
+				if resolvedUserId == memberUserId then
+					found = true
+					break
+				end
+			end
+			if not found then
+				return {
+					accepted = false,
+					reason = "party_members_invalid",
+					partyId = party.partyId,
+					partyMemberUserIds = party.memberUserIds,
+				}
+			end
+		end
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		partyId = party.partyId,
+		partyMemberUserIds = party.memberUserIds,
+	}
+end
+
 local function handleTransferOutcome(input: any): any
 	if type(input) ~= "table" then
 		return { accepted = false, reason = "input_invalid" }
@@ -749,6 +813,9 @@ globalEnv._TinyfolkPartyService_QueryAPI = {
 	end,
 	ResolveRaidBoardQueueContext = function(userId: number): any
 		return resolveRaidBoardQueueContext(userId)
+	end,
+	ResolveMatchmakingQueueContext = function(userId: number): any
+		return resolveMatchmakingQueueContext(userId)
 	end,
 	GetDiagnostics = function(): any
 		return cloneDiagnostics()
