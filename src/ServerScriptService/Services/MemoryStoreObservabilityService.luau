@@ -1,5 +1,9 @@
 --!strict
 
+local MemoryStoreCallObservability = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreCallObservability"))
+	else (require :: any)("./MemoryStoreCallObservability")
+
 local MemoryStoreObservabilityService: any = {}
 local globalEnv: any = getfenv()
 
@@ -178,6 +182,7 @@ function MemoryStoreObservabilityService.GetSnapshot(_input: any?): any
 	local admissionAny: any = admissionDiagnostics
 	local liveAny: any = liveRegistryDiagnostics
 	local transferAny: any = transferLockDiagnostics
+	local memoryStoreCallDiagnostics = MemoryStoreCallObservability.GetDiagnostics()
 
 	return {
 		accepted = accepted,
@@ -226,6 +231,14 @@ function MemoryStoreObservabilityService.GetSnapshot(_input: any?): any
 						then admissionAny.totalRetryDeferred
 						else 0,
 				},
+			},
+			memoryStoreCalls = {
+				throttledCount = memoryStoreCallDiagnostics.throttledCount,
+				partitionLimitCount = memoryStoreCallDiagnostics.partitionLimitCount,
+				otherFailureCount = memoryStoreCallDiagnostics.otherFailureCount,
+				totalFailures = memoryStoreCallDiagnostics.totalFailures,
+				lastReason = memoryStoreCallDiagnostics.lastReason,
+				lastOperation = memoryStoreCallDiagnostics.lastOperation,
 			},
 			reasons = reasons,
 		},

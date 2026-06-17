@@ -164,4 +164,39 @@ local threwNamedUpdate = pcall(function()
 end)
 assertFalse(threwNamedUpdate, "invalid transform rejects named update")
 
+local MemoryStoreCallObservability = require("../src/ServerScriptService/Services/MemoryStoreCallObservability")
+MemoryStoreCallObservability.ResetForTests()
+local observedMessages: { string } = {}
+MemoryStoreCallObservability.ConfigureForTests({
+	warn = function(message: string)
+		table.insert(observedMessages, message)
+	end,
+})
+
+local throttledService = makeMemoryStoreService()
+throttledService.GetQueue = function(_self: any, _queueName: string)
+	return {
+		AddAsync = function()
+			error("MemoryStore request was throttled. Try again.")
+		end,
+		ReadAsync = function()
+			return {}
+		end,
+		RemoveAsync = function() end,
+	}
+end
+
+local throttledAdapter = MemoryStoreAdapter.Create({
+	memoryStoreService = throttledService,
+	activeRealmCapacityMapName = "tin_active_realm_capacity_v1",
+})
+assertTrue(type(throttledAdapter) == "table", "throttled adapter created")
+
+local throttledAddOk = pcall(function()
+	throttledAdapter.QueueAddAsync("tin_realm_admission_queue_v1", "payload", 600, 100)
+end)
+assertFalse(throttledAddOk, "throttled queue add propagates failure")
+assertEqual(#observedMessages, 1, "throttled queue add logs once")
+assertEqual(MemoryStoreCallObservability.GetDiagnostics().throttledCount, 1, "adapter records throttled failure")
+
 print("memory_store_adapter: all checks passed")

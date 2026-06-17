@@ -1,5 +1,9 @@
 --!strict
 
+local MemoryStoreCallObservability = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("MemoryStoreCallObservability"))
+	else (require :: any)("./MemoryStoreCallObservability")
+
 local MemoryStoreAdapter: any = {}
 
 local function isFiniteNumber(value: any): boolean
@@ -57,6 +61,15 @@ local function hasMethod(target: any, methodName: string): boolean
 		return false
 	end
 	return type(member) == "function"
+end
+
+local function invokeObserved(operation: string, structureHint: string?, invoke: () -> ...any): ...any
+	local results = table.pack(pcall(invoke))
+	if results[1] ~= true then
+		MemoryStoreCallObservability.RecordFailure(operation, structureHint, results[2])
+		error(results[2])
+	end
+	return table.unpack(results, 2, results.n)
 end
 
 function MemoryStoreAdapter.Create(config: any?): any?
@@ -178,7 +191,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		if queue == nil or type(queue.AddAsync) ~= "function" then
 			error("queue_unavailable")
 		end
-		queue:AddAsync(value, ttlSeconds, priority)
+		invokeObserved("QueueAddAsync", queueName, function()
+			queue:AddAsync(value, ttlSeconds, priority)
+		end)
 	end
 
 	function adapter.QueueReadAsync(queueName: any, count: any, allOrNothing: any, waitTimeout: any): { any }
@@ -200,7 +215,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			error("queue_unavailable")
 		end
 
-		local items = queue:ReadAsync(count, allOrNothing, waitTimeout)
+		local items = invokeObserved("QueueReadAsync", queueName, function()
+			return queue:ReadAsync(count, allOrNothing, waitTimeout)
+		end)
 		if type(items) ~= "table" then
 			error("queue_read_result_invalid")
 		end
@@ -219,7 +236,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		if queue == nil or type(queue.RemoveAsync) ~= "function" then
 			error("queue_unavailable")
 		end
-		queue:RemoveAsync(receiptId)
+		invokeObserved("QueueRemoveAsync", queueName, function()
+			queue:RemoveAsync(receiptId)
+		end)
 	end
 
 	function adapter.GetAsync(key: any): any
@@ -232,7 +251,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			error("hash_map_unavailable")
 		end
 
-		return hashMap:GetAsync(key)
+		return invokeObserved("HashMapGetAsync", activeRealmCapacityMapName, function()
+			return hashMap:GetAsync(key)
+		end)
 	end
 
 	function adapter.UpdateAsync(key: any, transform: any, ttlSeconds: any): any
@@ -251,7 +272,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			error("hash_map_unavailable")
 		end
 
-		return hashMap:UpdateAsync(key, transform, ttlSeconds)
+		return invokeObserved("HashMapUpdateAsync", activeRealmCapacityMapName, function()
+			return hashMap:UpdateAsync(key, transform, ttlSeconds)
+		end)
 	end
 
 	function adapter.HashMapGetAsync(mapName: any, key: any): any
@@ -267,7 +290,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			error("hash_map_unavailable")
 		end
 
-		return hashMap:GetAsync(key)
+		return invokeObserved("HashMapGetAsync", mapName, function()
+			return hashMap:GetAsync(key)
+		end)
 	end
 
 	function adapter.HashMapUpdateAsync(mapName: any, key: any, transform: any, ttlSeconds: any): any
@@ -289,7 +314,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 			error("hash_map_unavailable")
 		end
 
-		return hashMap:UpdateAsync(key, transform, ttlSeconds)
+		return invokeObserved("HashMapUpdateAsync", mapName, function()
+			return hashMap:UpdateAsync(key, transform, ttlSeconds)
+		end)
 	end
 
 	function adapter.SortedMapSetAsync(mapName: any, key: any, value: any, sortKey: any, ttlSeconds: any)
@@ -313,7 +340,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		if sortedMap == nil or type(sortedMap.SetAsync) ~= "function" then
 			error("sorted_map_unavailable")
 		end
-		sortedMap:SetAsync(key, value, ttlSeconds, sortKey)
+		invokeObserved("SortedMapSetAsync", mapName, function()
+			sortedMap:SetAsync(key, value, ttlSeconds, sortKey)
+		end)
 	end
 
 	function adapter.SortedMapGetAsync(mapName: any, key: any): any
@@ -328,7 +357,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		if sortedMap == nil or type(sortedMap.GetAsync) ~= "function" then
 			error("sorted_map_unavailable")
 		end
-		return sortedMap:GetAsync(key)
+		return invokeObserved("SortedMapGetAsync", mapName, function()
+			return sortedMap:GetAsync(key)
+		end)
 	end
 
 	function adapter.SortedMapRemoveAsync(mapName: any, key: any)
@@ -343,7 +374,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		if sortedMap == nil or type(sortedMap.RemoveAsync) ~= "function" then
 			error("sorted_map_unavailable")
 		end
-		sortedMap:RemoveAsync(key)
+		invokeObserved("SortedMapRemoveAsync", mapName, function()
+			sortedMap:RemoveAsync(key)
+		end)
 	end
 
 	function adapter.SortedMapGetRangeAsync(mapName: any, direction: any, count: any, exclusiveStartKey: any?): { any }
@@ -368,7 +401,9 @@ function MemoryStoreAdapter.Create(config: any?): any?
 		local sortDirection = if direction == "descending"
 			then Enum.SortDirection.Descending
 			else Enum.SortDirection.Ascending
-		local items = sortedMap:GetRangeAsync(sortDirection, count, exclusiveStartKey)
+		local items = invokeObserved("SortedMapGetRangeAsync", mapName, function()
+			return sortedMap:GetRangeAsync(sortDirection, count, exclusiveStartKey)
+		end)
 		if type(items) ~= "table" then
 			error("sorted_map_range_result_invalid")
 		end

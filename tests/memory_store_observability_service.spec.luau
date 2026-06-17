@@ -106,4 +106,15 @@ assertEqual(
 	"transfer lock unavailable reason"
 )
 
+local MemoryStoreCallObservability = require("../src/ServerScriptService/Services/MemoryStoreCallObservability")
+MemoryStoreCallObservability.ResetForTests()
+MemoryStoreCallObservability.RecordFailure("QueueReadAsync", "tin_realm_admission_queue_v1", "request was throttled")
+local withCallDiagnostics = MemoryStoreObservabilityService.GetSnapshot()
+assertEqual(withCallDiagnostics.snapshot.memoryStoreCalls.throttledCount, 1, "aggregate memory store throttled count")
+assertEqual(
+	withCallDiagnostics.snapshot.memoryStoreCalls.lastReason,
+	"memory_store_throttled",
+	"aggregate memory store last reason"
+)
+
 print("memory_store_observability_service: all checks passed")
