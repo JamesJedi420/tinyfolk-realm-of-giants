@@ -29,8 +29,16 @@ Let Tinyfolk parties queue for shared hub activities **before** a target realm i
 
 - Cross-server party persistence.
 - TIN-14 hub district growth.
-- Rich matchmaking client UI (remotes + notify only; party panel integration deferred).
+- Rich matchmaking UX polish (skillBand/toolTier tuning, animations).
 - Rescue contract board discoverability UI (alternate product path).
+
+## Client slice (2026-06-17 follow-up)
+
+- `PartyMatchmakingHubPresentation` — deterministic status/activity copy for enqueue, poll, and notify payloads.
+- `PartyMatchmakingClient` — wires `PartyMatchmakingEnqueueRequest` / `PollRequest` / `Notify` with activity pick, join queue, and pending poll loop.
+- `InteractionResolver` — F-key opens matchmaking panel via `PartyMatchmakingOpenRequested` at `PartyMatchmakingHub_*` anchors.
+- `TinyfolkPartyClient` — party panel **Open Matchmaking** button sets the same open attribute.
+- Map anchor `PartyMatchmakingHub_A` in `TinyfolkWorld` hub district.
 
 ## Queue semantics
 
@@ -46,6 +54,7 @@ Let Tinyfolk parties queue for shared hub activities **before** a target realm i
 
 ```powershell
 .\scripts\run-validation.ps1 -ChangedOnly
+lune run tests/party_matchmaking_hub_presentation.spec.luau
 lune run tests/party_matchmaking_queue_state.spec.luau
 lune run tests/party_matchmaking_queue_service_runtime_entrypoint.spec.luau
 lune run tests/party_matchmaking_hub_service_runtime_entrypoint.spec.luau
