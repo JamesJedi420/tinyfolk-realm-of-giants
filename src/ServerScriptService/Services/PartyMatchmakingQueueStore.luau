@@ -177,13 +177,10 @@ function PartyMatchmakingQueueStore.Create(deps: any?): any
 		if type(structurePolicy) ~= "table" or type(structurePolicy.MakeKey) ~= "function" then
 			return failure("policy_unavailable", nil)
 		end
-		local queueKey, queueKeyReason = structurePolicy.MakeKey(
-			STRUCTURE_ID,
-			{
-				sanitizeKeyPart(inputResult.entry.partyId),
-				sanitizeKeyPart(inputResult.entry.operationId),
-			}
-		)
+		local queueKey, queueKeyReason = structurePolicy.MakeKey(STRUCTURE_ID, {
+			sanitizeKeyPart(inputResult.entry.partyId),
+			sanitizeKeyPart(inputResult.entry.operationId),
+		})
 		if queueKey == nil then
 			return failure(queueKeyReason or "queue_key_invalid", nil)
 		end

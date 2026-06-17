@@ -145,13 +145,8 @@ function PartyMatchmakingQueueProcessor.Create(deps: any?): any
 
 	local function resolveMatchTarget(entry: any, availability: { any }): (string?, string?)
 		if type(selectMatchmakingTarget) == "function" then
-			local ok, snapshot = pcall(
-				selectMatchmakingTarget,
-				availability,
-				entry.desiredActivity,
-				entry.skillBand,
-				entry.toolTier
-			)
+			local ok, snapshot =
+				pcall(selectMatchmakingTarget, availability, entry.desiredActivity, entry.skillBand, entry.toolTier)
 			if ok and type(snapshot) == "table" and type(snapshot.realmId) == "string" and snapshot.realmId ~= "" then
 				return snapshot.realmId, "matcher"
 			end

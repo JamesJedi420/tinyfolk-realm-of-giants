@@ -181,12 +181,7 @@ local pollRequestRemote = ensureRemoteEvent(remotesFolder, PartyMatchmakingQueue
 local pollResponseRemote = ensureRemoteEvent(remotesFolder, PartyMatchmakingQueueConfig.Remotes.PollResponse)
 local notifyRemote = ensureRemoteEvent(remotesFolder, PartyMatchmakingQueueConfig.Remotes.Notify)
 
-local function handleEnqueueRequest(
-	player: Player,
-	payload: any,
-	responseRemote: RemoteEvent,
-	at: number?
-): any
+local function handleEnqueueRequest(player: Player, payload: any, responseRemote: RemoteEvent, at: number?): any
 	local resolvedAt = if type(at) == "number" then at else now()
 	diagnostics.enqueueAttempts += 1
 
@@ -349,7 +344,11 @@ local function handlePollRequest(player: Player, payload: any, responseRemote: R
 	end
 
 	if
-		isCoolingDown(lastPollRequestAtByUserId[player.UserId], resolvedAt, PartyMatchmakingQueueConfig.PollCoalesceSeconds)
+		isCoolingDown(
+			lastPollRequestAtByUserId[player.UserId],
+			resolvedAt,
+			PartyMatchmakingQueueConfig.PollCoalesceSeconds
+		)
 	then
 		diagnostics.pollFailed += 1
 		diagnostics.lastReason = "rate_limited"

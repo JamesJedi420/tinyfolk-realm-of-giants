@@ -156,7 +156,11 @@ function LiveRealmHubRouting.SelectMatchmakingTarget(
 				if distance < bestDistance then
 					bestDistance = distance
 					bestSnapshot = snapshot
-				elseif distance == bestDistance and bestSnapshot ~= nil and compareRealmTieBreak(snapshot, bestSnapshot) then
+				elseif
+					distance == bestDistance
+					and bestSnapshot ~= nil
+					and compareRealmTieBreak(snapshot, bestSnapshot)
+				then
 					bestSnapshot = snapshot
 				elseif bestSnapshot == nil then
 					bestSnapshot = snapshot

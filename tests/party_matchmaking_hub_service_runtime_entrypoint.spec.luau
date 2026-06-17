@@ -90,7 +90,11 @@ addChild(remotesFolder, "PartyMatchmakingPollResponse", makeRemoteEvent("PartyMa
 addChild(remotesFolder, "PartyMatchmakingNotify", makeRemoteEvent("PartyMatchmakingNotify"))
 
 local configFolder = makeNode("Config", "Folder")
-addChild(configFolder, "PartyMatchmakingQueueConfig", "../../ReplicatedStorage/Shared/Config/PartyMatchmakingQueueConfig")
+addChild(
+	configFolder,
+	"PartyMatchmakingQueueConfig",
+	"../../ReplicatedStorage/Shared/Config/PartyMatchmakingQueueConfig"
+)
 addChild(configFolder, "TinyfolkHubConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkHubConfig")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 
