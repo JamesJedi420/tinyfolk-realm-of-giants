@@ -374,6 +374,17 @@ function NotificationReconciliationService.ReconcileRescueQueue(input: any?): an
 	local limit = if type(inputAny) == "table" and isPositiveInteger(inputAny.limit)
 		then inputAny.limit
 		else DEFAULT_RESCUE_QUEUE_LIMIT
+
+	local queueApi = resolveDependency("rescueContractQueueApi", "_RescueContractQueue_QueryAPI")
+	if type(queueApi) == "table" and type((queueApi :: any).ReconcileFromStore) == "function" then
+		pcall(function()
+			(queueApi :: any).ReconcileFromStore({
+				at = at,
+				limit = limit,
+			})
+		end)
+	end
+
 	local api = resolveDependency("rescueHubApi", "_RescueContractHubSurface_QueryAPI")
 	if type(api) ~= "table" or type((api :: any).GetPendingRescueQueueEntries) ~= "function" then
 		recordChannel("rescueQueue", false, "rescue_queue_api_unavailable", nil, nil, at)

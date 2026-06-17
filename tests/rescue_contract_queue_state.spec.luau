@@ -15,6 +15,7 @@ end
 local function makePendingEntry(overrides: any?): any
 	local entry = {
 		queueEntryId = "queue_1",
+		operationId = "rescue_accept_queue_1",
 		capturedUserId = 2102,
 		realmId = "giant_realm_9001",
 		sessionId = "session_a",

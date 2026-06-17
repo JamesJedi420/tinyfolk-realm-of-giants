@@ -18,9 +18,30 @@ RescueContractConfig.RescueEntryRouteKind = "RescueEntry"
 RescueContractConfig.QueueRewardHint = "rescue_contract"
 RescueContractConfig.QueueDangerRating = 0.5
 RescueContractConfig.RefreshCoalesceSeconds = 1
+RescueContractConfig.ReconcileBatchSize = 50
+RescueContractConfig.DefaultListLimit = 20
+RescueContractConfig.MaxListLimit = 50
+RescueContractConfig.HubRequestCooldownSeconds = 0.5
+
+RescueContractConfig.BoardNamePrefix = "RescueContractBoardHub_"
+RescueContractConfig.DefaultBoardId = "RescueContractBoardHub_A"
+RescueContractConfig.InteractionRangeStuds = 16
+RescueContractConfig.OpenRequestAttribute = "RescueContractBoardOpenRequested"
+RescueContractConfig.DebugOpenKeyName = "R"
 
 RescueContractConfig.Remotes = {
 	Notify = "RescueContractHubNotify",
+	ListRequest = "RescueContractBoardListRequest",
+	ListResponse = "RescueContractBoardListResponse",
+	AcceptRequest = "RescueContractBoardAcceptRequest",
+	AcceptResponse = "RescueContractBoardAcceptResponse",
+}
+
+RescueContractConfig.RewardTierBuckets = {
+	{ minDanger = 0.75, label = "High Risk" },
+	{ minDanger = 0.5, label = "Elevated" },
+	{ minDanger = 0.25, label = "Moderate" },
+	{ minDanger = 0.0, label = "Lower" },
 }
 
 RescueContractConfig.StateAttributes = {

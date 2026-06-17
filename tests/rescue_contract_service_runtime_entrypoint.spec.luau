@@ -800,6 +800,31 @@ end
 
 do
 	resetState()
+	local ingestResult = rescueApi.IngestQueueEntry({
+		queueEntryId = "ingest_queue_1",
+		operationId = "rescue_accept_ingest_queue_1",
+		capturedUserId = targetThree.UserId,
+		realmId = "giant_realm_9003",
+		sessionId = "session_ingest",
+		rewardHint = "rescue_contract",
+		dangerRating = 0.4,
+		expiration = 300,
+		rescuerUserId = rescuer.UserId,
+		targetRealmOwnerUserId = 9003,
+		entryRouteId = "RescueEntryRoute_9003",
+		entryRouteKind = "RescueEntry",
+		createdAt = 140,
+		status = "pending",
+	}, "receipt_ingest_1", 140.1)
+	assertTrue(ingestResult.accepted, "ingest external queue entry accepted")
+	local ingestedEntries = rescueApi.GetRescueQueueEntries(140.2)
+	assertEqual(#ingestedEntries, 1, "ingested queue entry listed pending")
+	assertEqual(ingestedEntries[1].queueEntryId, "ingest_queue_1", "ingested queue entry id")
+	assertEqual(ingestedEntries[1].storeReceiptId, "receipt_ingest_1", "ingested queue entry receipt id")
+end
+
+do
+	resetState()
 	local accepted = rescueApi.RequestRescueContract(rescuer.UserId, target.UserId, 142)
 	assertTrue(accepted.accepted, "accepted before idempotency completion failure check")
 
