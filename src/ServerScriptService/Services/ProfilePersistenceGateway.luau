@@ -144,6 +144,7 @@ export type GatewayResult = {
 	retryable: boolean?,
 	profileKey: string?,
 	data: any?,
+	meta: any?,
 }
 
 export type ProfileOwnerLayer = {
@@ -166,10 +167,11 @@ local function makeFailure(operation: string, reason: string, profileKey: string
 		retryable = retryable,
 		profileKey = profileKey,
 		data = nil,
+		meta = nil,
 	}
 end
 
-local function makeSuccess(operation: string, profileKey: string?, data: any?): GatewayResult
+local function makeSuccess(operation: string, profileKey: string?, data: any?, meta: any?): GatewayResult
 	return {
 		ok = true,
 		operation = operation,
@@ -177,6 +179,7 @@ local function makeSuccess(operation: string, profileKey: string?, data: any?): 
 		retryable = nil,
 		profileKey = profileKey,
 		data = data,
+		meta = meta,
 	}
 end
 
@@ -640,7 +643,7 @@ function ProfilePersistenceGateway.LoadGiantRealmProfile(ownerUserId: any): Gate
 		return makeFailure("LoadGiantRealmProfile", applyReason or "apply_save_snapshot_failed", key, false)
 	end
 
-	return makeSuccess("LoadGiantRealmProfile", key, ownerResult.data)
+	return makeSuccess("LoadGiantRealmProfile", key, ownerResult.data, ownerResult.meta)
 end
 
 function ProfilePersistenceGateway.ReleaseGiantRealmProfile(ownerUserId: any): GatewayResult

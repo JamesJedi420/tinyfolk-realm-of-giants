@@ -9,6 +9,7 @@ type GatewayResult = {
 	retryable: boolean?,
 	profileKey: string?,
 	data: any?,
+	meta: any?,
 }
 
 export type CreateConfig = {
@@ -37,10 +38,11 @@ local function makeFailure(operation: string, reason: string, profileKey: string
 		retryable = retryable,
 		profileKey = profileKey,
 		data = nil,
+		meta = nil,
 	}
 end
 
-local function makeSuccess(operation: string, profileKey: string?, data: any?): GatewayResult
+local function makeSuccess(operation: string, profileKey: string?, data: any?, meta: any?): GatewayResult
 	return {
 		ok = true,
 		operation = operation,
@@ -48,6 +50,7 @@ local function makeSuccess(operation: string, profileKey: string?, data: any?): 
 		retryable = nil,
 		profileKey = profileKey,
 		data = data,
+		meta = meta,
 	}
 end
 
@@ -165,6 +168,15 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 			return true, nil
 		end
 
+	local GiantRealmLoadState = if script ~= nil and script.Parent ~= nil
+		then require(
+			game:GetService("ReplicatedStorage")
+				:WaitForChild("Shared")
+				:WaitForChild("GiantRealm")
+				:WaitForChild("GiantRealmLoadState")
+		)
+		else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/GiantRealmLoadState")
+
 	local ownerLayer = {}
 
 	function ownerLayer.LoadPlayerProfile(profileKey: string, userId: number): GatewayResult
@@ -250,7 +262,22 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 		end
 
 		local loadedData = profile.Data
-		local validLoadedRoot, loadedReason = validateGiantRealmSaveRoot(loadedData)
+		local normalized = GiantRealmLoadState.ResolveSaveRootForSession(loadedData, ownerUserId)
+		if normalized.accepted ~= true or type(normalized.saveRoot) ~= "table" then
+			profile:EndSession()
+			return makeFailure(
+				"LoadGiantRealmProfile",
+				normalized.reason or "giant_realm_save_root_invalid",
+				profileKey,
+				false
+			)
+		end
+
+		if normalized.recovered == true then
+			profile.Data = cloneTable(normalized.saveRoot)
+		end
+
+		local validLoadedRoot, loadedReason = validateGiantRealmSaveRoot(profile.Data)
 		if not validLoadedRoot then
 			profile:EndSession()
 			return makeFailure(
@@ -264,7 +291,11 @@ function ProfileStoreOwnerLayer.Create(config: any): ProfileOwnerLayer
 		activeGiantRealmProfilesByUserId[ownerUserId] = profile
 		activeGiantRealmUserIdByProfileKey[profileKey] = ownerUserId
 
-		return makeSuccess("LoadGiantRealmProfile", profileKey, loadedData)
+		return makeSuccess("LoadGiantRealmProfile", profileKey, profile.Data, {
+			loadOutcome = normalized.loadOutcome,
+			recovered = normalized.recovered,
+			recoveryReason = normalized.reason,
+		})
 	end
 
 	function ownerLayer.SaveGiantRealmProfile(profileKey: string, ownerUserId: number, saveRoot: any): GatewayResult
