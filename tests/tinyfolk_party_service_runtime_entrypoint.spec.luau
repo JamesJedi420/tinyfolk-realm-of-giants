@@ -2,6 +2,7 @@
 --!nolint BuiltinGlobalWrite
 
 local MockPlayer = require("../tests/mocks/MockPlayer")
+local TinyfolkPartyConfig = require("../src/ReplicatedStorage/Shared/Config/TinyfolkPartyConfig")
 
 local function assertEqual(actual: any, expected: any, label: string)
 	if actual ~= expected then
@@ -250,10 +251,17 @@ assertTrue(reconnectJoin.accepted, "reconnect setup join accepted")
 
 playersService.PlayerRemoving:Fire(member)
 local afterDisconnectSnapshot = api.GetPartySnapshot(leader.UserId)
-assertEqual(afterDisconnectSnapshot.accepted, true, "disconnect keeps party alive for remaining members")
-assertEqual(#afterDisconnectSnapshot.memberUserIds, 1, "disconnect removes leaving member")
-assertEqual(afterDisconnectSnapshot.memberUserIds[1], 5001, "disconnect keeps leader as remaining member")
+assertTrue(afterDisconnectSnapshot.accepted, "disconnect keeps party alive for remaining members")
+assertEqual(#afterDisconnectSnapshot.memberUserIds, 2, "disconnect keeps leaving member in party during grace")
+assertEqual(afterDisconnectSnapshot.memberUserIds[1], 5001, "disconnect keeps leader in party")
+assertEqual(afterDisconnectSnapshot.memberUserIds[2], 5002, "disconnect keeps disconnected member in party")
 assertTrue(type(api.GetPendingDisconnectExpiryForTests(member.UserId)) == "number", "disconnect grace tracked")
+
+api.ExpirePendingDisconnectsForTests(100 + TinyfolkPartyConfig.DisconnectGraceSeconds + 1)
+local afterGraceSnapshot = api.GetPartySnapshot(leader.UserId)
+assertEqual(#afterGraceSnapshot.memberUserIds, 1, "grace expiry removes disconnected member")
+assertEqual(afterGraceSnapshot.memberUserIds[1], 5001, "grace expiry keeps connected leader")
+assertEqual(api.GetPendingDisconnectExpiryForTests(member.UserId), nil, "grace expiry clears pending marker")
 
 local transferInvite = api.HandleActionRequestForTests(leader, {
 	action = "invite",

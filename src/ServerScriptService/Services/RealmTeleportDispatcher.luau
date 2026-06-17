@@ -414,7 +414,61 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		end
 
 		local handoffTokensByUserId: { [number]: string } = {}
+		local payloadFailureUserIds: { [number]: boolean } = {}
+		local tinyfolkToolLoadoutByUserId: { [number]: any } = {}
+		local tinyfolkToolPayloadFailures: { any } = {}
+		local maxPayloadFailureDiagnostics = 5
+
+		if type(tinyfolkToolLoadoutApi) == "table" and type(tinyfolkToolLoadoutApi.BuildEntryPayload) == "function" then
+			local tinyfolkToolApiAny: any = tinyfolkToolLoadoutApi
+			for _, player in ipairs(players) do
+				if isPositiveInteger(player.UserId) and type(player.GetAttribute) == "function" then
+					local role = player:GetAttribute("Role")
+					if role == "Tinyfolk" then
+						local payloadOk, payloadResult = pcall(function()
+							return tinyfolkToolApiAny.BuildEntryPayload(player, entry.operationId)
+						end)
+						if payloadOk and type(payloadResult) == "table" and (payloadResult :: any).accepted == true then
+							tinyfolkToolLoadoutByUserId[player.UserId] = (payloadResult :: any).payload
+						else
+							local resultReason = if payloadOk and type(payloadResult) == "table"
+								then (payloadResult :: any).reason
+								else "tinyfolk_tool_payload_build_failed"
+							local publicReason = mapPayloadFailureReasonToPublic(
+								if type(resultReason) == "string" and resultReason ~= ""
+									then resultReason
+									else "tinyfolk_tool_payload_rejected"
+							)
+							payloadFailureUserIds[player.UserId] = true
+							appendPayloadFailure(
+								tinyfolkToolPayloadFailures,
+								maxPayloadFailureDiagnostics,
+								player.UserId,
+								publicReason
+							)
+						end
+					end
+				end
+			end
+		end
+
+		local playersToTeleport: { any } = {}
+		local transferredUserIds: { number } = {}
 		for _, player in ipairs(players) do
+			if isPositiveInteger(player.UserId) and payloadFailureUserIds[player.UserId] == true then
+				continue
+			end
+			table.insert(playersToTeleport, player)
+			if isPositiveInteger(player.UserId) then
+				table.insert(transferredUserIds, player.UserId)
+			end
+		end
+
+		if #playersToTeleport <= 0 then
+			return makeFailure("party_payload_rejected", false)
+		end
+
+		for _, player in ipairs(playersToTeleport) do
 			local handoffOk, handoffResult = pcall(function()
 				return handoffApi.BeginCrossServerHandoff(player, {
 					operationId = entry.operationId,
@@ -465,50 +519,21 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			handoffTokensByUserId = handoffTokensByUserId,
 		}
 
-		if type(tinyfolkToolLoadoutApi) == "table" and type(tinyfolkToolLoadoutApi.BuildEntryPayload) == "function" then
-			local tinyfolkToolApiAny: any = tinyfolkToolLoadoutApi
-			local tinyfolkToolLoadoutByUserId: { [number]: any } = {}
-			local tinyfolkToolPayloadFailures: { any } = {}
-			local maxPayloadFailureDiagnostics = 5
-			for _, player in ipairs(players) do
-				if isPositiveInteger(player.UserId) and type(player.GetAttribute) == "function" then
-					local role = player:GetAttribute("Role")
-					if role == "Tinyfolk" then
-						local payloadOk, payloadResult = pcall(function()
-							return tinyfolkToolApiAny.BuildEntryPayload(player, entry.operationId)
-						end)
-						if payloadOk and type(payloadResult) == "table" and (payloadResult :: any).accepted == true then
-							tinyfolkToolLoadoutByUserId[player.UserId] = (payloadResult :: any).payload
-						else
-							local resultReason = if payloadOk and type(payloadResult) == "table"
-								then (payloadResult :: any).reason
-								else "tinyfolk_tool_payload_build_failed"
-							local publicReason = mapPayloadFailureReasonToPublic(
-								if type(resultReason) == "string" and resultReason ~= ""
-									then resultReason
-									else "tinyfolk_tool_payload_rejected"
-							)
-							appendPayloadFailure(
-								tinyfolkToolPayloadFailures,
-								maxPayloadFailureDiagnostics,
-								player.UserId,
-								publicReason
-							)
-						end
-					end
-				end
-			end
-
-			if next(tinyfolkToolLoadoutByUserId) ~= nil then
-				(teleportData :: any).tinyfolkToolLoadoutByUserId = tinyfolkToolLoadoutByUserId
-			end
-			if #tinyfolkToolPayloadFailures > 0 then
-				(teleportData :: any).tinyfolkToolPayloadFailures = tinyfolkToolPayloadFailures
-			end
+		if next(tinyfolkToolLoadoutByUserId) ~= nil then
+			(teleportData :: any).tinyfolkToolLoadoutByUserId = tinyfolkToolLoadoutByUserId
+		end
+		if #tinyfolkToolPayloadFailures > 0 then
+			(teleportData :: any).tinyfolkToolPayloadFailures = tinyfolkToolPayloadFailures
 		end
 
 		local teleportOk = pcall(function()
-			teleportService:TeleportToPrivateServer(placeId, serverCodeOrError :: string, players, nil, teleportData)
+			teleportService:TeleportToPrivateServer(
+				placeId,
+				serverCodeOrError :: string,
+				playersToTeleport,
+				nil,
+				teleportData
+			)
 		end)
 		if not teleportOk then
 			return makeFailure("teleport_dispatch_failed", true)
@@ -519,9 +544,10 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			destinationPlaceId = placeId,
 			registryAccessCodeResolved = registryAccessCode ~= nil,
 			accessCodeResolverPath = resolverPath,
+			transferredUserIds = transferredUserIds,
 		}
-		if type((teleportData :: any).tinyfolkToolPayloadFailures) == "table" then
-			extraResult.tinyfolkToolPayloadFailures = (teleportData :: any).tinyfolkToolPayloadFailures
+		if #tinyfolkToolPayloadFailures > 0 then
+			extraResult.tinyfolkToolPayloadFailures = tinyfolkToolPayloadFailures
 		end
 		return makeSuccess(extraResult)
 	end

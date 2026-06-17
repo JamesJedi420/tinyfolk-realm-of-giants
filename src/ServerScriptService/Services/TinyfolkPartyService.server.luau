@@ -279,6 +279,44 @@ local function applyPartyTransition(
 	return party
 end
 
+local function applyDisconnectExpiryForUserId(userId: number, at: number): boolean
+	local expiryAt = pendingDisconnectByUserId[userId]
+	if type(expiryAt) ~= "number" or at < expiryAt then
+		return false
+	end
+
+	pendingDisconnectByUserId[userId] = nil
+	local party = getPartyForUserId(userId)
+	if party == nil then
+		return true
+	end
+
+	local outcome = TinyfolkPartyState.ResolveTransferOutcome({
+		party = party,
+		transferredUserIds = { userId },
+		at = at,
+	})
+	if outcome.accepted ~= true then
+		return true
+	end
+
+	local transition: TinyfolkPartyState.TransitionResult = {
+		accepted = true,
+		reason = "accepted",
+		party = outcome.party,
+		dissolved = outcome.dissolved,
+		notifyUserIds = party.memberUserIds,
+	}
+	applyPartyTransition(transition, party.memberUserIds)
+	return true
+end
+
+local function expirePendingDisconnects(at: number)
+	for userId, _expiryAt in pairs(pendingDisconnectByUserId) do
+		applyDisconnectExpiryForUserId(userId, at)
+	end
+end
+
 local function fireActionResponse(player: Player, responseRemote: RemoteEvent, snapshot: any)
 	responseRemote:FireClient(player, snapshot)
 end
@@ -521,6 +559,7 @@ local function handleActionRequest(
 ): any
 	local resolvedAt = if type(at) == "number" then at else now()
 	diagnostics.actionAttempts += 1
+	expirePendingDisconnects(resolvedAt)
 	clearPendingDisconnect(player.UserId)
 
 	if not isTinyfolk(player) then
@@ -676,28 +715,11 @@ end)
 
 resolvePlayersService().PlayerRemoving:Connect(function(player: Player)
 	lastRequestAtByUserId[player.UserId] = nil
-	local disconnectAt = now()
 	local party = getPartyForUserId(player.UserId)
 	if party == nil then
 		return
 	end
-	pendingDisconnectByUserId[player.UserId] = disconnectAt + TinyfolkPartyConfig.DisconnectGraceSeconds
-	local outcome = TinyfolkPartyState.ResolveTransferOutcome({
-		party = party,
-		transferredUserIds = { player.UserId },
-		at = disconnectAt,
-	})
-	if outcome.accepted ~= true then
-		return
-	end
-	local transition: TinyfolkPartyState.TransitionResult = {
-		accepted = true,
-		reason = "accepted",
-		party = outcome.party,
-		dissolved = outcome.dissolved,
-		notifyUserIds = party.memberUserIds,
-	}
-	applyPartyTransition(transition, party.memberUserIds)
+	pendingDisconnectByUserId[player.UserId] = now() + TinyfolkPartyConfig.DisconnectGraceSeconds
 end)
 
 local playersServiceForEvents = resolvePlayersService()
@@ -707,6 +729,8 @@ if
 	and type(playersServiceForEvents.PlayerAdded.Connect) == "function"
 then
 	playersServiceForEvents.PlayerAdded:Connect(function(player: Player)
+		local reconnectAt = now()
+		expirePendingDisconnects(reconnectAt)
 		clearPendingDisconnect(player.UserId)
 		local party = getPartyForUserId(player.UserId)
 		if party ~= nil then
@@ -729,8 +753,16 @@ globalEnv._TinyfolkPartyService_QueryAPI = {
 	GetDiagnostics = function(): any
 		return cloneDiagnostics()
 	end,
+	HandleTransferOutcome = function(input: any): any
+		return handleTransferOutcome(input)
+	end,
 	HandleTransferOutcomeForTests = function(input: any): any
 		return handleTransferOutcome(input)
+	end,
+	ExpirePendingDisconnectsForTests = function(at: number?): any
+		local resolvedAt = if type(at) == "number" then at else now()
+		expirePendingDisconnects(resolvedAt)
+		return { accepted = true, reason = "accepted" }
 	end,
 	GetPendingDisconnectExpiryForTests = function(userId: number): any
 		return pendingDisconnectByUserId[userId]
