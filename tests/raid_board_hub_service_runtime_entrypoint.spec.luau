@@ -97,6 +97,7 @@ addChild(remotesFolder, "RaidBoardNotify", makeRemoteEvent("RaidBoardNotify"))
 
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "RaidBoardConfig", "../../ReplicatedStorage/Shared/Config/RaidBoardConfig")
+addChild(configFolder, "TinyfolkHubConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkHubConfig")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")

@@ -9,6 +9,7 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 local TinyfolkPartyConfig = require(Config:WaitForChild("TinyfolkPartyConfig"))
+local TinyfolkHubConfig = require(Config:WaitForChild("TinyfolkHubConfig"))
 local TinyfolkPartyState = require(GiantRealm:WaitForChild("TinyfolkPartyState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -120,6 +121,23 @@ end
 
 local function isTinyfolk(player: Player): boolean
 	return player:GetAttribute(ROLE_ATTRIBUTE) == RoleConfig.Roles.Tinyfolk
+end
+
+local function isHubActivityAllowed(player: Player): (boolean, string)
+	local hubApi = getGlobalTable("_TinyfolkHubService_QueryAPI")
+	if type(hubApi) ~= "table" or type(hubApi.ResolveActivityEligibility) ~= "function" then
+		return true, "hub_api_unavailable"
+	end
+
+	local eligibility = hubApi.ResolveActivityEligibility(player.UserId, TinyfolkHubConfig.Activities.Party)
+	if type(eligibility) ~= "table" or eligibility.accepted ~= true then
+		local reason = if type(eligibility) == "table" and type(eligibility.reason) == "string"
+			then eligibility.reason
+			else "not_in_shared_hub"
+		return false, reason
+	end
+
+	return true, "accepted"
 end
 
 local function findPlayerByUserId(userId: number): Player?
@@ -507,6 +525,11 @@ local function handleActionRequest(
 
 	if not isTinyfolk(player) then
 		return rejectAction(player, responseRemote, "role_not_tinyfolk", getPartyForUserId(player.UserId), "unknown")
+	end
+
+	local hubAllowed, hubReason = isHubActivityAllowed(player)
+	if hubAllowed ~= true then
+		return rejectAction(player, responseRemote, hubReason, getPartyForUserId(player.UserId), "unknown")
 	end
 
 	if isCoolingDown(lastRequestAtByUserId[player.UserId], resolvedAt) then

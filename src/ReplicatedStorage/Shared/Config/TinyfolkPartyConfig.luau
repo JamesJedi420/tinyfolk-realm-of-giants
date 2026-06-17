@@ -8,6 +8,11 @@ TinyfolkPartyConfig.PartyIdPrefix = "tinyfolk_party:"
 TinyfolkPartyConfig.DebugOpenKeyName = "P"
 TinyfolkPartyConfig.DisconnectGraceSeconds = 30
 
+TinyfolkPartyConfig.PartyAnchorPrefix = "PartyHub_"
+TinyfolkPartyConfig.DefaultPartyAnchorId = "PartyHub_A"
+TinyfolkPartyConfig.InteractionRangeStuds = 16
+TinyfolkPartyConfig.OpenRequestAttribute = "TinyfolkPartyOpenRequested"
+
 TinyfolkPartyConfig.Actions = {
 	Create = "create",
 	Invite = "invite",

@@ -185,9 +185,14 @@ addChild(remotesFolder, "RoleDebugStateResponse", roleDebugResponseRemote)
 local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Config")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 addChild(configFolder, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
+addChild(configFolder, "TinyfolkHubConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkHubConfig")
+
+local tinyfolkHubFolder = makeNode("TinyfolkHub", "Folder", "ReplicatedStorage.Shared.TinyfolkHub")
+addChild(tinyfolkHubFolder, "TinyfolkHubState", "../../ReplicatedStorage/Shared/TinyfolkHub/TinyfolkHubState")
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "TinyfolkHub", tinyfolkHubFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage", "ReplicatedStorage", "ReplicatedStorage")
 addChild(replicatedStorage, "Shared", sharedFolder)

@@ -9,6 +9,7 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local LiveRealmHubRouting = require(GiantRealm:WaitForChild("LiveRealmHubRouting"))
 local RaidBoardConfig = require(Config:WaitForChild("RaidBoardConfig"))
+local TinyfolkHubConfig = require(Config:WaitForChild("TinyfolkHubConfig"))
 local RaidBoardHubState = require(GiantRealm:WaitForChild("RaidBoardHubState"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
 
@@ -102,6 +103,10 @@ local function buildSoloPartyId(userId: number): string
 	return string.format("%s%d", RaidBoardConfig.PartyIdPrefix, userId)
 end
 
+local function getTinyfolkHubApi(): any?
+	return getGlobalTable("_TinyfolkHubService_QueryAPI")
+end
+
 local function getTinyfolkPartyApi(): any?
 	if tinyfolkPartyApiOverride ~= nil then
 		return tinyfolkPartyApiOverride
@@ -162,6 +167,23 @@ end
 
 local function isTinyfolk(player: Player): boolean
 	return player:GetAttribute(ROLE_ATTRIBUTE) == RoleConfig.Roles.Tinyfolk
+end
+
+local function isHubActivityAllowed(player: Player, activity: string): (boolean, string)
+	local hubApi = getTinyfolkHubApi()
+	if type(hubApi) ~= "table" or type(hubApi.ResolveActivityEligibility) ~= "function" then
+		return true, "hub_api_unavailable"
+	end
+
+	local eligibility = hubApi.ResolveActivityEligibility(player.UserId, activity)
+	if type(eligibility) ~= "table" or eligibility.accepted ~= true then
+		local reason = if type(eligibility) == "table" and type(eligibility.reason) == "string"
+			then eligibility.reason
+			else "not_in_shared_hub"
+		return false, reason
+	end
+
+	return true, "accepted"
 end
 
 local function touchOwnerDisplayNameCache(ownerUserId: number, displayName: string)
@@ -253,6 +275,19 @@ local function handleListRequest(player: Player, payload: any, responseRemote: R
 		return response
 	end
 
+	local hubAllowed, hubReason = isHubActivityAllowed(player, TinyfolkHubConfig.Activities.RaidBoard)
+	if hubAllowed ~= true then
+		diagnostics.listFailed += 1
+		diagnostics.lastReason = hubReason
+		local response = {
+			requestId = requestId,
+			accepted = false,
+			reason = hubReason,
+		}
+		fireListResponse(player, responseRemote, response)
+		return response
+	end
+
 	if isCoolingDown(lastListRequestAtByUserId[player.UserId], resolvedAt) then
 		diagnostics.listFailed += 1
 		diagnostics.lastReason = "rate_limited"
@@ -313,6 +348,19 @@ local function handleQueueRequest(player: Player, payload: any, responseRemote: 
 			requestId = requestId,
 			accepted = false,
 			reason = "role_not_tinyfolk",
+		}
+		responseRemote:FireClient(player, response)
+		return response
+	end
+
+	local hubAllowed, hubReason = isHubActivityAllowed(player, TinyfolkHubConfig.Activities.RaidBoard)
+	if hubAllowed ~= true then
+		diagnostics.queueFailed += 1
+		diagnostics.lastReason = hubReason
+		local response = {
+			requestId = requestId,
+			accepted = false,
+			reason = hubReason,
 		}
 		responseRemote:FireClient(player, response)
 		return response

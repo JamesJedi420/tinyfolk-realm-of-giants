@@ -237,4 +237,14 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	end
 end)
 
+localPlayer:GetAttributeChangedSignal(TinyfolkPartyConfig.OpenRequestAttribute):Connect(function()
+	if localPlayer:GetAttribute(TinyfolkPartyConfig.OpenRequestAttribute) ~= true then
+		return
+	end
+	localPlayer:SetAttribute(TinyfolkPartyConfig.OpenRequestAttribute, false)
+	if not panel.Visible then
+		togglePanel()
+	end
+end)
+
 renderSnapshot(nil)

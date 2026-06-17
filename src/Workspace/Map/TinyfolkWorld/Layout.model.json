@@ -24,6 +24,160 @@
           206
         ]
       }
+    },
+    {
+      "name": "SharedHubSafeZone_A",
+      "className": "Part",
+      "attributes": {
+        "InSafeZone": true,
+        "SafeZoneType": "SharedHub"
+      },
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "CanTouch": false,
+        "CanQuery": false,
+        "Transparency": 0.94,
+        "Material": "SmoothPlastic",
+        "Color": [
+          0.2,
+          0.75,
+          0.45
+        ],
+        "Size": [
+          72,
+          18,
+          56
+        ],
+        "Position": [
+          0,
+          9,
+          192
+        ],
+        "CastShadow": false,
+        "Locked": true
+      }
+    },
+    {
+      "name": "Hub_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Slate",
+        "Color": [
+          0.28,
+          0.3,
+          0.34
+        ],
+        "Size": [
+          48,
+          1,
+          36
+        ],
+        "Position": [
+          0,
+          0.5,
+          192
+        ]
+      }
+    },
+    {
+      "name": "PartyHub_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [
+          0.32,
+          0.48,
+          0.62
+        ],
+        "Size": [
+          6,
+          5,
+          1.5
+        ],
+        "Position": [
+          -14,
+          3.5,
+          188
+        ]
+      }
+    },
+    {
+      "name": "PartyHub_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.24,
+          0.28,
+          0.32
+        ],
+        "Size": [
+          10,
+          1,
+          6
+        ],
+        "Position": [
+          -14,
+          0.5,
+          188
+        ]
+      }
+    },
+    {
+      "name": "RealmPortalHub_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Neon",
+        "Color": [
+          0.35,
+          0.65,
+          0.95
+        ],
+        "Size": [
+          10,
+          12,
+          1
+        ],
+        "Position": [
+          14,
+          7,
+          184
+        ],
+        "Transparency": 0.15
+      }
+    },
+    {
+      "name": "RealmPortal_Frame",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Metal",
+        "Color": [
+          0.42,
+          0.44,
+          0.48
+        ],
+        "Size": [
+          12,
+          14,
+          1.5
+        ],
+        "Position": [
+          14,
+          7.5,
+          183.2
+        ]
+      }
     }
   ]
 }
