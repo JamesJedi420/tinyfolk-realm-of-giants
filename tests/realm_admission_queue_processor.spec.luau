@@ -760,4 +760,123 @@ do
 	assertEqual(queueCalls[3].receiptId, "fatal-complete-again", "fatal duplicate removed")
 end
 
+do
+	local queueStore, _queueCalls = makeQueueStore({
+		{
+			receiptId = "party-transfer",
+			entry = makeEntry({
+				operationId = "op-party-transfer",
+				partyId = "tinyfolk_party:5001:100",
+			}),
+		},
+	})
+	local transferOutcomeCalls: { any } = {}
+	local unregisterCalls: { any } = {}
+
+	local processor = RealmAdmissionQueueProcessor.Create({
+		queueStore = queueStore,
+		queueState = queueState,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return { accepted = true, reason = "accepted" }
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return { accepted = true }
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				return {
+					ok = true,
+					retryable = false,
+					transferredUserIds = { 5001 },
+				}
+			end,
+		},
+		partyResolver = {
+			ResolvePartyMemberUserIds = function(_partyId: string, _entry: any)
+				return { 5001, 5002 }
+			end,
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+			end,
+		},
+		tinyfolkPartyApi = {
+			HandleTransferOutcome = function(input: any)
+				table.insert(transferOutcomeCalls, input)
+				return {
+					accepted = true,
+					reason = "accepted",
+					dissolved = false,
+				}
+			end,
+		},
+		now = function(): number
+			return 120
+		end,
+	})
+
+	local outcome = processor.ProcessBatch(1)
+	assertEqual(outcome.succeeded, 1, "party transfer success processed")
+	assertEqual(transferOutcomeCalls[1].partyId, "tinyfolk_party:5001:100", "transfer outcome party id")
+	assertEqual(transferOutcomeCalls[1].transferredUserIds[1], 5001, "transfer outcome transferred user")
+	assertEqual(#unregisterCalls, 0, "partial transfer keeps resolver registration")
+end
+
+do
+	local queueStore, _queueCalls = makeQueueStore({
+		{
+			receiptId = "party-transfer-full",
+			entry = makeEntry({
+				operationId = "op-party-transfer-full",
+				partyId = "tinyfolk_party:5001:101",
+			}),
+		},
+	})
+	local unregisterCalls: { any } = {}
+
+	local processor = RealmAdmissionQueueProcessor.Create({
+		queueStore = queueStore,
+		queueState = queueState,
+		capacityApi = {
+			ReserveTinyfolkSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return { accepted = true, reason = "accepted" }
+			end,
+			ReleaseReservedSlots = function(_realmId: string, _partySize: number, _nowAt: number)
+				return { accepted = true }
+			end,
+		},
+		teleportDispatcher = {
+			Dispatch = function(_entry: any)
+				return {
+					ok = true,
+					retryable = false,
+					transferredUserIds = { 5001, 5002 },
+				}
+			end,
+		},
+		partyResolver = {
+			UnregisterParty = function(partyId: string)
+				table.insert(unregisterCalls, partyId)
+			end,
+		},
+		tinyfolkPartyApi = {
+			HandleTransferOutcome = function(_input: any)
+				return {
+					accepted = true,
+					reason = "accepted",
+					dissolved = true,
+				}
+			end,
+		},
+		now = function(): number
+			return 120
+		end,
+	})
+
+	local outcome = processor.ProcessBatch(1)
+	assertEqual(outcome.succeeded, 1, "full party transfer success processed")
+	assertEqual(unregisterCalls[1], "tinyfolk_party:5001:101", "full transfer unregisters party")
+end
+
 print("realm_admission_queue_processor: all checks passed")

@@ -1,6 +1,9 @@
 --!strict
 
 local RealmAdmissionQueueProcessor: any = {}
+local globalEnv: any = getfenv()
+
+local TINYFOLK_PARTY_ID_PREFIX = "tinyfolk_party:"
 
 export type ProcessOutcome = {
 	processed: number,
@@ -26,6 +29,24 @@ local function defaultNow(): number
 	return os.clock()
 end
 
+local function getGlobalTable(name: string): any?
+	local fromEnv = rawget(globalEnv, name)
+	if type(fromEnv) == "table" then
+		return fromEnv
+	end
+	if type(_G) == "table" then
+		local fromGlobal = rawget(_G, name)
+		if type(fromGlobal) == "table" then
+			return fromGlobal
+		end
+	end
+	return nil
+end
+
+local function isTinyfolkPartyId(partyId: any): boolean
+	return type(partyId) == "string" and string.sub(partyId, 1, #TINYFOLK_PARTY_ID_PREFIX) == TINYFOLK_PARTY_ID_PREFIX
+end
+
 local function makeOutcome(): ProcessOutcome
 	return {
 		processed = 0,
@@ -47,6 +68,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 	local operationLock = if type(depsAny) == "table" then depsAny.operationLock else nil
 	local idempotencyStore = if type(depsAny) == "table" then depsAny.idempotencyStore else nil
 	local partyResolver = if type(depsAny) == "table" then depsAny.partyResolver else nil
+	local tinyfolkPartyApi = if type(depsAny) == "table" then depsAny.tinyfolkPartyApi else nil
 	local nowFn = if type(depsAny) == "table" and type(depsAny.now) == "function" then depsAny.now else defaultNow
 
 	local processor: any = {}
@@ -167,6 +189,68 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 		pcall((partyResolver :: any).UnregisterParty, partyId)
 	end
 
+	local function resolveTinyfolkPartyApi(): any?
+		if type(tinyfolkPartyApi) == "table" then
+			return tinyfolkPartyApi
+		end
+		return getGlobalTable("_TinyfolkPartyService_QueryAPI")
+	end
+
+	local function resolveTransferredUserIds(entry: any, dispatchResult: any): { number }?
+		if type(dispatchResult) == "table" and type(dispatchResult.transferredUserIds) == "table" then
+			return dispatchResult.transferredUserIds
+		end
+		if type(entry) ~= "table" or type(entry.partyId) ~= "string" then
+			return nil
+		end
+		if type(partyResolver) ~= "table" or type((partyResolver :: any).ResolvePartyMemberUserIds) ~= "function" then
+			return nil
+		end
+		local ok, members = pcall((partyResolver :: any).ResolvePartyMemberUserIds, entry.partyId, entry)
+		if not ok or type(members) ~= "table" then
+			return nil
+		end
+		return members
+	end
+
+	local function notifyPartyTransferOutcome(entry: any, dispatchResult: any, at: number): any?
+		if type(entry) ~= "table" or not isTinyfolkPartyId(entry.partyId) then
+			return nil
+		end
+
+		local partyApi = resolveTinyfolkPartyApi()
+		if type(partyApi) ~= "table" or type((partyApi :: any).HandleTransferOutcome) ~= "function" then
+			return nil
+		end
+
+		local transferredUserIds = resolveTransferredUserIds(entry, dispatchResult)
+		if type(transferredUserIds) ~= "table" or #transferredUserIds <= 0 then
+			return nil
+		end
+
+		local ok, result = pcall(function()
+			return (partyApi :: any).HandleTransferOutcome({
+				partyId = entry.partyId,
+				transferredUserIds = transferredUserIds,
+				at = at,
+			})
+		end)
+		if ok and type(result) == "table" then
+			return result
+		end
+		return nil
+	end
+
+	local function shouldUnregisterPartyAfterTransfer(entry: any, transferOutcome: any): boolean
+		if not isTinyfolkPartyId(if type(entry) == "table" then entry.partyId else nil) then
+			return true
+		end
+		if type(transferOutcome) ~= "table" or transferOutcome.accepted ~= true then
+			return true
+		end
+		return transferOutcome.dissolved == true
+	end
+
 	function processor.ProcessBatch(maxItems: any): ProcessOutcome
 		local outcome = makeOutcome()
 		if not isFiniteNumber(maxItems) or maxItems <= 0 or maxItems % 1 ~= 0 then
@@ -258,7 +342,10 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					outcome.cleanupDeferred += 1
 					continue
 				end
-				unregisterParty(entry.partyId)
+				local transferOutcome = notifyPartyTransferOutcome(entry, dispatchResult, nowAt)
+				if shouldUnregisterPartyAfterTransfer(entry, transferOutcome) then
+					unregisterParty(entry.partyId)
+				end
 				releaseOperationLock(entry.operationId)
 				outcome.succeeded += 1
 				continue

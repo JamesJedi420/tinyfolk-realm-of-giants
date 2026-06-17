@@ -153,6 +153,7 @@ assertEqual(#handoffCalls, 2, "handoff called per player")
 
 do
 	local telemetryTeleportCalls = 0
+	local teleportedUserIds: { number } = {}
 	local dispatcherWithPayloadFailure = RealmTeleportDispatcher.Create({
 		partyResolver = function(partyId: string): { number }
 			if partyId == "party-good" then
@@ -167,15 +168,9 @@ do
 		},
 		handoffApi = {
 			BeginCrossServerHandoff = function(player: any, _context: any): any
-				if player.UserId == 102 then
-					return {
-						ok = true,
-						handoffToken = "token-102",
-					}
-				end
 				return {
 					ok = true,
-					handoffToken = "token-101",
+					handoffToken = "token-" .. tostring(player.UserId),
 				}
 			end,
 		},
@@ -187,11 +182,14 @@ do
 				_self: any,
 				_placeId: number,
 				_accessCode: string,
-				_players: { any },
+				players: { any },
 				_spawnName: any,
 				teleportData: any
 			)
 				telemetryTeleportCalls += 1
+				for _, player in ipairs(players) do
+					table.insert(teleportedUserIds, player.UserId)
+				end
 				assertEqual(teleportData.tinyfolkToolLoadoutByUserId, nil, "payload omitted on build failure")
 				assertEqual(
 					type(teleportData.tinyfolkToolPayloadFailures),
@@ -216,9 +214,9 @@ do
 					}
 				end
 				return {
-					accepted = false,
-					reason = "tinyfolk_role_required",
-					payload = nil,
+					accepted = true,
+					reason = "accepted",
+					payload = { toolId = "ok" },
 				}
 			end,
 		},
@@ -240,9 +238,10 @@ do
 		partyId = "party-good",
 		targetRealmId = "giant_realm_100",
 	})
-	assertEqual(acceptedWithDiagnostics.ok, true, "dispatch still accepted on payload failure")
+	assertEqual(acceptedWithDiagnostics.ok, true, "dispatch accepted on partial payload failure")
 	assertEqual(acceptedWithDiagnostics.reason, "accepted", "dispatch reason still accepted")
-	assertEqual(telemetryTeleportCalls, 1, "teleport still executes on payload failure")
+	assertEqual(telemetryTeleportCalls, 1, "teleport executes for non-failed members")
+	assertEqual(teleportedUserIds[1], 102, "failed payload member excluded from teleport")
 	assertEqual(
 		type(acceptedWithDiagnostics.tinyfolkToolPayloadFailures),
 		"table",
@@ -253,6 +252,7 @@ do
 		"payload_invalid",
 		"result payload failure reason surfaced"
 	)
+	assertEqual(acceptedWithDiagnostics.transferredUserIds[1], 102, "result transferred user ids exclude failures")
 end
 
 local missingParty = dispatcher.Dispatch({
