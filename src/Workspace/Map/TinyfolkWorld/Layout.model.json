@@ -131,6 +131,54 @@
       }
     },
     {
+      "name": "PartyMatchmakingHub_A",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": true,
+        "Material": "Wood",
+        "Color": [
+          0.42,
+          0.58,
+          0.72
+        ],
+        "Size": [
+          6,
+          5,
+          1.5
+        ],
+        "Position": [
+          14,
+          3.5,
+          188
+        ]
+      }
+    },
+    {
+      "name": "PartyMatchmakingHub_Platform",
+      "className": "Part",
+      "properties": {
+        "Anchored": true,
+        "CanCollide": false,
+        "Material": "Slate",
+        "Color": [
+          0.24,
+          0.28,
+          0.32
+        ],
+        "Size": [
+          10,
+          1,
+          6
+        ],
+        "Position": [
+          14,
+          0.5,
+          188
+        ]
+      }
+    },
+    {
       "name": "RealmPortalHub_A",
       "className": "Part",
       "properties": {

@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 
 local TinyfolkPartyConfig = require(Config:WaitForChild("TinyfolkPartyConfig"))
+local PartyMatchmakingQueueConfig = require(Config:WaitForChild("PartyMatchmakingQueueConfig"))
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui") :: any
@@ -39,7 +40,7 @@ local panel = Instance.new("Frame")
 panel.Name = PANEL_NAME
 panel.AnchorPoint = Vector2.new(0, 0)
 panel.Position = UDim2.fromOffset(16, 120)
-panel.Size = UDim2.fromOffset(320, 280)
+panel.Size = UDim2.fromOffset(320, 312)
 panel.BackgroundColor3 = Color3.fromRGB(14, 16, 21)
 panel.BackgroundTransparency = 0.04
 panel.BorderSizePixel = 0
@@ -76,7 +77,7 @@ local members = Instance.new("TextLabel")
 members.Name = MEMBERS_NAME
 members.BackgroundTransparency = 1
 members.Position = UDim2.fromOffset(12, 74)
-members.Size = UDim2.new(1, -24, 1, -130)
+members.Size = UDim2.new(1, -24, 1, -162)
 members.Font = Enum.Font.Code
 members.TextSize = 12
 members.TextColor3 = Color3.fromRGB(196, 204, 214)
@@ -112,6 +113,19 @@ end
 local createButton = makeButton("Create", "Create", 0)
 local readyButton = makeButton("Ready", "Ready", 100)
 local leaveButton = makeButton("Leave", "Leave", 200)
+
+local queueButton = Instance.new("TextButton")
+queueButton.Name = "Queue"
+queueButton.AnchorPoint = Vector2.new(0, 1)
+queueButton.Position = UDim2.new(0, 12, 1, -48)
+queueButton.Size = UDim2.new(1, -24, 0, 28)
+queueButton.BackgroundColor3 = Color3.fromRGB(72, 118, 168)
+queueButton.BorderSizePixel = 0
+queueButton.Font = Enum.Font.GothamBold
+queueButton.TextSize = 11
+queueButton.TextColor3 = Color3.fromRGB(231, 234, 239)
+queueButton.Text = "Open Matchmaking"
+queueButton.Parent = panel
 
 local remotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local actionRequestRemote = remotesFolder:WaitForChild(TinyfolkPartyConfig.Remotes.ActionRequest) :: RemoteEvent
@@ -215,6 +229,10 @@ end)
 
 leaveButton.MouseButton1Click:Connect(function()
 	sendAction(TinyfolkPartyConfig.Actions.Leave)
+end)
+
+queueButton.MouseButton1Click:Connect(function()
+	localPlayer:SetAttribute(PartyMatchmakingQueueConfig.OpenRequestAttribute, true)
 end)
 
 actionResponseRemote.OnClientEvent:Connect(function(snapshot: any)
