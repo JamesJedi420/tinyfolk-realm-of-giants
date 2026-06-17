@@ -111,6 +111,41 @@ do
 end
 
 do
+	local notifyPayloads: { any } = {}
+	configure({
+		rescueHubApi = {
+			GetPendingRescueQueueEntries = function(_limit: any, _at: any): any
+				return {
+					{
+						queueEntryId = "queue-1",
+					},
+				}
+			end,
+			BroadcastNotify = function(payload: any)
+				table.insert(notifyPayloads, payload)
+			end,
+		},
+		now = function()
+			return 25
+		end,
+	})
+
+	local reconcileResult = NotificationReconciliationService.ReconcileRescueQueue()
+	assertTrue(reconcileResult.accepted, "rescue reconcile with fanout accepted")
+	assertEqual(#notifyPayloads, 1, "rescue reconcile fans out notify")
+	assertEqual(notifyPayloads[1].reason, "rescue_queue_reconciled", "rescue notify reason")
+	assertEqual(notifyPayloads[1].at, 25, "rescue notify at")
+
+	local envelope = buildEnvelope("rescue_queue_published", "op-rescue-fanout", {
+		queueEntryId = "queue-1",
+	})
+	local handleResult = NotificationReconciliationService.HandleNotification(envelope)
+	assertTrue(handleResult.accepted, "rescue notification accepted")
+	assertEqual(#notifyPayloads, 2, "rescue notification fans out notify")
+	assertEqual(notifyPayloads[2].at, 100, "rescue notification uses envelope sentAt")
+end
+
+do
 	configure({
 		realmMetadataRegistry = {
 			{
@@ -242,11 +277,19 @@ end
 
 do
 	local checkedUserIds: { number } = {}
+	local orchestratedPlayers: { any } = {}
 	configure({
 		handoffApi = {
 			CanSpawnGameplayForUserId = function(userId: any): boolean
 				table.insert(checkedUserIds, userId)
 				return userId == 9001
+			end,
+			OrchestrateDestinationArrival = function(player: any): any
+				table.insert(orchestratedPlayers, player)
+				return {
+					ok = true,
+					reason = "confirmed",
+				}
 			end,
 		},
 	})
@@ -257,12 +300,19 @@ do
 	assertFalse(invalid.accepted, "invalid user rejected")
 	assertEqual(invalid.reason, "user_id_invalid", "invalid user reason")
 
+	local player = {
+		UserId = 9001,
+	}
 	local result = NotificationReconciliationService.ReconcileReturnRecovery({
 		userId = 9001,
+		player = player,
 	})
 	assertTrue(result.accepted, "return recovery accepted")
 	assertEqual(checkedUserIds[1], 9001, "return recovery checks user")
 	assertEqual(result.snapshot.canSpawnGameplay, true, "return recovery snapshot")
+	assertEqual(#orchestratedPlayers, 1, "return recovery orchestrates join")
+	assertEqual(orchestratedPlayers[1].UserId, 9001, "return recovery orchestrates player")
+	assertEqual(result.snapshot.recoveryOrchestrated, true, "return recovery orchestration flag")
 end
 
 do
@@ -557,6 +607,56 @@ do
 	assertEqual(diagnostics.loopTickAttempts, 1, "failed tick attempt")
 	assertEqual(diagnostics.loopTickFailed, 1, "failed tick count")
 	assertEqual(diagnostics.lastReason, "reconcile_partial_failure", "failed tick reason")
+end
+
+do
+	local joinReconciles: { any } = {}
+	local mockPlayers: any = {
+		_players = {},
+		_callback = nil,
+		PlayerAdded = {},
+	}
+	mockPlayers.GetPlayers = function(_self: any): { any }
+		return mockPlayers._players
+	end
+	mockPlayers.PlayerAdded.Connect = function(_self: any, callback: (any) -> ())
+		mockPlayers._callback = callback
+		return {
+			Disconnect = function() end,
+		}
+	end
+
+	local existingPlayer = {
+		UserId = 8801,
+	}
+	table.insert(mockPlayers._players, existingPlayer)
+
+	configure({
+		enableReturnRecoveryOnJoin = true,
+		players = mockPlayers,
+		handoffApi = {
+			CanSpawnGameplayForUserId = function(_userId: any): boolean
+				return true
+			end,
+			OrchestrateDestinationArrival = function(player: any): any
+				table.insert(joinReconciles, player)
+				return {
+					ok = true,
+					reason = "confirmed",
+				}
+			end,
+		},
+	})
+
+	assertEqual(#joinReconciles, 1, "join reconcile runs for existing players")
+	assertTrue(type(mockPlayers._callback) == "function", "join reconcile stores player-added callback")
+
+	local joinedPlayer = {
+		UserId = 8802,
+	}
+	(mockPlayers._callback :: any)(joinedPlayer)
+	assertEqual(#joinReconciles, 2, "join reconcile runs for added players")
+	assertEqual(joinReconciles[2].UserId, 8802, "join reconcile added player user id")
 end
 
 NotificationReconciliationService.ResetForTests()

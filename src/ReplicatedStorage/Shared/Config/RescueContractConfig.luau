@@ -17,6 +17,11 @@ RescueContractConfig.RescueEntryRouteAttribute = "RescueEntryRoute"
 RescueContractConfig.RescueEntryRouteKind = "RescueEntry"
 RescueContractConfig.QueueRewardHint = "rescue_contract"
 RescueContractConfig.QueueDangerRating = 0.5
+RescueContractConfig.RefreshCoalesceSeconds = 1
+
+RescueContractConfig.Remotes = {
+	Notify = "RescueContractHubNotify",
+}
 
 RescueContractConfig.StateAttributes = {
 	RescueActive = "RescueContractActive",

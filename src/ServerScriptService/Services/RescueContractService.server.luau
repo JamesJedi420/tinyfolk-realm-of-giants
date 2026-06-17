@@ -36,6 +36,7 @@ local REMOTES_FOLDER_NAME = "Remotes"
 local REQUEST_REMOTE_NAME = "RescueContractRequest"
 local RESPONSE_REMOTE_NAME = "RescueContractResponse"
 local COMPLETE_REMOTE_NAME = "RescueContractCompleteRequest"
+local NOTIFY_REMOTE_NAME = RescueContractConfig.Remotes.Notify
 
 local ROLE_ATTRIBUTE = "Role"
 local globalEnv: any = getfenv()
@@ -1566,6 +1567,7 @@ local remotesFolder = ensureRemotesFolder()
 local requestRemote = ensureRemoteEvent(remotesFolder, REQUEST_REMOTE_NAME)
 local responseRemote = ensureRemoteEvent(remotesFolder, RESPONSE_REMOTE_NAME)
 local completeRemote = ensureRemoteEvent(remotesFolder, COMPLETE_REMOTE_NAME)
+local notifyRemote = ensureRemoteEvent(remotesFolder, NOTIFY_REMOTE_NAME)
 
 requestRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 	local targetUserId = nil
@@ -1725,5 +1727,11 @@ globalEnv._RescueContractHubSurface_QueryAPI = {
 	end,
 	AcceptRescueQueueEntry = function(acceptedByUserId: any, queueEntryId: any, at: number?): any
 		return acceptRescueQueueEntry(acceptedByUserId, queueEntryId, at)
+	end,
+	BroadcastNotify = function(payload: any)
+		if type(payload) ~= "table" then
+			return
+		end
+		notifyRemote:FireAllClients(payload)
 	end,
 }

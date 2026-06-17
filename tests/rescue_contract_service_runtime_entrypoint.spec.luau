@@ -97,6 +97,7 @@ local remotesFolder = makeNode("Remotes", "Folder")
 addChild(remotesFolder, "RescueContractRequest", makeRemoteEvent("RescueContractRequest"))
 addChild(remotesFolder, "RescueContractResponse", makeRemoteEvent("RescueContractResponse"))
 addChild(remotesFolder, "RescueContractCompleteRequest", makeRemoteEvent("RescueContractCompleteRequest"))
+addChild(remotesFolder, "RescueContractHubNotify", makeRemoteEvent("RescueContractHubNotify"))
 
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")

@@ -4,6 +4,7 @@ local NotificationReconciliationService = require(script.Parent:WaitForChild("No
 
 NotificationReconciliationService.Start({
 	enableReconciliationLoop = true,
+	enableReturnRecoveryOnJoin = true,
 })
 
 return NotificationReconciliationService
