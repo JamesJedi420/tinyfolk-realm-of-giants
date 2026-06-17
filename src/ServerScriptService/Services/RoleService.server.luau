@@ -26,6 +26,8 @@ end
 
 local giantRealm = Shared:FindFirstChild("GiantRealm")
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
+local TinyfolkHubConfig = require(Config:WaitForChild("TinyfolkHubConfig"))
+local TinyfolkHubState = require(Shared:WaitForChild("TinyfolkHub"):WaitForChild("TinyfolkHubState"))
 local EscapeConfig = requireDependency(Config, "EscapeConfig", "../../ReplicatedStorage/Shared/Config/EscapeConfig")
 local SafeZonePolicy =
 	requireDependency(giantRealm, "SafeZonePolicy", "../../ReplicatedStorage/Shared/GiantRealm/SafeZonePolicy")
@@ -62,7 +64,8 @@ local ROLE_DEBUG_RESPONSE_REMOTE_NAME = "RoleDebugStateResponse"
 
 local SPAWN_MAP_ROOT_NAME = "Map"
 local SPAWN_CONTAINER_NAME = "Spawns"
-local TINYFOLK_SPAWN_NAME = "TinyfolkSpawn"
+local TINYFOLK_SPAWN_NAME =
+	TinyfolkHubState.ResolveTinyfolkSpawnName(TinyfolkHubConfig.HubSpawnName, TinyfolkHubConfig.LegacyTinyfolkSpawnName)
 local GIANT_SPAWN_NAME = "GiantSpawn"
 local PROFILE_ROLE_PREFERENCE_KEY = "rolePreference"
 local PROFILE_PREFERRED_ROLE_KEY = "preferredRole"
@@ -607,6 +610,13 @@ local function findSpawnForRole(roleName: string): BasePart?
 	local spawnInstance = spawnContainer:FindFirstChild(spawnName)
 	if spawnInstance and spawnInstance:IsA("SpawnLocation") then
 		return spawnInstance
+	end
+
+	if roleName == RoleConfig.Roles.Tinyfolk and spawnName ~= TinyfolkHubConfig.LegacyTinyfolkSpawnName then
+		local legacySpawn = spawnContainer:FindFirstChild(TinyfolkHubConfig.LegacyTinyfolkSpawnName)
+		if legacySpawn and legacySpawn:IsA("SpawnLocation") then
+			return legacySpawn
+		end
 	end
 
 	return nil

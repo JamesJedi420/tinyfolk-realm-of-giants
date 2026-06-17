@@ -16,6 +16,7 @@ local EscapeConfig = require(Config:WaitForChild("EscapeConfig"))
 local ConstructionConfig = require(Config:WaitForChild("ConstructionConfig"))
 local UpgradeBoardConfig = require(Config:WaitForChild("UpgradeBoardConfig"))
 local RaidBoardConfig = require(Config:WaitForChild("RaidBoardConfig"))
+local TinyfolkPartyConfig = require(Config:WaitForChild("TinyfolkPartyConfig"))
 local VillageWorksiteUpgradeConfig = require(Config:WaitForChild("VillageWorksiteUpgradeConfig"))
 local TinyfolkLaborUpgradeConfig = require(Config:WaitForChild("TinyfolkLaborUpgradeConfig"))
 local RemoteControlStationConfig = require(Config:WaitForChild("RemoteControlStationConfig"))
@@ -80,6 +81,7 @@ type CandidateAction =
 	| "construction_build"
 	| "upgrade_board_hub"
 	| "raid_board_open"
+	| "party_hub_open"
 	| "worksite_upgrade"
 	| "warehouse_deliver"
 	| "granary_deliver"
@@ -104,6 +106,7 @@ local PRIORITY_BY_ACTION: { [CandidateAction]: number } = {
 	construction_build = 3,
 	upgrade_board_hub = 4,
 	raid_board_open = 4,
+	party_hub_open = 4,
 	worksite_upgrade = 4,
 	warehouse_deliver = 5,
 	granary_deliver = 5,
@@ -360,6 +363,23 @@ local function collectCandidates(localRoot: BasePart): { Candidate }
 		end
 
 		if
+			isTinyfolk
+			and startsWithPrefix(targetId, TinyfolkPartyConfig.PartyAnchorPrefix)
+			and distance <= TinyfolkPartyConfig.InteractionRangeStuds
+		then
+			pushCandidate(candidates, {
+				action = "party_hub_open",
+				targetId = targetId,
+				distance = distance,
+				priority = getPriority("party_hub_open"),
+				mode = "open",
+				payload = {
+					anchorId = targetId,
+				},
+			})
+		end
+
+		if
 			isGiant
 			and resolveUpgradeableWorksiteId(targetId) ~= nil
 			and distance <= VillageWorksiteUpgradeConfig.InteractionRangeStuds
@@ -598,6 +618,11 @@ local function fireCandidate(candidate: Candidate)
 
 	if candidate.action == "raid_board_open" then
 		localPlayer:SetAttribute(RaidBoardConfig.OpenRequestAttribute, true)
+		return
+	end
+
+	if candidate.action == "party_hub_open" then
+		localPlayer:SetAttribute(TinyfolkPartyConfig.OpenRequestAttribute, true)
 		return
 	end
 

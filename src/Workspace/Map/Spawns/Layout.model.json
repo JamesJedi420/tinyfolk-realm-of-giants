@@ -26,6 +26,30 @@
       }
     },
     {
+      "name": "TinyfolkHubSpawn",
+      "className": "SpawnLocation",
+      "attributes": {
+        "HiddenForScreenshots": true,
+        "VisualOnly": true
+      },
+      "properties": {
+        "Anchored": true,
+        "Neutral": true,
+        "Transparency": 1,
+        "CanCollide": false,
+        "Size": [
+          12,
+          1,
+          12
+        ],
+        "Position": [
+          0,
+          0.5,
+          198
+        ]
+      }
+    },
+    {
       "name": "GiantSpawn",
       "className": "SpawnLocation",
       "attributes": {

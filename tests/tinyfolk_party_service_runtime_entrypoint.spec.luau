@@ -90,6 +90,7 @@ addChild(remotesFolder, "TinyfolkPartyNotify", makeRemoteEvent("TinyfolkPartyNot
 local configFolder = makeNode("Config", "Folder")
 addChild(configFolder, "RoleConfig", "../../ReplicatedStorage/Shared/Config/RoleConfig")
 addChild(configFolder, "TinyfolkPartyConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkPartyConfig")
+addChild(configFolder, "TinyfolkHubConfig", "../../ReplicatedStorage/Shared/Config/TinyfolkHubConfig")
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder")
 addChild(giantRealmFolder, "TinyfolkPartyState", "../../ReplicatedStorage/Shared/GiantRealm/TinyfolkPartyState")
