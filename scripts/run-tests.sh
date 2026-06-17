@@ -71,6 +71,7 @@ test_files=(
 	tests/notification_rate_guard.spec.luau
 	tests/notification_message_schema.spec.luau
 	tests/notification_reconciliation_service.spec.luau
+	tests/notification_dropped_message_harness.spec.luau
 	tests/notification_subscription_manager.spec.luau
 	tests/queue_notification_fanout.spec.luau
 	tests/system_announcement_service_runtime_entrypoint.spec.luau
