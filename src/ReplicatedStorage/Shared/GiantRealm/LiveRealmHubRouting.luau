@@ -83,6 +83,93 @@ function LiveRealmHubRouting.SelectRaidBoardTarget(availability: { any }): any?
 	return bestSnapshot
 end
 
+local function isDiscoverableSnapshot(snapshot: any): boolean
+	if type(snapshot) ~= "table" or snapshot.isAvailable ~= true or not isNonEmptyString(snapshot.realmId) then
+		return false
+	end
+	return snapshot.accessMode == "public" or snapshot.accessMode == "raid_enabled"
+end
+
+local function compareRealmTieBreak(candidate: any, incumbent: any): boolean
+	local candidateRealmId = if type(candidate.realmId) == "string" then candidate.realmId else ""
+	local incumbentRealmId = if type(incumbent.realmId) == "string" then incumbent.realmId else ""
+	return candidateRealmId < incumbentRealmId
+end
+
+local function selectByDangerPreference(availability: { any }, preferHighest: boolean): any?
+	if type(availability) ~= "table" then
+		return nil
+	end
+
+	local bestSnapshot: any = nil
+	local bestDanger: number? = nil
+	for _, snapshot in ipairs(availability) do
+		if isDiscoverableSnapshot(snapshot) then
+			local dangerRating = if type(snapshot.dangerRating) == "number" then snapshot.dangerRating else 0
+			if bestSnapshot == nil then
+				bestSnapshot = snapshot
+				bestDanger = dangerRating
+				continue
+			end
+
+			local shouldReplace = if preferHighest
+				then dangerRating > (bestDanger :: number)
+				else dangerRating < (bestDanger :: number)
+			if shouldReplace then
+				bestSnapshot = snapshot
+				bestDanger = dangerRating
+			elseif dangerRating == bestDanger and compareRealmTieBreak(snapshot, bestSnapshot) then
+				bestSnapshot = snapshot
+			end
+		end
+	end
+
+	return bestSnapshot
+end
+
+function LiveRealmHubRouting.SelectMatchmakingTarget(
+	availability: { any },
+	desiredActivity: any,
+	_skillBand: any?,
+	_toolTier: any?
+): any?
+	if type(availability) ~= "table" or type(desiredActivity) ~= "string" then
+		return nil
+	end
+
+	if desiredActivity == "raid" then
+		return LiveRealmHubRouting.SelectRaidBoardTarget(availability)
+	end
+	if desiredActivity == "rescue" then
+		return selectByDangerPreference(availability, true)
+	end
+	if desiredActivity == "scouting" then
+		return selectByDangerPreference(availability, false)
+	end
+	if desiredActivity == "work_contract" then
+		local bestSnapshot: any = nil
+		local bestDistance = math.huge
+		for _, snapshot in ipairs(availability) do
+			if isDiscoverableSnapshot(snapshot) then
+				local dangerRating = if type(snapshot.dangerRating) == "number" then snapshot.dangerRating else 0
+				local distance = math.abs(dangerRating - 0.5)
+				if distance < bestDistance then
+					bestDistance = distance
+					bestSnapshot = snapshot
+				elseif distance == bestDistance and bestSnapshot ~= nil and compareRealmTieBreak(snapshot, bestSnapshot) then
+					bestSnapshot = snapshot
+				elseif bestSnapshot == nil then
+					bestSnapshot = snapshot
+					bestDistance = distance
+				end
+			end
+		end
+		return bestSnapshot
+	end
+
+	return nil
+end
+
 export type ResolveTeleportAccessCodeResult = {
 	accessCode: string?,
 	resolverPath: string,
