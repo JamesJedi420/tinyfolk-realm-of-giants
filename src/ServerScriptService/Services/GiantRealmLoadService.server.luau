@@ -2,11 +2,15 @@
 
 local Players = game:GetService("Players")
 
-local RoleConfig = require(
-	game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("RoleConfig")
-)
+local RoleConfig = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("RoleConfig")
+	)
+	else (require :: any)("../../ReplicatedStorage/Shared/Config/RoleConfig")
 
-local GiantRealmLoadService = require(script.Parent.GiantRealmLoadService)
+local GiantRealmLoadService = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent.GiantRealmLoadService)
+	else (require :: any)("./GiantRealmLoadService")
 
 local ROLE_ATTRIBUTE = "Role"
 

@@ -572,7 +572,7 @@ local roleServiceQueryApi: any = _G._RoleService_QueryAPI
 assertTrue(type(roleServiceQueryApi) == "table", "RoleService exposes query API")
 
 assertEqual(playersService.CharacterAutoLoads, false, "RoleService sets Players.CharacterAutoLoads false")
-assertEqual(#bindToCloseCallbacks, 1, "RoleService binds shutdown cleanup")
+assertEqual(#bindToCloseCallbacks, 0, "RoleService does not bind shutdown cleanup")
 
 assertEqual(
 	playerStoredGiant:GetAttribute("SelectedRole"),
@@ -702,35 +702,28 @@ assertTrue(
 )
 
 playerRemoving:Fire(playerRealmSaveFail)
-assertEqual(realmSaveCallCountByUserId[2004], 1, "save failure Giant still attempts save")
-assertEqual(realmReleaseCallCountByUserId[2004], 1, "save failure Giant still releases realm")
+assertEqual(realmSaveCallCountByUserId[2004], nil, "removing Giant does not save realm from RoleService")
+assertEqual(realmReleaseCallCountByUserId[2004], nil, "removing Giant does not release realm from RoleService")
 assertEqual(
 	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
 	2001,
 	"removing active Giant falls back to remaining loaded realm owner"
 )
 assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), 2001, "active realm owner projection falls back")
-assertTrue(sawWarnContaining("Giant realm save failed userId=2004"), "realm save failure warning emitted")
 
 playerRemoving:Fire(playerRealmLoadFail)
 assertEqual(realmSaveCallCountByUserId[2003], nil, "removing failed-load Giant does not save realm")
 assertEqual(realmReleaseCallCountByUserId[2003], nil, "removing failed-load Giant does not release realm")
 
 playerRemoving:Fire(playerUpdateOk)
-assertEqual(realmSaveCallCountByUserId[2001], 1, "removing loaded Giant saves realm")
-assertEqual(realmReleaseCallCountByUserId[2001], 1, "removing loaded Giant releases realm")
+assertEqual(realmSaveCallCountByUserId[2001], nil, "removing loaded Giant does not save realm from RoleService")
+assertEqual(realmReleaseCallCountByUserId[2001], nil, "removing loaded Giant does not release realm from RoleService")
 assertEqual(
 	roleServiceQueryApi.GetActiveGiantRealmOwnerUserId(),
 	nil,
 	"removing active Giant clears active realm owner"
 )
 assertEqual(playerUpdateFail:GetAttribute("GiantRealmOwnerUserId"), nil, "active realm owner projection clears")
-
-bindToCloseCallbacks[1]()
-assertEqual(realmSaveCallCountByUserId[2001], 1, "shutdown does not resave removed Giant")
-assertEqual(realmReleaseCallCountByUserId[2001], 1, "shutdown does not rerelease removed Giant")
-assertEqual(realmSaveCallCountByUserId[2004], 1, "shutdown does not resave save-failure removed Giant")
-assertEqual(realmReleaseCallCountByUserId[2004], 1, "shutdown does not rerelease save-failure removed Giant")
 
 playerNoStored:SetAttribute("Role", RoleConfig.Roles.Tinyfolk)
 local downAccepted = roleServiceQueryApi.SetDowned(playerNoStored.UserId, 30, "runtime_test_downed")
