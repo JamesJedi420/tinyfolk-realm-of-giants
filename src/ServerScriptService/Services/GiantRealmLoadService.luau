@@ -255,6 +255,27 @@ function GiantRealmLoadService.LoadAndInitialize(ownerUserId: any): any
 	}
 end
 
+function GiantRealmLoadService.ReleaseAllLoadedRealms(reason: any?): { number }
+	local cleanupReason = if type(reason) == "string" then reason else "unspecified"
+	local releasedOwnerUserIds: { number } = {}
+	local ownerUserIds: { number } = {}
+
+	for ownerUserId in pairs(loadedRealmByOwnerUserId) do
+		table.insert(ownerUserIds, ownerUserId)
+	end
+
+	table.sort(ownerUserIds)
+
+	for _, ownerUserId in ipairs(ownerUserIds) do
+		local releaseResult = GiantRealmLoadService.SaveAndRelease(ownerUserId, cleanupReason)
+		if type(releaseResult) == "table" and releaseResult.accepted == true then
+			table.insert(releasedOwnerUserIds, ownerUserId)
+		end
+	end
+
+	return releasedOwnerUserIds
+end
+
 function GiantRealmLoadService.SaveAndRelease(ownerUserId: any, reason: any?): any
 	if not isValidUserId(ownerUserId) then
 		return {
@@ -326,6 +347,9 @@ globalEnv._GiantRealmLoadService_QueryAPI = {
 	end,
 	SaveAndRelease = function(ownerUserId: any, reason: any?): any
 		return GiantRealmLoadService.SaveAndRelease(ownerUserId, reason)
+	end,
+	ReleaseAllLoadedRealms = function(reason: any?): { number }
+		return GiantRealmLoadService.ReleaseAllLoadedRealms(reason)
 	end,
 	IsRealmLoaded = function(ownerUserId: any): boolean
 		return GiantRealmLoadService.IsRealmLoaded(ownerUserId)

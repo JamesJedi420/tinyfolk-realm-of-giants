@@ -174,6 +174,48 @@ _G._EscapeService_QueryAPI = {
 	end,
 }
 
+local PlayerLocationService = require("../src/ServerScriptService/Services/PlayerLocationService")
+local PlayerLocationState = require("../src/ReplicatedStorage/Shared/GiantRealm/PlayerLocationState")
+local RealmSafeReturnService = require("../src/ServerScriptService/Services/RealmSafeReturnService")
+local RealmSafeReturnState = require("../src/ReplicatedStorage/Shared/GiantRealm/RealmSafeReturnState")
+local RealmTransferAssignmentService = require("../src/ServerScriptService/Services/RealmTransferAssignmentService")
+
+PlayerLocationService.ResetForTests()
+RealmTransferAssignmentService.ResetForTests()
+RealmSafeReturnService.ResetForTests()
+RealmSafeReturnService.SetTestOverrides({
+	profileGateway = _G._ProfilePersistenceGateway_QueryAPI,
+})
+
+local function seedCapturedLocation(targetUserId: number, ownerUserId: number, at: number)
+	PlayerLocationService.ApplyTransition(targetUserId, {
+		operation = PlayerLocationState.Operations.BeginTransit,
+		now = at,
+		realmOwnerUserId = ownerUserId,
+		realmId = string.format("giant_realm_%d", ownerUserId),
+		transitReason = PlayerLocationState.TransitReason.PartyAdmission,
+	})
+	PlayerLocationService.ApplyTransition(targetUserId, {
+		operation = PlayerLocationState.Operations.ConfirmRealmGuest,
+		now = at,
+		realmOwnerUserId = ownerUserId,
+	})
+	PlayerLocationService.ApplyTransition(targetUserId, {
+		operation = PlayerLocationState.Operations.Capture,
+		now = at,
+	})
+end
+
+playersService.PlayerRemoving:Connect(function(player: any)
+	if player:GetAttribute("Role") == "Tinyfolk" then
+		RealmSafeReturnService.ApplyReturnRequest(player.UserId, {
+			trigger = RealmSafeReturnState.ReturnTrigger.Logout,
+			isOnline = false,
+			now = os.time(),
+		})
+	end
+end)
+
 require("../src/ServerScriptService/Services/CaptureService.server")
 
 local captureApi: any = _G._CaptureService_QueryAPI
@@ -224,6 +266,12 @@ end
 
 local function resetState()
 	captureApi.ResetForTests()
+	PlayerLocationService.ResetForTests()
+	RealmTransferAssignmentService.ResetForTests()
+	RealmSafeReturnService.ResetForTests()
+	RealmSafeReturnService.SetTestOverrides({
+		profileGateway = _G._ProfilePersistenceGateway_QueryAPI,
+	})
 	scoreEvents = {}
 	safeReturnCalls = {}
 	profilePersistCalls = {}
@@ -376,6 +424,7 @@ assertFalse(missingRelease.accepted, "missing release rejected")
 assertEqual(missingRelease.reason, "capture_missing", "missing release reason")
 
 resetState()
+seedCapturedLocation(2102, 2101, 1)
 local toClear = captureApi.RequestCapture(2101, 2102, 1.0)
 assertTrue(toClear.accepted == true, "accepted before player removing")
 playersService.PlayerRemoving:Fire(giant)
@@ -387,6 +436,7 @@ assertEqual(#safeReturnCalls, 1, "custodian removing safe-returns online capture
 assertEqual(safeReturnCalls[1].targetUserId, 2102, "custodian removing safe return target")
 
 resetState()
+seedCapturedLocation(2102, 2101, 1)
 captureApi.RequestCapture(2101, 2102, 1.0)
 profilePersistCalls = {}
 playersService.PlayerRemoving:Fire(targetA)

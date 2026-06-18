@@ -76,4 +76,12 @@ assertEqual(saveCalls, 1, "save called once")
 assertEqual(releaseCalls, 1, "release called once")
 assertTrue(GiantRealmLoadService.IsRealmLoaded(ownerUserId) == false, "realm released in service")
 
+local secondOwnerUserId = 9502
+local secondLoad = GiantRealmLoadService.LoadAndInitialize(secondOwnerUserId)
+assertTrue(secondLoad.accepted == true, "second realm load accepted")
+local releasedAll = GiantRealmLoadService.ReleaseAllLoadedRealms("bind_to_close")
+assertEqual(#releasedAll, 1, "release all loaded one active realm")
+assertEqual(releasedAll[1], secondOwnerUserId, "release all owner id")
+assertTrue(GiantRealmLoadService.IsRealmLoaded(secondOwnerUserId) == false, "second realm released")
+
 print("giant_realm_load_service_runtime_entrypoint: all checks passed")
