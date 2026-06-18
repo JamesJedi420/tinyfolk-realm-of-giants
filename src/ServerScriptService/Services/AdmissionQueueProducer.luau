@@ -1,5 +1,9 @@
 --!strict
 
+local RealmAdmissionLocationCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmAdmissionLocationCaller"))
+	else (require :: any)("./RealmAdmissionLocationCaller")
+
 local AdmissionQueueProducer: any = {}
 
 type EnqueueResult = {
@@ -159,6 +163,26 @@ function AdmissionQueueProducer.Create(config: any?): any
 			retryCount = if isFiniteNumber(input.retryCount) and input.retryCount >= 0 then input.retryCount else 0,
 		}
 
+		local locationBeginInput = {
+			targetRealmId = input.targetRealmId,
+			entryType = input.entryType,
+			assignmentReason = input.assignmentReason,
+			now = os.time(),
+		}
+		local locationBeginResult =
+			RealmAdmissionLocationCaller.ApplyBeginForAdmissionMembers(normalizedMembers, locationBeginInput)
+		if type(locationBeginResult) ~= "table" or locationBeginResult.accepted ~= true then
+			return {
+				accepted = false,
+				reason = if type(locationBeginResult) == "table"
+						and type(locationBeginResult.reason) == "string"
+					then locationBeginResult.reason
+					else "location_transition_failed",
+				snapshot = nil,
+				payload = payload,
+			}
+		end
+
 		local queueApi = queryApiResolver()
 		if type(queueApi) ~= "table" or type((queueApi :: any).EnqueueAdmission) ~= "function" then
 			return {
@@ -173,6 +197,7 @@ function AdmissionQueueProducer.Create(config: any?): any
 			return (queueApi :: any).EnqueueAdmission(payload)
 		end)
 		if not enqueueOk then
+			RealmAdmissionLocationCaller.ApplyAbortRollbackForMembers(normalizedMembers, locationBeginInput)
 			return {
 				accepted = false,
 				reason = "admission_enqueue_failed",
@@ -182,6 +207,7 @@ function AdmissionQueueProducer.Create(config: any?): any
 		end
 
 		if type(enqueueResult) ~= "table" then
+			RealmAdmissionLocationCaller.ApplyAbortRollbackForMembers(normalizedMembers, locationBeginInput)
 			return {
 				accepted = false,
 				reason = "admission_enqueue_failed",
@@ -191,6 +217,7 @@ function AdmissionQueueProducer.Create(config: any?): any
 		end
 
 		if enqueueResult.accepted ~= true then
+			RealmAdmissionLocationCaller.ApplyAbortRollbackForMembers(normalizedMembers, locationBeginInput)
 			return {
 				accepted = false,
 				reason = if type(enqueueResult.reason) == "string"

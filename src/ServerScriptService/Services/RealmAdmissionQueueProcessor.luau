@@ -3,6 +3,10 @@
 local RealmAdmissionQueueProcessor: any = {}
 local globalEnv: any = getfenv()
 
+local RealmAdmissionLocationCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmAdmissionLocationCaller"))
+	else (require :: any)("./RealmAdmissionLocationCaller")
+
 local TINYFOLK_PARTY_ID_PREFIX = "tinyfolk_party:"
 
 export type ProcessOutcome = {
@@ -196,6 +200,26 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 		return getGlobalTable("_TinyfolkPartyService_QueryAPI")
 	end
 
+	local function resolvePartyMemberUserIds(entry: any): { number }?
+		if type(entry) ~= "table" or type(entry.partyMemberUserIds) ~= "table" then
+			return nil
+		end
+		if #entry.partyMemberUserIds <= 0 then
+			return nil
+		end
+		return entry.partyMemberUserIds
+	end
+
+	local function abortAdmissionLocation(entry: any, nowAt: number)
+		local memberUserIds = resolvePartyMemberUserIds(entry)
+		if memberUserIds == nil then
+			return
+		end
+		RealmAdmissionLocationCaller.ApplyAbortRollbackForMembers(memberUserIds, {
+			now = math.floor(nowAt),
+		})
+	end
+
 	local function resolveTransferredUserIds(entry: any, dispatchResult: any): { number }?
 		if type(dispatchResult) == "table" and type(dispatchResult.transferredUserIds) == "table" then
 			return dispatchResult.transferredUserIds
@@ -292,6 +316,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 			end
 			if queueState.IsExpired(entry, nowAt) then
 				if removeFromQueue(queued.receiptId) then
+					abortAdmissionLocation(entry, nowAt)
 					unregisterParty(entry.partyId)
 					outcome.expired += 1
 				else
@@ -368,6 +393,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					outcome.cleanupDeferred += 1
 					continue
 				end
+				abortAdmissionLocation(entry, nowAt)
 				unregisterParty(entry.partyId)
 				releaseOperationLock(entry.operationId)
 				outcome.failed += 1

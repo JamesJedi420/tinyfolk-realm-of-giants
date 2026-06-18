@@ -2,6 +2,8 @@
 
 local ProfilePersistenceGateway = require("../src/ServerScriptService/Services/ProfilePersistenceGateway")
 local ProfileTeleportHandoffService = require("../src/ServerScriptService/Services/ProfileTeleportHandoffService")
+local PlayerLocationService = require("../src/ServerScriptService/Services/PlayerLocationService")
+local PlayerLocationState = require("../src/ReplicatedStorage/Shared/GiantRealm/PlayerLocationState")
 local RealmTransferHandoffService = require("../src/ServerScriptService/Services/RealmTransferHandoffService")
 local RealmTransferAssignmentService = require("../src/ServerScriptService/Services/RealmTransferAssignmentService")
 local RealmAssignmentProfileState = require("../src/ReplicatedStorage/Shared/GiantRealm/RealmAssignmentProfileState")
@@ -104,6 +106,7 @@ TransferLockService.ResetForTests()
 RealmTransferHandoffService.ResetForTests()
 RealmTransferAssignmentService.ResetForTests()
 RealmTradeConversionService.ResetForTests()
+PlayerLocationService.ResetForTests()
 ProfileTeleportHandoffService.ResetForTests()
 
 local loadedProfileByUserId: { [number]: any } = {}
@@ -487,6 +490,13 @@ ownershipReadyByUserId[tradeTravelerUserId] = true
 local tradeConfirm =
 	ProfileTeleportHandoffService.ConfirmDestinationOwnership(tradeTravelerUserId, tradeHandoff.handoffToken)
 assertEqual(tradeConfirm.ok, true, "trade handoff confirm succeeds")
+local tradeLocationSnapshot = PlayerLocationService.GetLocationSnapshot(tradeTravelerUserId)
+assertEqual(tradeLocationSnapshot.accepted, true, "trade location snapshot accepted")
+assertEqual(
+	tradeLocationSnapshot.snapshot.location,
+	PlayerLocationState.Location.RealmGuest,
+	"trade handoff confirms guest location"
+)
 assertEqual(#tradeXpCalls, 1, "trade confirm records xp once")
 assertEqual(tradeXpCalls[1].operationId, "trade-handoff-4100", "trade xp operation id")
 
