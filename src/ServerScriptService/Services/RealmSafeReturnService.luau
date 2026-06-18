@@ -46,6 +46,19 @@ local CaptivitySafeReturnCaller = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("CaptivitySafeReturnCaller"))
 	else (require :: any)("./CaptivitySafeReturnCaller")
 
+local PublishedClientTeleportEvidenceCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PublishedClientTeleportEvidenceCaller"))
+	else (require :: any)("./PublishedClientTeleportEvidenceCaller")
+
+local TeleportEvidencePhases = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PublishedClientTeleportEvidence")
+	).Phases
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PublishedClientTeleportEvidence").Phases
+
 local RealmSafeReturnService: any = {}
 local globalEnv: any = getfenv()
 
@@ -287,6 +300,19 @@ local function recordReturnDiagnostics(userId: number, trigger: string, accepted
 	diagnostics.lastUserId = userId
 end
 
+local function recordSafeReturnEvidence(userId: number, snapshot: any, phase: string, resultReason: string, at: number)
+	local realmId = if type(snapshot) == "table" and type(snapshot.realmId) == "string" then snapshot.realmId else nil
+	pcall(PublishedClientTeleportEvidenceCaller.Record, {
+		userId = userId,
+		realmId = realmId,
+		phase = phase,
+		resultReason = resultReason,
+		flow = "escape_return",
+		timestamp = at,
+		allowUnresolvedRealmId = phase == TeleportEvidencePhases.Failed,
+	})
+end
+
 function RealmSafeReturnService.ResetForTests()
 	diagnostics = {
 		totalReturnAttempts = 0,
@@ -302,6 +328,7 @@ function RealmSafeReturnService.ResetForTests()
 	handoffApiOverride = nil
 	profileGatewayOverride = nil
 	nowFnOverride = nil
+	PublishedClientTeleportEvidenceCaller.ResetForTests()
 end
 
 function RealmSafeReturnService.SetTestOverrides(overrides: any)
@@ -358,12 +385,15 @@ function RealmSafeReturnService.ApplyReturnRequest(userId: any, input: any): any
 	})
 	if plan.accepted ~= true then
 		recordReturnDiagnostics(userId, tostring(trigger), false, plan.reason)
+		recordSafeReturnEvidence(userId, snapshot, TeleportEvidencePhases.Failed, plan.reason, resolvedAt)
 		return {
 			accepted = false,
 			reason = plan.reason,
 			returnPath = plan.returnPath,
 		}
 	end
+
+	recordSafeReturnEvidence(userId, snapshot, TeleportEvidencePhases.Requested, "accepted", resolvedAt)
 
 	if plan.useResolveDisconnect then
 		local locationApi = getLocationApi()
@@ -444,6 +474,7 @@ function RealmSafeReturnService.ApplyReturnRequest(userId: any, input: any): any
 
 	recordReturnDiagnostics(userId, tostring(trigger), true, "accepted")
 	debugLog(string.format("return applied userId=%d trigger=%s path=%s", userId, tostring(trigger), plan.returnPath))
+	recordSafeReturnEvidence(userId, snapshot, TeleportEvidencePhases.Returned, "accepted", resolvedAt)
 
 	return {
 		accepted = true,
@@ -485,6 +516,8 @@ function RealmSafeReturnService.ResolvePendingReturnOnJoin(userId: any, input: a
 	if joinPlan.abortAssignment then
 		abortAssignment(userId, resolvedAt)
 	end
+
+	recordSafeReturnEvidence(userId, snapshot, TeleportEvidencePhases.Returned, "accepted", resolvedAt)
 
 	return {
 		accepted = true,

@@ -60,6 +60,19 @@ local RealmAdmissionLocationCaller = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmAdmissionLocationCaller"))
 	else (require :: any)("./RealmAdmissionLocationCaller")
 
+local PublishedClientTeleportEvidenceCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PublishedClientTeleportEvidenceCaller"))
+	else (require :: any)("./PublishedClientTeleportEvidenceCaller")
+
+local TeleportEvidencePhases = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PublishedClientTeleportEvidence")
+	).Phases
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PublishedClientTeleportEvidence").Phases
+
 local LiveRealmHubRouting = if game ~= nil and type(game.GetService) == "function"
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -429,7 +442,31 @@ local function resolveAssignmentReason(context: any?): string
 	return RealmAssignmentProfileState.AssignmentReason.PartyAdmission
 end
 
-local function abortControlledTransferHandoff(userId: number, handoffToken: string, targetRealmId: string?)
+local function buildTeleportEvidenceBase(userId: number, realmId: string?, context: any?): any
+	local contextAny: any = if type(context) == "table" then context else {}
+	local partyMemberUserIds = contextAny.partyMemberUserIds
+	return {
+		userId = userId,
+		realmId = realmId,
+		partyId = contextAny.partyId,
+		operationId = contextAny.operationId,
+		assignmentReason = resolveAssignmentReason(contextAny),
+		contextFlow = contextAny.flow,
+		partyMemberCount = if type(partyMemberUserIds) == "table" then #partyMemberUserIds else nil,
+		targetPlaceId = contextAny.targetPlaceId,
+	}
+end
+
+local function recordTeleportEvidence(input: any)
+	pcall(PublishedClientTeleportEvidenceCaller.Record, input)
+end
+
+local function abortControlledTransferHandoff(
+	userId: number,
+	handoffToken: string,
+	targetRealmId: string?,
+	evidenceReason: string?
+)
 	if not isNonEmptyString(targetRealmId) or not isNonEmptyString(handoffToken) then
 		return
 	end
@@ -444,16 +481,23 @@ local function abortControlledTransferHandoff(userId: number, handoffToken: stri
 				now = os.time(),
 			})
 		end
-		RealmAdmissionLocationCaller.ApplyAbortRollback(userId, { now = os.time() })
-		return
+	else
+		pcall(handoffApi.InvalidateHandoffOnAbort, {
+			handoffToken = handoffToken,
+			targetRealmId = targetRealmId,
+			now = os.time(),
+		})
 	end
 
-	pcall(handoffApi.InvalidateHandoffOnAbort, {
-		handoffToken = handoffToken,
-		targetRealmId = targetRealmId,
-		now = os.time(),
-	})
 	RealmAdmissionLocationCaller.ApplyAbortRollback(userId, { now = os.time() })
+	recordTeleportEvidence({
+		userId = userId,
+		realmId = targetRealmId,
+		phase = TeleportEvidencePhases.Failed,
+		resultReason = if isNonEmptyString(evidenceReason) then evidenceReason else "handoff_aborted",
+		forceFailedTransfer = true,
+		allowUnresolvedRealmId = true,
+	})
 end
 
 local function confirmControlledTransferLocation(
@@ -528,14 +572,44 @@ local function finalizeArrivalConfirmations(
 ): (boolean, string?, any?)
 	local locationOk, locationReason = confirmControlledTransferLocation(userId, targetRealmId, assignmentReason)
 	if not locationOk then
+		recordTeleportEvidence({
+			userId = userId,
+			realmId = targetRealmId,
+			assignmentReason = assignmentReason,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = locationReason or "location_confirm_failed",
+			forceFailedTransfer = true,
+		})
 		return false, locationReason, handoffEntry
 	end
 
 	local assignmentOk, assignmentReasonOut =
 		applyAssignmentConfirmTransition(userId, targetRealmId, assignmentReason, handoffEntry)
 	if not assignmentOk then
+		recordTeleportEvidence({
+			userId = userId,
+			realmId = targetRealmId,
+			assignmentReason = assignmentReason,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = assignmentReasonOut or "assignment_confirm_failed",
+			forceFailedTransfer = true,
+		})
 		return false, assignmentReasonOut, handoffEntry
 	end
+
+	local inferredFlow = PublishedClientTeleportEvidenceCaller.InferFlow({
+		assignmentReason = assignmentReason,
+		contextFlow = if assignmentReason == RealmAssignmentProfileState.AssignmentReason.EscapeReturn
+			then "escape_return"
+			else nil,
+	})
+	recordTeleportEvidence({
+		userId = userId,
+		realmId = targetRealmId,
+		assignmentReason = assignmentReason,
+		phase = PublishedClientTeleportEvidenceCaller.ResolveTerminalPhase(inferredFlow),
+		resultReason = "accepted",
+	})
 
 	return true, nil, handoffEntry
 end
@@ -1114,6 +1188,16 @@ local function attemptDestinationConfirmation(
 		then confirmResult.reason
 		else "confirm_failed"
 	clearDestinationAwaitingOwnership(userId)
+	if confirmResult.reason ~= "ownership_not_ready" then
+		recordTeleportEvidence({
+			userId = userId,
+			realmId = targetRealmId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = destinationOrchestrationDiagnostics.lastReason,
+			forceFailedTransfer = true,
+			allowUnresolvedRealmId = true,
+		})
+	end
 	return confirmResult
 end
 
@@ -1201,6 +1285,7 @@ function ProfileTeleportHandoffService.ResetForTests()
 		capacitySkipped = 0,
 		lastReason = "not_started",
 	}
+	PublishedClientTeleportEvidenceCaller.ResetForTests()
 end
 
 function ProfileTeleportHandoffService.GetAdmissionIngressDiagnostics(): AdmissionIngressDiagnostics
@@ -1232,17 +1317,45 @@ end
 function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, context: any?): HandoffResult
 	local userId = getPlayerUserId(player)
 	if userId == nil then
+		recordTeleportEvidence({
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = "invalid_player_user_id",
+			forceFailedTransfer = true,
+			allowUnresolvedRealmId = true,
+		})
 		return makeResult(false, "BeginCrossServerHandoff", "invalid_player_user_id", false, nil, "safe_fallback")
 	end
 
 	local contextAny: any = context
 	local targetRealmId = if type(contextAny) == "table" then contextAny.targetRealmId else nil
+	local evidenceBase = buildTeleportEvidenceBase(userId, targetRealmId, contextAny)
+
 	if not isNonEmptyString(targetRealmId) then
+		recordTeleportEvidence({
+			userId = userId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = "target_realm_id_invalid",
+			forceFailedTransfer = true,
+			allowUnresolvedRealmId = true,
+		})
 		return makeResult(false, "BeginCrossServerHandoff", "target_realm_id_invalid", false, nil, "safe_fallback")
 	end
 
 	local targetAvailable, availabilityReason = validateTargetRealmForHandoff(targetRealmId)
 	if not targetAvailable then
+		recordTeleportEvidence({
+			userId = evidenceBase.userId,
+			realmId = evidenceBase.realmId,
+			partyId = evidenceBase.partyId,
+			operationId = evidenceBase.operationId,
+			assignmentReason = evidenceBase.assignmentReason,
+			contextFlow = evidenceBase.contextFlow,
+			partyMemberCount = evidenceBase.partyMemberCount,
+			targetPlaceId = evidenceBase.targetPlaceId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = availabilityReason or "target_realm_unavailable",
+			forceFailedTransfer = true,
+		})
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1255,6 +1368,19 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 
 	local handoffBegun, handoffReason, handoffToken = beginControlledTransferHandoff(userId, targetRealmId, contextAny)
 	if not handoffBegun or not isNonEmptyString(handoffToken) then
+		recordTeleportEvidence({
+			userId = evidenceBase.userId,
+			realmId = evidenceBase.realmId,
+			partyId = evidenceBase.partyId,
+			operationId = evidenceBase.operationId,
+			assignmentReason = evidenceBase.assignmentReason,
+			contextFlow = evidenceBase.contextFlow,
+			partyMemberCount = evidenceBase.partyMemberCount,
+			targetPlaceId = evidenceBase.targetPlaceId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = handoffReason or "handoff_begin_failed",
+			forceFailedTransfer = true,
+		})
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1267,7 +1393,7 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 
 	local enqueueResult = requestAdmissionHandoff(userId, handoffToken, targetRealmId)
 	if enqueueResult.accepted ~= true then
-		abortControlledTransferHandoff(userId, handoffToken, targetRealmId)
+		abortControlledTransferHandoff(userId, handoffToken, targetRealmId, enqueueResult.reason)
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1281,6 +1407,19 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 	local startedAt = os.time()
 	local persisted, persistReason = persistPendingRecovery(player, handoffToken, targetRealmId, startedAt)
 	if not persisted then
+		recordTeleportEvidence({
+			userId = evidenceBase.userId,
+			realmId = evidenceBase.realmId,
+			partyId = evidenceBase.partyId,
+			operationId = evidenceBase.operationId,
+			assignmentReason = evidenceBase.assignmentReason,
+			contextFlow = evidenceBase.contextFlow,
+			partyMemberCount = evidenceBase.partyMemberCount,
+			targetPlaceId = evidenceBase.targetPlaceId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = persistReason or "pending_recovery_persist_failed",
+			forceFailedTransfer = true,
+		})
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1293,6 +1432,19 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 
 	local releaseResult = ProfilePersistenceGateway.ReleasePlayerProfile(player)
 	if not releaseResult.ok then
+		recordTeleportEvidence({
+			userId = evidenceBase.userId,
+			realmId = evidenceBase.realmId,
+			partyId = evidenceBase.partyId,
+			operationId = evidenceBase.operationId,
+			assignmentReason = evidenceBase.assignmentReason,
+			contextFlow = evidenceBase.contextFlow,
+			partyMemberCount = evidenceBase.partyMemberCount,
+			targetPlaceId = evidenceBase.targetPlaceId,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = "release_before_transfer_failed",
+			forceFailedTransfer = true,
+		})
 		return makeResult(
 			false,
 			"BeginCrossServerHandoff",
@@ -1307,6 +1459,19 @@ function ProfileTeleportHandoffService.BeginCrossServerHandoff(player: any, cont
 		handoffToken = handoffToken,
 		targetRealmId = targetRealmId,
 	}
+
+	recordTeleportEvidence({
+		userId = evidenceBase.userId,
+		realmId = evidenceBase.realmId,
+		partyId = evidenceBase.partyId,
+		operationId = evidenceBase.operationId,
+		assignmentReason = evidenceBase.assignmentReason,
+		contextFlow = evidenceBase.contextFlow,
+		partyMemberCount = evidenceBase.partyMemberCount,
+		targetPlaceId = evidenceBase.targetPlaceId,
+		phase = TeleportEvidencePhases.Requested,
+		resultReason = "accepted",
+	})
 
 	local result = makeResult(true, "BeginCrossServerHandoff", nil, nil, handoffToken, nil)
 	notifyReleaseReadyCallbacks(userId, result)

@@ -7,6 +7,19 @@ local RealmAdmissionLocationCaller = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("RealmAdmissionLocationCaller"))
 	else (require :: any)("./RealmAdmissionLocationCaller")
 
+local PublishedClientTeleportEvidenceCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PublishedClientTeleportEvidenceCaller"))
+	else (require :: any)("./PublishedClientTeleportEvidenceCaller")
+
+local TeleportEvidencePhases = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PublishedClientTeleportEvidence")
+	).Phases
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PublishedClientTeleportEvidence").Phases
+
 local TINYFOLK_PARTY_ID_PREFIX = "tinyfolk_party:"
 
 export type ProcessOutcome = {
@@ -220,6 +233,24 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 		})
 	end
 
+	local function recordAdmissionFailureEvidence(entry: any, resultReason: string, nowAt: number)
+		local memberUserIds = resolvePartyMemberUserIds(entry)
+		if memberUserIds == nil then
+			return
+		end
+
+		pcall(PublishedClientTeleportEvidenceCaller.RecordForMembers, memberUserIds, {
+			realmId = if type(entry) == "table" then entry.targetRealmId else nil,
+			partyId = if type(entry) == "table" then entry.partyId else nil,
+			operationId = if type(entry) == "table" then entry.operationId else nil,
+			partyMemberCount = #memberUserIds,
+			phase = TeleportEvidencePhases.Failed,
+			resultReason = resultReason,
+			forceFailedTransfer = true,
+			timestamp = nowAt,
+		})
+	end
+
 	local function resolveTransferredUserIds(entry: any, dispatchResult: any): { number }?
 		if type(dispatchResult) == "table" and type(dispatchResult.transferredUserIds) == "table" then
 			return dispatchResult.transferredUserIds
@@ -317,6 +348,7 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 			if queueState.IsExpired(entry, nowAt) then
 				if removeFromQueue(queued.receiptId) then
 					abortAdmissionLocation(entry, nowAt)
+					recordAdmissionFailureEvidence(entry, "queue_entry_expired", nowAt)
 					unregisterParty(entry.partyId)
 					outcome.expired += 1
 				else
@@ -394,6 +426,11 @@ function RealmAdmissionQueueProcessor.Create(deps: any?): any
 					continue
 				end
 				abortAdmissionLocation(entry, nowAt)
+				recordAdmissionFailureEvidence(
+					entry,
+					if type(dispatchResult.reason) == "string" then dispatchResult.reason else "dispatch_failed",
+					nowAt
+				)
 				unregisterParty(entry.partyId)
 				releaseOperationLock(entry.operationId)
 				outcome.failed += 1
