@@ -16,6 +16,8 @@ $testFiles = @(
     'tests\profile_teleport_admission_service_runtime_entrypoint.spec.luau',
     'tests\profile_teleport_handoff_service_runtime_entrypoint.spec.luau',
     'tests\profile_teleport_handoff_admission_ingress_runtime_entrypoint.spec.luau',
+    'tests\player_location_assignment_sync.spec.luau',
+    'tests\player_location_assignment_sync_caller_runtime_entrypoint.spec.luau',
     'tests\profile_persistence_gateway_runtime_entrypoint.spec.luau',
     'tests\event_state_ownership_model.spec.luau',
     'tests\role_service_event_routing_runtime_entrypoint.spec.luau',
