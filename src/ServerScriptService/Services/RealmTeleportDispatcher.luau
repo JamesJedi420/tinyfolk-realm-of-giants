@@ -21,6 +21,19 @@ local RealmReservedServerAllocationState = if game ~= nil and type(game.GetServi
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmReservedServerAllocationState")
 
+local PublishedClientTeleportEvidenceCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PublishedClientTeleportEvidenceCaller"))
+	else (require :: any)("./PublishedClientTeleportEvidenceCaller")
+
+local TeleportEvidencePhases = if game ~= nil and type(game.GetService) == "function"
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("PublishedClientTeleportEvidence")
+	).Phases
+	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PublishedClientTeleportEvidence").Phases
+
 local RealmTransferState = if game ~= nil and type(game.GetService) == "function"
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -369,6 +382,35 @@ local function mapPayloadFailureReasonToPublic(reason: string): string
 	return "payload_rejected"
 end
 
+local function buildDispatchEvidenceInput(entry: any, userId: number, phase: string, resultReason: string): any
+	local memberUserIds = if type(entry) == "table" and type(entry.partyMemberUserIds) == "table"
+		then entry.partyMemberUserIds
+		else nil
+	return {
+		userId = userId,
+		realmId = if type(entry) == "table" then entry.targetRealmId else nil,
+		partyId = if type(entry) == "table" then entry.partyId else nil,
+		operationId = if type(entry) == "table" then entry.operationId else nil,
+		partyMemberCount = if memberUserIds ~= nil then #memberUserIds else nil,
+		targetPlaceId = if type(entry) == "table" then entry.targetPlaceId else nil,
+		phase = phase,
+		resultReason = resultReason,
+	}
+end
+
+local function recordDispatchEvidence(entry: any, userId: number, phase: string, resultReason: string)
+	pcall(PublishedClientTeleportEvidenceCaller.Record, buildDispatchEvidenceInput(entry, userId, phase, resultReason))
+end
+
+local function recordDispatchFailureForMembers(entry: any, memberUserIds: { number }?, resultReason: string)
+	if type(memberUserIds) ~= "table" then
+		return
+	end
+	for _, userId in ipairs(memberUserIds) do
+		recordDispatchEvidence(entry, userId, TeleportEvidencePhases.Failed, resultReason)
+	end
+end
+
 function RealmTeleportDispatcher.Create(config: any?): any
 	local teleportService = resolveTeleportService(config)
 	local playersService = resolvePlayersService(config)
@@ -397,6 +439,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		end
 
 		if type(playersService) ~= "table" or type(playersService.GetPlayerByUserId) ~= "function" then
+			recordDispatchFailureForMembers(entry, memberUserIds, "players_service_unavailable")
 			return makeFailure("players_service_unavailable", true)
 		end
 
@@ -404,12 +447,14 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		for _, userId in ipairs(memberUserIds) do
 			local player = playersService:GetPlayerByUserId(userId)
 			if player == nil then
+				recordDispatchFailureForMembers(entry, memberUserIds, "party_player_missing")
 				return makeFailure("party_player_missing", true)
 			end
 			table.insert(players, player)
 		end
 
 		if type(handoffApi) ~= "table" or type(handoffApi.BeginCrossServerHandoff) ~= "function" then
+			recordDispatchFailureForMembers(entry, memberUserIds, "handoff_api_unavailable")
 			return makeFailure("handoff_api_unavailable", true)
 		end
 
@@ -465,6 +510,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		end
 
 		if #playersToTeleport <= 0 then
+			recordDispatchFailureForMembers(entry, memberUserIds, "party_payload_rejected")
 			return makeFailure("party_payload_rejected", false)
 		end
 
@@ -478,6 +524,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 				})
 			end)
 			if not handoffOk or type(handoffResult) ~= "table" or handoffResult.ok ~= true then
+				recordDispatchFailureForMembers(entry, memberUserIds, "handoff_begin_failed")
 				return makeFailure("handoff_begin_failed", true)
 			end
 			if isPositiveInteger(player.UserId) and isNonEmptyString(handoffResult.handoffToken) then
@@ -486,14 +533,17 @@ function RealmTeleportDispatcher.Create(config: any?): any
 		end
 
 		if type(teleportService) ~= "table" then
+			recordDispatchFailureForMembers(entry, memberUserIds, "teleport_service_unavailable")
 			return makeFailure("teleport_service_unavailable", true)
 		end
 		if type(teleportService.TeleportToPrivateServer) ~= "function" then
+			recordDispatchFailureForMembers(entry, memberUserIds, "teleport_private_server_unavailable")
 			return makeFailure("teleport_private_server_unavailable", true)
 		end
 
 		local placeId = resolveDestinationPlaceId(config, entry)
 		if placeId == nil then
+			recordDispatchFailureForMembers(entry, memberUserIds, "destination_place_unresolved")
 			return makeFailure("destination_place_unresolved", true)
 		end
 
@@ -503,12 +553,15 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			serverCodeOrError = registryAccessCode
 		else
 			if registryReason == "target_realm_unavailable" or registryReason == "entry_access_mode_rejected" then
+				recordDispatchFailureForMembers(entry, memberUserIds, registryReason)
 				return makeFailure(registryReason, false)
 			end
+			recordDispatchFailureForMembers(entry, memberUserIds, registryReason or "target_private_server_unresolved")
 			return makeFailure(registryReason or "target_private_server_unresolved", true)
 		end
 
 		if not isNonEmptyString(serverCodeOrError) then
+			recordDispatchFailureForMembers(entry, memberUserIds, "target_private_server_unresolved")
 			return makeFailure("target_private_server_unresolved", true)
 		end
 
@@ -526,6 +579,12 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			(teleportData :: any).tinyfolkToolPayloadFailures = tinyfolkToolPayloadFailures
 		end
 
+		for _, player in ipairs(playersToTeleport) do
+			if isPositiveInteger(player.UserId) then
+				recordDispatchEvidence(entry, player.UserId, TeleportEvidencePhases.Teleporting, "accepted")
+			end
+		end
+
 		local teleportOk = pcall(function()
 			teleportService:TeleportToPrivateServer(
 				placeId,
@@ -536,6 +595,7 @@ function RealmTeleportDispatcher.Create(config: any?): any
 			)
 		end)
 		if not teleportOk then
+			recordDispatchFailureForMembers(entry, memberUserIds, "teleport_dispatch_failed")
 			return makeFailure("teleport_dispatch_failed", true)
 		end
 

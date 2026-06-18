@@ -12,6 +12,7 @@ $testFiles = @(
     'tests\event_log_state.spec.luau',
     'tests\event_log_service_runtime_entrypoint.spec.luau',
     'tests\published_client_teleport_evidence.spec.luau',
+    'tests\published_client_teleport_evidence_caller.spec.luau',
     'tests\profile_teleport_admission_service_runtime_entrypoint.spec.luau',
     'tests\profile_teleport_handoff_service_runtime_entrypoint.spec.luau',
     'tests\profile_teleport_handoff_admission_ingress_runtime_entrypoint.spec.luau',
