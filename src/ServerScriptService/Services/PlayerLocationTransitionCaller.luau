@@ -9,6 +9,10 @@ local PlayerLocationState = if script ~= nil and script.Parent ~= nil
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/PlayerLocationState")
 
+local PlayerLocationAssignmentSyncCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PlayerLocationAssignmentSyncCaller"))
+	else (require :: any)("./PlayerLocationAssignmentSyncCaller")
+
 local Operations = PlayerLocationState.Operations
 local TransitReason = PlayerLocationState.TransitReason
 local Location = PlayerLocationState.Location
@@ -36,17 +40,7 @@ local function getLocationSnapshot(userId: number): any?
 end
 
 local function applyTransition(userId: number, payload: any): any?
-	local locationApi = getLocationApi()
-	if type(locationApi) ~= "table" or type(locationApi.ApplyTransition) ~= "function" then
-		return nil
-	end
-	local ok, result = pcall(function()
-		return locationApi.ApplyTransition(userId, payload)
-	end)
-	if not ok then
-		return nil
-	end
-	return result
+	return PlayerLocationAssignmentSyncCaller.ApplyLocationWithAssignmentSync(userId, payload)
 end
 
 function PlayerLocationTransitionCaller.ApplyCapture(userId: number, at: number?): any?
