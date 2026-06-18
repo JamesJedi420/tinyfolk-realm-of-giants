@@ -27,10 +27,13 @@ local RealmTransferState = if script ~= nil and script.Parent ~= nil
 	)
 	else (require :: any)("../../ReplicatedStorage/Shared/GiantRealm/RealmTransferState")
 
+local PlayerLocationAssignmentSyncCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PlayerLocationAssignmentSyncCaller"))
+	else (require :: any)("./PlayerLocationAssignmentSyncCaller")
+
 local RealmAdmissionLocationCaller: any = {}
 local globalEnv: any = getfenv()
 
-local Location = PlayerLocationState.Location
 local Operations = PlayerLocationState.Operations
 
 local locationApiOverride: any = nil
@@ -79,23 +82,7 @@ local function getLocationSnapshot(userId: number): any?
 end
 
 local function applyTransition(userId: number, payload: any): any
-	local locationApi = getLocationApi()
-	if type(locationApi) ~= "table" or type(locationApi.ApplyTransition) ~= "function" then
-		return {
-			accepted = true,
-			reason = "location_api_unavailable",
-		}
-	end
-	local ok, result = pcall(function()
-		return locationApi.ApplyTransition(userId, payload)
-	end)
-	if not ok or type(result) ~= "table" then
-		return {
-			accepted = false,
-			reason = "location_transition_failed",
-		}
-	end
-	return result
+	return PlayerLocationAssignmentSyncCaller.ApplyLocationWithAssignmentSync(userId, payload)
 end
 
 function RealmAdmissionLocationCaller.ResetForTests()
@@ -159,6 +146,7 @@ function RealmAdmissionLocationCaller.ApplyBeginForAdmission(userId: any, input:
 		realmOwnerUserId = realmOwnerUserId,
 		realmId = targetRealmId,
 		transitReason = transitReason,
+		assignmentReason = input.assignmentReason,
 	})
 end
 
@@ -227,43 +215,17 @@ function RealmAdmissionLocationCaller.ApplyConfirmForArrival(userId: any, input:
 		transitReason = if snapshot ~= nil then snapshot.transitReason else nil,
 	})
 
-	return applyTransition(userId, {
-		operation = confirmOperation,
-		now = resolvedAt,
+	return PlayerLocationAssignmentSyncCaller.ApplyCoupledConfirmForArrival(userId, {
+		targetRealmId = targetRealmId,
 		realmOwnerUserId = realmOwnerUserId,
-		realmId = targetRealmId,
+		assignmentReason = input.assignmentReason,
+		confirmOperation = confirmOperation,
+		now = resolvedAt,
 	})
 end
 
 function RealmAdmissionLocationCaller.ApplyAbortRollback(userId: any, input: any?): any
-	if not isPositiveInteger(userId) then
-		return {
-			accepted = false,
-			reason = "user_id_invalid",
-		}
-	end
-
-	local resolvedAt = if type(input) == "table" and type(input.now) == "number" then input.now else os.time()
-	local snapshot = getLocationSnapshot(userId)
-	if snapshot == nil or snapshot.location ~= Location.Transit then
-		return {
-			accepted = true,
-			reason = "not_in_transit",
-		}
-	end
-
-	local abortResult = applyTransition(userId, {
-		operation = Operations.AbortTransit,
-		now = resolvedAt,
-	})
-	if type(abortResult) ~= "table" or abortResult.accepted ~= true then
-		return abortResult
-	end
-
-	return applyTransition(userId, {
-		operation = Operations.ResolveHub,
-		now = resolvedAt,
-	})
+	return PlayerLocationAssignmentSyncCaller.ApplyCoupledAbortRollback(userId, input)
 end
 
 function RealmAdmissionLocationCaller.ApplyAbortRollbackForMembers(memberUserIds: any, input: any?): any

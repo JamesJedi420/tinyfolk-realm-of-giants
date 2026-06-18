@@ -519,51 +519,6 @@ local function confirmControlledTransferLocation(
 	return true, nil
 end
 
-local function resolveConfirmOperation(assignmentReason: string?): string
-	if assignmentReason == RealmAssignmentProfileState.AssignmentReason.EscapeReturn then
-		return RealmTransferState.Operations.ConfirmHubReturn
-	end
-	return RealmTransferState.Operations.ConfirmArrival
-end
-
-local function applyAssignmentConfirmTransition(
-	userId: number,
-	targetRealmId: string,
-	assignmentReason: string?,
-	handoffEntry: any?
-): (boolean, string?)
-	local assignmentApi = getRealmTransferAssignmentQueryApi()
-	if assignmentApi == nil or type(assignmentApi.ApplyTransition) ~= "function" then
-		return true, nil
-	end
-
-	local realmOwnerUserId = RealmTransferState.ParseRealmOwnerUserId(targetRealmId)
-	if realmOwnerUserId == nil and type(handoffEntry) == "table" then
-		local entryAny: any = handoffEntry
-		if isValidUserId(entryAny.realmOwnerUserId) then
-			realmOwnerUserId = entryAny.realmOwnerUserId
-		end
-	end
-	if realmOwnerUserId == nil then
-		return true, nil
-	end
-
-	local transitionResult = assignmentApi.ApplyTransition(userId, {
-		operation = resolveConfirmOperation(assignmentReason),
-		now = os.time(),
-		realmOwnerUserId = realmOwnerUserId,
-		realmId = targetRealmId,
-	})
-	if type(transitionResult) ~= "table" or transitionResult.accepted ~= true then
-		local reason = if type(transitionResult) == "table" and type(transitionResult.reason) == "string"
-			then transitionResult.reason
-			else "assignment_confirm_failed"
-		return false, reason
-	end
-
-	return true, nil
-end
-
 local function finalizeArrivalConfirmations(
 	userId: number,
 	targetRealmId: string,
@@ -581,20 +536,6 @@ local function finalizeArrivalConfirmations(
 			forceFailedTransfer = true,
 		})
 		return false, locationReason, handoffEntry
-	end
-
-	local assignmentOk, assignmentReasonOut =
-		applyAssignmentConfirmTransition(userId, targetRealmId, assignmentReason, handoffEntry)
-	if not assignmentOk then
-		recordTeleportEvidence({
-			userId = userId,
-			realmId = targetRealmId,
-			assignmentReason = assignmentReason,
-			phase = TeleportEvidencePhases.Failed,
-			resultReason = assignmentReasonOut or "assignment_confirm_failed",
-			forceFailedTransfer = true,
-		})
-		return false, assignmentReasonOut, handoffEntry
 	end
 
 	local inferredFlow = PublishedClientTeleportEvidenceCaller.InferFlow({
