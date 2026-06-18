@@ -123,6 +123,18 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		"CapturePersistenceRules",
 		"../../ReplicatedStorage/Shared/GiantRealm/CapturePersistenceRules"
 	)
+	local PlayerLocationTransitionCaller: any = nil
+	do
+		local callerLoaded, callerModule = pcall(function()
+			if script ~= nil and script.Parent ~= nil then
+				return require(script.Parent:WaitForChild("PlayerLocationTransitionCaller"))
+			end
+			return require("./PlayerLocationTransitionCaller")
+		end)
+		if callerLoaded then
+			PlayerLocationTransitionCaller = callerModule
+		end
+	end
 	local PostRescueProtectionState = resolveDependency(
 		GiantRealm,
 		"PostRescueProtectionState",
@@ -1088,6 +1100,51 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		}
 	end
 
+	local function locationNow(): number
+		return os.time()
+	end
+
+	local function applyEscapeLocationTransition(userId: number, at: number, hadActiveCapture: boolean)
+		if type(PlayerLocationTransitionCaller) ~= "table" then
+			return
+		end
+		if hadActiveCapture then
+			if type(PlayerLocationTransitionCaller.ApplyBeginEscape) == "function" then
+				PlayerLocationTransitionCaller.ApplyBeginEscape(userId, at)
+			end
+			if type(PlayerLocationTransitionCaller.ApplyEscapeSucceeded) == "function" then
+				PlayerLocationTransitionCaller.ApplyEscapeSucceeded(userId, at)
+			end
+			return
+		end
+		if type(PlayerLocationTransitionCaller.ApplyReturnToHub) == "function" then
+			local returnResult = PlayerLocationTransitionCaller.ApplyReturnToHub(userId, at)
+			if type(returnResult) ~= "table" or returnResult.accepted ~= true then
+				local realmOwnerUserId = resolveActiveRealmOwnerUserId()
+				if
+					type(realmOwnerUserId) == "number"
+					and type(PlayerLocationTransitionCaller.ApplyEscapeReturnTransit) == "function"
+				then
+					PlayerLocationTransitionCaller.ApplyEscapeReturnTransit(
+						userId,
+						realmOwnerUserId,
+						string.format("giant_realm_%d", realmOwnerUserId),
+						at
+					)
+				end
+			end
+		end
+	end
+
+	local function targetHadActiveCapture(userId: number, at: number): boolean
+		local captureApi = getCaptureServiceQueryApi()
+		if captureApi == nil or type(captureApi.GetTargetCapture) ~= "function" then
+			return false
+		end
+		local ok, record = pcall(captureApi.GetTargetCapture, userId, at)
+		return ok and type(record) == "table"
+	end
+
 	local function markPlayerEscaped(player: any, _sourceId: string?): boolean
 		if player == nil or type(player.UserId) ~= "number" then
 			return false
@@ -2013,6 +2070,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 		local escapeOutcome = nil
 		local custodyEndOutcome = nil
 		if escapedNow then
+			local hadActiveCapture = targetHadActiveCapture(player.UserId, stableResolvedAt)
 			local sourceKind = if isFallbackEscapeCandidate(routePart)
 				then "fallback_escape"
 				elseif finalExitStateByRouteId[routeId] ~= nil then "final_exit"
@@ -2031,6 +2089,7 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				end
 				stableResolvedAt = routeOutcomeResolvedAt
 			end
+			applyEscapeLocationTransition(player.UserId, locationNow(), hadActiveCapture)
 			custodyEndOutcome = resolveCaptureCustodyEnd(player.UserId, "escaped", stableResolvedAt)
 			escapeOutcome = resolveEscapeOutcome(player, {
 				operationId = string.format("escape-%d-%s-%.3f", player.UserId, routeId, stableResolvedAt),
@@ -2572,6 +2631,12 @@ local function createEscapeService(runtimeGame: any?, options: any?)
 				realmOwnerUserId = realmOwnerUserId,
 				sourceId = "captivity_timeout",
 			})
+			if
+				type(PlayerLocationTransitionCaller) == "table"
+				and type(PlayerLocationTransitionCaller.ApplyReturnToHub) == "function"
+			then
+				PlayerLocationTransitionCaller.ApplyReturnToHub(targetUserId, locationNow())
+			end
 		end
 
 		return {

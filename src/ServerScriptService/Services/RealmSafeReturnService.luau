@@ -532,6 +532,45 @@ function RealmSafeReturnService.HandleGiantDisconnect(giantOwnerUserId: any, inp
 	}
 end
 
+function RealmSafeReturnService.ApplyCaptureLogoutSideEffects(userId: any, logoutPlan: any, at: any?): any
+	if not isValidUserId(userId) then
+		return {
+			accepted = false,
+			reason = "user_id_invalid",
+		}
+	end
+	if type(logoutPlan) ~= "table" or logoutPlan.accepted ~= true then
+		return {
+			accepted = false,
+			reason = "logout_plan_invalid",
+		}
+	end
+
+	local resolvedAt = if type(at) == "number" then at else now()
+	local appliedTargetReturns = 0
+
+	if type(logoutPlan.targetsToSafeReturn) == "table" then
+		for _, targetUserId in ipairs(logoutPlan.targetsToSafeReturn) do
+			if isValidUserId(targetUserId) then
+				local result = RealmSafeReturnService.ApplyReturnRequest(targetUserId, {
+					trigger = RealmSafeReturnState.ReturnTrigger.ModerationFallback,
+					isOnline = true,
+					now = resolvedAt,
+				})
+				if result.accepted == true then
+					appliedTargetReturns += 1
+				end
+			end
+		end
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		appliedTargetReturns = appliedTargetReturns,
+	}
+end
+
 function RealmSafeReturnService.GetDiagnostics(): ReturnDiagnostics
 	return cloneDiagnostics()
 end
@@ -539,6 +578,9 @@ end
 globalEnv._RealmSafeReturnService_QueryAPI = {
 	ApplyReturnRequest = function(userId: any, input: any): any
 		return RealmSafeReturnService.ApplyReturnRequest(userId, input)
+	end,
+	ApplyCaptureLogoutSideEffects = function(userId: any, logoutPlan: any, at: any?): any
+		return RealmSafeReturnService.ApplyCaptureLogoutSideEffects(userId, logoutPlan, at)
 	end,
 	ResolvePendingReturnOnJoin = function(userId: any, input: any?): any
 		return RealmSafeReturnService.ResolvePendingReturnOnJoin(userId, input)

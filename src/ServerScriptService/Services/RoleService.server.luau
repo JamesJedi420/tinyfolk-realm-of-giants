@@ -934,67 +934,6 @@ local function loadGiantRealmForPlayer(player: Player)
 	end
 end
 
-local function saveAndReleaseGiantRealmForPlayer(player: Player, reason: string)
-	if not loadedGiantRealmOwnerUserIds[player.UserId] or cleanedGiantRealmOwnerUserIds[player.UserId] then
-		return
-	end
-
-	local loadApi = _G._GiantRealmLoadService_QueryAPI
-	if type(loadApi) == "table" and type(loadApi.SaveAndRelease) == "function" then
-		local releaseResult = loadApi.SaveAndRelease(player.UserId, reason)
-		if type(releaseResult) ~= "table" or releaseResult.accepted ~= true then
-			debugWarn(
-				string.format(
-					"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
-					player.UserId,
-					tostring(
-						if type(releaseResult) == "table" then releaseResult.reason else "release_service_unavailable"
-					),
-					reason
-				)
-			)
-		end
-	else
-		local saveResult = ProfilePersistenceGateway.SaveGiantRealmProfile(player.UserId)
-		if not saveResult.ok then
-			debugWarn(
-				string.format(
-					"Giant realm save failed userId=%d reason=%s cleanupReason=%s",
-					player.UserId,
-					tostring(saveResult.reason),
-					reason
-				)
-			)
-		end
-
-		local releaseResult = ProfilePersistenceGateway.ReleaseGiantRealmProfile(player.UserId)
-		if not releaseResult.ok then
-			debugWarn(
-				string.format(
-					"Giant realm release failed userId=%d reason=%s cleanupReason=%s",
-					player.UserId,
-					tostring(releaseResult.reason),
-					reason
-				)
-			)
-		end
-	end
-
-	loadedGiantRealmOwnerUserIds[player.UserId] = nil
-	cleanedGiantRealmOwnerUserIds[player.UserId] = true
-	if activeGiantRealmOwnerUserId == player.UserId then
-		activeGiantRealmOwnerUserId = findLoadedGiantRealmOwnerUserId()
-		projectActiveGiantRealmOwner()
-	end
-
-	local registryApi = _G._LiveRealmRegistry_QueryAPI
-	if type(registryApi) == "table" and type(registryApi.PruneActiveRealm) == "function" then
-		pcall(registryApi.PruneActiveRealm, {
-			ownerUserId = player.UserId,
-		})
-	end
-end
-
 local remotesFolder = ensureRemotesFolder()
 local roleChangeRemote = ensureRoleChangeRemote(remotesFolder)
 local roleDebugRequestRemote = ensureRoleDebugRequestRemote(remotesFolder)
@@ -1073,16 +1012,21 @@ Players.PlayerRemoving:Connect(function(player)
 	lastRoleChangeAtByUserId[player.UserId] = nil
 	downedStates[player.UserId] = nil
 	pendingSpawnDeferredByUserId[player.UserId] = nil
-	saveAndReleaseGiantRealmForPlayer(player, "player_removing")
-end)
-
-if game ~= nil and type((game :: any).BindToClose) == "function" then
-	(game :: any):BindToClose(function()
-		for _, player in Players:GetPlayers() do
-			saveAndReleaseGiantRealmForPlayer(player, "bind_to_close")
+	if loadedGiantRealmOwnerUserIds[player.UserId] and not cleanedGiantRealmOwnerUserIds[player.UserId] then
+		loadedGiantRealmOwnerUserIds[player.UserId] = nil
+		cleanedGiantRealmOwnerUserIds[player.UserId] = true
+		if activeGiantRealmOwnerUserId == player.UserId then
+			activeGiantRealmOwnerUserId = findLoadedGiantRealmOwnerUserId()
+			projectActiveGiantRealmOwner()
 		end
-	end)
-end
+		local registryApi = _G._LiveRealmRegistry_QueryAPI
+		if type(registryApi) == "table" and type(registryApi.PruneActiveRealm) == "function" then
+			pcall(registryApi.PruneActiveRealm, {
+				ownerUserId = player.UserId,
+			})
+		end
+	end
+end)
 
 roleChangeRemote.OnServerEvent:Connect(function(player, requestedRole: unknown)
 	if isRoleLocked(player) then

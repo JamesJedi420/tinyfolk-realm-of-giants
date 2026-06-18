@@ -19,6 +19,7 @@ $testFiles = @(
     'tests\event_state_ownership_model.spec.luau',
     'tests\role_service_event_routing_runtime_entrypoint.spec.luau',
     'tests\role_service_runtime_entrypoint.spec.luau',
+    'tests\giant_realm_load_service_server_runtime_entrypoint.spec.luau',
     'tests\role_loadout_service_runtime_entrypoint.spec.luau',
     'tests\specialist_assignment_service_runtime_entrypoint.spec.luau',
     'tests\station_service_runtime_entrypoint.spec.luau',

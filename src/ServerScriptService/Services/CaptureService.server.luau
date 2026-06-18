@@ -31,9 +31,12 @@ local QueueProcessingIdempotencyStore = if script ~= nil and script.Parent ~= ni
 local CaptivitySafeReturnCaller = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("CaptivitySafeReturnCaller"))
 	else (require :: any)("./CaptivitySafeReturnCaller")
-local DisconnectSafeReturnCaller = if script ~= nil and script.Parent ~= nil
-	then require(script.Parent:WaitForChild("DisconnectSafeReturnCaller"))
-	else (require :: any)("./DisconnectSafeReturnCaller")
+local PlayerLocationTransitionCaller = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("PlayerLocationTransitionCaller"))
+	else (require :: any)("./PlayerLocationTransitionCaller")
+local RealmSafeReturnService = if script ~= nil and script.Parent ~= nil
+	then require(script.Parent:WaitForChild("RealmSafeReturnService"))
+	else (require :: any)("./RealmSafeReturnService")
 
 local ROLE_ATTRIBUTE = "Role"
 local POST_RESCUE_PROTECTED_ATTRIBUTE = "PostRescueProtected"
@@ -51,6 +54,10 @@ local applyCaptureAttributesFromState: () -> ()
 
 local function now(): number
 	return os.clock()
+end
+
+local function locationNow(): number
+	return os.time()
 end
 
 local function getPlayerByUserId(userId: number): Player?
@@ -697,6 +704,7 @@ local function requestCapture(custodian: Player, targetUserId: any, at: number?)
 			giantLevelApi.RecordCaptureSuccess(custodian.UserId, target.UserId, resolvedNow)
 		end
 		notifyAbuseCaptureStart(custodian.UserId, target.UserId, resolvedNow)
+		PlayerLocationTransitionCaller.ApplyCapture(targetUserId, locationNow())
 	else
 		markRejectedRequest(custodian.UserId, resolvedNow)
 	end
@@ -737,6 +745,9 @@ local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?,
 	state = transition.state
 	projectCustodyEndReason(transition.record, endReason)
 	local reward = resolveContainmentRewardForRecord(transition.record, endReason, resolvedNow, operationId)
+	if endReason == "released" or endReason == "safe_return" then
+		PlayerLocationTransitionCaller.ApplyReturnToHub(targetUserId, locationNow())
+	end
 	notifyAbuseCustodyEnd(
 		transition.record.custodianUserId,
 		transition.record.targetUserId,
@@ -831,6 +842,9 @@ local function promoteTargetToContained(targetUserId: any, at: number?): any
 	end
 	state = transition.state
 	applyCaptureAttributesFromState()
+	if transition.accepted == true then
+		PlayerLocationTransitionCaller.ApplyContain(targetUserId, locationNow())
+	end
 	return {
 		accepted = transition.accepted,
 		reason = transition.reason,
@@ -884,22 +898,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		end
 	end
 
-	if logoutPlan.accepted == true and logoutPlan.persistReturnPendingForDisconnectingUser == true then
-		DisconnectSafeReturnCaller.PersistDisconnectReturnPending(player.UserId, resolvedNow, {
-			sourceId = "capture_disconnect",
-		})
-	end
-
-	if logoutPlan.accepted == true and type(logoutPlan.targetsToSafeReturn) == "table" then
-		for _, targetUserId in ipairs(logoutPlan.targetsToSafeReturn) do
-			if getPlayerByUserId(targetUserId) ~= nil then
-				DisconnectSafeReturnCaller.ApplyOnlineSafeReturn(
-					targetUserId,
-					resolvedNow,
-					CapturePersistenceRules.CustodyEndReasons.safe_return
-				)
-			end
-		end
+	if logoutPlan.accepted == true then
+		RealmSafeReturnService.ApplyCaptureLogoutSideEffects(player.UserId, logoutPlan, locationNow())
 	end
 
 	lastRequestAtByUserId[player.UserId] = nil
