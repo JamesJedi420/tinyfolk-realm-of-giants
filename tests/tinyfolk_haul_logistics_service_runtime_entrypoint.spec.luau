@@ -338,7 +338,7 @@ assertEqual(
 haulerAtSource._RootPart.Position = makeVector3(warehousePosition)
 flowState.Wood.produced = 0
 
-local deliverSnapshot = queryApi.ProcessTick()
+local _deliverSnapshot = queryApi.ProcessTick()
 assertEqual(#deliveryCalls, 1, "delivery applied at warehouse range")
 assertEqual(flowState.Wood.inTransit, 1, "one wood remains in transit after first delivery step")
 assertEqual(flowState.Wood.stored, 2, "wood stored after first delivery step")

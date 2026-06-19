@@ -1163,7 +1163,7 @@ _G._StationService_QueryAPI = {
 			return nil
 		end
 
-		local partPosition = stationState.part.Position
+		local partPosition = stationState.part.Position :: any
 		return {
 			stationId = stationId,
 			materialType = stationState.materialType,
@@ -1189,7 +1189,7 @@ _G._StationService_QueryAPI = {
 			return { accepted = false, reason = haulReason or "pickup_rejected", movedAmount = 0 }
 		end
 
-		local materialName = stationState.materialType
+		local materialName: "Wood" | "Stone" | "Food" | "Metal" = stationState.materialType
 		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
 		local afterSnapshot = ResourceFlowState.TransferProducedToInTransit(materialName, maxAmount)
 		local movedAmount = afterSnapshot.inTransit - beforeSnapshot.inTransit
