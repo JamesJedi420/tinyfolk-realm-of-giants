@@ -205,6 +205,8 @@ TIN-233 active follow-up kickoff is recorded in `docs/TIN-233_INGRESS_ROLLOUT_SC
 
 **Fold into this bucket:** new specialist station couplings, resource state transition rules, additional assignment reasons, new hauling paths.
 
+**Current implementation status:** TIN-28 adds a bounded realm-scoped social economy layer through deterministic shared logic in `Shared/GiantRealm/SocialEconomyState`, config in `Shared/Config/SocialEconomyConfig`, runtime orchestration in `SocialEconomyService`, and persistence via `socialEconomyPersistence` on `GiantRealmSaveSchema` (TIN-249). Favor/control axes (0–100) drive effect snapshots (`favorComplianceBonus`, `controlIntimidationBonus`) with axis decay, bonus caps, and trophy delta diminishing returns. Trophy producers map capture/release outcomes into social events. Gameplay consumers include capture intimidation (PenRationing morale gate), labor production yield, and ransom post/settle gates. Parallel to but separate from `GiantReputationState`, `PenRationingState` custodian morale, `TinyfolkStatusService` fear exposure, and player-profile reputation tracks. Per-Tinyfolk dyadic favor/fear maps, covenant/miracle/domain expansion paths, and full presentation polish remain partially deferred.
+
 ### Role and Session System
 - Pre-spawn role selection (Giant / Tinyfolk)
 - First valid choice wins; role locked for session

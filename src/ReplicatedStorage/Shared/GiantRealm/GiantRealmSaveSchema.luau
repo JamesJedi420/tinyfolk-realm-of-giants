@@ -191,10 +191,18 @@ export type SocialEconomyEventSaveRecord = {
 	awardedAt: number,
 }
 
+export type SocialEconomyDyadicRelationSaveRecord = {
+	userId: number,
+	favor: number,
+	control: number,
+	lastUpdatedAt: number?,
+}
+
 export type SocialEconomyPersistenceSaveRecord = {
 	favor: number,
 	control: number,
 	recentEvents: { SocialEconomyEventSaveRecord }?,
+	dyadicRelations: { SocialEconomyDyadicRelationSaveRecord }?,
 }
 
 export type RealmServerAllocationSaveRecord = {
@@ -824,6 +832,7 @@ local VALID_SOCIAL_ECONOMY_EVENT_KINDS = {
 local SOCIAL_ECONOMY_AXIS_MIN = 0
 local SOCIAL_ECONOMY_AXIS_MAX = 100
 local SOCIAL_ECONOMY_MAX_RETAINED_RECENT_EVENTS = 50
+local SOCIAL_ECONOMY_MAX_DYADIC_RELATIONS = 50
 
 function GiantRealmSaveSchema.ValidateTrophySaveRecord(record: any): (boolean, string?)
 	if type(record) ~= "table" then
@@ -1075,6 +1084,40 @@ function GiantRealmSaveSchema.ValidateSocialEconomyPersistenceRecord(record: any
 				return false, string.format("social_economy_operation_id_duplicate index=%d", index)
 			end
 			seenOperationIds[eventRecord.operationId] = true
+		end
+	end
+	if record.dyadicRelations ~= nil then
+		if type(record.dyadicRelations) ~= "table" then
+			return false, "social_economy_dyadic_relations_invalid"
+		end
+		if #record.dyadicRelations > SOCIAL_ECONOMY_MAX_DYADIC_RELATIONS then
+			return false, "social_economy_dyadic_relations_limit_exceeded"
+		end
+		for index, relation in ipairs(record.dyadicRelations) do
+			if type(relation) ~= "table" then
+				return false, string.format("social_economy_dyadic_relation_invalid index=%d", index)
+			end
+			if not isPositiveNumber(relation.userId) then
+				return false, string.format("social_economy_dyadic_user_id_invalid index=%d", index)
+			end
+			if not isFiniteNumber(relation.favor) or relation.favor < SOCIAL_ECONOMY_AXIS_MIN then
+				return false, string.format("social_economy_dyadic_favor_invalid index=%d", index)
+			end
+			if relation.favor > SOCIAL_ECONOMY_AXIS_MAX then
+				return false, string.format("social_economy_dyadic_favor_invalid index=%d", index)
+			end
+			if not isFiniteNumber(relation.control) or relation.control < SOCIAL_ECONOMY_AXIS_MIN then
+				return false, string.format("social_economy_dyadic_control_invalid index=%d", index)
+			end
+			if relation.control > SOCIAL_ECONOMY_AXIS_MAX then
+				return false, string.format("social_economy_dyadic_control_invalid index=%d", index)
+			end
+			if
+				relation.lastUpdatedAt ~= nil
+				and (not isFiniteNumber(relation.lastUpdatedAt) or relation.lastUpdatedAt < 0)
+			then
+				return false, string.format("social_economy_dyadic_last_updated_invalid index=%d", index)
+			end
 		end
 	end
 	return true, nil
@@ -1594,9 +1637,7 @@ function GiantRealmSaveSchema.SerializeGiantReputationPersistenceRecord(
 	}
 end
 
-function GiantRealmSaveSchema.SerializeSocialEconomyPersistenceRecord(
-	state: any
-): SocialEconomyPersistenceSaveRecord?
+function GiantRealmSaveSchema.SerializeSocialEconomyPersistenceRecord(state: any): SocialEconomyPersistenceSaveRecord?
 	if state == nil then
 		return nil
 	end
@@ -1632,10 +1673,39 @@ function GiantRealmSaveSchema.SerializeSocialEconomyPersistenceRecord(
 		return a.operationId < b.operationId
 	end)
 
+	local dyadicRelations: { SocialEconomyDyadicRelationSaveRecord } = {}
+	if type(state.dyadicRelations) == "table" then
+		for _, relation in ipairs(state.dyadicRelations) do
+			if type(relation) == "table" then
+				table.insert(dyadicRelations, {
+					userId = relation.userId,
+					favor = relation.favor,
+					control = relation.control,
+					lastUpdatedAt = relation.lastUpdatedAt,
+				})
+			end
+		end
+	elseif type(state.dyadicByUserId) == "table" then
+		for userIdKey, relation in pairs(state.dyadicByUserId) do
+			if type(relation) == "table" then
+				local userId = tonumber(userIdKey)
+				if type(userId) == "number" and userId > 0 then
+					table.insert(dyadicRelations, {
+						userId = math.floor(userId),
+						favor = relation.favor,
+						control = relation.control,
+						lastUpdatedAt = relation.lastUpdatedAt,
+					})
+				end
+			end
+		end
+	end
+
 	return {
 		favor = if isFiniteNumber(state.favor) then state.favor else 50,
 		control = if isFiniteNumber(state.control) then state.control else 50,
 		recentEvents = events,
+		dyadicRelations = dyadicRelations,
 	}
 end
 

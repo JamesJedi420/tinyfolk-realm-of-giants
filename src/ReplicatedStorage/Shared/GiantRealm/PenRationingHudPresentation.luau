@@ -76,16 +76,22 @@ function PenRationingHudPresentation.BuildHudModel(snapshot: any): PenRationingH
 			then string.format("Shortfall x%d", math.max(1, math.floor(consecutiveShortfallTicks)))
 			else "Rations OK"
 
+		local intimidationBonus = readNumber(snapshot, "controlIntimidationBonus", 1)
+		local intimidationLine = if intimidationBonus > 1
+			then string.format(" | Intimidation x%.2f", intimidationBonus)
+			else ""
+
 		return {
 			visible = true,
 			title = "Pen Rationing",
 			summary = string.format(
-				"Morale %d | Capture %d%% | %s | Captives %d | Food x%.2f",
+				"Morale %d | Capture %d%% | %s | Captives %d | Food x%.2f%s",
 				math.floor(morale),
 				readiness,
 				shortfallLine,
 				math.floor(activeCaptiveCount),
-				foodCostMultiplier
+				foodCostMultiplier,
+				intimidationLine
 			),
 			tone = tone,
 		}

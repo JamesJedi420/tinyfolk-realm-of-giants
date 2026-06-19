@@ -52,6 +52,12 @@ local shaken = PenRationingState.ResolveCaptureMoraleCheck(48, 9001, 9101, 60, 5
 assertEqual(shaken.allowed, false, "low morale deterministic fail")
 assertEqual(shaken.reason, "custodian_morale_shaken", "shaken morale reason")
 
+local intimidated = PenRationingState.ResolveCaptureMoraleCheck(48, 9001, 9101, 60, 50, 1.5)
+assertEqual(intimidated.allowed, true, "intimidation bonus enables shaken morale capture")
+
+local depletedWithBonus = PenRationingState.ResolveCaptureMoraleCheck(0, 9001, 9101, 60, 50, 1.5)
+assertEqual(depletedWithBonus.allowed, false, "intimidation bonus does not bypass depleted morale")
+
 local recovered = PenRationingState.ResolveCaptureMoraleCheck(49, 9001, 9101, 60, 50)
 assertEqual(recovered.allowed, true, "low morale deterministic pass")
 

@@ -9,6 +9,8 @@ export type SocialEconomyHudModel = {
 	title: string,
 	summary: string,
 	tone: string,
+	complianceBonus: number?,
+	intimidationBonus: number?,
 }
 
 local function finiteNumber(value: any): number?
@@ -44,10 +46,18 @@ function SocialEconomyPresentation.BuildHudModel(snapshot: any): SocialEconomyHu
 	local favor = readNumber(snapshot, "favor", SocialEconomyConfig.DefaultFavor)
 	local control = readNumber(snapshot, "control", SocialEconomyConfig.DefaultControl)
 	local dominantAxis = readString(snapshot, "dominantAxis", SocialEconomyConfig.DominantAxes.Balanced)
+	local complianceBonus = readNumber(snapshot, "favorComplianceBonus", 1)
+	local intimidationBonus = readNumber(snapshot, "controlIntimidationBonus", 1)
 
 	local title = "Realm Social Economy"
-	local summary =
-		string.format("Favor %d | Control %d | Dominant %s", math.floor(favor), math.floor(control), dominantAxis)
+	local summary = string.format(
+		"Favor %d | Control %d | Dominant %s | Compliance x%.2f | Intimidation x%.2f",
+		math.floor(favor),
+		math.floor(control),
+		dominantAxis,
+		complianceBonus,
+		intimidationBonus
+	)
 	local tone = "neutral"
 	if dominantAxis == SocialEconomyConfig.DominantAxes.Favor then
 		tone = "warm"
@@ -60,6 +70,8 @@ function SocialEconomyPresentation.BuildHudModel(snapshot: any): SocialEconomyHu
 		title = title,
 		summary = summary,
 		tone = tone,
+		complianceBonus = complianceBonus,
+		intimidationBonus = intimidationBonus,
 	}
 end
 

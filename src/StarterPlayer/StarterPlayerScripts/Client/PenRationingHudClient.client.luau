@@ -10,6 +10,7 @@ local playerGui = localPlayer:WaitForChild("PlayerGui") :: any
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
+local SocialEconomyConfig = require(Config:WaitForChild("SocialEconomyConfig"))
 local PenRationingConfig = require(Config:WaitForChild("PenRationingConfig"))
 local PenRationingHudPresentation = require(GiantRealm:WaitForChild("PenRationingHudPresentation"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
@@ -122,6 +123,9 @@ local function collectSnapshot(): any
 			localPlayer:GetAttribute(attrs.CustodianMorale) or PenRationingConfig.MoraleDefault,
 			PenRationingConfig.MoraleCaptureSureThreshold
 		),
+		controlIntimidationBonus = localPlayer:GetAttribute(
+			SocialEconomyConfig.StateAttributes.ControlIntimidationBonus
+		),
 	}
 
 	if penPart ~= nil then
@@ -151,6 +155,7 @@ hookPlayerAttribute("CaptureActive")
 hookPlayerAttribute(attrs.CustodianMorale)
 hookPlayerAttribute(attrs.CaptiveShortfallStreak)
 hookPlayerAttribute(attrs.CaptiveStarving)
+hookPlayerAttribute(SocialEconomyConfig.StateAttributes.ControlIntimidationBonus)
 
 if penPart ~= nil then
 	local penPartAny = penPart :: any

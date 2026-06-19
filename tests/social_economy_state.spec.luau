@@ -70,6 +70,7 @@ assertEqual(fearAlias.state.control, 55, "fear alias increases control")
 local clamped = SocialEconomyState.ApplySocialEvent({
 	favor = 98,
 	control = 98,
+	dyadicByUserId = {},
 	operationIds = {},
 	recentEvents = {},
 }, {
@@ -83,6 +84,7 @@ assertEqual(clamped.state.control, 100, "control clamps at max")
 local effect = SocialEconomyState.ResolveEffectSnapshot({
 	favor = 80,
 	control = 40,
+	dyadicByUserId = {},
 	operationIds = {},
 	recentEvents = {},
 })
@@ -93,16 +95,83 @@ assertTrue(effect.controlIntimidationBonus > 1, "control intimidation bonus abov
 local balancedEffect = SocialEconomyState.ResolveEffectSnapshot({
 	favor = 50,
 	control = 52,
+	dyadicByUserId = {},
 	operationIds = {},
 	recentEvents = {},
 })
 assertEqual(balancedEffect.dominantAxis, SocialEconomyConfig.DominantAxes.Balanced, "balanced dominant axis")
 
+local cappedEffect = SocialEconomyState.ResolveEffectSnapshot({
+	favor = 100,
+	control = 100,
+	dyadicByUserId = {},
+	operationIds = {},
+	recentEvents = {},
+})
+assertEqual(cappedEffect.favorComplianceBonus, SocialEconomyConfig.MaxComplianceBonus, "compliance bonus capped")
+assertEqual(
+	cappedEffect.controlIntimidationBonus,
+	SocialEconomyConfig.MaxIntimidationBonus,
+	"intimidation bonus capped"
+)
+
+local decayed = SocialEconomyState.ApplyAxisDecay({
+	favor = 80,
+	control = 30,
+	dyadicByUserId = {},
+	operationIds = {},
+	recentEvents = {},
+}, 100)
+assertEqual(decayed.favor, 75, "favor decays toward default")
+assertEqual(decayed.control, 35, "control decays toward default")
+
+local decayedState = SocialEconomyState.CreateEmptyState()
+for index = 1, 3 do
+	local result = SocialEconomyState.ApplySocialEvent(decayedState, {
+		operationId = "capture-diminish-" .. tostring(index),
+		eventKind = TrophyConfig.Kinds.CaptureSuccess,
+		awardedAt = index * 10,
+	})
+	assertTrue(result.accepted, "diminish capture " .. tostring(index))
+	decayedState = result.state
+end
+local diminished = SocialEconomyState.ApplySocialEvent(decayedState, {
+	operationId = "capture-diminish-4",
+	eventKind = TrophyConfig.Kinds.CaptureSuccess,
+	awardedAt = 35,
+})
+assertTrue(diminished.accepted, "diminished fourth capture accepted")
+assertEqual(diminished.state.control, 59, "fourth capture control delta diminished to 1")
+
+local dyadicEvent = SocialEconomyState.ApplySocialEvent(SocialEconomyState.CreateEmptyState(), {
+	operationId = "dyadic-capture-1",
+	eventKind = TrophyConfig.Kinds.CaptureSuccess,
+	awardedAt = 100,
+	targetUserId = 9001,
+})
+assertTrue(dyadicEvent.accepted, "dyadic capture accepted")
+assertEqual(dyadicEvent.state.dyadicByUserId["9001"].control, 55, "dyadic control seeded from capture")
+
+local blended = SocialEconomyState.ResolveEffectSnapshot(dyadicEvent.state, 9001)
+assertTrue(blended.controlIntimidationBonus > 1, "dyadic blend raises intimidation bonus")
+
+local persistedDyadic = SocialEconomyState.SerializePersistenceState(dyadicEvent.state)
+assertEqual(#persistedDyadic.dyadicRelations, 1, "serialized dyadic relation count")
+assertEqual(persistedDyadic.dyadicRelations[1].userId, 9001, "serialized dyadic user id")
+
+local appliedDyadic = SocialEconomyState.ApplyPersistenceState(persistedDyadic)
+assertTrue(appliedDyadic.accepted, "dyadic persistence apply accepted")
+assertEqual(appliedDyadic.state.dyadicByUserId["9001"].control, 55, "restored dyadic control")
+
 local persisted = SocialEconomyState.SerializePersistenceState(escapeFailure.state)
 assertEqual(persisted.favor, 55, "serialized favor")
 assertEqual(persisted.control, 58, "serialized control")
 assertEqual(#persisted.recentEvents, 3, "serialized recent event count")
-assertEqual(persisted.recentEvents[1].operationId, "trophy-capture-101-202-1000", "serialized events sorted by awardedAt")
+assertEqual(
+	persisted.recentEvents[1].operationId,
+	"trophy-capture-101-202-1000",
+	"serialized events sorted by awardedAt"
+)
 
 local applied = SocialEconomyState.ApplyPersistenceState(persisted)
 assertTrue(applied.accepted, "apply persistence accepted")
@@ -119,7 +188,11 @@ local duplicatePersisted = {
 	},
 }
 local duplicateApplied = SocialEconomyState.ApplyPersistenceState(duplicatePersisted)
-assertEqual(duplicateApplied.reason, "social_economy_operation_id_duplicate index=2", "duplicate persisted operation rejected")
+assertEqual(
+	duplicateApplied.reason,
+	"social_economy_operation_id_duplicate index=2",
+	"duplicate persisted operation rejected"
+)
 
 local cleared = SocialEconomyState.ApplyPersistenceState(nil)
 assertTrue(cleared.accepted, "clear persistence accepted")

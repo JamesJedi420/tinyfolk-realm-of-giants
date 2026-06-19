@@ -64,7 +64,7 @@ local function recordSocialEconomyEvent(input: any, trophyKind: string)
 	if type(socialApi) ~= "table" or type(socialApi.RecordTrophySocialEvent) ~= "function" then
 		return
 	end
-	pcall(socialApi.RecordTrophySocialEvent, trophyKind, input.operationId, input.awardedAt)
+	pcall(socialApi.RecordTrophySocialEvent, trophyKind, input.operationId, input.awardedAt, input.targetUserId)
 end
 
 local function getRealmOwnerUserId(): number?

@@ -8,6 +8,13 @@ SocialEconomyConfig.DefaultFavor = 50
 SocialEconomyConfig.DefaultControl = 50
 SocialEconomyConfig.DominantAxisBalanceThreshold = 5
 SocialEconomyConfig.MaxRetainedRecentEvents = 50
+SocialEconomyConfig.AxisDecayPerSecond = 0.05
+SocialEconomyConfig.MaxComplianceBonus = 1.5
+SocialEconomyConfig.MaxIntimidationBonus = 1.5
+SocialEconomyConfig.TrophyDeltaDiminishWindowSeconds = 300
+SocialEconomyConfig.TrophyDeltaDiminishMultipliers = { 1, 0.5, 0.25 }
+SocialEconomyConfig.DyadicBlendWeight = 0.5
+SocialEconomyConfig.MaxDyadicRelations = 50
 
 SocialEconomyConfig.EventKinds = {
 	FavorGrant = "favor_grant",

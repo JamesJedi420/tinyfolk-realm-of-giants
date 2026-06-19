@@ -1,5 +1,6 @@
 --!nocheck
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
@@ -52,6 +53,7 @@ local function buildSnapshot(lastEventKind: string?): any
 	return {
 		favor = socialState.favor,
 		control = socialState.control,
+		dyadicByUserId = socialState.dyadicByUserId,
 		recentEvents = socialState.recentEvents,
 		effectSnapshot = effectSnapshot,
 		dominantAxis = effectSnapshot.dominantAxis,
@@ -79,6 +81,17 @@ local function projectRealmOwnerAttributes(lastEventKind: string?)
 	owner:SetAttribute(attrs.ControlIntimidationBonus, effectSnapshot.controlIntimidationBonus)
 	if type(lastEventKind) == "string" then
 		owner:SetAttribute(attrs.LastEventKind, lastEventKind)
+	end
+end
+
+local function applyAxisDecay(deltaSeconds: number)
+	if not (type(deltaSeconds) == "number" and deltaSeconds > 0) then
+		return
+	end
+	local nextState = SocialEconomyState.ApplyAxisDecay(socialState, deltaSeconds)
+	if nextState.favor ~= socialState.favor or nextState.control ~= socialState.control then
+		socialState = nextState
+		projectRealmOwnerAttributes(nil)
 	end
 end
 
@@ -112,7 +125,12 @@ local function recordSocialEventByKind(eventKind: string, operationId: string, a
 	})
 end
 
-local function recordTrophySocialEvent(trophyKind: string, operationId: string, awardedAt: number): any
+local function recordTrophySocialEvent(
+	trophyKind: string,
+	operationId: string,
+	awardedAt: number,
+	targetUserId: number?
+): any
 	local resolvedKind = SocialEconomyState.ResolveTrophyEventKind(trophyKind)
 	if resolvedKind == nil then
 		return { accepted = false, reason = "trophy_kind_not_mapped" }
@@ -121,6 +139,7 @@ local function recordTrophySocialEvent(trophyKind: string, operationId: string, 
 		operationId = operationId,
 		eventKind = resolvedKind,
 		awardedAt = awardedAt,
+		targetUserId = targetUserId,
 	})
 end
 
@@ -146,8 +165,8 @@ _G._SocialEconomyService_QueryAPI = {
 	GetSnapshot = function(): any
 		return buildSnapshot(nil)
 	end,
-	GetEffectSnapshot = function(): any
-		return SocialEconomyState.ResolveEffectSnapshot(socialState)
+	GetEffectSnapshot = function(targetUserId: number?): any
+		return SocialEconomyState.ResolveEffectSnapshot(socialState, targetUserId)
 	end,
 	GetFavor = function(): number
 		return socialState.favor
@@ -159,6 +178,13 @@ _G._SocialEconomyService_QueryAPI = {
 		socialState = SocialEconomyState.CreateEmptyState()
 		projectRealmOwnerAttributes(nil)
 	end,
+	AdvanceDecayForTests = function(deltaSeconds: number)
+		applyAxisDecay(deltaSeconds)
+	end,
 }
+
+RunService.Heartbeat:Connect(function(deltaTime: number)
+	applyAxisDecay(deltaTime)
+end)
 
 debugLog("SocialEconomyService initialized")
