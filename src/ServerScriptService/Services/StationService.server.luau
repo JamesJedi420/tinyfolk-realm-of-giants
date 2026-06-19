@@ -1135,9 +1135,29 @@ end)
 
 debugLog("StationService initialized")
 
--- Test-only exports for runtime proof slices.
 -- selene: allow(global_usage)
 _G._StationService_StationState = stationStateById
+_G._StationService_QueryAPI = {
+	ListStationDemandSnapshots = function(): { any }
+		local snapshots: { any } = {}
+		for stationId, stationState in stationStateById do
+			local requiredSpecialistRole = StationConfig.RequiredSpecialistRoleByStationId[stationId]
+			if type(requiredSpecialistRole) == "string" and requiredSpecialistRole ~= "" then
+				table.insert(snapshots, {
+					stationId = stationId,
+					requiredSpecialistRole = requiredSpecialistRole,
+					materialType = stationState.materialType,
+					isActive = stationState.isActive,
+					activatedByUserId = stationState.activatedByUserId,
+				})
+			end
+		end
+		table.sort(snapshots, function(left: any, right: any)
+			return left.stationId < right.stationId
+		end)
+		return snapshots
+	end,
+}
 -- selene: allow(global_usage)
 _G._StationService_TaskState = taskStateByStationId
 -- selene: allow(global_usage)

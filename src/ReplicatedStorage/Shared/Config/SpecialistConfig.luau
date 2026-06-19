@@ -17,6 +17,7 @@ SpecialistConfig.AssignmentReasons = {
 	Assigned = "Assigned",
 	ClearedManual = "ClearedManual",
 	ClearedRoleChange = "ClearedRoleChange",
+	JobScheduled = "JobScheduled",
 }
 
 return SpecialistConfig
