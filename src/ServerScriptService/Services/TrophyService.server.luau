@@ -48,6 +48,25 @@ local function recordReputationScore(input: any, trophyKind: string)
 	pcall(reputationApi.RecordTrophyScore, trophyKind, input.operationId, input.awardedAt)
 end
 
+local function getSocialEconomyQueryApi(): any?
+	local queryApi = globalEnv._SocialEconomyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._SocialEconomyService_QueryAPI) == "table" then
+		return (_G :: any)._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
+
+local function recordSocialEconomyEvent(input: any, trophyKind: string)
+	local socialApi = getSocialEconomyQueryApi()
+	if type(socialApi) ~= "table" or type(socialApi.RecordTrophySocialEvent) ~= "function" then
+		return
+	end
+	pcall(socialApi.RecordTrophySocialEvent, trophyKind, input.operationId, input.awardedAt)
+end
+
 local function getRealmOwnerUserId(): number?
 	local buildModeApi = getGiantBuildModeQueryApi()
 	if type(buildModeApi) == "table" and type(buildModeApi.GetActiveGiantRealmOwnerUserId) == "function" then
@@ -194,6 +213,7 @@ local function recordEvent(input: any): any
 		trophyState = result.state
 		projectRealmOwnerAttributes()
 		recordReputationScore(input, tostring(input.trophyKind))
+		recordSocialEconomyEvent(input, tostring(input.trophyKind))
 		debugLog(
 			string.format(
 				"Recorded trophy kind=%s operationId=%s total=%d",

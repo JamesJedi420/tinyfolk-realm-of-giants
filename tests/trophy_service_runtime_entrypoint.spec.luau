@@ -92,10 +92,12 @@ local configFolder = makeNode("Config")
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["TrophyConfig"] = "../../ReplicatedStorage/Shared/Config/TrophyConfig"
 configFolder._Children["GiantReputationConfig"] = "../../ReplicatedStorage/Shared/Config/GiantReputationConfig"
+configFolder._Children["SocialEconomyConfig"] = "../../ReplicatedStorage/Shared/Config/SocialEconomyConfig"
 
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["TrophyState"] = "../../ReplicatedStorage/Shared/GiantRealm/TrophyState"
 giantRealmFolder._Children["GiantReputationState"] = "../../ReplicatedStorage/Shared/GiantRealm/GiantReputationState"
+giantRealmFolder._Children["SocialEconomyState"] = "../../ReplicatedStorage/Shared/GiantRealm/SocialEconomyState"
 giantRealmFolder._Children["TrophyCasePresentation"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/TrophyCasePresentation"
 giantRealmFolder._Children["TrophyDisplayPolicyProfileState"] =
@@ -153,7 +155,11 @@ end
 local ownerPlayer = makePlayer(5001, "Giant")
 local targetPlayer = makePlayer(5101, "Tinyfolk")
 local playersList = { ownerPlayer, targetPlayer }
-local playerAddedSignal = makeSignal()
+local playerAddedSignal = {
+	Connect = function(_self: any, _callback: (...any) -> ())
+		return {}
+	end,
+}
 
 assertTrue(ProfilePersistenceGateway.LoadPlayerProfile(targetPlayer).ok, "target profile loaded")
 
@@ -209,9 +215,11 @@ _G._GiantBuildModeService_QueryAPI = {
 
 local TrophyConfig = require("../src/ReplicatedStorage/Shared/Config/TrophyConfig")
 local GiantReputationConfig = require("../src/ReplicatedStorage/Shared/Config/GiantReputationConfig")
+local SocialEconomyConfig = require("../src/ReplicatedStorage/Shared/Config/SocialEconomyConfig")
 
 require("../src/ServerScriptService/Services/GiantReputationService.server")
 require("../src/ServerScriptService/Services/TrophyDisplayPolicyService.server")
+require("../src/ServerScriptService/Services/SocialEconomyService.server")
 require("../src/ServerScriptService/Services/TrophyService.server")
 
 local trophyApi = _G._TrophyService_QueryAPI
@@ -264,6 +272,17 @@ assertEqual(trophyApi.GetTrophyCount(), 4, "raid defense increments trophy count
 local reputationApi = _G._GiantReputationService_QueryAPI
 assertEqual(reputationApi.GetScore(), 72, "trophies grant reputation score")
 assertEqual(ownerPlayer:GetAttribute(GiantReputationConfig.StateAttributes.Score), 72, "reputation score attribute")
+
+local socialApi = _G._SocialEconomyService_QueryAPI
+assertEqual(socialApi.GetFavor(), 55, "trophies grant favor from negotiated release")
+assertEqual(socialApi.GetControl(), 58, "trophies grant control from capture and escape failure")
+assertEqual(ownerPlayer:GetAttribute(SocialEconomyConfig.StateAttributes.Favor), 55, "social favor attribute")
+assertEqual(ownerPlayer:GetAttribute(SocialEconomyConfig.StateAttributes.Control), 58, "social control attribute")
+assertEqual(
+	ownerPlayer:GetAttribute(SocialEconomyConfig.StateAttributes.LastEventKind),
+	TrophyConfig.Kinds.ContainmentEscapeFailure,
+	"last mapped social event kind remains escape failure"
+)
 
 local caseModel = trophyApi.GetCaseModel()
 assertEqual(caseModel.count, 4, "case model count")
