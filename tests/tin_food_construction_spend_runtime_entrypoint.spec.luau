@@ -204,25 +204,44 @@ addChild(remotesFolder, "ConstructionDebugStateResponse", makeRemoteEvent("Const
 
 local configFolder = makeNode("Config")
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
+configFolder._Children["AdvancedMaterialFlowConfig"] =
+	"../../ReplicatedStorage/Shared/Config/AdvancedMaterialFlowConfig"
 configFolder._Children["RoleConfig"] = "../../ReplicatedStorage/Shared/Config/RoleConfig"
 configFolder._Children["SpecialistConfig"] = "../../ReplicatedStorage/Shared/Config/SpecialistConfig"
 configFolder._Children["ConstructionConfig"] = "../../ReplicatedStorage/Shared/Config/ConstructionConfig"
+configFolder._Children["LaborActionConfig"] = "../../ReplicatedStorage/Shared/Config/LaborActionConfig"
+configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"
+configFolder._Children["SkillCatalogSchema"] = "../../ReplicatedStorage/Shared/Config/SkillCatalogSchema"
 configFolder._Children["VillageWorksiteUpgradeConfig"] =
 	"../../ReplicatedStorage/Shared/Config/VillageWorksiteUpgradeConfig"
 
 local giantRealmFolder = makeNode("GiantRealm")
 giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
+giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
+giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
+giantRealmFolder._Children["PostRescueProtectionState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/PostRescueProtectionState"
+giantRealmFolder._Children["AdvancedMaterialFlowState"] =
+	"../../ReplicatedStorage/Shared/GiantRealm/AdvancedMaterialFlowState"
+
+local skillsFolder = makeNode("Skills")
+skillsFolder._Children["SkillXpAwardPolicy"] = "../../ReplicatedStorage/Shared/Skills/SkillXpAwardPolicy"
+skillsFolder._Children["SkillsProfileState"] = "../../ReplicatedStorage/Shared/Skills/SkillsProfileState"
 
 local sharedConstructionFolder = makeNode("Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
 sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
+sharedConstructionFolder._Children["ConstructionSpendState"] =
+	"../../ReplicatedStorage/Shared/Construction/ConstructionSpendState"
 
 local sharedFolder = makeNode("Shared")
 addChild(sharedFolder, "Config", configFolder)
 addChild(sharedFolder, "GiantRealm", giantRealmFolder)
+addChild(sharedFolder, "Skills", skillsFolder)
 addChild(sharedFolder, "Construction", sharedConstructionFolder)
 
 local replicatedStorage = makeNode("ReplicatedStorage")
@@ -276,6 +295,12 @@ _G._DistrictPlacementService_QueryAPI = {
 
 local scriptParent = makeNode("Services")
 scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
+scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
+scriptParent._Children["OutcomeSkillXpProducer"] = "../../ServerScriptService/Services/OutcomeSkillXpProducer"
+scriptParent._Children["RealmObjectiveCompletionCaller"] =
+	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
+scriptParent._Children["PostRescueProtectionCancellationCaller"] =
+	"../../ServerScriptService/Services/PostRescueProtectionCancellationCaller"
 script = { Parent = scriptParent } :: any
 
 local RoleConfig = require("../src/ReplicatedStorage/Shared/Config/RoleConfig")
@@ -285,6 +310,7 @@ local ConstructionConfig = require("../src/ReplicatedStorage/Shared/Config/Const
 local ResourceFlowState = require("../src/ServerScriptService/Services/ResourceFlowState")
 
 StationConfig.RequestCooldownSeconds = 0
+StationConfig.HaulIntervalSeconds = 0
 ConstructionConfig.RequestCooldownSeconds = 0
 
 local farmPlayer = makeAlivePlayer(9501, Vector3.new(40, 0, 10))
@@ -306,6 +332,14 @@ for _, player in ipairs({ farmPlayer, haulPlayer, granaryPlayer, builder }) do
 	table.insert(playersList, player)
 end
 
+_G._SpecialistAssignmentService_QueryAPI = {
+	AssignForInteraction = function(player: any, specialistRole: string, assignedStationId: string): (boolean, string)
+		player:SetAttribute("SpecialistRole", specialistRole)
+		player:SetAttribute("SpecialistAssignedStationId", assignedStationId)
+		return true, "assigned"
+	end,
+}
+
 require("../src/ServerScriptService/Services/StationService.server")
 require("../src/ServerScriptService/Services/WarehousingService.server")
 require("../src/ServerScriptService/Services/ConstructionService.server")
@@ -318,11 +352,8 @@ assertTrue(type(siteStateById) == "table", "construction site state export prese
 
 local foodCost = ConstructionConfig.CostBySiteId.ConstructionSite_A.food
 
-activateRemote:FireServer(farmPlayer, "Farm_A")
-runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
-activateRemote:FireServer(haulPlayer, "Farm_A")
-runServiceHeartbeat:Fire(StationConfig.GenerationIntervalSeconds)
-activateRemote:FireServer(haulPlayer, "Farm_A")
+ResourceFlowState.AddProduced("Food", "Farm:Farm_A", foodCost)
+ResourceFlowState.TransferProducedToInTransit("Food", foodCost)
 granaryDeliverRemote:FireServer(granaryPlayer, "Granary_A")
 granaryDeliverRemote:FireServer(granaryPlayer, "Granary_A")
 
