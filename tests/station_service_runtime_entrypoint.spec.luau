@@ -226,6 +226,7 @@ local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Sha
 giantRealmFolder._Children["VillageWorksiteUpgradeState"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/VillageWorksiteUpgradeState"
 giantRealmFolder._Children["LaborActionState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborActionState"
+giantRealmFolder._Children["LaborComplianceState"] = "../../ReplicatedStorage/Shared/GiantRealm/LaborComplianceState"
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
 	"../../ReplicatedStorage/Shared/GiantRealm/RealmObjectiveSiteIdResolver"
 giantRealmFolder._Children["PostRescueProtectionState"] =
