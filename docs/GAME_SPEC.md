@@ -113,11 +113,12 @@ Rules:
 - Scheduled general-haul jobs execute via proximity-gated logistics in `TinyfolkHaulLogisticsService` (TIN-32): when a scheduled hauler is within activation range of the source station or delivery point, the server auto-pickups produced material and auto-delivers in-transit material to storage. Players still walk; no pathfinding or NPC haulers.
 - Scheduled job state is exposed on player attributes (`TinyfolkScheduledJob*`) and `_TinyfolkJobSchedulingService_QueryAPI` for debugging.
 - Haul logistics phase/route state is exposed on player attributes (`TinyfolkHaul*`) and `_TinyfolkHaulLogisticsService_QueryAPI` for debugging.
+- Scheduled job and haul logistics presentation (TIN-33) projects `TinyfolkScheduledJob*` and `TinyfolkHaul*` into a Tinyfolk labor HUD screen panel and route-target billboards via `TinyfolkLaborJobHudClient` (read-only; no pathfinding).
 - Only stored resources count as usable realm resources in the current prototype.
 
 Future scope note:
 - Station gating by specialist assignment is implemented for current specialist stations.
-- Full labor AI movement, hauling route pathfinding, and presentation polish are not implemented in the current prototype.
+- Full labor AI movement, hauling route pathfinding, and NPC haulers are not implemented in the current prototype.
 - Additional specialist-gated station paths beyond WorkStation_A remain future scope.
 
 Operational state model:
