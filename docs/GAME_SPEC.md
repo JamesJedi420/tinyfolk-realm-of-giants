@@ -109,13 +109,15 @@ Rules:
 - WorkStation_A in this slice is bounded Wood production, not generic/infinite workstation output.
 - Haulers move produced goods to storage.
 - Hauling is implemented as deterministic general labor flow, not specialist assignment.
-- Bounded Tinyfolk job scheduling (Slice A, TIN-31) proactively assigns live player Tinyfolk to specialist production and general-haul jobs on active Giant realm servers via `TinyfolkJobSchedulingService`; haul jobs are attribute labels only (no movement AI).
+- Bounded Tinyfolk job scheduling (TIN-31) proactively assigns live player Tinyfolk to specialist production and general-haul jobs on active Giant realm servers via `TinyfolkJobSchedulingService`.
+- Scheduled general-haul jobs execute via proximity-gated logistics in `TinyfolkHaulLogisticsService` (TIN-32): when a scheduled hauler is within activation range of the source station or delivery point, the server auto-pickups produced material and auto-delivers in-transit material to storage. Players still walk; no pathfinding or NPC haulers.
 - Scheduled job state is exposed on player attributes (`TinyfolkScheduledJob*`) and `_TinyfolkJobSchedulingService_QueryAPI` for debugging.
+- Haul logistics phase/route state is exposed on player attributes (`TinyfolkHaul*`) and `_TinyfolkHaulLogisticsService_QueryAPI` for debugging.
 - Only stored resources count as usable realm resources in the current prototype.
 
 Future scope note:
 - Station gating by specialist assignment is implemented for current specialist stations.
-- Full labor AI movement, hauling route AI, and presentation polish are not implemented in the current prototype.
+- Full labor AI movement, hauling route pathfinding, and presentation polish are not implemented in the current prototype.
 - Additional specialist-gated station paths beyond WorkStation_A remain future scope.
 
 Operational state model:
