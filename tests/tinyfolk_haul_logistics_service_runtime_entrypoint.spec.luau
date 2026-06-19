@@ -316,7 +316,10 @@ testHooks.SetJobSchedulingQueryApi({
 	ClearScheduledJobForUser = function(userId: number, reason: string)
 		table.insert(clearedJobs, { userId = userId, reason = reason })
 		local player = if userId == haulerAtSource.UserId then haulerAtSource else haulerFar
-		player:SetAttribute(TinyfolkJobSchedulingConfig.ScheduledJobKindAttribute, TinyfolkJobSchedulingConfig.JobKinds.None)
+		player:SetAttribute(
+			TinyfolkJobSchedulingConfig.ScheduledJobKindAttribute,
+			TinyfolkJobSchedulingConfig.JobKinds.None
+		)
 		return true
 	end,
 })
@@ -359,7 +362,10 @@ assertEqual(
 )
 assertTrue(completeSnapshot.actionCount >= 1, "completion tick reports actions")
 
-haulerAtSource:SetAttribute(TinyfolkJobSchedulingConfig.ScheduledJobKindAttribute, TinyfolkJobSchedulingConfig.JobKinds.GeneralHaul)
+haulerAtSource:SetAttribute(
+	TinyfolkJobSchedulingConfig.ScheduledJobKindAttribute,
+	TinyfolkJobSchedulingConfig.JobKinds.GeneralHaul
+)
 haulerAtSource:SetAttribute(TinyfolkJobSchedulingConfig.ScheduledJobMaterialAttribute, "Wood")
 haulerAtSource:SetAttribute(TinyfolkJobSchedulingConfig.ScheduledJobStationIdAttribute, "WorkStation_A")
 haulerAtSource:SetAttribute(StationConfig.HaulInteractionActiveAttribute, true)

@@ -51,10 +51,7 @@ assertEqual(
 	"empty pools select none"
 )
 
-assertTrue(
-	TinyfolkHaulLogisticsState.IsHaulComplete({ produced = 0, inTransit = 0 }),
-	"haul complete when pools empty"
-)
+assertTrue(TinyfolkHaulLogisticsState.IsHaulComplete({ produced = 0, inTransit = 0 }), "haul complete when pools empty")
 assertTrue(
 	not TinyfolkHaulLogisticsState.IsHaulComplete({ produced = 1, inTransit = 0 }),
 	"haul incomplete with produced"
@@ -112,11 +109,7 @@ assertTrue(
 	"out of range at 20 studs"
 )
 
-assertEqual(
-	TinyfolkHaulLogisticsState.ResolvePickupAmount(2, 1.5),
-	3,
-	"pickup amount applies haul yield multiplier"
-)
+assertEqual(TinyfolkHaulLogisticsState.ResolvePickupAmount(2, 1.5), 3, "pickup amount applies haul yield multiplier")
 assertEqual(
 	TinyfolkHaulLogisticsState.ResolveDeliveryAmount("Wood", 5, StationConfig.HaulTransferPerStepByMaterial),
 	2,

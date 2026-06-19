@@ -535,15 +535,16 @@ local function processWorkerLogistics(worker: any, flowSnapshot: any, tickAt: nu
 
 	diagnostics.actionsApplied += 1
 	local refreshedSnapshot = getFlowSnapshot()
-	local refreshedMaterialSnapshot = if type(refreshedSnapshot) == "table"
-		then refreshedSnapshot[material]
-		else nil
+	local refreshedMaterialSnapshot = if type(refreshedSnapshot) == "table" then refreshedSnapshot[material] else nil
 	local nextPhase = TinyfolkHaulLogisticsConfig.Phases.Pickup
 	if type(refreshedMaterialSnapshot) == "table" then
 		nextPhase = TinyfolkHaulLogisticsState.ResolveHaulPhase(refreshedMaterialSnapshot)
 	end
 
-	if type(refreshedMaterialSnapshot) == "table" and TinyfolkHaulLogisticsState.IsHaulComplete(refreshedMaterialSnapshot) then
+	if
+		type(refreshedMaterialSnapshot) == "table"
+		and TinyfolkHaulLogisticsState.IsHaulComplete(refreshedMaterialSnapshot)
+	then
 		clearLogisticsAttributes(player, "haul_logistics_complete")
 		clearScheduledHaulJob(worker.userId, "haul_logistics_complete")
 		debugLog(

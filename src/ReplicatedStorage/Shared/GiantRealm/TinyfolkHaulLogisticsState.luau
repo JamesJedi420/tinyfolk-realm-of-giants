@@ -75,7 +75,8 @@ function TinyfolkHaulLogisticsState.ResolveHaulRoute(material: string, sourceSta
 		material = material,
 		sourceStationId = resolvedSource :: string,
 		deliveryId = deliveryId :: string,
-	}, nil
+	},
+		nil
 end
 
 function TinyfolkHaulLogisticsState.ResolveHaulPhase(materialSnapshot: MaterialSnapshot): string
