@@ -97,6 +97,7 @@ Rules:
 	- Assigned
 	- ClearedManual
 	- ClearedRoleChange
+	- JobScheduled
 - Hauling is general labor and does not require a specialist role.
 - Hauling is not a specialist role.
 - Hauling does not consume the specialist assignment slot.
@@ -108,11 +109,13 @@ Rules:
 - WorkStation_A in this slice is bounded Wood production, not generic/infinite workstation output.
 - Haulers move produced goods to storage.
 - Hauling is implemented as deterministic general labor flow, not specialist assignment.
+- Bounded Tinyfolk job scheduling (Slice A, TIN-31) proactively assigns live player Tinyfolk to specialist production and general-haul jobs on active Giant realm servers via `TinyfolkJobSchedulingService`; haul jobs are attribute labels only (no movement AI).
+- Scheduled job state is exposed on player attributes (`TinyfolkScheduledJob*`) and `_TinyfolkJobSchedulingService_QueryAPI` for debugging.
 - Only stored resources count as usable realm resources in the current prototype.
 
 Future scope note:
 - Station gating by specialist assignment is implemented for current specialist stations.
-- Full labor AI behavior and full job scheduling are not implemented in the current prototype.
+- Full labor AI movement, hauling route AI, and presentation polish are not implemented in the current prototype.
 - Additional specialist-gated station paths beyond WorkStation_A remain future scope.
 
 Operational state model:

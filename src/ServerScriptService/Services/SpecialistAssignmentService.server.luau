@@ -632,6 +632,20 @@ _G._SpecialistAssignmentService_QueryAPI = {
 			"interaction"
 		)
 	end,
+	AssignForJobScheduling = function(
+		player: Player,
+		specialistRole: string,
+		assignedStationId: string?
+	): (boolean, string)
+		return assignSpecialistState(
+			player,
+			specialistRole,
+			assignedStationId,
+			SpecialistConfig.AssignmentReasons.JobScheduled,
+			true,
+			"job_scheduling"
+		)
+	end,
 	GetSnapshotForPlayer = function(player: Player): any
 		return snapshotForPlayer(player)
 	end,
