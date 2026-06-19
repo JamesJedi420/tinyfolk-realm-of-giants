@@ -29,6 +29,7 @@ local ownersByNamespace = {
 	emergencyReinforcement = EventStateOwnershipModel.Owners.realmProfile,
 	shrinePersistence = EventStateOwnershipModel.Owners.realmProfile,
 	rescuePersistence = EventStateOwnershipModel.Owners.realmProfile,
+	socialEconomyPersistence = EventStateOwnershipModel.Owners.realmProfile,
 	captureRuntime = EventStateOwnershipModel.Owners.sessionRuntime,
 	escapeRuntime = EventStateOwnershipModel.Owners.sessionRuntime,
 	defenseRuntime = EventStateOwnershipModel.Owners.sessionRuntime,

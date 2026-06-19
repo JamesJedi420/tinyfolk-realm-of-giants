@@ -635,6 +635,30 @@ local function run()
 	end
 
 	do
+		local root = GiantRealmSaveSchema.BuildSaveRoot(9402, {}, nil, nil, nil, nil, nil, nil, nil, nil, nil, {
+			favor = 55,
+			control = 58,
+			recentEvents = {
+				{
+					operationId = "trophy-capture-9402-9403-1000",
+					eventKind = "capture_success",
+					favorDelta = 0,
+					controlDelta = 5,
+					favorAfter = 50,
+					controlAfter = 55,
+					awardedAt = 10,
+				},
+			},
+		})
+		assertTrue(type(root.socialEconomyPersistence) == "table", "built root includes social economy persistence")
+		assertEqual(root.socialEconomyPersistence.control, 58, "built root social economy control")
+		assertValid(
+			"built root with social economy persistence validates",
+			GiantRealmSaveSchema.ValidateSaveRoot(root)
+		)
+	end
+
+	do
 		local root = makeSaveRoot()
 		root.resourceLedger = makeResourceLedgerRecord()
 		root.resourceLedger.recentAwards[2].operationId = root.resourceLedger.recentAwards[1].operationId

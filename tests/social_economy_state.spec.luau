@@ -98,4 +98,31 @@ local balancedEffect = SocialEconomyState.ResolveEffectSnapshot({
 })
 assertEqual(balancedEffect.dominantAxis, SocialEconomyConfig.DominantAxes.Balanced, "balanced dominant axis")
 
+local persisted = SocialEconomyState.SerializePersistenceState(escapeFailure.state)
+assertEqual(persisted.favor, 55, "serialized favor")
+assertEqual(persisted.control, 58, "serialized control")
+assertEqual(#persisted.recentEvents, 3, "serialized recent event count")
+assertEqual(persisted.recentEvents[1].operationId, "trophy-capture-101-202-1000", "serialized events sorted by awardedAt")
+
+local applied = SocialEconomyState.ApplyPersistenceState(persisted)
+assertTrue(applied.accepted, "apply persistence accepted")
+assertEqual(applied.state.favor, 55, "applied favor")
+assertEqual(applied.state.control, 58, "applied control")
+assertTrue(applied.state.operationIds["trophy-capture-101-202-1000"] == true, "applied operation id rebuilt")
+
+local duplicatePersisted = {
+	favor = 55,
+	control = 58,
+	recentEvents = {
+		persisted.recentEvents[1],
+		persisted.recentEvents[1],
+	},
+}
+local duplicateApplied = SocialEconomyState.ApplyPersistenceState(duplicatePersisted)
+assertEqual(duplicateApplied.reason, "social_economy_operation_id_duplicate index=2", "duplicate persisted operation rejected")
+
+local cleared = SocialEconomyState.ApplyPersistenceState(nil)
+assertTrue(cleared.accepted, "clear persistence accepted")
+assertEqual(cleared.state.favor, SocialEconomyConfig.DefaultFavor, "cleared favor default")
+
 print("social_economy_state.spec.luau: all checks passed")

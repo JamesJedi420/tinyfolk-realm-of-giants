@@ -2282,6 +2282,14 @@ local function getGiantReputationQueryApi(): any
 	return nil
 end
 
+local function getSocialEconomyQueryApi(): any
+	local globalValue = globalEnv
+	if type(globalValue._SocialEconomyService_QueryAPI) == "table" then
+		return globalValue._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
+
 local function getRealmReservedServerAllocationQueryApi(): any
 	local globalValue = globalEnv
 	if type(globalValue._RealmReservedServerAllocationService_QueryAPI) == "table" then
@@ -2361,6 +2369,15 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		giantReputationPersistenceState = giantReputationQueryApi.BuildPersistenceState()
 	end
 
+	local socialEconomyPersistenceState = nil
+	local socialEconomyQueryApi = getSocialEconomyQueryApi()
+	if socialEconomyQueryApi ~= nil then
+		if type(socialEconomyQueryApi.BuildPersistenceState) ~= "function" then
+			return nil, "social_economy_build_persistence_missing"
+		end
+		socialEconomyPersistenceState = socialEconomyQueryApi.BuildPersistenceState()
+	end
+
 	local realmServerAllocationState = nil
 	local allocationQueryApi = getRealmReservedServerAllocationQueryApi()
 	if allocationQueryApi ~= nil then
@@ -2382,6 +2399,7 @@ local function BuildSaveSnapshot(ownerUserId: any): (any?, string?)
 		trophyPersistenceState,
 		giantLevelPersistenceState,
 		giantReputationPersistenceState,
+		socialEconomyPersistenceState,
 		realmServerAllocationState
 	)
 	local valid, reason = GiantRealmSaveSchema.ValidateSaveRoot(root)
@@ -2553,6 +2571,27 @@ local function ApplySaveSnapshot(root: any): (boolean, string?)
 		local appliedGiantReputation, giantReputationReason = giantReputationQueryApi.ApplyPersistenceState(nil)
 		if not appliedGiantReputation then
 			return false, giantReputationReason or "giant_reputation_apply_persistence_failed"
+		end
+	end
+
+	local socialEconomyQueryApi = getSocialEconomyQueryApi()
+	if root.socialEconomyPersistence ~= nil then
+		if socialEconomyQueryApi == nil then
+			return false, "social_economy_query_api_missing"
+		end
+		if type(socialEconomyQueryApi.ApplyPersistenceState) ~= "function" then
+			return false, "social_economy_apply_persistence_missing"
+		end
+
+		local appliedSocialEconomy, socialEconomyReason =
+			socialEconomyQueryApi.ApplyPersistenceState(root.socialEconomyPersistence)
+		if not appliedSocialEconomy then
+			return false, socialEconomyReason or "social_economy_apply_persistence_failed"
+		end
+	elseif socialEconomyQueryApi ~= nil and type(socialEconomyQueryApi.ApplyPersistenceState) == "function" then
+		local appliedSocialEconomy, socialEconomyReason = socialEconomyQueryApi.ApplyPersistenceState(nil)
+		if not appliedSocialEconomy then
+			return false, socialEconomyReason or "social_economy_apply_persistence_failed"
 		end
 	end
 

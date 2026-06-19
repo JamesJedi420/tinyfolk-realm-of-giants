@@ -60,6 +60,11 @@ local function run()
 			"skills profile owner"
 		)
 		assertEqual(namespaceOwners.rescuePersistence, EventStateOwnershipModel.Owners.realmProfile, "rescue owner")
+		assertEqual(
+			namespaceOwners.socialEconomyPersistence,
+			EventStateOwnershipModel.Owners.realmProfile,
+			"social economy owner"
+		)
 		assertEqual(namespaceOwners.captureRuntime, EventStateOwnershipModel.Owners.sessionRuntime, "capture owner")
 		assertEqual(namespaceOwners.escapeRuntime, EventStateOwnershipModel.Owners.sessionRuntime, "escape owner")
 
@@ -83,6 +88,7 @@ local function run()
 			skillsProfileState = EventStateOwnershipModel.Owners.playerProfile,
 			emergencyReinforcement = EventStateOwnershipModel.Owners.realmProfile,
 			rescuePersistence = EventStateOwnershipModel.Owners.realmProfile,
+			socialEconomyPersistence = EventStateOwnershipModel.Owners.realmProfile,
 			captureRuntime = EventStateOwnershipModel.Owners.sessionRuntime,
 			escapeRuntime = EventStateOwnershipModel.Owners.sessionRuntime,
 		})
