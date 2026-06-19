@@ -181,6 +181,22 @@ export type GiantReputationPersistenceSaveRecord = {
 	recentEvents: { GiantReputationEventSaveRecord }?,
 }
 
+export type SocialEconomyEventSaveRecord = {
+	operationId: string,
+	eventKind: string,
+	favorDelta: number,
+	controlDelta: number,
+	favorAfter: number,
+	controlAfter: number,
+	awardedAt: number,
+}
+
+export type SocialEconomyPersistenceSaveRecord = {
+	favor: number,
+	control: number,
+	recentEvents: { SocialEconomyEventSaveRecord }?,
+}
+
 export type RealmServerAllocationSaveRecord = {
 	reservedAccessCode: string,
 	destinationPlaceId: number,
@@ -200,6 +216,7 @@ export type GiantRealmSaveRoot = {
 	trophyPersistence: TrophyPersistenceSaveRecord?,
 	giantLevelPersistence: GiantLevelPersistenceSaveRecord?,
 	giantReputationPersistence: GiantReputationPersistenceSaveRecord?,
+	socialEconomyPersistence: SocialEconomyPersistenceSaveRecord?,
 	realmServerAllocation: RealmServerAllocationSaveRecord?,
 }
 
@@ -794,6 +811,20 @@ local VALID_TROPHY_KINDS = {
 	negotiated_release = true,
 }
 
+local VALID_SOCIAL_ECONOMY_EVENT_KINDS = {
+	capture_success = true,
+	negotiated_release = true,
+	containment_escape_failure = true,
+	favor_grant = true,
+	loyalty_grant = true,
+	control_grant = true,
+	fear_grant = true,
+}
+
+local SOCIAL_ECONOMY_AXIS_MIN = 0
+local SOCIAL_ECONOMY_AXIS_MAX = 100
+local SOCIAL_ECONOMY_MAX_RETAINED_RECENT_EVENTS = 50
+
 function GiantRealmSaveSchema.ValidateTrophySaveRecord(record: any): (boolean, string?)
 	if type(record) ~= "table" then
 		return false, "trophy_record_invalid"
@@ -974,6 +1005,81 @@ function GiantRealmSaveSchema.ValidateGiantReputationPersistenceRecord(record: a
 	return true, nil
 end
 
+function GiantRealmSaveSchema.ValidateSocialEconomyEventSaveRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "social_economy_event_invalid"
+	end
+	if type(record.operationId) ~= "string" or record.operationId == "" then
+		return false, "social_economy_operation_id_invalid"
+	end
+	if VALID_SOCIAL_ECONOMY_EVENT_KINDS[record.eventKind] ~= true then
+		return false, "social_economy_event_kind_invalid"
+	end
+	if not isFiniteNumber(record.favorDelta) then
+		return false, "social_economy_favor_delta_invalid"
+	end
+	if not isFiniteNumber(record.controlDelta) then
+		return false, "social_economy_control_delta_invalid"
+	end
+	if not isFiniteNumber(record.favorAfter) or record.favorAfter < SOCIAL_ECONOMY_AXIS_MIN then
+		return false, "social_economy_favor_after_invalid"
+	end
+	if record.favorAfter > SOCIAL_ECONOMY_AXIS_MAX then
+		return false, "social_economy_favor_after_invalid"
+	end
+	if not isFiniteNumber(record.controlAfter) or record.controlAfter < SOCIAL_ECONOMY_AXIS_MIN then
+		return false, "social_economy_control_after_invalid"
+	end
+	if record.controlAfter > SOCIAL_ECONOMY_AXIS_MAX then
+		return false, "social_economy_control_after_invalid"
+	end
+	if not isFiniteNumber(record.awardedAt) or record.awardedAt < 0 then
+		return false, "social_economy_awarded_at_invalid"
+	end
+	return true, nil
+end
+
+function GiantRealmSaveSchema.ValidateSocialEconomyPersistenceRecord(record: any): (boolean, string?)
+	if record == nil then
+		return true, nil
+	end
+	if type(record) ~= "table" then
+		return false, "social_economy_persistence_invalid"
+	end
+	if not isFiniteNumber(record.favor) or record.favor < SOCIAL_ECONOMY_AXIS_MIN then
+		return false, "social_economy_favor_invalid"
+	end
+	if record.favor > SOCIAL_ECONOMY_AXIS_MAX then
+		return false, "social_economy_favor_invalid"
+	end
+	if not isFiniteNumber(record.control) or record.control < SOCIAL_ECONOMY_AXIS_MIN then
+		return false, "social_economy_control_invalid"
+	end
+	if record.control > SOCIAL_ECONOMY_AXIS_MAX then
+		return false, "social_economy_control_invalid"
+	end
+	if record.recentEvents ~= nil then
+		if type(record.recentEvents) ~= "table" then
+			return false, "social_economy_recent_events_invalid"
+		end
+		if #record.recentEvents > SOCIAL_ECONOMY_MAX_RETAINED_RECENT_EVENTS then
+			return false, "social_economy_recent_events_limit_exceeded"
+		end
+		local seenOperationIds: { [string]: boolean } = {}
+		for index, eventRecord in ipairs(record.recentEvents) do
+			local valid, reason = GiantRealmSaveSchema.ValidateSocialEconomyEventSaveRecord(eventRecord)
+			if not valid then
+				return false, string.format("%s index=%d", reason or "social_economy_event_invalid", index)
+			end
+			if seenOperationIds[eventRecord.operationId] then
+				return false, string.format("social_economy_operation_id_duplicate index=%d", index)
+			end
+			seenOperationIds[eventRecord.operationId] = true
+		end
+	end
+	return true, nil
+end
+
 function GiantRealmSaveSchema.ValidateRealmServerAllocationRecord(record: any, ownerUserId: any): (boolean, string?)
 	return RealmReservedServerAllocationState.ValidateSaveRecord(record, ownerUserId)
 end
@@ -1057,6 +1163,12 @@ function GiantRealmSaveSchema.ValidateSaveRoot(root: any): (boolean, string?)
 		GiantRealmSaveSchema.ValidateGiantReputationPersistenceRecord(root.giantReputationPersistence)
 	if not giantReputationValid then
 		return false, giantReputationReason
+	end
+
+	local socialEconomyValid, socialEconomyReason =
+		GiantRealmSaveSchema.ValidateSocialEconomyPersistenceRecord(root.socialEconomyPersistence)
+	if not socialEconomyValid then
+		return false, socialEconomyReason
 	end
 
 	local allocationValid, allocationReason =
@@ -1482,6 +1594,51 @@ function GiantRealmSaveSchema.SerializeGiantReputationPersistenceRecord(
 	}
 end
 
+function GiantRealmSaveSchema.SerializeSocialEconomyPersistenceRecord(
+	state: any
+): SocialEconomyPersistenceSaveRecord?
+	if state == nil then
+		return nil
+	end
+	if type(state) ~= "table" then
+		return {
+			favor = SOCIAL_ECONOMY_AXIS_MIN + (SOCIAL_ECONOMY_AXIS_MAX - SOCIAL_ECONOMY_AXIS_MIN) / 2,
+			control = SOCIAL_ECONOMY_AXIS_MIN + (SOCIAL_ECONOMY_AXIS_MAX - SOCIAL_ECONOMY_AXIS_MIN) / 2,
+			recentEvents = {},
+		}
+	end
+
+	local events = {}
+	if type(state.recentEvents) == "table" then
+		for _, record in ipairs(state.recentEvents) do
+			if type(record) == "table" then
+				table.insert(events, {
+					operationId = record.operationId,
+					eventKind = record.eventKind,
+					favorDelta = record.favorDelta,
+					controlDelta = record.controlDelta,
+					favorAfter = record.favorAfter,
+					controlAfter = record.controlAfter,
+					awardedAt = record.awardedAt,
+				})
+			end
+		end
+	end
+
+	table.sort(events, function(a: SocialEconomyEventSaveRecord, b: SocialEconomyEventSaveRecord): boolean
+		if a.awardedAt ~= b.awardedAt then
+			return a.awardedAt < b.awardedAt
+		end
+		return a.operationId < b.operationId
+	end)
+
+	return {
+		favor = if isFiniteNumber(state.favor) then state.favor else 50,
+		control = if isFiniteNumber(state.control) then state.control else 50,
+		recentEvents = events,
+	}
+end
+
 function GiantRealmSaveSchema.BuildSaveRoot(
 	ownerUserId: number,
 	statesById: { [string]: any },
@@ -1494,6 +1651,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 	trophyPersistenceState: any?,
 	giantLevelPersistenceState: any?,
 	giantReputationPersistenceState: any?,
+	socialEconomyPersistenceState: any?,
 	realmServerAllocationState: any?
 ): GiantRealmSaveRoot
 	local root: GiantRealmSaveRoot = {
@@ -1509,6 +1667,7 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		trophyPersistence = nil,
 		giantLevelPersistence = nil,
 		giantReputationPersistence = nil,
+		socialEconomyPersistence = nil,
 		realmServerAllocation = nil,
 	}
 
@@ -1556,6 +1715,12 @@ function GiantRealmSaveSchema.BuildSaveRoot(
 		GiantRealmSaveSchema.SerializeGiantReputationPersistenceRecord(giantReputationPersistenceState)
 	if giantReputationRecord ~= nil then
 		root.giantReputationPersistence = giantReputationRecord
+	end
+
+	local socialEconomyRecord =
+		GiantRealmSaveSchema.SerializeSocialEconomyPersistenceRecord(socialEconomyPersistenceState)
+	if socialEconomyRecord ~= nil then
+		root.socialEconomyPersistence = socialEconomyRecord
 	end
 
 	local allocationRecord = GiantRealmSaveSchema.SerializeRealmServerAllocationRecord(realmServerAllocationState)

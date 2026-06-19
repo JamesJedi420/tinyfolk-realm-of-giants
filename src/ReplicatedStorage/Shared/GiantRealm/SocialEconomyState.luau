@@ -238,4 +238,131 @@ function SocialEconomyState.ApplySocialEvent(state: State, input: any): any
 	}
 end
 
+function SocialEconomyState.ValidateEventRecord(record: any): (boolean, string?)
+	if type(record) ~= "table" then
+		return false, "social_economy_event_invalid"
+	end
+	if nonEmptyString(record.operationId) == nil then
+		return false, "social_economy_operation_id_invalid"
+	end
+	if SocialEconomyState.IsValidEventKind(record.eventKind) ~= true then
+		return false, "social_economy_event_kind_invalid"
+	end
+	if not isFiniteNumber(record.favorDelta) then
+		return false, "social_economy_favor_delta_invalid"
+	end
+	if not isFiniteNumber(record.controlDelta) then
+		return false, "social_economy_control_delta_invalid"
+	end
+	if not isFiniteNumber(record.favorAfter) or record.favorAfter < SocialEconomyConfig.AxisMin then
+		return false, "social_economy_favor_after_invalid"
+	end
+	if record.favorAfter > SocialEconomyConfig.AxisMax then
+		return false, "social_economy_favor_after_invalid"
+	end
+	if not isFiniteNumber(record.controlAfter) or record.controlAfter < SocialEconomyConfig.AxisMin then
+		return false, "social_economy_control_after_invalid"
+	end
+	if record.controlAfter > SocialEconomyConfig.AxisMax then
+		return false, "social_economy_control_after_invalid"
+	end
+	if not isFiniteNumber(record.awardedAt) or record.awardedAt < 0 then
+		return false, "social_economy_awarded_at_invalid"
+	end
+	return true, nil
+end
+
+function SocialEconomyState.SerializePersistenceState(state: State): any
+	if type(state) ~= "table" then
+		return {
+			favor = SocialEconomyConfig.DefaultFavor,
+			control = SocialEconomyConfig.DefaultControl,
+			recentEvents = {},
+		}
+	end
+
+	local events = {}
+	for _, record in ipairs(state.recentEvents) do
+		table.insert(events, cloneEventRecord(record))
+	end
+
+	table.sort(events, function(a: SocialEventRecord, b: SocialEventRecord): boolean
+		if a.awardedAt ~= b.awardedAt then
+			return a.awardedAt < b.awardedAt
+		end
+		return a.operationId < b.operationId
+	end)
+
+	return {
+		favor = state.favor,
+		control = state.control,
+		recentEvents = events,
+	}
+end
+
+function SocialEconomyState.ApplyPersistenceState(raw: any): any
+	if raw == nil then
+		return {
+			accepted = true,
+			reason = "cleared",
+			state = SocialEconomyState.CreateEmptyState(),
+		}
+	end
+
+	if type(raw) ~= "table" then
+		return { accepted = false, reason = "persistence_invalid" }
+	end
+	if not isFiniteNumber(raw.favor) or raw.favor < SocialEconomyConfig.AxisMin then
+		return { accepted = false, reason = "social_economy_favor_invalid" }
+	end
+	if raw.favor > SocialEconomyConfig.AxisMax then
+		return { accepted = false, reason = "social_economy_favor_invalid" }
+	end
+	if not isFiniteNumber(raw.control) or raw.control < SocialEconomyConfig.AxisMin then
+		return { accepted = false, reason = "social_economy_control_invalid" }
+	end
+	if raw.control > SocialEconomyConfig.AxisMax then
+		return { accepted = false, reason = "social_economy_control_invalid" }
+	end
+
+	local recentEvents: { SocialEventRecord } = {}
+	local operationIds: { [string]: boolean } = {}
+	if raw.recentEvents ~= nil then
+		if type(raw.recentEvents) ~= "table" then
+			return { accepted = false, reason = "social_economy_recent_events_invalid" }
+		end
+		if #raw.recentEvents > SocialEconomyConfig.MaxRetainedRecentEvents then
+			return { accepted = false, reason = "social_economy_recent_events_limit_exceeded" }
+		end
+		for index, record in ipairs(raw.recentEvents) do
+			local valid, reason = SocialEconomyState.ValidateEventRecord(record)
+			if not valid then
+				return {
+					accepted = false,
+					reason = string.format("%s index=%d", reason or "social_economy_event_invalid", index),
+				}
+			end
+			if operationIds[record.operationId] == true then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_operation_id_duplicate index=%d", index),
+				}
+			end
+			table.insert(recentEvents, cloneEventRecord(record))
+			operationIds[record.operationId] = true
+		end
+	end
+
+	return {
+		accepted = true,
+		reason = "accepted",
+		state = {
+			favor = math.floor(raw.favor),
+			control = math.floor(raw.control),
+			operationIds = operationIds,
+			recentEvents = recentEvents,
+		},
+	}
+end
+
 return SocialEconomyState

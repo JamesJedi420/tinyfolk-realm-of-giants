@@ -465,6 +465,31 @@ globalEnv._RescueContractService_QueryAPI = {
 	end,
 }
 
+globalEnv._SocialEconomyService_QueryAPI = {
+	BuildPersistenceState = function(): any
+		return {
+			favor = 55,
+			control = 58,
+			recentEvents = {
+				{
+					operationId = "trophy-capture-9402-9403-1000",
+					eventKind = "capture_success",
+					favorDelta = 0,
+					controlDelta = 5,
+					favorAfter = 50,
+					controlAfter = 55,
+					awardedAt = 10,
+				},
+			},
+		}
+	end,
+	_LastAppliedPersistenceState = nil,
+	ApplyPersistenceState = function(_persistedState: any): (boolean, string?)
+		globalEnv._SocialEconomyService_QueryAPI._LastAppliedPersistenceState = _persistedState
+		return true, nil
+	end,
+}
+
 local eventLogRecords: { any } = {}
 globalEnv._EventLogService_QueryAPI = {
 	RecordEvent = function(category: any, message: any, severity: any, timestamp: any, metadata: any): any
@@ -1021,6 +1046,8 @@ if saveRoot then
 	)
 	assertEqual(saveRoot.emergencyReinforcement.used, true, "save snapshot reinforcement used")
 	assertEqual(saveRoot.emergencyReinforcement.triggeredByUserId, 1101, "save snapshot reinforcement requester")
+	assertTrue(type(saveRoot.socialEconomyPersistence) == "table", "save snapshot includes social economy persistence")
+	assertEqual(saveRoot.socialEconomyPersistence.control, 58, "save snapshot social economy control")
 	assertEqual(
 		saveRoot.placedStructures[1].structureId,
 		acceptedStructureId,
@@ -1252,6 +1279,10 @@ assertTrue(
 assertTrue(
 	type(globalEnv._RescueContractService_QueryAPI._LastAppliedPersistenceState) == "nil",
 	"apply without rescue record clears persistence state"
+)
+assertTrue(
+	type(globalEnv._SocialEconomyService_QueryAPI._LastAppliedPersistenceState) == "nil",
+	"apply without social economy record clears persistence state"
 )
 assertTrue(globalEnv._GiantBuildModeService_Registry == registryBeforeApply, "apply preserves registry table reference")
 assertTrue(queryApi.GetPlacedStructure(acceptedStructureId) == nil, "apply removes stale accepted structure state")

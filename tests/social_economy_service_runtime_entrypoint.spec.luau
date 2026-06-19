@@ -112,4 +112,30 @@ local snapshot = socialApi.GetSnapshot()
 assertEqual(#snapshot.recentEvents, 2, "snapshot includes recent events")
 assertEqual(snapshot.recentEvents[2].eventKind, TrophyConfig.Kinds.NegotiatedRelease, "release event kind")
 
+local persistenceState = socialApi.BuildPersistenceState()
+assertEqual(persistenceState.favor, 55, "build persistence favor")
+assertEqual(persistenceState.control, 55, "build persistence control after release")
+assertEqual(#persistenceState.recentEvents, 2, "build persistence recent events")
+
+socialApi.ResetForTests()
+assertEqual(socialApi.GetFavor(), SocialEconomyConfig.DefaultFavor, "reset favor default")
+
+local applied, applyReason = socialApi.ApplyPersistenceState(persistenceState)
+assertTrue(applied, "apply persistence succeeds")
+assertEqual(applyReason, nil, "apply persistence no reason")
+assertEqual(socialApi.GetFavor(), 55, "apply restores favor")
+assertEqual(socialApi.GetControl(), 55, "apply restores control")
+assertEqual(ownerPlayer:GetAttribute(SocialEconomyConfig.StateAttributes.Favor), 55, "apply projects favor attribute")
+
+local duplicateApply, duplicateReason = socialApi.ApplyPersistenceState({
+	favor = 55,
+	control = 55,
+	recentEvents = {
+		persistenceState.recentEvents[1],
+		persistenceState.recentEvents[1],
+	},
+})
+assertEqual(duplicateApply, false, "duplicate persisted events rejected on apply")
+assertEqual(duplicateReason, "social_economy_operation_id_duplicate index=2", "duplicate apply reason")
+
 print("social_economy_service_runtime_entrypoint.spec.luau: all checks passed")

@@ -124,9 +124,25 @@ local function recordTrophySocialEvent(trophyKind: string, operationId: string, 
 	})
 end
 
+local function BuildPersistenceState(): any
+	return SocialEconomyState.SerializePersistenceState(socialState)
+end
+
+local function ApplyPersistenceState(raw: any): (boolean, string?)
+	local applied = SocialEconomyState.ApplyPersistenceState(raw)
+	if applied.accepted ~= true then
+		return false, applied.reason or "social_economy_apply_failed"
+	end
+	socialState = applied.state
+	projectRealmOwnerAttributes(nil)
+	return true, nil
+end
+
 _G._SocialEconomyService_QueryAPI = {
 	RecordSocialEvent = recordSocialEventByKind,
 	RecordTrophySocialEvent = recordTrophySocialEvent,
+	BuildPersistenceState = BuildPersistenceState,
+	ApplyPersistenceState = ApplyPersistenceState,
 	GetSnapshot = function(): any
 		return buildSnapshot(nil)
 	end,

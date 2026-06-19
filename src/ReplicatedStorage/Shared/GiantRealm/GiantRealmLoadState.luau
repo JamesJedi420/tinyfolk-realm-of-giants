@@ -34,7 +34,7 @@ local function isPositiveInteger(value: any): boolean
 end
 
 function GiantRealmLoadState.BuildDefaultStarterSaveRoot(ownerUserId: number): any
-	return GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, {}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	return GiantRealmSaveSchema.BuildSaveRoot(ownerUserId, {}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 end
 
 function GiantRealmLoadState.BuildRecoverySaveRoot(ownerUserId: number): any
