@@ -21,9 +21,16 @@ export type EffectSnapshot = {
 	dominantAxis: string,
 }
 
+export type DyadicRelation = {
+	favor: number,
+	control: number,
+	lastUpdatedAt: number,
+}
+
 export type State = {
 	favor: number,
 	control: number,
+	dyadicByUserId: { [string]: DyadicRelation },
 	operationIds: { [string]: boolean },
 	recentEvents: { SocialEventRecord },
 }
@@ -68,6 +75,41 @@ local function clampAxis(value: number): number
 	return math.clamp(value, SocialEconomyConfig.AxisMin, SocialEconomyConfig.AxisMax)
 end
 
+local function resolveBonusCap(rawBonus: number, maxBonus: number): number
+	if not isFiniteNumber(maxBonus) or maxBonus <= 1 then
+		return rawBonus
+	end
+	return math.min(rawBonus, maxBonus)
+end
+
+local function countRecentEventsByKind(state: State, eventKind: string, at: number, windowSeconds: number): number
+	if type(state.recentEvents) ~= "table" or #state.recentEvents == 0 then
+		return 0
+	end
+	if not isFiniteNumber(windowSeconds) or windowSeconds <= 0 then
+		return 0
+	end
+
+	local count = 0
+	for _, record in ipairs(state.recentEvents) do
+		if record.eventKind == eventKind and isFiniteNumber(record.awardedAt) then
+			if at - record.awardedAt <= windowSeconds then
+				count += 1
+			end
+		end
+	end
+	return count
+end
+
+local function resolveDiminishMultiplier(recentCount: number): number
+	local multipliers = SocialEconomyConfig.TrophyDeltaDiminishMultipliers
+	if type(multipliers) ~= "table" or #multipliers == 0 then
+		return 1
+	end
+	local index = math.min(recentCount + 1, #multipliers)
+	return multipliers[index]
+end
+
 local function resolveDeltas(eventKind: string): (number?, number?)
 	local trophyDeltas = SocialEconomyConfig.DeltasByTrophyKind[eventKind]
 	if type(trophyDeltas) == "table" then
@@ -91,13 +133,102 @@ local function resolveDeltas(eventKind: string): (number?, number?)
 	return favorDelta, controlDelta
 end
 
+function SocialEconomyState.ApplyAxisDecay(state: State, deltaSeconds: number): State
+	if type(state) ~= "table" then
+		state = SocialEconomyState.CreateEmptyState()
+	end
+	if not isFiniteNumber(deltaSeconds) or deltaSeconds <= 0 then
+		return state
+	end
+
+	local decayRate = SocialEconomyConfig.AxisDecayPerSecond
+	if not isFiniteNumber(decayRate) or decayRate <= 0 then
+		return state
+	end
+
+	local decayAmount = decayRate * deltaSeconds
+	local function decayAxis(current: number, defaultValue: number): number
+		if current > defaultValue then
+			return clampAxis(math.max(defaultValue, current - decayAmount))
+		end
+		if current < defaultValue then
+			return clampAxis(math.min(defaultValue, current + decayAmount))
+		end
+		return current
+	end
+
+	return {
+		favor = math.floor(decayAxis(state.favor, SocialEconomyConfig.DefaultFavor)),
+		control = math.floor(decayAxis(state.control, SocialEconomyConfig.DefaultControl)),
+		dyadicByUserId = if type(state.dyadicByUserId) == "table" then state.dyadicByUserId else {},
+		operationIds = state.operationIds,
+		recentEvents = state.recentEvents,
+	}
+end
+
+function SocialEconomyState.ResolveDiminishedTrophyDelta(
+	state: State,
+	eventKind: string,
+	at: number
+): (number?, number?)
+	local favorDelta, controlDelta = resolveDeltas(eventKind)
+	if favorDelta == nil or controlDelta == nil then
+		return nil, nil
+	end
+
+	if VALID_TROPHY_KINDS[eventKind] ~= true then
+		return favorDelta, controlDelta
+	end
+
+	local windowSeconds = SocialEconomyConfig.TrophyDeltaDiminishWindowSeconds
+	local recentCount = countRecentEventsByKind(state, eventKind, at, windowSeconds)
+	local multiplier = resolveDiminishMultiplier(recentCount)
+	return math.floor(favorDelta * multiplier), math.floor(controlDelta * multiplier)
+end
+
 function SocialEconomyState.CreateEmptyState(): State
 	return {
 		favor = SocialEconomyConfig.DefaultFavor,
 		control = SocialEconomyConfig.DefaultControl,
+		dyadicByUserId = {},
 		operationIds = {},
 		recentEvents = {},
 	}
+end
+
+function SocialEconomyState.ResolveEffectiveAxes(state: State, targetUserId: number?): (number, number)
+	local favor = if type(state) == "table" and isFiniteNumber(state.favor)
+		then state.favor
+		else SocialEconomyConfig.DefaultFavor
+	local control = if type(state) == "table" and isFiniteNumber(state.control)
+		then state.control
+		else SocialEconomyConfig.DefaultControl
+
+	if not isFiniteNumber(targetUserId) or (targetUserId :: number) <= 0 then
+		return favor, control
+	end
+
+	local dyadicByUserId = if type(state) == "table" then state.dyadicByUserId else nil
+	if type(dyadicByUserId) ~= "table" then
+		return favor, control
+	end
+
+	local dyadic = dyadicByUserId[tostring(math.floor(targetUserId :: number))]
+	if type(dyadic) ~= "table" then
+		return favor, control
+	end
+
+	local blendWeight = SocialEconomyConfig.DyadicBlendWeight
+	if not isFiniteNumber(blendWeight) or blendWeight <= 0 then
+		return favor, control
+	end
+	if blendWeight > 1 then
+		blendWeight = 1
+	end
+
+	local dyadicFavor = if isFiniteNumber(dyadic.favor) then dyadic.favor else favor
+	local dyadicControl = if isFiniteNumber(dyadic.control) then dyadic.control else control
+	return favor + (dyadicFavor - favor) * blendWeight, control + (dyadicControl - control) * blendWeight
 end
 
 function SocialEconomyState.ResolveDominantAxis(favor: number, control: number): string
@@ -115,17 +246,12 @@ function SocialEconomyState.ResolveDominantAxis(favor: number, control: number):
 	return SocialEconomyConfig.DominantAxes.Balanced
 end
 
-function SocialEconomyState.ResolveEffectSnapshot(state: State): EffectSnapshot
-	local favor = if type(state) == "table" and isFiniteNumber(state.favor)
-		then state.favor
-		else SocialEconomyConfig.DefaultFavor
-	local control = if type(state) == "table" and isFiniteNumber(state.control)
-		then state.control
-		else SocialEconomyConfig.DefaultControl
+function SocialEconomyState.ResolveEffectSnapshot(state: State, targetUserId: number?): EffectSnapshot
+	local favor, control = SocialEconomyState.ResolveEffectiveAxes(state, targetUserId)
 
 	return {
-		favorComplianceBonus = 1 + favor / 200,
-		controlIntimidationBonus = 1 + control / 200,
+		favorComplianceBonus = resolveBonusCap(1 + favor / 200, SocialEconomyConfig.MaxComplianceBonus),
+		controlIntimidationBonus = resolveBonusCap(1 + control / 200, SocialEconomyConfig.MaxIntimidationBonus),
 		dominantAxis = SocialEconomyState.ResolveDominantAxis(favor, control),
 	}
 end
@@ -178,16 +304,6 @@ function SocialEconomyState.ApplySocialEvent(state: State, input: any): any
 		}
 	end
 
-	local favorDelta, controlDelta = resolveDeltas(eventKind)
-	if favorDelta == nil or controlDelta == nil then
-		return {
-			accepted = false,
-			reason = "delta_invalid",
-			state = state,
-			record = nil,
-		}
-	end
-
 	if not isFiniteNumber(input.awardedAt) or input.awardedAt < 0 then
 		return {
 			accepted = false,
@@ -197,8 +313,55 @@ function SocialEconomyState.ApplySocialEvent(state: State, input: any): any
 		}
 	end
 
+	local favorDelta, controlDelta = SocialEconomyState.ResolveDiminishedTrophyDelta(state, eventKind, input.awardedAt)
+	if favorDelta == nil or controlDelta == nil then
+		return {
+			accepted = false,
+			reason = "delta_invalid",
+			state = state,
+			record = nil,
+		}
+	end
+	if favorDelta == 0 and controlDelta == 0 then
+		return {
+			accepted = false,
+			reason = "delta_zero",
+			state = state,
+			record = nil,
+		}
+	end
+
 	local nextFavor = clampAxis(state.favor + favorDelta)
 	local nextControl = clampAxis(state.control + controlDelta)
+
+	local nextDyadicByUserId: { [string]: DyadicRelation } = {}
+	if type(state.dyadicByUserId) == "table" then
+		for userIdKey, relation in pairs(state.dyadicByUserId) do
+			if type(relation) == "table" then
+				nextDyadicByUserId[userIdKey] = {
+					favor = relation.favor,
+					control = relation.control,
+					lastUpdatedAt = relation.lastUpdatedAt,
+				}
+			end
+		end
+	end
+
+	if isFiniteNumber(input.targetUserId) and (input.targetUserId :: number) > 0 then
+		local userIdKey = tostring(math.floor(input.targetUserId :: number))
+		local existingDyadic = nextDyadicByUserId[userIdKey]
+		local dyadicFavor = if type(existingDyadic) == "table" and isFiniteNumber(existingDyadic.favor)
+			then existingDyadic.favor
+			else state.favor
+		local dyadicControl = if type(existingDyadic) == "table" and isFiniteNumber(existingDyadic.control)
+			then existingDyadic.control
+			else state.control
+		nextDyadicByUserId[userIdKey] = {
+			favor = clampAxis(dyadicFavor + favorDelta),
+			control = clampAxis(dyadicControl + controlDelta),
+			lastUpdatedAt = input.awardedAt,
+		}
+	end
 
 	local record: SocialEventRecord = {
 		operationId = operationId,
@@ -213,6 +376,7 @@ function SocialEconomyState.ApplySocialEvent(state: State, input: any): any
 	local nextState: State = {
 		favor = nextFavor,
 		control = nextControl,
+		dyadicByUserId = nextDyadicByUserId,
 		operationIds = {},
 		recentEvents = {},
 	}
@@ -278,6 +442,7 @@ function SocialEconomyState.SerializePersistenceState(state: State): any
 			favor = SocialEconomyConfig.DefaultFavor,
 			control = SocialEconomyConfig.DefaultControl,
 			recentEvents = {},
+			dyadicRelations = {},
 		}
 	end
 
@@ -293,10 +458,44 @@ function SocialEconomyState.SerializePersistenceState(state: State): any
 		return a.operationId < b.operationId
 	end)
 
+	local dyadicEntries: { any } = {}
+	if type(state.dyadicByUserId) == "table" then
+		for userIdKey, relation in pairs(state.dyadicByUserId) do
+			if type(relation) == "table" then
+				local userId = tonumber(userIdKey)
+				if type(userId) == "number" and userId > 0 then
+					table.insert(dyadicEntries, {
+						userId = math.floor(userId),
+						favor = relation.favor,
+						control = relation.control,
+						lastUpdatedAt = relation.lastUpdatedAt,
+					})
+				end
+			end
+		end
+	end
+
+	table.sort(dyadicEntries, function(a: any, b: any): boolean
+		local aUpdated = if isFiniteNumber(a.lastUpdatedAt) then a.lastUpdatedAt else 0
+		local bUpdated = if isFiniteNumber(b.lastUpdatedAt) then b.lastUpdatedAt else 0
+		if aUpdated ~= bUpdated then
+			return aUpdated > bUpdated
+		end
+		return a.userId < b.userId
+	end)
+
+	local maxDyadic = SocialEconomyConfig.MaxDyadicRelations
+	if isFiniteNumber(maxDyadic) and maxDyadic > 0 then
+		while #dyadicEntries > math.floor(maxDyadic) do
+			table.remove(dyadicEntries)
+		end
+	end
+
 	return {
 		favor = state.favor,
 		control = state.control,
 		recentEvents = events,
+		dyadicRelations = dyadicEntries,
 	}
 end
 
@@ -353,12 +552,67 @@ function SocialEconomyState.ApplyPersistenceState(raw: any): any
 		end
 	end
 
+	local dyadicByUserId: { [string]: DyadicRelation } = {}
+	if raw.dyadicRelations ~= nil then
+		if type(raw.dyadicRelations) ~= "table" then
+			return { accepted = false, reason = "social_economy_dyadic_relations_invalid" }
+		end
+		if #raw.dyadicRelations > SocialEconomyConfig.MaxDyadicRelations then
+			return { accepted = false, reason = "social_economy_dyadic_relations_limit_exceeded" }
+		end
+		for index, relation in ipairs(raw.dyadicRelations) do
+			if type(relation) ~= "table" then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_relation_invalid index=%d", index),
+				}
+			end
+			if not isFiniteNumber(relation.userId) or relation.userId <= 0 then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_user_id_invalid index=%d", index),
+				}
+			end
+			if not isFiniteNumber(relation.favor) or relation.favor < SocialEconomyConfig.AxisMin then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_favor_invalid index=%d", index),
+				}
+			end
+			if relation.favor > SocialEconomyConfig.AxisMax then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_favor_invalid index=%d", index),
+				}
+			end
+			if not isFiniteNumber(relation.control) or relation.control < SocialEconomyConfig.AxisMin then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_control_invalid index=%d", index),
+				}
+			end
+			if relation.control > SocialEconomyConfig.AxisMax then
+				return {
+					accepted = false,
+					reason = string.format("social_economy_dyadic_control_invalid index=%d", index),
+				}
+			end
+			local userIdKey = tostring(math.floor(relation.userId))
+			dyadicByUserId[userIdKey] = {
+				favor = math.floor(relation.favor),
+				control = math.floor(relation.control),
+				lastUpdatedAt = if isFiniteNumber(relation.lastUpdatedAt) then relation.lastUpdatedAt else 0,
+			}
+		end
+	end
+
 	return {
 		accepted = true,
 		reason = "accepted",
 		state = {
 			favor = math.floor(raw.favor),
 			control = math.floor(raw.control),
+			dyadicByUserId = dyadicByUserId,
 			operationIds = operationIds,
 			recentEvents = recentEvents,
 		},

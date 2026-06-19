@@ -66,7 +66,8 @@ function PenRationingState.ResolveCaptureMoraleCheck(
 	custodianUserId: number,
 	targetUserId: number,
 	at: number,
-	sureThreshold: number
+	sureThreshold: number,
+	intimidationBonus: number?
 ): { allowed: boolean, reason: string }
 	if not isFiniteNumber(morale) or morale <= 0 then
 		return { allowed = false, reason = "custodian_morale_depleted" }
@@ -81,9 +82,15 @@ function PenRationingState.ResolveCaptureMoraleCheck(
 		return { allowed = false, reason = "custodian_morale_shaken" }
 	end
 
+	local resolvedIntimidationBonus = 1
+	if isFiniteNumber(intimidationBonus) and (intimidationBonus :: number) > 0 then
+		resolvedIntimidationBonus = intimidationBonus :: number
+	end
+
 	local rollSeed = math.floor(custodianUserId) * 31 + math.floor(targetUserId) * 17 + math.floor(at * 1000)
 	local roll = rollSeed % 100
-	if roll < math.floor(morale) then
+	local effectiveRollMorale = math.clamp(math.floor(morale * resolvedIntimidationBonus), 0, 100)
+	if roll < effectiveRollMorale then
 		return { allowed = true, reason = "accepted" }
 	end
 

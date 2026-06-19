@@ -9,6 +9,8 @@ local GiantRealm = Shared:WaitForChild("GiantRealm")
 local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
 local RansomBoardConfig = require(Config:WaitForChild("RansomBoardConfig"))
 local RansomBoardState = require(GiantRealm:WaitForChild("RansomBoardState"))
+local RansomSocialGateState = require(GiantRealm:WaitForChild("RansomSocialGateState"))
+local SocialEconomyState = require(GiantRealm:WaitForChild("SocialEconomyState"))
 local ResourceFlowState = if script ~= nil and script.Parent ~= nil
 	then require(script.Parent:WaitForChild("ResourceFlowState"))
 	else (require :: any)("./ResourceFlowState")
@@ -21,6 +23,47 @@ local state = RansomBoardState.NewState()
 local lastRequestAtByUserId: { [number]: number? } = {}
 local offerSequenceByTargetUserId: { [number]: number? } = {}
 local notifyRemote: RemoteEvent? = nil
+
+local function getSocialEconomyServiceQueryApi(): any?
+	local queryApi = globalEnv._SocialEconomyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._SocialEconomyService_QueryAPI) == "table" then
+		return (_G :: any)._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
+
+local function getSocialEconomyControl(targetUserId: number?): number
+	local socialApi = getSocialEconomyServiceQueryApi()
+	if type(socialApi) ~= "table" or type(socialApi.GetSnapshot) ~= "function" then
+		return 50
+	end
+	local snapshot = socialApi.GetSnapshot()
+	if type(snapshot) ~= "table" then
+		return 50
+	end
+	local _, control = SocialEconomyState.ResolveEffectiveAxes({
+		favor = snapshot.favor,
+		control = snapshot.control,
+		dyadicByUserId = snapshot.dyadicByUserId,
+		operationIds = {},
+		recentEvents = {},
+	}, targetUserId)
+	return control
+end
+
+local function getFavorComplianceBonus(targetUserId: number?): number
+	local socialApi = getSocialEconomyServiceQueryApi()
+	if type(socialApi) == "table" and type(socialApi.GetEffectSnapshot) == "function" then
+		local snapshot = socialApi.GetEffectSnapshot(targetUserId)
+		if type(snapshot) == "table" and type(snapshot.favorComplianceBonus) == "number" then
+			return snapshot.favorComplianceBonus
+		end
+	end
+	return 1
+end
 
 local function now(): number
 	return os.clock()
@@ -386,6 +429,15 @@ local function postRansomOffer(
 		return { accepted = false, reason = "custodian_mismatch" }
 	end
 
+	local postGate = RansomSocialGateState.ResolvePostGate(
+		getSocialEconomyControl(targetUserId),
+		RansomBoardConfig.MinControlToPostRansom
+	)
+	if postGate.allowed ~= true then
+		setRansomLastReason(custodian, postGate.reason)
+		return { accepted = false, reason = postGate.reason }
+	end
+
 	local resolvedSettlementKind = if type(settlementKind) == "string"
 		then settlementKind
 		else RansomBoardConfig.SettlementKinds.PaymentFood
@@ -473,12 +525,20 @@ local function settleRansomOffer(payerUserId: number, offerId: string, at: numbe
 		return { accepted = false, reason = "capture_missing" }
 	end
 
+	local effectiveFoodCost = pending.terms.foodCost
+	if pending.terms.settlementKind == RansomBoardConfig.SettlementKinds.PaymentFood then
+		effectiveFoodCost = RansomSocialGateState.ResolveEffectiveFoodCost(
+			pending.terms.foodCost,
+			getFavorComplianceBonus(pending.terms.targetUserId)
+		)
+	end
+
 	local transition = RansomBoardState.ResolveSettle(state, {
 		now = resolvedNow,
 		offerId = offerId,
 		payerUserId = payerUserId,
 		record = record,
-		canAffordFood = canAffordFoodCost(pending.terms.foodCost),
+		canAffordFood = canAffordFoodCost(effectiveFoodCost),
 		settlementReady = resolveObjectiveReady(),
 	})
 
@@ -493,7 +553,7 @@ local function settleRansomOffer(payerUserId: number, offerId: string, at: numbe
 	end
 
 	if transition.offer.terms.settlementKind == RansomBoardConfig.SettlementKinds.PaymentFood then
-		local spent, spendReason = spendFoodCost(transition.offer.terms.foodCost, offerId)
+		local spent, spendReason = spendFoodCost(effectiveFoodCost, offerId)
 		if not spent then
 			setRansomLastReason(payer, spendReason or "insufficient_food")
 			return {
@@ -510,12 +570,7 @@ local function settleRansomOffer(payerUserId: number, offerId: string, at: numbe
 	local captureApi = getCaptureServiceQueryApi()
 	if captureApi == nil or type(captureApi.ResolveCustodyEnd) ~= "function" then
 		if transition.offer.terms.settlementKind == RansomBoardConfig.SettlementKinds.PaymentFood then
-			ResourceFlowState.AddStoredAtomic(
-				0,
-				0,
-				string.format("RansomBoardRollback:%s", offerId),
-				transition.offer.terms.foodCost
-			)
+			ResourceFlowState.AddStoredAtomic(0, 0, string.format("RansomBoardRollback:%s", offerId), effectiveFoodCost)
 		end
 		setRansomLastReason(payer, "capture_release_unavailable")
 		return { accepted = false, reason = "capture_release_unavailable" }
@@ -524,12 +579,7 @@ local function settleRansomOffer(payerUserId: number, offerId: string, at: numbe
 	local releaseResult = captureApi.ResolveCustodyEnd(pending.terms.targetUserId, "released", resolvedNow, offerId)
 	if releaseResult.accepted ~= true then
 		if transition.offer.terms.settlementKind == RansomBoardConfig.SettlementKinds.PaymentFood then
-			ResourceFlowState.AddStoredAtomic(
-				0,
-				0,
-				string.format("RansomBoardRollback:%s", offerId),
-				transition.offer.terms.foodCost
-			)
+			ResourceFlowState.AddStoredAtomic(0, 0, string.format("RansomBoardRollback:%s", offerId), effectiveFoodCost)
 		end
 		setRansomLastReason(payer, releaseResult.reason or "capture_release_failed")
 		return {

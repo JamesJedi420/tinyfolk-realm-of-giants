@@ -9,6 +9,7 @@ RansomBoardConfig.DefaultFoodCost = 5
 RansomBoardConfig.MaxActiveOffersPerCustodian = 3
 RansomBoardConfig.RequestCooldownSeconds = 0.5
 RansomBoardConfig.SettleRadiusStuds = 14
+RansomBoardConfig.MinControlToPostRansom = 20
 
 RansomBoardConfig.SettlementKinds = {
 	PaymentFood = "payment_food",

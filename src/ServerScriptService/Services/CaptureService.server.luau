@@ -537,6 +537,36 @@ local function getPenRationingServiceQueryApi(): any?
 	return nil
 end
 
+local function getSocialEconomyServiceQueryApi(): any?
+	local queryApi = globalEnv._SocialEconomyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._SocialEconomyService_QueryAPI) == "table" then
+		return (_G :: any)._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
+
+local function resolveControlIntimidationBonus(targetUserId: number): number
+	local socialApi = getSocialEconomyServiceQueryApi()
+	if type(socialApi) ~= "table" or type(socialApi.GetEffectSnapshot) ~= "function" then
+		return 1
+	end
+
+	local effectSnapshot = socialApi.GetEffectSnapshot(targetUserId)
+	if type(effectSnapshot) ~= "table" then
+		return 1
+	end
+
+	local intimidationBonus = effectSnapshot.controlIntimidationBonus
+	if type(intimidationBonus) ~= "number" or intimidationBonus ~= intimidationBonus or intimidationBonus <= 0 then
+		return 1
+	end
+
+	return intimidationBonus
+end
+
 local function resolveMoraleCaptureGate(custodianUserId: number, targetUserId: number, at: number): any
 	local rationingApi = getPenRationingServiceQueryApi()
 	if type(rationingApi) ~= "table" or type(rationingApi.GetCustodianMorale) ~= "function" then
@@ -549,7 +579,8 @@ local function resolveMoraleCaptureGate(custodianUserId: number, targetUserId: n
 		custodianUserId,
 		targetUserId,
 		at,
-		PenRationingConfig.MoraleCaptureSureThreshold
+		PenRationingConfig.MoraleCaptureSureThreshold,
+		resolveControlIntimidationBonus(targetUserId)
 	)
 end
 

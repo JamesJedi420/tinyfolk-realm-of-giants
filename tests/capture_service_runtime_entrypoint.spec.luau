@@ -541,6 +541,31 @@ local sureMorale = captureApi.RequestCapture(2101, 2102, 60.0)
 assertTrue(sureMorale.accepted == true, "sure threshold morale captures")
 assertEqual(sureMorale.reason, "accepted", "sure threshold morale accepted reason")
 
+local socialControlIntimidationBonus = 1
+_G._SocialEconomyService_QueryAPI = {
+	GetEffectSnapshot = function()
+		return {
+			controlIntimidationBonus = socialControlIntimidationBonus,
+		}
+	end,
+}
+
+resetState()
+moraleByCustodian[2101] = 48
+socialControlIntimidationBonus = 1.5
+local intimidatedMorale = captureApi.RequestCapture(2101, 2102, 60.0)
+assertTrue(intimidatedMorale.accepted == true, "social control intimidation enables shaken morale capture")
+assertEqual(intimidatedMorale.reason, "accepted", "intimidated morale accepted reason")
+
+resetState()
+moraleByCustodian[2101] = 48
+socialControlIntimidationBonus = 1
+local neutralBonusMorale = captureApi.RequestCapture(2101, 2102, 60.0)
+assertFalse(neutralBonusMorale.accepted, "neutral intimidation bonus keeps shaken morale block")
+assertEqual(neutralBonusMorale.reason, "custodian_morale_shaken", "neutral intimidation bonus shaken reason")
+
+moraleByCustodian[2101] = 100
+
 local prohibitedEnd = captureApi.ValidateCustodyEndReason("sold")
 assertFalse(prohibitedEnd.accepted == true, "prohibited custody end rejected")
 assertEqual(prohibitedEnd.reason, "end_reason_prohibited", "prohibited custody end reason")

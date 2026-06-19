@@ -22,6 +22,7 @@ local GiantEssenceSession = require(script.Parent:WaitForChild("GiantEssenceSess
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local GiantRealmResourceState = require(GiantRealm:WaitForChild("GiantRealmResourceState"))
 local LaborActionState = require(GiantRealm:WaitForChild("LaborActionState"))
+local LaborComplianceState = require(GiantRealm:WaitForChild("LaborComplianceState"))
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 
 local REMOTES_FOLDER_NAME = "Remotes"
@@ -37,6 +38,17 @@ local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
 local SHRINE_FOLDER_PATH = { "Map", "Stations" }
 local globalEnv: any = getfenv()
+
+local function getSocialEconomyServiceQueryApi(): any?
+	local queryApi = globalEnv._SocialEconomyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._SocialEconomyService_QueryAPI) == "table" then
+		return (_G :: any)._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
 
 local function getShrineProductionModifiers(shrineId: string): any
 	local upgradeApi = globalEnv._VillageWorksiteUpgradeService_QueryAPI
@@ -681,6 +693,11 @@ local function performShrineProductionTick(
 			deactivateReason = "max_essence_reached",
 		}
 	end
+
+	generatedAmount = LaborComplianceState.ApplyComplianceYield(
+		generatedAmount,
+		LaborComplianceState.ResolveFavorComplianceBonus(getSocialEconomyServiceQueryApi(), activatingPlayer.UserId)
+	)
 
 	shrineState.essenceTotal += generatedAmount
 	local sessionSnapshot =

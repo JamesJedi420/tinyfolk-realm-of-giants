@@ -55,6 +55,8 @@ local ownerPlayer = {
 local playersList = { ownerPlayer }
 
 local fakeGame: any = {}
+local heartbeatCallbacks: { (number) -> () } = {}
+local _ = heartbeatCallbacks
 function fakeGame:GetService(serviceName: string): any
 	if serviceName == "ReplicatedStorage" then
 		return replicatedStorage
@@ -64,6 +66,16 @@ function fakeGame:GetService(serviceName: string): any
 			GetPlayers = function()
 				return playersList
 			end,
+		}
+	end
+	if serviceName == "RunService" then
+		return {
+			Heartbeat = {
+				Connect = function(_self: any, callback: (number) -> ())
+					table.insert(heartbeatCallbacks, callback)
+					return { Disconnect = function() end }
+				end,
+			},
 		}
 	end
 	return nil
@@ -126,6 +138,12 @@ assertEqual(applyReason, nil, "apply persistence no reason")
 assertEqual(socialApi.GetFavor(), 55, "apply restores favor")
 assertEqual(socialApi.GetControl(), 55, "apply restores control")
 assertEqual(ownerPlayer:GetAttribute(SocialEconomyConfig.StateAttributes.Favor), 55, "apply projects favor attribute")
+
+socialApi.ResetForTests()
+socialApi.RecordTrophySocialEvent(TrophyConfig.Kinds.CaptureSuccess, "decay-capture-1", 1)
+assertEqual(socialApi.GetControl(), 55, "decay baseline control")
+socialApi.AdvanceDecayForTests(200)
+assertTrue(socialApi.GetControl() < 55, "decay reduces elevated control toward default")
 
 local duplicateApply, duplicateReason = socialApi.ApplyPersistenceState({
 	favor = 55,

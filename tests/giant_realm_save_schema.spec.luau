@@ -652,10 +652,7 @@ local function run()
 		})
 		assertTrue(type(root.socialEconomyPersistence) == "table", "built root includes social economy persistence")
 		assertEqual(root.socialEconomyPersistence.control, 58, "built root social economy control")
-		assertValid(
-			"built root with social economy persistence validates",
-			GiantRealmSaveSchema.ValidateSaveRoot(root)
-		)
+		assertValid("built root with social economy persistence validates", GiantRealmSaveSchema.ValidateSaveRoot(root))
 	end
 
 	do

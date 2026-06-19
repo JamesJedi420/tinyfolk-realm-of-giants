@@ -10,6 +10,7 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 local VillageWorksiteUpgradeState = require(GiantRealm:WaitForChild("VillageWorksiteUpgradeState"))
 local LaborActionState = require(GiantRealm:WaitForChild("LaborActionState"))
+local LaborComplianceState = require(GiantRealm:WaitForChild("LaborComplianceState"))
 local StationConfig = require(Config:WaitForChild("StationConfig"))
 local LaborActionConfig = require(Config:WaitForChild("LaborActionConfig"))
 local RoleConfig = require(Config:WaitForChild("RoleConfig"))
@@ -46,6 +47,17 @@ local ATTRIBUTE_ACTIVATED_BY = "ActivatedByUserId"
 
 local STATION_FOLDER_PATH = { "Map", "Stations" }
 local globalEnv: any = getfenv()
+
+local function getSocialEconomyServiceQueryApi(): any?
+	local queryApi = globalEnv._SocialEconomyService_QueryAPI
+	if type(queryApi) == "table" then
+		return queryApi
+	end
+	if type(_G) == "table" and type((_G :: any)._SocialEconomyService_QueryAPI) == "table" then
+		return (_G :: any)._SocialEconomyService_QueryAPI
+	end
+	return nil
+end
 
 type StationState = {
 	stationId: string,
@@ -657,6 +669,11 @@ local function performProductionTick(stationState: StationState, activatingPlaye
 			deactivateReason = maxReachedReason,
 		}
 	end
+
+	generatedAmount = LaborComplianceState.ApplyComplianceYield(
+		generatedAmount,
+		LaborComplianceState.ResolveFavorComplianceBonus(getSocialEconomyServiceQueryApi(), activatingPlayer.UserId)
+	)
 
 	if materialName == "Metal" then
 		local stoneCost = StationConfig.StoneStoredCostPerRefineTick
