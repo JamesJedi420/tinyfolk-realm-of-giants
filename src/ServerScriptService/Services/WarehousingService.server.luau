@@ -534,4 +534,107 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	lastHaulRequestAtByUserId[player.UserId] = nil
 end)
 
+local function resolveDeliveryStateForMaterial(material: string): (any?, string?)
+	local configuredId = StationConfig.DeliveryPointIdByMaterial[material]
+	if material == "Food" then
+		for granaryId, granaryState in granaryStateById do
+			if configuredId == nil or granaryId == configuredId then
+				return granaryState, granaryId
+			end
+		end
+		local firstId, firstState = next(granaryStateById)
+		if firstState ~= nil then
+			return firstState, firstId
+		end
+		return nil, nil
+	end
+
+	for warehouseId, warehouseState in warehouseStateById do
+		if configuredId == nil or warehouseId == configuredId then
+			return warehouseState, warehouseId
+		end
+	end
+	local firstId, firstState = next(warehouseStateById)
+	if firstState ~= nil then
+		return firstState, firstId
+	end
+	return nil, nil
+end
+
+-- selene: allow(global_usage)
+_G._WarehousingService_QueryAPI = {
+	GetDeliverySnapshot = function(material: string): any?
+		local deliveryState, deliveryId = resolveDeliveryStateForMaterial(material)
+		if deliveryState == nil or type(deliveryId) ~= "string" then
+			return nil
+		end
+
+		local partPosition = deliveryState.part.Position
+		return {
+			deliveryId = deliveryId,
+			material = material,
+			position = {
+				x = partPosition.X,
+				y = partPosition.Y,
+				z = partPosition.Z,
+			},
+		}
+	end,
+	ApplyScheduledDelivery = function(
+		player: Player,
+		material: "Wood" | "Stone" | "Food" | "Metal",
+		maxAmount: number
+	): any
+		if maxAmount <= 0 then
+			return { accepted = false, reason = "non_positive_amount", movedAmount = 0 }
+		end
+
+		local deliveryState, deliveryId = resolveDeliveryStateForMaterial(material)
+		if deliveryState == nil or type(deliveryId) ~= "string" then
+			return { accepted = false, reason = "delivery_point_missing", movedAmount = 0 }
+		end
+
+		local flowSnapshot = ResourceFlowState.GetSnapshot()
+		local materialSnapshot = flowSnapshot[material]
+		local inTransitAmount = if type(materialSnapshot) == "table" then materialSnapshot.inTransit else 0
+		if inTransitAmount <= 0 then
+			return { accepted = false, reason = "nothing_in_transit", movedAmount = 0 }
+		end
+
+		local deliverAmount = math.min(getDeliveryTransferAmount(material, inTransitAmount), maxAmount)
+		local beforeInTransit = inTransitAmount
+		local afterSnapshot = ResourceFlowState.TransferInTransitToStored(material, deliverAmount)
+		local movedAmount = beforeInTransit - afterSnapshot.inTransit
+		if movedAmount <= 0 then
+			return { accepted = false, reason = "no_transfer", movedAmount = 0 }
+		end
+
+		markHaulRequest(player.UserId)
+		applyInventoryGrantsForDelivery(player, material, movedAmount)
+
+		if material == "Food" then
+			applyGranaryDebugAttributes(deliveryState)
+		else
+			applyDebugAttributes(deliveryState)
+		end
+
+		debugLog(
+			string.format(
+				"Accepted scheduled delivery userId=%d deliveryId=%s material=%s moved=%.0f",
+				player.UserId,
+				deliveryId,
+				material,
+				movedAmount
+			)
+		)
+
+		return {
+			accepted = true,
+			reason = "delivered",
+			movedAmount = movedAmount,
+			deliveryId = deliveryId,
+		}
+	end,
+}
+
 debugLog("WarehousingService initialized")

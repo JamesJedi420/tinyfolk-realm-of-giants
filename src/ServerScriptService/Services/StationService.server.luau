@@ -1157,6 +1157,69 @@ _G._StationService_QueryAPI = {
 		end)
 		return snapshots
 	end,
+	GetStationHaulSnapshot = function(stationId: string): any?
+		local stationState = stationStateById[stationId]
+		if stationState == nil then
+			return nil
+		end
+
+		local partPosition = stationState.part.Position
+		return {
+			stationId = stationId,
+			materialType = stationState.materialType,
+			position = {
+				x = partPosition.X,
+				y = partPosition.Y,
+				z = partPosition.Z,
+			},
+		}
+	end,
+	ApplyScheduledPickup = function(player: Player, stationId: string, maxAmount: number): any
+		if maxAmount <= 0 then
+			return { accepted = false, reason = "non_positive_amount", movedAmount = 0 }
+		end
+
+		local stationState = stationStateById[stationId]
+		if stationState == nil then
+			return { accepted = false, reason = "station_not_found", movedAmount = 0 }
+		end
+
+		local haulAllowed, haulReason = validateActivationRequest(player, stationState, true)
+		if not haulAllowed then
+			return { accepted = false, reason = haulReason or "pickup_rejected", movedAmount = 0 }
+		end
+
+		local materialName = stationState.materialType
+		local beforeSnapshot = ResourceFlowState.GetMaterialSnapshot(materialName)
+		local afterSnapshot = ResourceFlowState.TransferProducedToInTransit(materialName, maxAmount)
+		local movedAmount = afterSnapshot.inTransit - beforeSnapshot.inTransit
+		if movedAmount <= 0 then
+			return { accepted = false, reason = "no_transfer", movedAmount = 0 }
+		end
+
+		lastHaulRequestAtByUserId[player.UserId] = os.clock()
+		stationState.resourceTotal = afterSnapshot.produced
+		applyDebugAttributes(stationState)
+
+		debugLog(
+			string.format(
+				"Accepted scheduled pickup userId=%d stationId=%s material=%s moved=%.0f produced=%.0f inTransit=%.0f",
+				player.UserId,
+				stationId,
+				materialName,
+				movedAmount,
+				afterSnapshot.produced,
+				afterSnapshot.inTransit
+			)
+		)
+
+		return {
+			accepted = true,
+			reason = "picked_up",
+			movedAmount = movedAmount,
+			material = materialName,
+		}
+	end,
 }
 -- selene: allow(global_usage)
 _G._StationService_TaskState = taskStateByStationId
