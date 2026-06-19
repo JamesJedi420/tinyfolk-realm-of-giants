@@ -26,7 +26,7 @@ Use these markers consistently in design and implementation discussions:
 - Interaction resolution for current bounded surfaces is deterministic by priority, then distance, then target id.
 - Farm_A produces Food (Farmer-gated); Tinyfolk haul moves produced Food to in-transit; Granary_A stores in-transit Food.
 - Stored Wood/Stone totals are the current usable realm totals.
-- Prototype construction spending uses stored Wood/Stone and stored Food (Granary) where configured per site.
+- Prototype construction spending uses stored Wood/Stone, stored Food (Granary), and stored Metal (Warehouse) where configured per site.
 - Food-adjacent worksite upgrades (Farm, Granary, Pen) may spend stored Food from Granary alongside wood/stone/essence.
 - Pen_A rationing spends stored Food each interval while captives are held in custody (1 Food per captive per second in the prototype, scaled by pen upgrade level).
 - Sustained pen food shortfall reduces custodian morale (low morale can block or shake capture attempts), marks captives with ration stress/starvation exposure, and eventually forces starvation release of the oldest held captive.

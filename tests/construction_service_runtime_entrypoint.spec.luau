@@ -180,15 +180,24 @@ local configFolder = makeNode("Config", "Folder", "ReplicatedStorage.Shared.Conf
 -- String paths stored directly to avoid child.Parent = parent on a string value
 configFolder._Children["ConstructionConfig"] = "../../ReplicatedStorage/Shared/Config/ConstructionConfig"
 configFolder._Children["StationConfig"] = "../../ReplicatedStorage/Shared/Config/StationConfig"
+configFolder._Children["SkillProgressionConfig"] = "../../ReplicatedStorage/Shared/Config/SkillProgressionConfig"
+configFolder._Children["SkillCatalogSchema"] = "../../ReplicatedStorage/Shared/Config/SkillCatalogSchema"
+
+local skillsFolder = makeNode("Skills", "Folder", "ReplicatedStorage.Shared.Skills")
+skillsFolder._Children["SkillXpAwardPolicy"] = "../../ReplicatedStorage/Shared/Skills/SkillXpAwardPolicy"
+skillsFolder._Children["SkillsProfileState"] = "../../ReplicatedStorage/Shared/Skills/SkillsProfileState"
 
 local sharedFolder = makeNode("Shared", "Folder", "ReplicatedStorage.Shared")
 addChild(sharedFolder, "Config", configFolder)
+addChild(sharedFolder, "Skills", skillsFolder)
 
 local sharedConstructionFolder = makeNode("Construction", "Folder", "ReplicatedStorage.Shared.Construction")
 sharedConstructionFolder._Children["ContextualTaskProgressLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/ContextualTaskProgressLogic"
 sharedConstructionFolder._Children["TaskQteTimingLogic"] =
 	"../../ReplicatedStorage/Shared/Construction/TaskQteTimingLogic"
+sharedConstructionFolder._Children["ConstructionSpendState"] =
+	"../../ReplicatedStorage/Shared/Construction/ConstructionSpendState"
 
 local giantRealmFolder = makeNode("GiantRealm", "Folder", "ReplicatedStorage.Shared.GiantRealm")
 giantRealmFolder._Children["RealmObjectiveSiteIdResolver"] =
@@ -210,6 +219,8 @@ local constructionSitePart = makeBasePart("ConstructionSite_A", 10, 0, 10)
 addChild(mapFolder, "ConstructionSite_A", constructionSitePart)
 local constructionSitePartB = makeBasePart("ConstructionSite_B", 15, 0, 10)
 addChild(mapFolder, "ConstructionSite_B", constructionSitePartB)
+local constructionSitePartC = makeBasePart("ConstructionSite_C", 20, 0, 10)
+addChild(mapFolder, "ConstructionSite_C", constructionSitePartC)
 addChild(workspaceService, "Map", mapFolder)
 
 local _playerRemovingConnections: { (any) -> () } = {}
@@ -293,6 +304,7 @@ local scriptParent = makeNode("Services", "Folder", "ServerScriptService.Service
 -- String path stored directly to avoid child.Parent = parent on a string value
 scriptParent._Children["ResourceFlowState"] = "../../ServerScriptService/Services/ResourceFlowState"
 scriptParent._Children["ObjectiveSkillXpProducer"] = "../../ServerScriptService/Services/ObjectiveSkillXpProducer"
+scriptParent._Children["OutcomeSkillXpProducer"] = "../../ServerScriptService/Services/OutcomeSkillXpProducer"
 scriptParent._Children["RealmObjectiveCompletionCaller"] =
 	"../../ServerScriptService/Services/RealmObjectiveCompletionCaller"
 scriptParent._Children["PostRescueProtectionCancellationCaller"] =
@@ -843,6 +855,31 @@ assertEqual(
 	qteBuilder:GetAttribute("ConstructionTaskObjectiveState"),
 	"regressing",
 	"QTE failure applies disruption regression penalty"
+)
+
+-- TIN-39: metal-requiring construction site spend.
+local siteCState = siteStateById["ConstructionSite_C"]
+assertTrue(siteCState ~= nil, "ConstructionSite_C registered with metal cost config")
+
+local metalSiteCost = ConstructionConfig.CostBySiteId.ConstructionSite_C
+ResourceFlowState.AddStoredAtomic(
+	metalSiteCost.wood,
+	metalSiteCost.stone,
+	"construction_c_seed_materials",
+	metalSiteCost.food,
+	metalSiteCost.metal
+)
+
+local metalBuilder = makeAlivePlayer(9701, Vector3.new(20, 0, 10))
+buildRemote:FireServer(metalBuilder, "ConstructionSite_C")
+
+assertTrue(siteCState.isBuilt, "metal site build succeeds when stored materials available")
+assertEqual(siteCState.lastBuiltByUserId, 9701, "metal site build tracks builder")
+assertEqual(ResourceFlowState.GetMaterialSnapshot("Metal").stored, 0, "construction build spends stored metal")
+assertEqual(
+	constructionSitePartC:GetAttribute("ConstructionCostMetal"),
+	metalSiteCost.metal,
+	"construction site exposes metal cost attribute"
 )
 
 print("construction_service_runtime_entrypoint: contextual task progress slice checks passed")

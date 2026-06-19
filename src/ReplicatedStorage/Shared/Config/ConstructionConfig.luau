@@ -40,11 +40,19 @@ ConstructionConfig.CostBySiteId = {
 		stone = 6,
 		food = 4,
 	},
+	ConstructionSite_C = {
+		wood = 6,
+		stone = 8,
+		food = 0,
+		metal = 3,
+	},
 }
 
 ConstructionConfig.DistrictDefaultCost = {
 	wood = 10,
 	stone = 8,
+	food = 0,
+	metal = 0,
 }
 
 return ConstructionConfig
