@@ -129,4 +129,12 @@ do
 	assertEqual(afterStored.lastDeliveredTo, StationConfig.DefaultWarehouseId, "metal routes to warehouse")
 end
 
+do
+	local beforeSpend = ResourceFlowState.GetMaterialSnapshot("Metal")
+	local spent, afterSpend, spendError = ResourceFlowState.SpendStoredAtomic(0, 0, "TestMetalSpend", 0, 2)
+	assertEqual(spent, true, "metal-only spend accepted")
+	assertEqual(spendError, nil, "metal-only spend has no error")
+	assertEqual(afterSpend.Metal.stored, beforeSpend.stored - 2, "metal stored reduced by spend")
+end
+
 print("resource_flow_metal.spec.luau: all checks passed")
