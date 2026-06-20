@@ -92,6 +92,7 @@ local function collectTreasuryAttributes(): any
 		SessionEssence = localPlayer:GetAttribute(attributes.SessionEssence),
 		SessionWood = localPlayer:GetAttribute(attributes.SessionWood),
 		SessionStone = localPlayer:GetAttribute(attributes.SessionStone),
+		SessionMetal = localPlayer:GetAttribute(attributes.SessionMetal),
 		Summary = localPlayer:GetAttribute(attributes.Summary),
 		UpdatedAt = localPlayer:GetAttribute(attributes.UpdatedAt),
 	}
@@ -107,6 +108,7 @@ local function buildTreasuryPresentationInput(attributes: any)
 		essenceStored = attributes.SessionEssence,
 		woodStored = attributes.SessionWood,
 		stoneStored = attributes.SessionStone,
+		metalStored = attributes.SessionMetal,
 	}
 	return ledgerInput, sessionInput
 end

@@ -21,12 +21,15 @@ do
 	}, {
 		woodStored = 120,
 		stoneStored = 90,
+		metalStored = 15,
 		essenceStored = 0,
 	})
 	assertEqual(model.visible, true, "treasury model visible")
 	assertEqual(model.ledgerEssence, 12, "ledger essence")
 	assertEqual(model.sessionWood, 120, "session wood")
+	assertEqual(model.sessionMetal, 15, "session metal")
 	assertTrue(string.find(model.summary, "Ledger E12", 1, true) ~= nil, "summary includes ledger")
+	assertTrue(string.find(model.summary, "M15", 1, true) ~= nil, "summary includes session metal")
 end
 
 print("giant_realm_treasury_presentation.spec.luau: all checks passed")
