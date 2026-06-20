@@ -25,4 +25,13 @@ GiantHudStackConfig.SectionOrder = {
 	"GiantEffects",
 }
 
+GiantHudStackConfig.PreferenceAttributes = {
+	ExpandedBySectionIdJson = "GiantHudStackExpandedBySectionIdJson",
+}
+
+GiantHudStackConfig.PreferenceRemotes = {
+	UpdateRequest = "GiantHudStackPreferenceUpdateRequest",
+	UpdateResponse = "GiantHudStackPreferenceUpdateResponse",
+}
+
 return GiantHudStackConfig

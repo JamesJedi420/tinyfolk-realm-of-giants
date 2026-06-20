@@ -1,5 +1,6 @@
 --!nocheck
 
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -23,6 +24,13 @@ local GiantRealmTreasuryPresentation = require(GiantRealm:WaitForChild("GiantRea
 local PenRationingHudPresentation = require(GiantRealm:WaitForChild("PenRationingHudPresentation"))
 local PenRationingState = require(GiantRealm:WaitForChild("PenRationingState"))
 local SocialEconomyPresentation = require(GiantRealm:WaitForChild("SocialEconomyPresentation"))
+
+local REMOTES_FOLDER_NAME = "Remotes"
+local PREFERENCE_ATTRIBUTE = GiantHudStackConfig.PreferenceAttributes.ExpandedBySectionIdJson
+local UPDATE_REQUEST_REMOTE_NAME = GiantHudStackConfig.PreferenceRemotes.UpdateRequest
+
+local remotesFolder = ReplicatedStorage:WaitForChild(REMOTES_FOLDER_NAME)
+local preferenceUpdateRequestRemote = remotesFolder:WaitForChild(UPDATE_REQUEST_REMOTE_NAME) :: RemoteEvent
 
 local ACCENT_BY_TONE = {
 	neutral = Color3.fromRGB(151, 159, 174),
@@ -175,6 +183,7 @@ type SectionModel = {
 }
 
 type SectionHandle = {
+	sectionId: string,
 	frame: Frame,
 	accent: Frame?,
 	title: TextLabel,
@@ -192,6 +201,53 @@ local function applySectionLayout(section: SectionHandle)
 	section.collapsedSummary.Visible = not section.expanded
 	section.detailSummary.Visible = section.expanded
 	section.toggle.Text = if section.expanded then "−" else "+"
+end
+
+local function isGiant(): boolean
+	return localPlayer:GetAttribute("Role") == RoleConfig.Roles.Giant
+end
+
+local function decodeExpandedBySectionId(): { [string]: boolean }
+	local encoded = localPlayer:GetAttribute(PREFERENCE_ATTRIBUTE)
+	if type(encoded) ~= "string" or encoded == "" then
+		return {}
+	end
+
+	local ok, decoded = pcall(function()
+		return HttpService:JSONDecode(encoded)
+	end)
+	if not ok or type(decoded) ~= "table" then
+		return {}
+	end
+
+	return decoded
+end
+
+local function applyPreferenceToSections()
+	if not isGiant() then
+		return
+	end
+
+	local expandedBySectionId = decodeExpandedBySectionId()
+	for _, sectionId in ipairs(GiantHudStackConfig.SectionOrder) do
+		local section = sectionsById[sectionId]
+		local expanded = expandedBySectionId[sectionId]
+		if section ~= nil and type(expanded) == "boolean" then
+			section.expanded = expanded
+			applySectionLayout(section)
+		end
+	end
+end
+
+local function requestSectionExpanded(sectionId: string, expanded: boolean)
+	if not isGiant() then
+		return
+	end
+
+	preferenceUpdateRequestRemote:FireServer({
+		sectionId = sectionId,
+		expanded = expanded,
+	})
 end
 
 local function refreshSection(section: SectionHandle)
@@ -318,6 +374,7 @@ local function createSection(parent: Frame, sectionId: string, defaultTitle: str
 	detailSummary.Parent = content
 
 	local section: SectionHandle = {
+		sectionId = sectionId,
 		frame = sectionFrame,
 		accent = accent,
 		title = title,
@@ -337,6 +394,7 @@ local function createSection(parent: Frame, sectionId: string, defaultTitle: str
 		section.expanded = not section.expanded
 		applySectionLayout(section)
 		section.refresh()
+		requestSectionExpanded(section.sectionId, section.expanded)
 	end)
 
 	applySectionLayout(section)
@@ -447,6 +505,16 @@ end
 hookPlayerAttribute("Role")
 hookPlayerAttribute("CaptureActive")
 
+localPlayer:GetAttributeChangedSignal(PREFERENCE_ATTRIBUTE):Connect(function()
+	applyPreferenceToSections()
+	refreshAllSections()
+end)
+
+localPlayer:GetAttributeChangedSignal("Role"):Connect(function()
+	applyPreferenceToSections()
+	refreshAllSections()
+end)
+
 for _, attributeName in pairs(GiantRealmTreasuryConfig.Attributes) do
 	hookPlayerAttribute(attributeName)
 end
@@ -473,4 +541,5 @@ if penPart ~= nil then
 	penPartAny:GetAttributeChangedSignal(penAttrs.FoodCostMultiplier):Connect(refreshAllSections)
 end
 
+applyPreferenceToSections()
 refreshAllSections()
