@@ -158,7 +158,12 @@ function TinyfolkInspectState.ResolveFatigueLine(input: any): string
 	return string.format("Fatigue: %s", TinyfolkInspectConfig.MissingLabel)
 end
 
-function TinyfolkInspectState.ResolveLoyaltyLine(): string
+function TinyfolkInspectState.ResolveLoyaltyLine(input: any): string
+	local favor = readNumber(input.socialDyadicFavor)
+	local control = readNumber(input.socialDyadicControl)
+	if favor ~= nil and control ~= nil then
+		return string.format("Loyalty: Favor %d / Control %d", math.floor(favor), math.floor(control))
+	end
 	return string.format("Loyalty: %s", TinyfolkInspectConfig.UnavailableLabel)
 end
 
@@ -229,7 +234,7 @@ function TinyfolkInspectState.BuildSnapshot(input: any): Snapshot
 		traitsLine = string.format("Traits: %s", TinyfolkInspectState.ResolveTraitsLine(input)),
 		moraleLine = TinyfolkInspectState.ResolveMoraleLine(input),
 		fatigueLine = TinyfolkInspectState.ResolveFatigueLine(input),
-		loyaltyLine = TinyfolkInspectState.ResolveLoyaltyLine(),
+		loyaltyLine = TinyfolkInspectState.ResolveLoyaltyLine(input),
 		assignmentLine = TinyfolkInspectState.ResolveAssignmentLine(input),
 		valueLine = TinyfolkInspectState.ResolveValueLine(input),
 		tone = TinyfolkInspectState.ResolveTone(input),
@@ -262,6 +267,8 @@ function TinyfolkInspectState.CollectAttributeInput(displayName: string, attribu
 		haulMaterial = attributes[attrs.HaulMaterial],
 		scoreTotal = attributes[attrs.ScoreTotal],
 		laborTokens = attributes[attrs.LaborTokens],
+		socialDyadicFavor = attributes[attrs.SocialDyadicFavor],
+		socialDyadicControl = attributes[attrs.SocialDyadicControl],
 	}
 end
 

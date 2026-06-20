@@ -61,6 +61,79 @@ local function buildSnapshot(lastEventKind: string?): any
 	}
 end
 
+local function clearDyadicAttributesForPlayer(player: Player)
+	local attrs = SocialEconomyConfig.DyadicAttributes
+	player:SetAttribute(attrs.Favor, nil)
+	player:SetAttribute(attrs.Control, nil)
+end
+
+local function projectDyadicAttributesForUserId(userId: number)
+	if type(userId) ~= "number" or userId <= 0 then
+		return
+	end
+
+	local player = getPlayerByUserId(math.floor(userId))
+	if player == nil then
+		return
+	end
+
+	local userIdKey = tostring(math.floor(userId))
+	local relation = if type(socialState.dyadicByUserId) == "table" then socialState.dyadicByUserId[userIdKey] else nil
+	if type(relation) ~= "table" then
+		clearDyadicAttributesForPlayer(player)
+		return
+	end
+
+	local attrs = SocialEconomyConfig.DyadicAttributes
+	player:SetAttribute(attrs.Favor, math.floor(relation.favor))
+	player:SetAttribute(attrs.Control, math.floor(relation.control))
+end
+
+local function clearDyadicProjectionForTarget(targetUserId: number)
+	if type(targetUserId) ~= "number" or targetUserId <= 0 then
+		return
+	end
+
+	local player = getPlayerByUserId(math.floor(targetUserId))
+	if player ~= nil then
+		clearDyadicAttributesForPlayer(player)
+	end
+end
+
+local function projectAllOnlineDyadicAttributes()
+	if type(socialState.dyadicByUserId) ~= "table" then
+		return
+	end
+
+	for userIdKey in pairs(socialState.dyadicByUserId) do
+		local userId = tonumber(userIdKey)
+		if type(userId) == "number" and userId > 0 then
+			projectDyadicAttributesForUserId(userId)
+		end
+	end
+end
+
+local function clearAllOnlineDyadicAttributes()
+	for _, player in Players:GetPlayers() do
+		clearDyadicAttributesForPlayer(player :: any)
+	end
+end
+
+local function applyDyadicProjectionForSocialEvent(input: any)
+	if type(input) ~= "table" or type(input.targetUserId) ~= "number" or input.targetUserId <= 0 then
+		return
+	end
+
+	local eventKind = if type(input.eventKind) == "string" then input.eventKind else nil
+	local clearKinds = SocialEconomyConfig.DyadicProjectionClearEventKinds
+	if type(eventKind) == "string" and type(clearKinds) == "table" and clearKinds[eventKind] == true then
+		clearDyadicProjectionForTarget(input.targetUserId)
+		return
+	end
+
+	projectDyadicAttributesForUserId(input.targetUserId)
+end
+
 local function projectRealmOwnerAttributes(lastEventKind: string?)
 	local ownerUserId = getRealmOwnerUserId()
 	if ownerUserId == nil then
@@ -104,6 +177,7 @@ local function recordSocialEvent(input: any): any
 		socialState = result.state
 		local eventKind = if type(input.eventKind) == "string" then input.eventKind else nil
 		projectRealmOwnerAttributes(eventKind)
+		applyDyadicProjectionForSocialEvent(input)
 		debugLog(
 			string.format(
 				"Recorded social event kind=%s operationId=%s favor=%d control=%d",
@@ -154,6 +228,7 @@ local function ApplyPersistenceState(raw: any): (boolean, string?)
 	end
 	socialState = applied.state
 	projectRealmOwnerAttributes(nil)
+	projectAllOnlineDyadicAttributes()
 	return true, nil
 end
 
@@ -176,15 +251,22 @@ _G._SocialEconomyService_QueryAPI = {
 	end,
 	ResetForTests = function()
 		socialState = SocialEconomyState.CreateEmptyState()
+		clearAllOnlineDyadicAttributes()
 		projectRealmOwnerAttributes(nil)
 	end,
 	AdvanceDecayForTests = function(deltaSeconds: number)
 		applyAxisDecay(deltaSeconds)
 	end,
+	ClearDyadicProjectionForTarget = clearDyadicProjectionForTarget,
+	ProjectDyadicAttributesForTarget = projectDyadicAttributesForUserId,
 }
 
 RunService.Heartbeat:Connect(function(deltaTime: number)
 	applyAxisDecay(deltaTime)
+end)
+
+Players.PlayerRemoving:Connect(function(player: Player)
+	clearDyadicAttributesForPlayer(player)
 end)
 
 debugLog("SocialEconomyService initialized")

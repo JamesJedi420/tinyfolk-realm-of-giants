@@ -789,6 +789,11 @@ local function resolveCustodyEnd(targetUserId: any, endReason: any, at: number?,
 	clearStructureOccupantForTarget(targetUserId)
 	applyCaptureAttributesFromState()
 
+	local socialApi = getSocialEconomyServiceQueryApi()
+	if type(socialApi) == "table" and type(socialApi.ClearDyadicProjectionForTarget) == "function" then
+		pcall(socialApi.ClearDyadicProjectionForTarget, targetUserId)
+	end
+
 	return {
 		accepted = true,
 		reason = endReason,

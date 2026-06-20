@@ -1,5 +1,7 @@
 --!strict
 
+local TrophyConfig = require("./TrophyConfig")
+
 local SocialEconomyConfig: any = {}
 
 SocialEconomyConfig.AxisMin = 0
@@ -49,6 +51,18 @@ SocialEconomyConfig.StateAttributes = {
 	FavorComplianceBonus = "SocialEconomyFavorComplianceBonus",
 	ControlIntimidationBonus = "SocialEconomyControlIntimidationBonus",
 	LastEventKind = "SocialEconomyLastEventKind",
+}
+
+SocialEconomyConfig.DyadicAttributes = {
+	Favor = "SocialDyadicFavor",
+	Control = "SocialDyadicControl",
+}
+
+SocialEconomyConfig.DyadicProjectionClearEventKinds = {
+	[TrophyConfig.Kinds.NegotiatedRelease] = true,
+	[TrophyConfig.Kinds.ContainmentEscapeFailure] = true,
+	[TrophyConfig.Kinds.ContainmentStarvation] = true,
+	[TrophyConfig.Kinds.ContainmentHeld] = true,
 }
 
 return SocialEconomyConfig
