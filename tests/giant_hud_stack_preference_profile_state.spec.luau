@@ -98,11 +98,8 @@ do
 		"apply treasury writes profile key"
 	)
 
-	local applySocial = GiantHudStackPreferenceProfileState.ApplySectionExpanded(
-		applyTreasury.profileData,
-		"SocialEconomy",
-		true
-	)
+	local applySocial =
+		GiantHudStackPreferenceProfileState.ApplySectionExpanded(applyTreasury.profileData, "SocialEconomy", true)
 	assertTrue(applySocial.accepted, "apply social accepted")
 	assertTrue(applySocial.preference.expandedBySectionId.SocialEconomy, "apply social merges preference")
 	assertTrue(applySocial.preference.expandedBySectionId.Treasury, "apply social preserves treasury")
