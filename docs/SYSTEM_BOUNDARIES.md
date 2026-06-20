@@ -209,6 +209,8 @@ TIN-233 active follow-up kickoff is recorded in `docs/TIN-233_INGRESS_ROLLOUT_SC
 
 **Current implementation status:** TIN-92 adds a bounded Giant village status HUD projection through deterministic shared logic in `Shared/GiantRealm/VillageStatusState` and `VillageStatusHudPresentation`, config in `Shared/Config/VillageStatusHudConfig`, server orchestration in `VillageStatusProjectionService`, and read-only client consumption in `VillageStatusHudClient`. The service aggregates existing resource flow, pen rationing/morale, active Tinyfolk raider count, and job-scheduling debug snapshots onto realm-owner Giant player attributes with danger bands for food, morale, shortfall, raiders, and coarse escape pressure. Rebellion pressure, HUD consolidation with existing panels, and Tinyfolk-facing village summaries remain deferred.
 
+**Current implementation status:** TIN-102 adds a bounded Giant-only Tinyfolk inspect panel through deterministic shared logic in `Shared/GiantRealm/TinyfolkInspectState` and `TinyfolkInspectPresentation`, config in `Shared/Config/TinyfolkInspectConfig`, and read-only client selection/consumption in `TinyfolkInspectClient`. Giants click-select in-range Tinyfolk characters to view replicated per-player attributes (role, traits, assignment, custody, score/tokens, sprint fatigue, captive stress proxies) without a new server projection layer. Per-Tinyfolk loyalty/morale simulation, selection highlight polish, Tinyfolk teammate inspect, and server-curated inspect snapshots remain deferred.
+
 ### Role and Session System
 - Pre-spawn role selection (Giant / Tinyfolk)
 - First valid choice wins; role locked for session

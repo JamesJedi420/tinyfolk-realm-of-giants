@@ -110,6 +110,8 @@ $testFiles = @(
     'tests\tinyfolk_haul_logistics_state.spec.luau',
     'tests\tinyfolk_haul_logistics_service_runtime_entrypoint.spec.luau',
     'tests\tinyfolk_labor_job_hud_presentation.spec.luau',
+    'tests\tinyfolk_inspect_state.spec.luau',
+    'tests\tinyfolk_inspect_presentation.spec.luau',
     'tests\raid_board_hub_service_runtime_entrypoint.spec.luau',
     'tests\rescue_admission_service_runtime_entrypoint.spec.luau',
     'tests\realm_metadata_registry.spec.luau',
