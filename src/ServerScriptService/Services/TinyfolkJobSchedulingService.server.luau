@@ -8,6 +8,7 @@ local Config = Shared:WaitForChild("Config")
 local GiantRealm = Shared:WaitForChild("GiantRealm")
 
 local CaptureConfig = require(Config:WaitForChild("CaptureConfig"))
+local SocialEconomyConfig = require(Config:WaitForChild("SocialEconomyConfig"))
 local TinyfolkJobSchedulingConfig = require(Config:WaitForChild("TinyfolkJobSchedulingConfig"))
 local TinyfolkJobSchedulingState = require(GiantRealm:WaitForChild("TinyfolkJobSchedulingState"))
 
@@ -181,6 +182,8 @@ local function buildWorkerSnapshot(player: Player): any
 		scheduledJobKind = scheduledJobKind,
 		scheduledMaterial = scheduledMaterial,
 		captureActive = player:GetAttribute(CaptureConfig.StateAttributes.CaptureActive) == true,
+		dyadicFavor = player:GetAttribute(SocialEconomyConfig.DyadicAttributes.Favor),
+		dyadicControl = player:GetAttribute(SocialEconomyConfig.DyadicAttributes.Control),
 	}
 end
 
@@ -197,9 +200,6 @@ local function collectWorkerSnapshots(): { any }
 		end
 	end
 
-	table.sort(workers, function(left: any, right: any)
-		return left.userId < right.userId
-	end)
 	return workers
 end
 

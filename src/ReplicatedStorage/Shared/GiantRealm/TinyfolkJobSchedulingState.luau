@@ -1,5 +1,6 @@
 --!strict
 
+local SocialEconomyConfig = require("../Config/SocialEconomyConfig")
 local TinyfolkJobSchedulingConfig = require("../Config/TinyfolkJobSchedulingConfig")
 local SpecialistConfig = require("../Config/SpecialistConfig")
 
@@ -38,6 +39,14 @@ export type WorkerSnapshot = {
 	assignedStationId: string?,
 	scheduledJobKind: string?,
 	captureActive: boolean?,
+	dyadicFavor: number?,
+	dyadicControl: number?,
+}
+
+export type WorkerScheduleRank = {
+	favor: number,
+	control: number,
+	userId: number,
 }
 
 export type JobDemand = {
@@ -88,8 +97,38 @@ local function sortDemands(demands: { JobDemand })
 	end)
 end
 
+local function resolveAxisValue(value: any, defaultValue: number): number
+	if isFiniteNumber(value) then
+		return math.clamp(value :: number, SocialEconomyConfig.AxisMin, SocialEconomyConfig.AxisMax)
+	end
+	return defaultValue
+end
+
+function TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(worker: WorkerSnapshot): WorkerScheduleRank
+	return {
+		favor = resolveAxisValue(worker.dyadicFavor, SocialEconomyConfig.DefaultFavor),
+		control = resolveAxisValue(worker.dyadicControl, SocialEconomyConfig.DefaultControl),
+		userId = worker.userId,
+	}
+end
+
+local function compareWorkersForSchedule(left: WorkerSnapshot, right: WorkerSnapshot): boolean
+	local leftRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(left)
+	local rightRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(right)
+	if leftRank.favor ~= rightRank.favor then
+		return leftRank.favor > rightRank.favor
+	end
+	if leftRank.control ~= rightRank.control then
+		return leftRank.control < rightRank.control
+	end
+	return leftRank.userId < rightRank.userId
+end
+
 local function sortWorkers(workers: { WorkerSnapshot })
 	table.sort(workers, function(left: WorkerSnapshot, right: WorkerSnapshot)
+		if TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking == true then
+			return compareWorkersForSchedule(left, right)
+		end
 		return left.userId < right.userId
 	end)
 end
@@ -337,6 +376,22 @@ function TinyfolkJobSchedulingState.SelectAssignments(
 	}
 end
 
+function TinyfolkJobSchedulingState.FormatWorkerForDebug(worker: WorkerSnapshot): any
+	local scheduleRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(worker)
+	return {
+		userId = worker.userId,
+		role = worker.role,
+		specialistRole = worker.specialistRole,
+		assignedStationId = worker.assignedStationId,
+		scheduledJobKind = worker.scheduledJobKind,
+		captureActive = worker.captureActive,
+		dyadicFavor = worker.dyadicFavor,
+		dyadicControl = worker.dyadicControl,
+		scheduleRankFavor = scheduleRank.favor,
+		scheduleRankControl = scheduleRank.control,
+	}
+end
+
 function TinyfolkJobSchedulingState.BuildDebugSnapshot(input: {
 	demands: { JobDemand }?,
 	assignments: { PlannedAssignment }?,
@@ -345,6 +400,14 @@ function TinyfolkJobSchedulingState.BuildDebugSnapshot(input: {
 	lastTickAt: number?,
 	lastReason: string?,
 }): any
+	local debugWorkers: { any }? = nil
+	if type(input.workers) == "table" then
+		debugWorkers = {}
+		for _, worker in ipairs(input.workers) do
+			table.insert(debugWorkers, TinyfolkJobSchedulingState.FormatWorkerForDebug(worker))
+		end
+	end
+
 	return {
 		demandCount = if type(input.demands) == "table" then #input.demands else 0,
 		assignmentCount = if type(input.assignments) == "table" then #input.assignments else 0,
@@ -353,7 +416,7 @@ function TinyfolkJobSchedulingState.BuildDebugSnapshot(input: {
 		demands = input.demands,
 		assignments = input.assignments,
 		rejections = input.rejections,
-		workers = input.workers,
+		workers = debugWorkers,
 		lastTickAt = input.lastTickAt,
 		lastReason = input.lastReason,
 	}

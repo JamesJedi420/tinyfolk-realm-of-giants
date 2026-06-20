@@ -175,4 +175,107 @@ local capturedWorkers = {
 local capturedEligible = TinyfolkJobSchedulingState.IsWorkerEligible(capturedWorkers[1])
 assertTrue(not capturedEligible, "captured worker is ineligible")
 
+local woodcutterDemand = {
+	{
+		demandId = "specialist:WorkStation_A",
+		kind = TinyfolkJobSchedulingConfig.JobKinds.SpecialistProduction,
+		stationId = "WorkStation_A",
+		shrineId = nil,
+		specialistRole = SpecialistConfig.SpecialistRoles.Woodcutter,
+		material = "Wood",
+		priority = TinyfolkJobSchedulingConfig.SpecialistDemandPriority,
+	},
+}
+
+local favorRankWorkers = {
+	{
+		userId = 100,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 30,
+		dyadicControl = 50,
+	},
+	{
+		userId = 50,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 80,
+		dyadicControl = 50,
+	},
+}
+local favorRankResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, favorRankWorkers)
+assertEqual(#favorRankResult.assignments, 1, "one woodcutter demand assigns one worker")
+assertEqual(favorRankResult.assignments[1].userId, 50, "higher dyadic favor wins over lower userId")
+
+local controlTieWorkers = {
+	{
+		userId = 100,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 60,
+		dyadicControl = 70,
+	},
+	{
+		userId = 50,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 60,
+		dyadicControl = 40,
+	},
+}
+local controlTieResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, controlTieWorkers)
+assertEqual(controlTieResult.assignments[1].userId, 50, "equal favor prefers lower control")
+
+local neutralRankWorkers = {
+	{
+		userId = 100,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+	},
+	{
+		userId = 50,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+	},
+}
+local neutralRankResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, neutralRankWorkers)
+assertEqual(neutralRankResult.assignments[1].userId, 50, "missing dyadic attrs tie-break by userId")
+
+local scheduleRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank({
+	userId = 7,
+	role = "Tinyfolk",
+	dyadicFavor = 120,
+	dyadicControl = -5,
+})
+assertEqual(scheduleRank.favor, 100, "schedule rank clamps favor to axis max")
+assertEqual(scheduleRank.control, 0, "schedule rank clamps control to axis min")
+
+local debugWorker = TinyfolkJobSchedulingState.FormatWorkerForDebug(favorRankWorkers[2])
+assertEqual(debugWorker.scheduleRankFavor, 80, "debug worker exposes resolved schedule rank favor")
+assertEqual(debugWorker.scheduleRankControl, 50, "debug worker exposes resolved schedule rank control")
+
+local previousDyadicRanking = TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking
+TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking = false
+local userIdRankResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, favorRankWorkers)
+TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking = previousDyadicRanking
+assertEqual(userIdRankResult.assignments[1].userId, 50, "dyadic ranking disabled falls back to userId order")
+
 print("tinyfolk_job_scheduling_state: all checks passed")
