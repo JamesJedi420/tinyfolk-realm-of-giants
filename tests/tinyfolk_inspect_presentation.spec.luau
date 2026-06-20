@@ -36,6 +36,14 @@ assertTrue(string.find(model.summary, "Assignment:", 1, true) ~= nil, "assignmen
 assertTrue(string.find(model.summary, "Value: Score 120 · Tokens 3", 1, true) ~= nil, "value line")
 assertEqual(model.tone, TinyfolkInspectConfig.Tones.Neutral, "neutral tone")
 
+local dyadicModel = TinyfolkInspectPresentation.BuildPanelModel({
+	displayName = "Loyal One",
+	role = "Tinyfolk",
+	socialDyadicFavor = 55,
+	socialDyadicControl = 60,
+})
+assertTrue(string.find(dyadicModel.summary, "Loyalty: Favor 55 / Control 60", 1, true) ~= nil, "dyadic loyalty in summary")
+
 local warningModel = TinyfolkInspectPresentation.BuildPanelModel({
 	displayName = "Held One",
 	role = "Tinyfolk",

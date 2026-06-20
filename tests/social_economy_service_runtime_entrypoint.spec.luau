@@ -52,7 +52,20 @@ local ownerPlayer = {
 	end,
 }
 
-local playersList = { ownerPlayer }
+local targetPlayer = {
+	UserId = 5101,
+	_Attributes = {},
+	SetAttribute = function(self: any, attributeName: string, value: any)
+		self._Attributes[attributeName] = value
+	end,
+	GetAttribute = function(self: any, attributeName: string): any
+		return self._Attributes[attributeName]
+	end,
+}
+
+local playersList = { ownerPlayer, targetPlayer }
+
+local playerRemovingCallbacks: { (any) -> () } = {}
 
 local fakeGame: any = {}
 local heartbeatCallbacks: { (number) -> () } = {}
@@ -66,6 +79,12 @@ function fakeGame:GetService(serviceName: string): any
 			GetPlayers = function()
 				return playersList
 			end,
+			PlayerRemoving = {
+				Connect = function(_self: any, callback: (any) -> ())
+					table.insert(playerRemovingCallbacks, callback)
+					return { Disconnect = function() end }
+				end,
+			},
 		}
 	end
 	if serviceName == "RunService" then
@@ -155,5 +174,64 @@ local duplicateApply, duplicateReason = socialApi.ApplyPersistenceState({
 })
 assertEqual(duplicateApply, false, "duplicate persisted events rejected on apply")
 assertEqual(duplicateReason, "social_economy_operation_id_duplicate index=2", "duplicate apply reason")
+
+socialApi.ResetForTests()
+local dyadicAttrs = SocialEconomyConfig.DyadicAttributes
+local dyadicCaptureResult = socialApi.RecordTrophySocialEvent(
+	TrophyConfig.Kinds.CaptureSuccess,
+	"trophy-capture-5001-5101-dyadic-1",
+	30,
+	5101
+)
+assertTrue(dyadicCaptureResult.accepted, "dyadic capture social event recorded")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), 50, "dyadic favor projected on capture")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), 55, "dyadic control projected on capture")
+
+local dyadicReleaseResult = socialApi.RecordTrophySocialEvent(
+	TrophyConfig.Kinds.NegotiatedRelease,
+	"containment-released-5001-5101-dyadic-2",
+	31,
+	5101
+)
+assertTrue(dyadicReleaseResult.accepted, "dyadic release social event recorded")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), nil, "dyadic favor cleared on release")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), nil, "dyadic control cleared on release")
+
+socialApi.ResetForTests()
+socialApi.RecordTrophySocialEvent(
+	TrophyConfig.Kinds.CaptureSuccess,
+	"trophy-capture-5001-5101-dyadic-persist-1",
+	40,
+	5101
+)
+local dyadicPersistenceState = socialApi.BuildPersistenceState()
+assertEqual(#dyadicPersistenceState.dyadicRelations, 1, "persistence includes dyadic relation")
+assertEqual(dyadicPersistenceState.dyadicRelations[1].userId, 5101, "persistence dyadic user id")
+
+socialApi.ResetForTests()
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), nil, "reset clears dyadic favor on target")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), nil, "reset clears dyadic control on target")
+
+local dyadicApplied, dyadicApplyReason = socialApi.ApplyPersistenceState({
+	favor = SocialEconomyConfig.DefaultFavor,
+	control = SocialEconomyConfig.DefaultControl,
+	recentEvents = {},
+	dyadicRelations = {
+		{
+			userId = 5101,
+			favor = 62,
+			control = 48,
+			lastUpdatedAt = 40,
+		},
+	},
+})
+assertTrue(dyadicApplied, "dyadic persistence apply succeeds")
+assertEqual(dyadicApplyReason, nil, "dyadic persistence apply no reason")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), 62, "apply projects dyadic favor on target")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), 48, "apply projects dyadic control on target")
+
+socialApi.ClearDyadicProjectionForTarget(5101)
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), nil, "clear dyadic projection favor")
+assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), nil, "clear dyadic projection control")
 
 print("social_economy_service_runtime_entrypoint.spec.luau: all checks passed")

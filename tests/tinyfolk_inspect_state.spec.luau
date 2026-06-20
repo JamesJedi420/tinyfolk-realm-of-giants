@@ -93,4 +93,22 @@ assertTrue(
 	"loyalty unavailable"
 )
 
+local dyadicLoyaltySnapshot = TinyfolkInspectState.BuildSnapshot({
+	displayName = "DyadicOne",
+	role = "Tinyfolk",
+	socialDyadicFavor = 55,
+	socialDyadicControl = 60,
+})
+assertEqual(dyadicLoyaltySnapshot.loyaltyLine, "Loyalty: Favor 55 / Control 60", "dyadic loyalty line")
+
+local partialDyadicSnapshot = TinyfolkInspectState.BuildSnapshot({
+	displayName = "PartialOne",
+	role = "Tinyfolk",
+	socialDyadicFavor = 55,
+})
+assertTrue(
+	string.find(partialDyadicSnapshot.loyaltyLine, TinyfolkInspectConfig.UnavailableLabel, 1, true) ~= nil,
+	"partial dyadic loyalty unavailable"
+)
+
 print("tinyfolk_inspect_state.spec.luau: all checks passed")

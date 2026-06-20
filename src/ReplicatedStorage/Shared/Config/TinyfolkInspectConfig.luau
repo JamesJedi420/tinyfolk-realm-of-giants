@@ -45,6 +45,8 @@ TinyfolkInspectConfig.Attributes = {
 	HaulMaterial = "TinyfolkHaulMaterial",
 	ScoreTotal = "ScoreTotal",
 	LaborTokens = "TinyfolkLaborTokens",
+	SocialDyadicFavor = "SocialDyadicFavor",
+	SocialDyadicControl = "SocialDyadicControl",
 }
 
 return TinyfolkInspectConfig
