@@ -42,7 +42,10 @@ local dyadicModel = TinyfolkInspectPresentation.BuildPanelModel({
 	socialDyadicFavor = 55,
 	socialDyadicControl = 60,
 })
-assertTrue(string.find(dyadicModel.summary, "Loyalty: Favor 55 / Control 60", 1, true) ~= nil, "dyadic loyalty in summary")
+assertTrue(
+	string.find(dyadicModel.summary, "Loyalty: Favor 55 / Control 60", 1, true) ~= nil,
+	"dyadic loyalty in summary"
+)
 
 local warningModel = TinyfolkInspectPresentation.BuildPanelModel({
 	displayName = "Held One",
