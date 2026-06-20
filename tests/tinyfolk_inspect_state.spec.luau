@@ -111,4 +111,75 @@ assertTrue(
 	"partial dyadic loyalty unavailable"
 )
 
+local favorDominantInput = {
+	role = "Tinyfolk",
+	socialDyadicFavor = 60,
+	socialDyadicControl = 40,
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(favorDominantInput),
+	TinyfolkInspectConfig.Tones.Positive,
+	"favor dominant highlight positive"
+)
+assertEqual(
+	TinyfolkInspectState.ResolveTone(favorDominantInput),
+	TinyfolkInspectConfig.Tones.Neutral,
+	"favor dominant panel tone still neutral"
+)
+
+local controlDominantInput = {
+	role = "Tinyfolk",
+	socialDyadicFavor = 40,
+	socialDyadicControl = 60,
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(controlDominantInput),
+	TinyfolkInspectConfig.Tones.Warning,
+	"control dominant highlight warning"
+)
+
+local balancedDyadicInput = {
+	role = "Tinyfolk",
+	socialDyadicFavor = 50,
+	socialDyadicControl = 52,
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(balancedDyadicInput),
+	TinyfolkInspectConfig.Tones.Neutral,
+	"balanced dyadic highlight neutral"
+)
+
+local custodyOverridesDyadicInput = {
+	role = "Tinyfolk",
+	captureActive = true,
+	socialDyadicFavor = 80,
+	socialDyadicControl = 20,
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(custodyOverridesDyadicInput),
+	TinyfolkInspectConfig.Tones.Warning,
+	"captured custody overrides favor highlight"
+)
+
+local starvingOverridesDyadicInput = {
+	role = "Tinyfolk",
+	captiveStarving = true,
+	socialDyadicFavor = 80,
+	socialDyadicControl = 20,
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(starvingOverridesDyadicInput),
+	TinyfolkInspectConfig.Tones.Critical,
+	"starving custody overrides favor highlight"
+)
+
+local missingDyadicInput = {
+	role = "Tinyfolk",
+}
+assertEqual(
+	TinyfolkInspectState.ResolveHighlightTone(missingDyadicInput),
+	TinyfolkInspectConfig.Tones.Neutral,
+	"missing dyadic highlight falls back to custody tone"
+)
+
 print("tinyfolk_inspect_state.spec.luau: all checks passed")

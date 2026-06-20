@@ -13,8 +13,17 @@ TinyfolkInspectConfig.MissingLabel = "—"
 
 TinyfolkInspectConfig.Tones = {
 	Neutral = "neutral",
+	Positive = "positive",
 	Warning = "warning",
 	Critical = "critical",
+}
+
+-- RGB triplets for client highlight fill/outline (panel accent uses custody tone only).
+TinyfolkInspectConfig.HighlightAccentRgbByTone = {
+	[TinyfolkInspectConfig.Tones.Neutral] = { 151, 159, 174 },
+	[TinyfolkInspectConfig.Tones.Positive] = { 88, 180, 120 },
+	[TinyfolkInspectConfig.Tones.Warning] = { 224, 166, 68 },
+	[TinyfolkInspectConfig.Tones.Critical] = { 214, 88, 88 },
 }
 
 TinyfolkInspectConfig.HighlightName = "TinyfolkInspectSelectionHighlight"
