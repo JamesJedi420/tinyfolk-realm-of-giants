@@ -1412,15 +1412,19 @@ local function buildSessionTreasurySnapshot(): any
 		essenceStored = 0,
 		woodStored = 0,
 		stoneStored = 0,
+		metalStored = 0,
 	}
 	if ResourceFlowState ~= nil and type(ResourceFlowState.GetSnapshot) == "function" then
 		local flowSnapshot = ResourceFlowState.GetSnapshot()
 		if type(flowSnapshot) == "table" then
-			if type(flowSnapshot.Wood) == "table" and type(flowSnapshot.Wood.Stored) == "number" then
-				sessionSnapshot.woodStored = flowSnapshot.Wood.Stored
+			if type(flowSnapshot.Wood) == "table" and type(flowSnapshot.Wood.stored) == "number" then
+				sessionSnapshot.woodStored = flowSnapshot.Wood.stored
 			end
-			if type(flowSnapshot.Stone) == "table" and type(flowSnapshot.Stone.Stored) == "number" then
-				sessionSnapshot.stoneStored = flowSnapshot.Stone.Stored
+			if type(flowSnapshot.Stone) == "table" and type(flowSnapshot.Stone.stored) == "number" then
+				sessionSnapshot.stoneStored = flowSnapshot.Stone.stored
+			end
+			if type(flowSnapshot.Metal) == "table" and type(flowSnapshot.Metal.stored) == "number" then
+				sessionSnapshot.metalStored = flowSnapshot.Metal.stored
 			end
 		end
 	end
@@ -1455,6 +1459,7 @@ local function applyTreasuryProjectionToPlayer(player: any)
 	player:SetAttribute(attributes.SessionEssence, model.sessionEssence)
 	player:SetAttribute(attributes.SessionWood, model.sessionWood)
 	player:SetAttribute(attributes.SessionStone, model.sessionStone)
+	player:SetAttribute(attributes.SessionMetal, model.sessionMetal)
 	player:SetAttribute(attributes.Summary, model.summary)
 	player:SetAttribute(attributes.UpdatedAt, updatedAt)
 end
@@ -2652,6 +2657,7 @@ globalEnv._GiantBuildModeService_QueryAPI = {
 	RecordEscapeDefenseOutcome = RecordEscapeDefenseOutcome,
 	GetRealmOwnerUserId = GetRealmOwnerUserId,
 	GetResourceLedgerSnapshot = GetResourceLedgerSnapshot,
+	RefreshTreasuryProjection = refreshTreasuryProjection,
 	ApplyResourceAward = ApplyResourceAward,
 	ApplyResourceSpend = ApplyResourceSpend,
 	SpendWorksiteUpgradeCost = SpendWorksiteUpgradeCost,

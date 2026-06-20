@@ -39,6 +39,14 @@ local function debugLog(message: string)
 	print(string.format("[WarehousingService] %s", message))
 end
 
+local function refreshTreasuryProjection()
+	local queryApi = globalEnv._GiantBuildModeService_QueryAPI
+	if type(queryApi) ~= "table" or type(queryApi.RefreshTreasuryProjection) ~= "function" then
+		return
+	end
+	queryApi.RefreshTreasuryProjection()
+end
+
 local function debugWarn(message: string)
 	warn(string.format("[WarehousingService] %s", message))
 end
@@ -390,6 +398,7 @@ deliverRemote.OnServerEvent:Connect(function(player: Player, payload: unknown)
 
 	applyDebugAttributes(warehouseState)
 	applyHaulDebugAttributes(player, "warehouse_deliver", warehouseId, deliveredMaterial, movedAmount)
+	refreshTreasuryProjection()
 
 	debugLog(
 		string.format(
@@ -455,6 +464,7 @@ granaryDeliverRemote.OnServerEvent:Connect(function(player: Player, payload: unk
 
 	applyGranaryDebugAttributes(granaryState)
 	applyHaulDebugAttributes(player, "granary_deliver", granaryId, "Food", movedAmount)
+	refreshTreasuryProjection()
 
 	debugLog(
 		string.format(
@@ -617,6 +627,7 @@ _G._WarehousingService_QueryAPI = {
 		else
 			applyDebugAttributes(deliveryState)
 		end
+		refreshTreasuryProjection()
 
 		debugLog(
 			string.format(

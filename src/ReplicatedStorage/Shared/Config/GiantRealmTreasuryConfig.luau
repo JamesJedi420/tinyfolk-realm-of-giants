@@ -8,6 +8,7 @@ GiantRealmTreasuryConfig.Attributes = {
 	LedgerStone = "GiantRealmLedgerStone",
 	SessionWood = "GiantRealmSessionWood",
 	SessionStone = "GiantRealmSessionStone",
+	SessionMetal = "GiantRealmSessionMetal",
 	SessionEssence = "GiantRealmSessionEssence",
 	Summary = "GiantRealmTreasurySummary",
 	UpdatedAt = "GiantRealmTreasuryUpdatedAt",

@@ -12,6 +12,7 @@ export type TreasuryModel = {
 	sessionEssence: number,
 	sessionWood: number,
 	sessionStone: number,
+	sessionMetal: number,
 }
 
 local function finiteNumber(value: any): number?
@@ -39,15 +40,17 @@ function GiantRealmTreasuryPresentation.BuildHudModel(ledgerSnapshot: any, sessi
 	local sessionEssence = readLedgerField(sessionSnapshot, "essenceStored")
 	local sessionWood = readLedgerField(sessionSnapshot, "woodStored")
 	local sessionStone = readLedgerField(sessionSnapshot, "stoneStored")
+	local sessionMetal = readLedgerField(sessionSnapshot, "metalStored")
 
 	local summary = string.format(
-		"Ledger E%d W%d S%d | Session E%d W%d S%d",
+		"Ledger E%d W%d S%d | Session E%d W%d S%d M%d",
 		ledgerEssence,
 		ledgerWood,
 		ledgerStone,
 		sessionEssence,
 		sessionWood,
-		sessionStone
+		sessionStone,
+		sessionMetal
 	)
 
 	return {
@@ -60,6 +63,7 @@ function GiantRealmTreasuryPresentation.BuildHudModel(ledgerSnapshot: any, sessi
 		sessionEssence = sessionEssence,
 		sessionWood = sessionWood,
 		sessionStone = sessionStone,
+		sessionMetal = sessionMetal,
 	}
 end
 
