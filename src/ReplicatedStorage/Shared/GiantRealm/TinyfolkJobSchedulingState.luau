@@ -402,10 +402,11 @@ function TinyfolkJobSchedulingState.BuildDebugSnapshot(input: {
 }): any
 	local debugWorkers: { any }? = nil
 	if type(input.workers) == "table" then
-		debugWorkers = {}
+		local formattedWorkers: { any } = {}
 		for _, worker in ipairs(input.workers) do
-			table.insert(debugWorkers, TinyfolkJobSchedulingState.FormatWorkerForDebug(worker))
+			table.insert(formattedWorkers, TinyfolkJobSchedulingState.FormatWorkerForDebug(worker))
 		end
+		debugWorkers = formattedWorkers
 	end
 
 	return {
