@@ -5,6 +5,7 @@ local TinyfolkJobSchedulingConfig: any = {}
 TinyfolkJobSchedulingConfig.ProcessIntervalSeconds = 2
 TinyfolkJobSchedulingConfig.MaxAssignmentsPerTick = 8
 TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking = true
+TinyfolkJobSchedulingConfig.DeprioritizeControlDominantWorkers = true
 
 TinyfolkJobSchedulingConfig.JobKinds = {
 	None = "none",
