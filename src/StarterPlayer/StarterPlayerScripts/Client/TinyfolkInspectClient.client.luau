@@ -30,6 +30,8 @@ local ACCENT_BY_TONE = {
 local selectedTarget: Player? = nil
 local targetAttributeConnections: { any } = {}
 local targetCharacterConnections: { any } = {}
+local activeHighlight: Highlight? = nil
+local activeHighlightCharacter: Model? = nil
 
 local refreshPanel: () -> ()
 
@@ -96,8 +98,56 @@ local function disconnectTargetConnections()
 	table.clear(targetCharacterConnections)
 end
 
+local function clearHighlight()
+	if activeHighlight ~= nil then
+		activeHighlight:Destroy()
+		activeHighlight = nil
+	end
+	activeHighlightCharacter = nil
+end
+
+local function applyHighlightTone(highlight: Highlight, tone: string?)
+	local color = toneColor(tone)
+	highlight.FillColor = color
+	highlight.OutlineColor = color
+end
+
+local function applyHighlight(character: Model?, tone: string?)
+	clearHighlight()
+	if character == nil then
+		return
+	end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = TinyfolkInspectConfig.HighlightName
+	highlight.Adornee = character
+	highlight.FillTransparency = TinyfolkInspectConfig.HighlightFillTransparency
+	highlight.OutlineTransparency = TinyfolkInspectConfig.HighlightOutlineTransparency
+	highlight.DepthMode = TinyfolkInspectConfig.HighlightDepthMode
+	applyHighlightTone(highlight, tone)
+	highlight.Parent = character
+
+	activeHighlight = highlight
+	activeHighlightCharacter = character
+end
+
+local function syncHighlight(character: Model?, tone: string?)
+	if character == nil then
+		clearHighlight()
+		return
+	end
+
+	if activeHighlight ~= nil and activeHighlightCharacter == character then
+		applyHighlightTone(activeHighlight, tone)
+		return
+	end
+
+	applyHighlight(character, tone)
+end
+
 local function clearSelection()
 	disconnectTargetConnections()
+	clearHighlight()
 	selectedTarget = nil
 end
 
@@ -200,6 +250,7 @@ function refreshPanel()
 	local target = selectedTarget
 	if target == nil or not target.Parent then
 		panel.Visible = false
+		clearHighlight()
 		return
 	end
 
@@ -214,6 +265,7 @@ function refreshPanel()
 	title.Text = model.title
 	summary.Text = model.summary
 	accent.BackgroundColor3 = toneColor(model.tone)
+	syncHighlight(target.Character, model.tone)
 end
 
 local function selectTarget(target: Player?)

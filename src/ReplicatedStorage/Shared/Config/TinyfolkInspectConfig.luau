@@ -17,6 +17,11 @@ TinyfolkInspectConfig.Tones = {
 	Critical = "critical",
 }
 
+TinyfolkInspectConfig.HighlightName = "TinyfolkInspectSelectionHighlight"
+TinyfolkInspectConfig.HighlightFillTransparency = 0.65
+TinyfolkInspectConfig.HighlightOutlineTransparency = 0
+TinyfolkInspectConfig.HighlightDepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
 TinyfolkInspectConfig.Attributes = {
 	Role = "Role",
 	SpecialistRole = "SpecialistRole",
