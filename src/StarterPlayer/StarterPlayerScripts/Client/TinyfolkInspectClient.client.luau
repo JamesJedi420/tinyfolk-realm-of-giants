@@ -21,11 +21,22 @@ local PANEL_NAME = TinyfolkInspectConfig.PanelName
 local MAX_SELECT_RANGE = TinyfolkInspectConfig.MaxSelectRangeStuds
 local RAYCAST_DISTANCE = 1000
 
-local ACCENT_BY_TONE = {
+local PANEL_ACCENT_BY_TONE = {
 	neutral = Color3.fromRGB(151, 159, 174),
 	warning = Color3.fromRGB(224, 166, 68),
 	critical = Color3.fromRGB(214, 88, 88),
 }
+
+local function highlightColorForTone(tone: string?): Color3
+	if type(tone) ~= "string" then
+		tone = TinyfolkInspectConfig.Tones.Neutral
+	end
+	local rgb = TinyfolkInspectConfig.HighlightAccentRgbByTone[tone]
+	if type(rgb) == "table" and #rgb >= 3 then
+		return Color3.fromRGB(rgb[1], rgb[2], rgb[3])
+	end
+	return Color3.fromRGB(151, 159, 174)
+end
 
 local selectedTarget: Player? = nil
 local targetAttributeConnections: { any } = {}
@@ -38,11 +49,11 @@ local refreshPanel: () -> ()
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local function toneColor(tone: string?): Color3
+local function panelAccentColor(tone: string?): Color3
 	if type(tone) ~= "string" then
-		return ACCENT_BY_TONE.neutral
+		return PANEL_ACCENT_BY_TONE.neutral
 	end
-	return ACCENT_BY_TONE[tone] or ACCENT_BY_TONE.neutral
+	return PANEL_ACCENT_BY_TONE[tone] or PANEL_ACCENT_BY_TONE.neutral
 end
 
 local function isLocalPlayerGiant(): boolean
@@ -107,7 +118,7 @@ local function clearHighlight()
 end
 
 local function applyHighlightTone(highlight: Highlight, tone: string?)
-	local color = toneColor(tone)
+	local color = highlightColorForTone(tone)
 	highlight.FillColor = color
 	highlight.OutlineColor = color
 end
@@ -209,7 +220,7 @@ panel.Parent = screenGui
 
 local accent = Instance.new("Frame")
 accent.Name = "Accent"
-accent.BackgroundColor3 = ACCENT_BY_TONE.neutral
+accent.BackgroundColor3 = PANEL_ACCENT_BY_TONE.neutral
 accent.BorderSizePixel = 0
 accent.Size = UDim2.new(0, 4, 1, 0)
 accent.Parent = panel
@@ -260,12 +271,14 @@ function refreshPanel()
 		return
 	end
 
-	local model = TinyfolkInspectPresentation.BuildPanelModel(buildSnapshotForTarget(target))
+	local attributeInput = buildSnapshotForTarget(target)
+	local model = TinyfolkInspectPresentation.BuildPanelModel(attributeInput)
+	local highlightTone = TinyfolkInspectState.ResolveHighlightTone(attributeInput)
 	panel.Visible = model.visible
 	title.Text = model.title
 	summary.Text = model.summary
-	accent.BackgroundColor3 = toneColor(model.tone)
-	syncHighlight(target.Character, model.tone)
+	accent.BackgroundColor3 = panelAccentColor(model.tone)
+	syncHighlight(target.Character, highlightTone)
 end
 
 local function selectTarget(target: Player?)

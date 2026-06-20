@@ -1,11 +1,13 @@
 --!strict
 
+local SocialEconomyConfig = require("../Config/SocialEconomyConfig")
 local SpecialistConfig = require("../Config/SpecialistConfig")
 local TinyfolkHaulLogisticsConfig = require("../Config/TinyfolkHaulLogisticsConfig")
 local TinyfolkInspectConfig = require("../Config/TinyfolkInspectConfig")
 local TinyfolkJobSchedulingConfig = require("../Config/TinyfolkJobSchedulingConfig")
 local TinyfolkLaborJobHudConfig = require("../Config/TinyfolkLaborJobHudConfig")
 local TinyfolkMovementTraitConfig = require("../Config/TinyfolkMovementTraitConfig")
+local SocialEconomyState = require("./SocialEconomyState")
 
 local TinyfolkInspectState = {}
 
@@ -221,6 +223,28 @@ function TinyfolkInspectState.ResolveTone(input: any): string
 		return TinyfolkInspectConfig.Tones.Warning
 	end
 
+	return TinyfolkInspectConfig.Tones.Neutral
+end
+
+function TinyfolkInspectState.ResolveHighlightTone(input: any): string
+	local custodyTone = TinyfolkInspectState.ResolveTone(input)
+	if custodyTone ~= TinyfolkInspectConfig.Tones.Neutral then
+		return custodyTone
+	end
+
+	local favor = readNumber(input.socialDyadicFavor)
+	local control = readNumber(input.socialDyadicControl)
+	if favor == nil or control == nil then
+		return custodyTone
+	end
+
+	local dominantAxis = SocialEconomyState.ResolveDominantAxis(favor, control)
+	if dominantAxis == SocialEconomyConfig.DominantAxes.Favor then
+		return TinyfolkInspectConfig.Tones.Positive
+	end
+	if dominantAxis == SocialEconomyConfig.DominantAxes.Control then
+		return TinyfolkInspectConfig.Tones.Warning
+	end
 	return TinyfolkInspectConfig.Tones.Neutral
 end
 
