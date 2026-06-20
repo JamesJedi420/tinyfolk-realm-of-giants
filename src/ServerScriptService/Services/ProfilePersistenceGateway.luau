@@ -92,6 +92,15 @@ local TrophyDisplayPolicyProfileState = if script ~= nil and script.Parent ~= ni
 	)
 	else require("../../ReplicatedStorage/Shared/GiantRealm/TrophyDisplayPolicyProfileState")
 
+local GiantHudStackPreferenceProfileState = if script ~= nil and script.Parent ~= nil
+	then require(
+		game:GetService("ReplicatedStorage")
+			:WaitForChild("Shared")
+			:WaitForChild("GiantRealm")
+			:WaitForChild("GiantHudStackPreferenceProfileState")
+	)
+	else require("../../ReplicatedStorage/Shared/GiantRealm/GiantHudStackPreferenceProfileState")
+
 local PendingRecoveryProfileState = if script ~= nil and script.Parent ~= nil
 	then require(
 		game:GetService("ReplicatedStorage")
@@ -354,6 +363,7 @@ local function copyDefaultPlayerProfileData(data: any): any
 		escapeHistory = EscapeHistoryProfileState.CopyProfileField(data),
 		safeLocation = SafeLocationProfileState.CopyProfileField(data),
 		trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(data),
+		giantHudStackPreference = GiantHudStackPreferenceProfileState.CopyProfileField(data),
 		pendingRecovery = PendingRecoveryProfileState.CopyProfileField(data),
 		realmAssignment = RealmAssignmentProfileState.CopyProfileField(data),
 		discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(data),
@@ -466,6 +476,7 @@ function ProfilePersistenceGateway.LoadPlayerProfile(player: any): GatewayResult
 			loadedData.tinyfolkToolProgressionState = TinyfolkToolProgressionProfileState.CopyProfileField(loadedData)
 			loadedData.inventoryCraftState = InventoryCraftProfileState.CopyProfileField(loadedData)
 			loadedData.trophyDisplayPreference = TrophyDisplayPolicyProfileState.CopyProfileField(loadedData)
+			loadedData.giantHudStackPreference = GiantHudStackPreferenceProfileState.CopyProfileField(loadedData)
 			loadedData.pendingRecovery = PendingRecoveryProfileState.CopyProfileField(loadedData)
 			loadedData.realmAssignment = RealmAssignmentProfileState.CopyProfileField(loadedData)
 			loadedData.discoveredRealms = DiscoveredRealmsProfileState.CopyProfileField(loadedData)

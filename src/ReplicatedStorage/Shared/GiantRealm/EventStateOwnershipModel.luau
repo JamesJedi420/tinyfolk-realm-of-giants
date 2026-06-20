@@ -21,6 +21,7 @@ local ownersByNamespace = {
 	rolePreference = EventStateOwnershipModel.Owners.playerProfile,
 	specialistPreference = EventStateOwnershipModel.Owners.playerProfile,
 	trophyDisplayPreference = EventStateOwnershipModel.Owners.playerProfile,
+	giantHudStackPreference = EventStateOwnershipModel.Owners.playerProfile,
 	pendingRecovery = EventStateOwnershipModel.Owners.playerProfile,
 	realmAssignment = EventStateOwnershipModel.Owners.playerProfile,
 	discoveredRealms = EventStateOwnershipModel.Owners.playerProfile,
