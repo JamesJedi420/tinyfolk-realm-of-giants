@@ -1,6 +1,7 @@
 --!nocheck
 
 local TinyfolkJobSchedulingConfig = require("../src/ReplicatedStorage/Shared/Config/TinyfolkJobSchedulingConfig")
+local SocialEconomyConfig = require("../src/ReplicatedStorage/Shared/Config/SocialEconomyConfig")
 local SpecialistConfig = require("../src/ReplicatedStorage/Shared/Config/SpecialistConfig")
 local TinyfolkJobSchedulingState = require("../src/ReplicatedStorage/Shared/GiantRealm/TinyfolkJobSchedulingState")
 
@@ -271,6 +272,80 @@ assertEqual(scheduleRank.control, 0, "schedule rank clamps control to axis min")
 local debugWorker = TinyfolkJobSchedulingState.FormatWorkerForDebug(favorRankWorkers[2])
 assertEqual(debugWorker.scheduleRankFavor, 80, "debug worker exposes resolved schedule rank favor")
 assertEqual(debugWorker.scheduleRankControl, 50, "debug worker exposes resolved schedule rank control")
+assertEqual(
+	debugWorker.scheduleDominantAxis,
+	SocialEconomyConfig.DominantAxes.Favor,
+	"debug worker exposes schedule dominant axis"
+)
+
+local controlDominantWorkers = {
+	{
+		userId = 100,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 55,
+		dyadicControl = 65,
+	},
+	{
+		userId = 50,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 50,
+		dyadicControl = 50,
+	},
+}
+local controlDominantResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, controlDominantWorkers)
+assertEqual(
+	controlDominantResult.assignments[1].userId,
+	50,
+	"balanced worker wins over control-dominant worker with higher raw favor"
+)
+
+local equalFavorDominanceWorkers = {
+	{
+		userId = 100,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 60,
+		dyadicControl = 70,
+	},
+	{
+		userId = 50,
+		role = "Tinyfolk",
+		specialistRole = SpecialistConfig.SpecialistRoles.None,
+		assignedStationId = nil,
+		scheduledJobKind = TinyfolkJobSchedulingConfig.JobKinds.None,
+		captureActive = false,
+		dyadicFavor = 60,
+		dyadicControl = 40,
+	},
+}
+local equalFavorDominanceResult =
+	TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, equalFavorDominanceWorkers)
+assertEqual(
+	equalFavorDominanceResult.assignments[1].userId,
+	50,
+	"favor-dominant worker wins over control-dominant worker at equal raw favor"
+)
+
+local previousDeprioritizeControl = TinyfolkJobSchedulingConfig.DeprioritizeControlDominantWorkers
+TinyfolkJobSchedulingConfig.DeprioritizeControlDominantWorkers = false
+local rawFavorRankResult = TinyfolkJobSchedulingState.SelectAssignments(woodcutterDemand, controlDominantWorkers)
+TinyfolkJobSchedulingConfig.DeprioritizeControlDominantWorkers = previousDeprioritizeControl
+assertEqual(
+	rawFavorRankResult.assignments[1].userId,
+	100,
+	"control dominance deprioritization disabled preserves raw favor ranking"
+)
 
 local previousDyadicRanking = TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking
 TinyfolkJobSchedulingConfig.UseDyadicWorkerRanking = false

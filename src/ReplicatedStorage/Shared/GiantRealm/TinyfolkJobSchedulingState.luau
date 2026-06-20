@@ -1,6 +1,7 @@
 --!strict
 
 local SocialEconomyConfig = require("../Config/SocialEconomyConfig")
+local SocialEconomyState = require("./SocialEconomyState")
 local TinyfolkJobSchedulingConfig = require("../Config/TinyfolkJobSchedulingConfig")
 local SpecialistConfig = require("../Config/SpecialistConfig")
 
@@ -112,7 +113,30 @@ function TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(worker: WorkerSnap
 	}
 end
 
+function TinyfolkJobSchedulingState.ResolveWorkerDominantAxis(worker: WorkerSnapshot): string
+	local scheduleRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(worker)
+	return SocialEconomyState.ResolveDominantAxis(scheduleRank.favor, scheduleRank.control)
+end
+
+local DOMINANCE_TIER_BY_AXIS = {
+	[SocialEconomyConfig.DominantAxes.Favor] = 3,
+	[SocialEconomyConfig.DominantAxes.Balanced] = 2,
+	[SocialEconomyConfig.DominantAxes.Control] = 1,
+}
+
+local function resolveDominanceTier(dominantAxis: string): number
+	return DOMINANCE_TIER_BY_AXIS[dominantAxis] or DOMINANCE_TIER_BY_AXIS[SocialEconomyConfig.DominantAxes.Balanced]
+end
+
 local function compareWorkersForSchedule(left: WorkerSnapshot, right: WorkerSnapshot): boolean
+	if TinyfolkJobSchedulingConfig.DeprioritizeControlDominantWorkers == true then
+		local leftTier = resolveDominanceTier(TinyfolkJobSchedulingState.ResolveWorkerDominantAxis(left))
+		local rightTier = resolveDominanceTier(TinyfolkJobSchedulingState.ResolveWorkerDominantAxis(right))
+		if leftTier ~= rightTier then
+			return leftTier > rightTier
+		end
+	end
+
 	local leftRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(left)
 	local rightRank = TinyfolkJobSchedulingState.ResolveWorkerScheduleRank(right)
 	if leftRank.favor ~= rightRank.favor then
@@ -389,6 +413,7 @@ function TinyfolkJobSchedulingState.FormatWorkerForDebug(worker: WorkerSnapshot)
 		dyadicControl = worker.dyadicControl,
 		scheduleRankFavor = scheduleRank.favor,
 		scheduleRankControl = scheduleRank.control,
+		scheduleDominantAxis = TinyfolkJobSchedulingState.ResolveWorkerDominantAxis(worker),
 	}
 end
 
