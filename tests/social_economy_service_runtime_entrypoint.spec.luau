@@ -177,12 +177,8 @@ assertEqual(duplicateReason, "social_economy_operation_id_duplicate index=2", "d
 
 socialApi.ResetForTests()
 local dyadicAttrs = SocialEconomyConfig.DyadicAttributes
-local dyadicCaptureResult = socialApi.RecordTrophySocialEvent(
-	TrophyConfig.Kinds.CaptureSuccess,
-	"trophy-capture-5001-5101-dyadic-1",
-	30,
-	5101
-)
+local dyadicCaptureResult =
+	socialApi.RecordTrophySocialEvent(TrophyConfig.Kinds.CaptureSuccess, "trophy-capture-5001-5101-dyadic-1", 30, 5101)
 assertTrue(dyadicCaptureResult.accepted, "dyadic capture social event recorded")
 assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Favor), 50, "dyadic favor projected on capture")
 assertEqual(targetPlayer:GetAttribute(dyadicAttrs.Control), 55, "dyadic control projected on capture")
